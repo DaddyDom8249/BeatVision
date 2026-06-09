@@ -18,11 +18,16 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   }
   return data;
 }
+
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, username: string) => Promise<{ error: Error | null; emailConfirmRequired?: boolean }>;
+  /** @deprecated use signIn */
   signInWithUsername: (username: string, password: string) => Promise<{ error: Error | null }>;
+  /** @deprecated use signUp */
   signUpWithUsername: (username: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -78,14 +83,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithUsername = async (username: string, password: string) => {
+  // Primary: sign in with real email + password
+  const signIn = async (email: string, password: string) => {
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      return { error: new Error('Supabase is not connected. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.') };
+    }
     try {
-      const email = `${username}@miaoda.com`;
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       return { error: null };
     } catch (error) {
@@ -93,28 +97,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUpWithUsername = async (username: string, password: string) => {
+  // Primary: sign up with real email + password; username stored in metadata and profile
+  const signUp = async (email: string, password: string, username: string) => {
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      return { error: new Error('Supabase is not connected. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.') };
+    }
     try {
-      const email = `${username}@miaoda.com`;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            username,
+            display_name: username,
+            agreed_to_terms: true,
+            creator_memory_enabled: true,
+          },
+        },
       });
-
       if (error) throw error;
 
-      // Update the username in profiles after signup trigger fires
-      if (data.user) {
+      // The trigger auto-creates the profile row with email.
+      // Update it with username if the user exists (not email-confirmation pending).
+      if (data.user && username) {
         await supabase
           .from('profiles')
           .update({ username })
           .eq('id', data.user.id);
       }
 
-      return { error: null };
+      // Detect email confirmation requirement: user created but session is null
+      const emailConfirmRequired = !!data.user && !data.session;
+      return { error: null, emailConfirmRequired };
     } catch (error) {
-      return { error: error as Error };
+      return { error: error as Error, emailConfirmRequired: false };
     }
+  };
+
+  // Deprecated legacy aliases — kept so other parts of the app don't break
+  const signInWithUsername = async (username: string, password: string) => {
+    // Treat username as email for backward compatibility
+    return signIn(username, password);
+  };
+
+  const signUpWithUsername = async (username: string, password: string) => {
+    return signUp(username, password, '');
   };
 
   const signOut = async () => {
@@ -124,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signInWithUsername, signUpWithUsername, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signInWithUsername, signUpWithUsername, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
