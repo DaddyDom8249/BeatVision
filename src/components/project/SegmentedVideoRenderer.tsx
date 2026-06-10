@@ -457,16 +457,46 @@ export default function SegmentedVideoRenderer({
 
   function computeImageBlockers(): string[] {
     const blockers: string[] = [];
+
+    const imageHasUsableUrl = (si: any) =>
+      Boolean(si.image_url || si.scene_image_url || si.reference_image_url || si.storage_path || si.image_path);
+
+    const imageMatchesScene = (si: any, sc: any) => {
+      const siNumber = Number(si.scene_number ?? si.scene_index ?? si.segment_number ?? 0);
+      const scNumber = Number(sc.scene_number ?? sc.scene_index ?? 0);
+
+      return (
+        si.storyboard_scene_id === sc.id ||
+        si.source_storyboard_scene_id === sc.id ||
+        si.scene_visual_prompt_id === sc.scene_visual_prompt_id ||
+        (siNumber > 0 && scNumber > 0 && siNumber === scNumber) ||
+        (
+          si.scene_title &&
+          sc.scene_title &&
+          String(si.scene_title).trim().toLowerCase() === String(sc.scene_title).trim().toLowerCase()
+        )
+      );
+    };
+
     const approvedImages = sceneImages.filter(
-      si => si.approved && (si.real_generated || si.manual_upload || si.use_placeholder_as_draft_final)
+      (si: any) =>
+        si.approved &&
+        imageHasUsableUrl(si) &&
+        (si.real_generated || si.manual_upload || si.use_placeholder_as_draft_final || si.provider === 'manual_upload')
     );
-    scenes.forEach(sc => {
-      const hasImg = approvedImages.some(si => si.storyboard_scene_id === sc.id);
+
+    scenes.forEach((sc: any) => {
+      const matchingImages = sceneImages.filter((si: any) => imageMatchesScene(si, sc));
+      const hasImg = approvedImages.some((si: any) => imageMatchesScene(si, sc));
+
       if (!hasImg) {
-        const sceneImg = sceneImages.find(si => si.storyboard_scene_id === sc.id);
+        const sceneImg = matchingImages.find((si: any) => imageHasUsableUrl(si)) || matchingImages[0];
+
         if (!sceneImg) {
           blockers.push(`Scene ${sc.scene_number} has no image at all.`);
-        } else if (sceneImg.placeholder && !sceneImg.use_placeholder_as_draft_final) {
+        } else if (!imageHasUsableUrl(sceneImg)) {
+          blockers.push(`Scene ${sc.scene_number} has no image at all.`);
+        } else if (sceneImg.placeholder && !sceneImg.use_placeholder_as_draft_final && !sceneImg.manual_upload) {
           blockers.push(
             `Scene ${sc.scene_number} only has a placeholder preview. Click "Use Placeholder As Draft Final" to unlock it, or upload/generate a real image.`
           );
@@ -475,6 +505,7 @@ export default function SegmentedVideoRenderer({
         }
       }
     });
+
     return blockers;
   }
 
