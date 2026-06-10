@@ -664,10 +664,20 @@ export default function SegmentedVideoRenderer({
         ? (approvedImgByScene[seg.source_storyboard_scene_id] ?? fallbackImage)
         : fallbackImage;
       if (matchImg?.image_url) {
-        await supabase.from('video_segments')
-          .update({ image_url: matchImg.image_url, source_scene_image_id: matchImg.id, updated_at: new Date().toISOString() })
+        const { error } = await supabase.from('video_segments')
+          .update({
+            image_url: matchImg.image_url,
+            source_scene_image_id: matchImg.id,
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', seg.id);
-        repaired++;
+
+        if (error) {
+          console.error('Failed to repair segment image:', error);
+          toast.error(`Failed to repair segment image: ${error.message}`);
+        } else {
+          repaired++;
+        }
       }
     }
 
@@ -721,7 +731,13 @@ export default function SegmentedVideoRenderer({
         };
       });
       const { error } = await supabase.from('video_segments').insert(fillerInserts);
-      if (!error) repaired += fillerInserts.length;
+
+      if (error) {
+        console.error('Failed to insert filler segments:', error);
+        toast.error(`Failed to insert filler segments: ${error.message}`);
+      } else {
+        repaired += fillerInserts.length;
+      }
     }
 
     await loadSegments();
