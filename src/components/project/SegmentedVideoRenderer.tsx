@@ -796,7 +796,11 @@ export default function SegmentedVideoRenderer({
   const handleRenderAll = async () => {
     if (segments.length === 0) { toast.error('No segments to render.'); return; }
     setRenderingAll(true);
-    const toRender = segments.filter(s => s.render_status === 'Not Rendered' || s.failed);
+    const toRender = segments.filter(s =>
+      s.active &&
+      !s.approved &&
+      (s.render_status === 'Not Rendered' || s.failed || s.simulated_preview || s.fallback_rendered)
+    );
     let success = 0;
     for (const seg of toRender) {
       setRenderingId(seg.id);
