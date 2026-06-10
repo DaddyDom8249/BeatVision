@@ -577,7 +577,11 @@ export default function ProjectResultsPage() {
     project.environment_sheet_approved &&
     project.scene_prompts_approved;
 
-  const phase4Unlocked = phase3Unlocked && !!project.images_approved;
+  // Also unlock Scene Images section when rows already exist in the DB
+  // (e.g. seeded externally or created via a prior workflow step with awaiting_upload status)
+  const sceneImagesUnlocked = phase3Unlocked || sceneImages.length > 0;
+
+  const phase4Unlocked = sceneImagesUnlocked && !!project.images_approved;
 
   // Preview is ready as soon as world report + storyboard are approved
   const previewReady = !!(worldReport?.approved && project.storyboard_approved);
@@ -1048,7 +1052,7 @@ export default function ProjectResultsPage() {
           )}
 
           {/* Image Provider Settings — Phase 3+ (shown BEFORE Generate Scene Images) */}
-          {phase3Unlocked && (
+          {sceneImagesUnlocked && (
             <section className="section-unlock space-y-3">
               <div className="flex items-center gap-3 mb-2">
                 <div
@@ -1081,8 +1085,8 @@ export default function ProjectResultsPage() {
             </section>
           )}
 
-          {/* Generate Scene Images — Phase 3 */}
-          {phase3Unlocked ? (
+          {/* Generate Scene Images — Phase 3 / manual upload unlock */}
+          {sceneImagesUnlocked ? (
             <section className="section-unlock space-y-3">
               <div className="flex items-center gap-3 mb-2">
                 <div
@@ -1092,9 +1096,9 @@ export default function ProjectResultsPage() {
                   <ImageIcon className="w-4 h-4" style={{ color: '#3b7eff' }} />
                 </div>
                 <div>
-                  <h2 className="font-bold text-lg text-foreground">Generate Scene Images</h2>
+                  <h2 className="font-bold text-lg text-foreground">Scene Images</h2>
                   <p className="text-xs text-muted-foreground">
-                    One image per scene · Character consistent · World consistent · Creator controlled
+                    Upload an image per scene · Approve each one · All approved unlocks Motion
                   </p>
                 </div>
               </div>
@@ -1111,8 +1115,8 @@ export default function ProjectResultsPage() {
             </section>
           ) : (
             <LockedSection
-              title="Generate Scene Images"
-              message="Approve all world assets and scene prompts to unlock scene image generation."
+              title="Scene Images"
+              message="Approve all world assets and scene prompts to unlock scene image generation, or scenes will appear here automatically when created."
               icon={<ImageIcon className="w-5 h-5 text-muted-foreground/50" />}
             />
           )}

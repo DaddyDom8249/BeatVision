@@ -1,0 +1,1 @@
+ALTER TABLE scene_images ADD COLUMN IF NOT EXISTS storage_path text;

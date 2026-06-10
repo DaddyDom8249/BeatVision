@@ -33,7 +33,8 @@ import {
   AlertTriangle,
   Info,
 } from 'lucide-react';
-import { SceneImage, SceneImageVersion, SceneVisualPrompt } from '@/types/types';
+import { SceneImage, SceneImageVersion, SceneVisualPrompt, Project, WorldStyleBible, CharacterSheet, EnvironmentSheet } from '@/types/types';
+import SceneImageOptionsPanel from './SceneImageOptionsPanel';
 
 interface Props {
   image: SceneImage;
@@ -42,6 +43,11 @@ interface Props {
   isGenerating: boolean;
   realProvidersEnabled: boolean;
   providerActive: boolean;
+  providerEndpoint: string | null;
+  project: Project;
+  styleBible: WorldStyleBible | null;
+  characterSheet: CharacterSheet | null;
+  envSheet: EnvironmentSheet | null;
   onGenerate: (sceneImageId: string, promptId: string) => void;
   onRegenerate: (sceneImageId: string, promptId: string) => void;
   onUpload: (sceneImageId: string, file: File) => void;
@@ -51,6 +57,8 @@ interface Props {
   onReject: (sceneImageId: string) => void;
   onCompare: (sceneImage: SceneImage) => void;
   onEditPrompt: (prompt: SceneVisualPrompt, updatedFields: Partial<SceneVisualPrompt>) => void;
+  onSceneImageUpdate: (updated: SceneImage) => void;
+  onAllApproved: () => void;
 }
 
 function ImageSourceBadge({ image }: { image: SceneImage }) {
@@ -69,13 +77,15 @@ function StatusBadge({ image }: { image: SceneImage }) {
   if (image.approved) return <Badge className="bg-[#10b981]/20 text-[#10b981] border-[#10b981]/30 font-mono text-[10px]">APPROVED</Badge>;
   if (image.rejected) return <Badge className="bg-[#ef4444]/20 text-[#ef4444] border-[#ef4444]/30 font-mono text-[10px]">REJECTED</Badge>;
   if (image.generation_status === 'generating') return <Badge className="bg-[#3b7eff]/20 text-[#3b7eff] border-[#3b7eff]/30 font-mono text-[10px]">GENERATING</Badge>;
-  if (image.generation_status === 'generated' || image.generation_status === 'manual_upload')
+  if (image.generation_status === 'generated' || image.generation_status === 'manual_upload' || image.generation_status === 'uploaded')
     return <Badge className="bg-[#f59e0b]/20 text-[#f59e0b] border-[#f59e0b]/30 font-mono text-[10px]">IN REVIEW</Badge>;
   if (image.generation_status === 'placeholder_preview')
     return <Badge className="bg-[#555]/30 text-[#999] border-[#555]/50 font-mono text-[10px]">PLACEHOLDER</Badge>;
   if (image.generation_status === 'failed') return <Badge className="bg-[#ef4444]/20 text-[#ef4444] border-[#ef4444]/30 font-mono text-[10px]">FAILED</Badge>;
   if (image.generation_status === 'provider_disabled')
     return <Badge className="bg-[#555]/30 text-[#888] border-[#555]/50 font-mono text-[10px]">PROVIDER OFF</Badge>;
+  if (image.generation_status === 'awaiting_upload' || image.generation_status === 'ready_for_upload')
+    return <Badge className="bg-[#f59e0b]/20 text-[#f59e0b] border-[#f59e0b]/30 font-mono text-[10px]">AWAITING UPLOAD</Badge>;
   return <Badge className="bg-[#222] text-[#555] border-[#333] font-mono text-[10px]">PENDING</Badge>;
 }
 
@@ -151,6 +161,11 @@ export default function SceneImageCard({
   isGenerating,
   realProvidersEnabled,
   providerActive,
+  providerEndpoint,
+  project,
+  styleBible,
+  characterSheet,
+  envSheet,
   onGenerate,
   onRegenerate,
   onUpload,
@@ -160,12 +175,15 @@ export default function SceneImageCard({
   onReject,
   onCompare,
   onEditPrompt,
+  onSceneImageUpdate,
+  onAllApproved,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [editedMainPrompt, setEditedMainPrompt] = useState(prompt?.main_image_prompt || '');
   const [editedNegativePrompt, setEditedNegativePrompt] = useState(prompt?.negative_prompt || '');
   const [showPlaceholderDraftConfirm, setShowPlaceholderDraftConfirm] = useState(false);
+  const [showOptionsPanel, setShowOptionsPanel] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const hasImage = !!image.image_url;
@@ -444,7 +462,7 @@ export default function SceneImageCard({
           </div>
         )}
 
-        {/* Upload scene image */}
+        {/* Upload scene image — shows Upload or Replace depending on whether image exists */}
         <Button
           size="sm"
           variant="ghost"
@@ -452,7 +470,7 @@ export default function SceneImageCard({
           className="text-[#3b7eff] hover:text-blue-300 border border-[#3b7eff]/30 font-mono text-xs h-7"
         >
           <Upload className="w-3 h-3 mr-1.5" />
-          Upload Scene Image
+          {hasImage ? 'Replace Image' : 'Upload Image'}
         </Button>
         <input
           ref={fileInputRef}
@@ -512,7 +530,10 @@ export default function SceneImageCard({
 
         {/* Approve — only for real or manually uploaded or accepted placeholder */}
         {!image.approved && (image.real_generated || image.manual_upload || image.use_placeholder_as_draft_final) &&
-          image.generation_status !== 'pending' && image.generation_status !== 'provider_disabled' && (
+          image.generation_status !== 'pending' &&
+          image.generation_status !== 'provider_disabled' &&
+          image.generation_status !== 'awaiting_upload' &&
+          image.generation_status !== 'ready_for_upload' && (
           <Button
             size="sm"
             onClick={() => onApprove(image.id)}
@@ -555,6 +576,47 @@ export default function SceneImageCard({
           </p>
         </div>
       )}
+
+      {/* Image Options Panel toggle */}
+      <div className="border-t border-[#1a1a1a]">
+        <button
+          onClick={() => setShowOptionsPanel(v => !v)}
+          className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-[#111] transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-[#8b5cf6]" />
+            <span className="font-mono text-xs text-[#888]">
+              Upload & Options
+            </span>
+            {image.approved && (
+              <span className="font-mono text-[10px] text-[#10b981]">· Approved</span>
+            )}
+            {!image.approved && image.image_url && (
+              <span className="font-mono text-[10px] text-[#f59e0b]">· Awaiting Approval</span>
+            )}
+          </div>
+          {showOptionsPanel
+            ? <ChevronUp className="w-3.5 h-3.5 text-[#555]" />
+            : <ChevronDown className="w-3.5 h-3.5 text-[#555]" />
+          }
+        </button>
+
+        {showOptionsPanel && (
+          <SceneImageOptionsPanel
+            image={image}
+            prompt={prompt}
+            project={project}
+            realProvidersEnabled={realProvidersEnabled}
+            providerActive={providerActive}
+            providerEndpoint={providerEndpoint}
+            styleBible={styleBible}
+            characterSheet={characterSheet}
+            envSheet={envSheet}
+            onSceneImageUpdate={onSceneImageUpdate}
+            onAllApproved={onAllApproved}
+          />
+        )}
+      </div>
 
       {/* Placeholder as Draft confirmation */}
       <AlertDialog open={showPlaceholderDraftConfirm} onOpenChange={setShowPlaceholderDraftConfirm}>

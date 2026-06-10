@@ -651,9 +651,9 @@ export default function GenerateSceneImagesSection({
     if ((allPromptsCovered && (dbApprovedCount ?? 0) >= totalPrompts) || noPromptManualWorkflow) {
       await supabase
         .from('projects')
-        .update({ status: 'Scene Images Approved', images_approved: true, updated_at: now })
+        .update({ status: 'Ready for Motion', images_approved: true, updated_at: now })
         .eq('id', project.id);
-      onProjectUpdate({ status: 'Scene Images Approved', images_approved: true });
+      onProjectUpdate({ status: 'Ready for Motion', images_approved: true });
       toast.success('All scene images approved! Your project is Ready for Motion.', { duration: 5000 });
     }
   };
@@ -716,30 +716,34 @@ export default function GenerateSceneImagesSection({
 
   // Manual upload — mark as manual_upload source; counts toward motion after approval
   const handleUpload = async (sceneImageId: string, file: File) => {
+    const img = sceneImages.find(si => si.id === sceneImageId);
     const ext = file.name.split('.').pop() ?? 'jpg';
-    const path = `scene-images/${project.id}/${sceneImageId}-manual.${ext}`;
+    const sceneIndex = img?.scene_number ?? 0;
+    const storagePath = `${project.id}/scene-${sceneIndex}-${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from('scene-images')
-      .upload(path, file, { upsert: true });
+      .upload(storagePath, file, { upsert: true });
     if (uploadError) {
       toast.error(`Upload failed: ${uploadError.message}`);
       return;
     }
-    const { data: urlData } = supabase.storage.from('scene-images').getPublicUrl(path);
+    const { data: urlData } = supabase.storage.from('scene-images').getPublicUrl(storagePath);
     const now = new Date().toISOString();
     const { error: dbError } = await supabase
       .from('scene_images')
       .update({
         image_url: urlData.publicUrl,
+        storage_path: storagePath,
         manual_upload: true,
         real_generated: false,
         placeholder: false,
         use_placeholder_as_draft_final: false,
-        provider_name: 'Manual Upload Only',
-        generation_status: 'generated',  // in-review state — awaiting approval
+        provider_name: 'manual_upload',
+        generation_status: 'uploaded',
         approved: false,
         rejected: false,
         pending: false,
+        updated_after_approval: false,
         updated_at: now,
       })
       .eq('id', sceneImageId);
@@ -750,7 +754,20 @@ export default function GenerateSceneImagesSection({
     setSceneImages(prev => {
       const next = prev.map(si =>
         si.id === sceneImageId
-          ? { ...si, image_url: urlData.publicUrl, manual_upload: true, real_generated: false, placeholder: false, use_placeholder_as_draft_final: false, generation_status: 'generated' as const, approved: false, rejected: false }
+          ? {
+              ...si,
+              image_url: urlData.publicUrl,
+              storage_path: storagePath,
+              manual_upload: true,
+              real_generated: false,
+              placeholder: false,
+              use_placeholder_as_draft_final: false,
+              provider_name: 'manual_upload',
+              generation_status: 'uploaded' as const,
+              approved: false,
+              rejected: false,
+              updated_after_approval: false,
+            }
           : si
       );
       onSceneImagesUpdate(next);
@@ -901,7 +918,9 @@ export default function GenerateSceneImagesSection({
             <div className="flex items-start gap-2">
               <span className="text-yellow-400/70 mt-0.5 shrink-0">•</span>
               <span className="text-xs text-muted-foreground/60">
-                Real AI Providers are disabled. Enable &quot;Real AI Providers&quot; in Image Provider Settings above to allow credit-based generation.
+                <strong className="text-foreground/60">Manual upload required. No image provider connected.</strong>{' '}
+                Real AI Providers are disabled (credit-safe mode). Use the <strong className="text-[#3b7eff]/80">Upload Image</strong> button
+                on each scene card to add images manually, or enable a provider in Image Provider Settings above.
               </span>
             </div>
           )}
@@ -909,7 +928,9 @@ export default function GenerateSceneImagesSection({
             <div className="flex items-start gap-2">
               <span className="text-yellow-400/70 mt-0.5 shrink-0">•</span>
               <span className="text-xs text-muted-foreground/60">
-                No image provider is connected. Add a provider endpoint in Image Provider Settings above, or upload images manually.
+                <strong className="text-foreground/60">Manual upload required.</strong> No image provider connected.
+                Use the <strong className="text-[#3b7eff]/80">Upload Image</strong> button on each scene card below,
+                or add a provider endpoint in Image Provider Settings above.
               </span>
             </div>
           )}
@@ -1026,6 +1047,11 @@ export default function GenerateSceneImagesSection({
               isGenerating={generatingIds.has(img.id)}
               realProvidersEnabled={realProvidersEnabled}
               providerActive={providerActive}
+              providerEndpoint={providerEndpoint}
+              project={project}
+              styleBible={styleBible}
+              characterSheet={characterSheet}
+              envSheet={envSheet}
               onGenerate={handleGenerateSingleClick}
               onRegenerate={(sceneImageId, promptId) => {
                 if (!realProvidersEnabled || !providerActive) {
@@ -1041,6 +1067,16 @@ export default function GenerateSceneImagesSection({
               onReject={handleReject}
               onCompare={setCompareTarget}
               onEditPrompt={handleEditPrompt}
+              onSceneImageUpdate={(updated) => {
+                setSceneImages(prev => {
+                  const next = prev.map(si => si.id === updated.id ? updated : si);
+                  onSceneImagesUpdate(next);
+                  return next;
+                });
+              }}
+              onAllApproved={() => {
+                onProjectUpdate({ status: 'Ready for Motion', images_approved: true });
+              }}
             />
           ))}
         </div>

@@ -34,3 +34,4 @@ history/*.json
 .skills
 tasks
 !.env.example
+historical_context.txt

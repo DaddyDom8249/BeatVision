@@ -236,7 +236,10 @@ export type ImageGenerationStatus =
   | 'manual_upload'
   | 'placeholder_preview'
   | 'provider_disabled'
-  | 'ready_for_upload';
+  | 'ready_for_upload'
+  | 'awaiting_upload'
+  | 'uploaded'
+  | 'selected';
 
 export type BatchStatus = 'pending' | 'generating' | 'completed' | 'failed' | 'partial';
 
@@ -250,6 +253,7 @@ export interface SceneImage {
   timestamp_range: string | null;
   image_url: string | null;
   thumbnail_url: string | null;
+  storage_path: string | null;
   prompt_used: string | null;
   prompt_summary: string | null;
   mood: string | null;
@@ -282,6 +286,25 @@ export interface SceneImage {
   placeholder_accent: string | null;
   placeholder_label_1: string | null;
   placeholder_label_2: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SceneImageOption {
+  id: string;
+  project_id: string;
+  scene_image_id: string;
+  owner_id: string | null;
+  option_index: number | null;
+  source_type: string;
+  image_url: string | null;
+  storage_path: string | null;
+  provider: string | null;
+  prompt_text: string | null;
+  reference_image_url: string | null;
+  status: string;
+  selected: boolean;
+  metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
