@@ -1296,6 +1296,11 @@ export default function SegmentedVideoRenderer({
   const rendered = segments.filter(s => s.render_status !== 'Not Rendered' && s.render_status !== 'Failed').length;
   const approved = segments.filter(s => s.approved).length;
   const failed = segments.filter(s => s.failed).length;
+  const renderableSegments = segments.filter(s =>
+    s.active &&
+    !s.approved &&
+    (s.render_status === 'Not Rendered' || s.failed || s.simulated_preview || s.fallback_rendered)
+  ).length;
 
   const canStitch = segments.length > 0 && videoBlockers.length === 0;
   const browserBlockers = computeBrowserRenderBlockers();
@@ -1657,7 +1662,7 @@ export default function SegmentedVideoRenderer({
             <div className="flex flex-wrap gap-2">
               <Button
                 onClick={handleRenderAll}
-                disabled={renderingAll || notRendered === 0}
+                disabled={renderingAll || renderableSegments === 0}
                 className="gap-2"
               >
                 {renderingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
