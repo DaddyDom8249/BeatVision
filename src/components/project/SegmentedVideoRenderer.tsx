@@ -1075,12 +1075,31 @@ export default function SegmentedVideoRenderer({
     }
 
     // 7. Draw frames segment by segment
-    const totalDuration = sortedSegs.reduce((acc, s) => acc + s.duration, 0);
+    // MediaRecorder records real wall-clock time, not "number of canvas frames drawn".
+    // If we draw frames too fast, a 4-minute timeline exports as a tiny WebM.
+    // So this render loop must pace itself at FPS speed.
+    const getSegStart = (seg: any) =>
+      Number(seg.start_time ?? seg.start_seconds ?? seg.audio_start_time ?? 0);
+
+    const getSegDuration = (seg: any) => {
+      const direct = Number(seg.duration ?? seg.duration_seconds ?? seg.audio_duration ?? 0);
+      if (direct > 0) return direct;
+
+      const end = Number(seg.end_time ?? seg.end_seconds ?? seg.audio_end_time ?? 0);
+      const start = getSegStart(seg);
+      return Math.max(0, end - start);
+    };
+
+    const totalDuration = effectiveDuration || sortedSegs.reduce((acc, s) => acc + getSegDuration(s), 0);
+    const frameMs = 1000 / FPS;
+    const renderStartedAt = performance.now();
+    let globalFrame = 0;
     let elapsed = 0;
 
     for (let si = 0; si < sortedSegs.length; si++) {
       const seg = sortedSegs[si];
-      const segFrames = Math.max(1, Math.round(seg.duration * FPS));
+      const segDuration = getSegDuration(seg);
+      const segFrames = Math.max(1, Math.round(segDuration * FPS));
       const bmp = seg.image_url ? imgBitmaps.get(seg.image_url) ?? null : null;
 
       for (let f = 0; f < segFrames; f++) {
@@ -1196,14 +1215,17 @@ export default function SegmentedVideoRenderer({
         ctx.font = '13px monospace';
         ctx.fillStyle = 'rgba(255,255,255,0.35)';
         ctx.textAlign = 'right';
-        ctx.fillText(formatTime(seg.start_time + (f / FPS)), W - 16, H - 16);
+        ctx.fillText(formatTime(getSegStart(seg) + (f / FPS)), W - 16, H - 16);
         ctx.textAlign = 'left';
 
-        // Yield to browser between frames (prevents blocking)
-        await new Promise<void>(resolve => setTimeout(resolve, 0));
+        // Pace the canvas so MediaRecorder captures real-time duration.
+        globalFrame += 1;
+        const targetWallTime = renderStartedAt + globalFrame * frameMs;
+        const waitMs = Math.max(0, targetWallTime - performance.now());
+        await new Promise<void>(resolve => setTimeout(resolve, waitMs));
       }
 
-      elapsed += seg.duration;
+      elapsed += segDuration;
       setBrowserRenderProgress(Math.round((elapsed / totalDuration) * 95));
     }
 
