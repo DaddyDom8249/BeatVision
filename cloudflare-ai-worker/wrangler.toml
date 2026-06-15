@@ -1,0 +1,6 @@
+name = "beatvision-ai-worker"
+main = "src/index.ts"
+compatibility_date = "2026-06-15"
+
+[ai]
+binding = "AI"
