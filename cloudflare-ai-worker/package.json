@@ -4,14 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
-  },
-  "dependencies": {
-    "wrangler": "latest"
-  },
-  "devDependencies": {
-    "@cloudflare/workers-types": "latest",
-    "typescript": "latest"
+    "deploy": "npx wrangler deploy",
+    "dev": "npx wrangler dev"
   }
 }
