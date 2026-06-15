@@ -70,6 +70,17 @@ export default function SceneImageOptionsPanel({
   const [selectingId, setSelectingId] = useState<string | null>(null);
   const [approving, setApproving] = useState(false);
 
+  const cloudflareWorkerBase = import.meta.env.VITE_CLOUDFLARE_AI_WORKER_URL?.trim?.() ?? '';
+  const cloudflareWorkerEndpoint = cloudflareWorkerBase
+    ? `${cloudflareWorkerBase.replace(/\/+$/, '')}/generate-image`
+    : null;
+  const activeProviderEndpoint = providerEndpoint || cloudflareWorkerEndpoint;
+  const providerReady =
+    realProvidersEnabled &&
+    Boolean(activeProviderEndpoint) &&
+    (providerActive || Boolean(cloudflareWorkerEndpoint));
+
+
   const loadOptions = useCallback(async () => {
     const { data } = await supabase
       .from('scene_image_options')
@@ -179,7 +190,7 @@ export default function SceneImageOptionsPanel({
 
   // ── Generate options via provider ───────────────────────────────────────────
   const handleGenerate = async () => {
-    if (!realProvidersEnabled || !providerActive || !providerEndpoint) {
+    if (!providerReady || !activeProviderEndpoint) {
       toast.info(
         image.image_url
           ? 'Manual upload saved. Regenerated options require an image provider.'
@@ -225,7 +236,7 @@ export default function SceneImageOptionsPanel({
           variation_total: variationCount,
         };
 
-        const res = await fetch(providerEndpoint, {
+        const res = await fetch(activeProviderEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -234,24 +245,52 @@ export default function SceneImageOptionsPanel({
           const errText = await res.text();
           throw new Error(`Provider returned ${res.status}: ${errText}`);
         }
-        const json = await res.json();
-
+        const contentType = res.headers.get('content-type') || '';
         let resolvedUrl: string | null = null;
+        let resolvedStoragePath: string | null = null;
 
-        if (json.image_url) {
-          resolvedUrl = json.image_url as string;
-        } else if (json.base64 || json.data) {
-          const b64 = json.base64 || json.data;
-          const byteStr = atob(b64);
-          const arr = new Uint8Array(byteStr.length);
-          for (let j = 0; j < byteStr.length; j++) arr[j] = byteStr.charCodeAt(j);
-          const blob = new Blob([arr], { type: 'image/png' });
-          const path = `${project.id}/scene-${image.scene_number}/option-${i + 1}-${Date.now()}.png`;
+        const uploadGeneratedBlob = async (blob: Blob, ext: 'jpg' | 'png' | 'webp' = 'jpg') => {
+          const path = `${project.id}/scene-${image.scene_number}/option-${i + 1}-${Date.now()}.${ext}`;
           const { error: blobErr } = await supabase.storage
             .from('scene-images')
-            .upload(path, blob, { upsert: true });
-          if (!blobErr) {
-            resolvedUrl = supabase.storage.from('scene-images').getPublicUrl(path).data.publicUrl;
+            .upload(path, blob, {
+              upsert: true,
+              contentType: blob.type || `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+            });
+
+          if (blobErr) {
+            throw new Error(`Generated image upload failed: ${blobErr.message}`);
+          }
+
+          resolvedStoragePath = path;
+          resolvedUrl = supabase.storage.from('scene-images').getPublicUrl(path).data.publicUrl;
+        };
+
+        if (contentType.startsWith('image/')) {
+          const blob = await res.blob();
+          const ext =
+            contentType.includes('png') ? 'png' :
+            contentType.includes('webp') ? 'webp' :
+            'jpg';
+
+          await uploadGeneratedBlob(blob, ext);
+        } else {
+          const json = await res.json();
+
+          if (json.image_url) {
+            resolvedUrl = json.image_url as string;
+          } else if (json.base64 || json.data) {
+            let b64 = json.base64 || json.data;
+            if (typeof b64 === 'string' && b64.includes(',')) {
+              b64 = b64.split(',').pop();
+            }
+
+            const byteStr = atob(b64);
+            const arr = new Uint8Array(byteStr.length);
+            for (let j = 0; j < byteStr.length; j++) arr[j] = byteStr.charCodeAt(j);
+
+            const blob = new Blob([arr], { type: 'image/png' });
+            await uploadGeneratedBlob(blob, 'png');
           }
         }
 
@@ -265,9 +304,9 @@ export default function SceneImageOptionsPanel({
             owner_id: (await supabase.auth.getUser()).data.user?.id ?? null,
             option_index: i + 1,
             source_type: 'ai_generated',
-            provider: 'provider',
+            provider: activeProviderEndpoint.includes('workers.dev') ? 'cloudflare_workers_ai' : 'provider',
             image_url: resolvedUrl,
-            storage_path: null,
+            storage_path: resolvedStoragePath,
             reference_image_url: referenceUrl,
             status: 'ready',
             selected: false,
