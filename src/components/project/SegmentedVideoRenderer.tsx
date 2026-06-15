@@ -1034,29 +1034,67 @@ export default function SegmentedVideoRenderer({
     // 5. Set up MediaRecorder on canvas stream
     const canvasStream = canvas.captureStream(FPS);
 
-    // Attempt to attach audio from a hidden <audio> element if song_file exists
+    // Attempt to attach audio.
+    // Prefer decoded AudioBufferSource over <audio>.play(), because mobile browsers can
+    // silently block element playback and MediaRecorder will capture a silent track.
     let audioCtx: AudioContext | null = null;
     let audioSource: MediaElementAudioSourceNode | null = null;
+    let audioBufferSource: AudioBufferSourceNode | null = null;
     let audioDestination: MediaStreamAudioDestinationNode | null = null;
     let audioEl: HTMLAudioElement | null = null;
     let audioAttached = false;
 
     if (project.song_file) {
       try {
-        audioEl = document.createElement('audio');
-        audioEl.src = project.song_file;
-        audioEl.crossOrigin = 'anonymous';
         audioCtx = new AudioContext();
-        audioSource = audioCtx.createMediaElementSource(audioEl);
+        if (audioCtx.state === 'suspended') {
+          await audioCtx.resume();
+        }
+
+        const audioResp = await fetch(project.song_file, { mode: 'cors' });
+        if (!audioResp.ok) {
+          throw new Error(`Audio fetch failed: ${audioResp.status}`);
+        }
+
+        const audioArrayBuffer = await audioResp.arrayBuffer();
+        const decodedAudio = await audioCtx.decodeAudioData(audioArrayBuffer.slice(0));
+
         audioDestination = audioCtx.createMediaStreamDestination();
-        audioSource.connect(audioDestination);
-        audioSource.connect(audioCtx.destination);
+        audioBufferSource = audioCtx.createBufferSource();
+        audioBufferSource.buffer = decodedAudio;
+        audioBufferSource.connect(audioDestination);
+
         const audioTracks = audioDestination.stream.getAudioTracks();
         audioTracks.forEach(t => canvasStream.addTrack(t));
-        audioAttached = true;
-      } catch {
-        // Audio attachment failed — continue without audio
-        audioAttached = false;
+        audioAttached = audioTracks.length > 0;
+      } catch (bufferAudioErr) {
+        console.warn('Decoded audio attachment failed, trying HTMLAudioElement fallback:', bufferAudioErr);
+
+        try {
+          audioEl = document.createElement('audio');
+          audioEl.src = project.song_file;
+          audioEl.crossOrigin = 'anonymous';
+          audioEl.preload = 'auto';
+          audioEl.muted = false;
+          audioEl.volume = 1;
+
+          audioCtx = audioCtx ?? new AudioContext();
+          if (audioCtx.state === 'suspended') {
+            await audioCtx.resume();
+          }
+
+          audioSource = audioCtx.createMediaElementSource(audioEl);
+          audioDestination = audioCtx.createMediaStreamDestination();
+          audioSource.connect(audioDestination);
+          audioSource.connect(audioCtx.destination);
+
+          const audioTracks = audioDestination.stream.getAudioTracks();
+          audioTracks.forEach(t => canvasStream.addTrack(t));
+          audioAttached = audioTracks.length > 0;
+        } catch (elementAudioErr) {
+          console.warn('Audio attachment failed; rendering silent video:', elementAudioErr);
+          audioAttached = false;
+        }
       }
     }
 
@@ -1069,9 +1107,24 @@ export default function SegmentedVideoRenderer({
 
     // 6. Start recording + audio playback
     recorder.start(200); // emit data every 200ms
-    if (audioEl && audioAttached) {
+
+    if (audioCtx && audioCtx.state === 'suspended') {
+      await audioCtx.resume();
+    }
+
+    if (audioBufferSource && audioAttached) {
+      try {
+        audioBufferSource.start(0);
+      } catch (err) {
+        console.warn('AudioBufferSource start failed; continuing video render:', err);
+      }
+    } else if (audioEl && audioAttached) {
       audioEl.currentTime = 0;
-      audioEl.play().catch(() => {});
+      try {
+        await audioEl.play();
+      } catch (err) {
+        console.warn('HTMLAudioElement playback failed; video may render silent:', err);
+      }
     }
 
     // 7. Draw frames segment by segment
@@ -1234,6 +1287,10 @@ export default function SegmentedVideoRenderer({
       recorder.onstop = () => resolve();
       recorder.stop();
     });
+    if (audioBufferSource) {
+      try { audioBufferSource.stop(); } catch {}
+      try { audioBufferSource.disconnect(); } catch {}
+    }
     if (audioEl) { audioEl.pause(); audioEl.src = ''; }
     if (audioCtx) { try { await audioCtx.close(); } catch {} }
 
