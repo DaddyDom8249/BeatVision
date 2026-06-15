@@ -458,8 +458,6 @@ export default function SceneImageOptionsPanel({
   const selectedOption = options.find(o => o.selected);
   const hasImage = !!image.image_url;
   const canApprove = hasImage && !image.approved;
-  const providerReady = realProvidersEnabled && providerActive && !!providerEndpoint;
-
   return (
     <div className="border-t border-[#1a1a1a] bg-[#0d0d0d] p-4 space-y-4">
       {/* ── Header label ── */}
