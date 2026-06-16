@@ -370,7 +370,7 @@ export default {
 
     const width = safeNum(payload.width, 1024);
     const height = safeNum(payload.height, 576);
-    const num_steps = safeNum(payload.num_steps, 28);
+    const num_steps = safeNum(payload.num_steps, 20);
     const guidance = safeNum(payload.guidance, 8.5);
 
     const input: AnyObj = {

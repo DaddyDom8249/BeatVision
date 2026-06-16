@@ -245,7 +245,7 @@ export default function SceneImageOptionsPanel({
           output_size: '1024x576',
           width: 1024,
           height: 576,
-          num_steps: 28,
+          num_steps: 20,
           guidance: 8.5,
           model_name: '',
 
