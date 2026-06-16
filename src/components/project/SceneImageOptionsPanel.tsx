@@ -219,21 +219,65 @@ export default function SceneImageOptionsPanel({
 
     for (let i = 0; i < variationCount; i++) {
       try {
+        const projectSeed =
+          Array.from(project.id || 'beatvision-project').reduce(
+            (acc, ch) => acc + ch.charCodeAt(0),
+            0
+          ) || 12345;
+
         const body = {
           prompt: prompt.main_image_prompt ?? '',
-          negative_prompt: prompt.negative_prompt ?? '',
+          negative_prompt: [
+            prompt.negative_prompt ?? '',
+            'different protagonist',
+            'inconsistent character',
+            'different outfit',
+            'different world',
+            'neon car show',
+            'glamour photoshoot',
+            'fashion editorial',
+            'text',
+            'watermark',
+            'logo'
+          ].filter(Boolean).join(', '),
+
           aspect_ratio: '16:9',
           output_size: '1024x576',
+          width: 1024,
+          height: 576,
+          num_steps: 28,
+          guidance: 8.5,
           model_name: '',
+
           project_id: project.id,
           scene_number: prompt.scene_number,
+          scene_title: (prompt as any).scene_title ?? `Scene ${prompt.scene_number}`,
+
           reference_image_url: referenceUrl,
+
           style_bible: styleBible ? JSON.stringify(styleBible) : '',
           character_sheet: characterSheet ? JSON.stringify(characterSheet) : '',
           environment_sheet: envSheet ? JSON.stringify(envSheet) : '',
-          seed: i + 1,
+
+          consistency_mode: 'locked',
+          project_seed: projectSeed,
+          seed: projectSeed + Number(prompt.scene_number ?? 0) * 100 + i,
+
           variation_index: i,
           variation_total: variationCount,
+
+          anchor_summary:
+            (characterSheet as any)?.identity_lock ||
+            (characterSheet as any)?.summary ||
+            'Same protagonist across scenes. Preserve identity, build, clothing logic, workwear, and overall look.',
+
+          world_summary:
+            (envSheet as any)?.world_identity_lock ||
+            (envSheet as any)?.summary ||
+            'Same gritty Alabama auto salvage yard world. Preserve rain, mud, metal, floodlights, industrial mood, and grounded realism.',
+
+          reference_notes:
+            'Preserve the current BeatVision protagonist and salvage-yard world. Keep continuity stronger than novelty. Do not drift into unrelated neon showroom/car commercial imagery unless explicitly requested.',
         };
 
         const res = await fetch(activeProviderEndpoint, {
@@ -277,10 +321,14 @@ export default function SceneImageOptionsPanel({
         } else {
           const json = await res.json();
 
+          if (json.ok === false) {
+            throw new Error(json.error || json.details || 'Provider returned an error.');
+          }
+
           if (json.image_url) {
             resolvedUrl = json.image_url as string;
-          } else if (json.base64 || json.data) {
-            let b64 = json.base64 || json.data;
+          } else if (json.base64 || json.data || json.image) {
+            let b64 = json.base64 || json.data || json.image;
             if (typeof b64 === 'string' && b64.includes(',')) {
               b64 = b64.split(',').pop();
             }
