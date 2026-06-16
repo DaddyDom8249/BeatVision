@@ -314,7 +314,8 @@ export default function SceneImageOptionsPanel({
           width: 1024,
           height: 576,
           num_steps: 20,
-          guidance: 10,
+          guidance: 9.5,
+          strength: 0.52,
           model_name: '',
 
           project_id: project.id,

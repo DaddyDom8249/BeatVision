@@ -278,6 +278,32 @@ async function normalizeAiImageResult(result: any): Promise<BodyInit | null> {
   return null;
 }
 
+
+async function fetchReferenceImageBytes(url: string): Promise<number[] | null> {
+  if (!url) return null;
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "BeatVision-Cloudflare-Worker/1.0"
+      }
+    });
+
+    if (!res.ok) return null;
+
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.startsWith("image/")) return null;
+
+    const buf = await res.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+
+    // Cloudflare Workers AI img2img accepts image as an array of 8-bit integers.
+    return Array.from(bytes);
+  } catch {
+    return null;
+  }
+}
+
 async function runImageModel(env: Env, model: string, input: AnyObj) {
   try {
     return await env.AI.run(model, input);
@@ -330,14 +356,24 @@ export default {
 
     const { finalPrompt, finalNegativePrompt, finalSeed } = buildPrompt(payload);
 
+    const referenceImageUrl = safeText(payload.reference_image_url);
+    const referenceImageBytes = referenceImageUrl
+      ? await fetchReferenceImageBytes(referenceImageUrl)
+      : null;
+
+    const requestedModel = safeText(payload.model_name);
+
     const model =
-      safeText(payload.model_name) ||
-      "@cf/stabilityai/stable-diffusion-xl-base-1.0";
+      requestedModel ||
+      (referenceImageBytes
+        ? "@cf/runwayml/stable-diffusion-v1-5-img2img"
+        : "@cf/stabilityai/stable-diffusion-xl-base-1.0");
 
     const width = safeNum(payload.width, 1024);
     const height = safeNum(payload.height, 576);
     const num_steps = safeNum(payload.num_steps, 20);
-    const guidance = safeNum(payload.guidance, 8.5);
+    const guidance = safeNum(payload.guidance, referenceImageBytes ? 9.5 : 10);
+    const strength = safeNum(payload.strength, 0.52);
 
     const input: AnyObj = {
       prompt: finalPrompt,
@@ -348,6 +384,11 @@ export default {
       guidance,
       seed: finalSeed
     };
+
+    if (referenceImageBytes) {
+      input.image = referenceImageBytes;
+      input.strength = Math.max(0.25, Math.min(0.78, strength));
+    }
 
     try {
       const result = await runImageModel(env, model, input);
@@ -360,6 +401,8 @@ export default {
           debug: {
             model,
             seed: finalSeed,
+            reference_image_used: Boolean(referenceImageBytes),
+            strength,
             prompt_used: finalPrompt,
             negative_prompt_used: finalNegativePrompt,
             result_type: typeof result,
@@ -386,6 +429,8 @@ export default {
         debug: {
           model,
           seed: finalSeed,
+          reference_image_used: Boolean(referenceImageBytes),
+          strength,
           prompt_used: finalPrompt,
           negative_prompt_used: finalNegativePrompt
         }
