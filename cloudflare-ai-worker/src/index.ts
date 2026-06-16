@@ -334,8 +334,10 @@ export default {
         ok: true,
         name: "BeatVision Cloudflare AI Worker",
         routes: ["/generate-image"],
-        model: "@cf/stabilityai/stable-diffusion-xl-base-1.0",
-        continuity_prompting: true
+        model: "@cf/runwayml/stable-diffusion-v1-5-img2img when reference image exists, otherwise @cf/stabilityai/stable-diffusion-xl-base-1.0",
+        continuity_prompting: true,
+        prompt_mode: "beatvision_lkq_song_world_v5_img2img_reference",
+        reference_img2img: true
       }, 200, request, env);
     }
 
