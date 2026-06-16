@@ -120,67 +120,70 @@ function buildPrompt(payload: AnyObj) {
   const rawScenePrompt = safeText(payload.prompt);
   const negativePrompt = safeText(payload.negative_prompt);
 
-  const styleBible = safeJsonParse(payload.style_bible);
-  const characterSheet = safeJsonParse(payload.character_sheet);
-  const environmentSheet = safeJsonParse(payload.environment_sheet);
-
   const projectId = safeText(payload.project_id, "beatvision-project");
-  const projectTitle = safeText(payload.project_title, "BeatVision music video");
-  const sceneNumber = safeNum(payload.scene_number, 0);
+  const projectTitle = safeText(payload.project_title, "Drain Rack Halo");
+  const sceneNumber = safeNum(payload.scene_number, 1);
   const variationIndex = safeNum(payload.variation_index, 0);
-  const sceneTitle = safeText(payload.scene_title, `Scene ${sceneNumber || "Unknown"}`);
-
-  const anchorSummary = safeText(payload.anchor_summary);
-  const worldSummary = safeText(payload.world_summary);
-  const referenceNotes = safeText(payload.reference_notes);
+  const sceneTitle = safeText(payload.scene_title, `Scene ${sceneNumber}`);
 
   const userSeed = safeNum(payload.seed, 0);
   const projectSeed = safeNum(payload.project_seed, hashString(projectId));
   const finalSeed = userSeed > 0 ? userSeed : projectSeed + sceneNumber * 100 + variationIndex;
 
-  const charIdentity =
-    safeText(characterSheet?.identity_lock) ||
-    safeText(characterSheet?.summary) ||
-    safeText(characterSheet?.signature_clothing) ||
-    "same female auto salvage-yard worker, neon yellow reflective safety vest, grounded workwear, tattooed forearms when visible";
+  const sceneActionByNumber: Record<number, string> = {
+    1: "early morning at an Alabama auto salvage yard, the female worker arrives near rows of stripped cars and the drain rack, dawn light, mud, metal, floodlights still glowing",
+    2: "close cinematic shot of the female worker pulling tangled wire harnesses from a stripped vehicle dashboard, wet arms, gloves, neon yellow reflective safety vest, rain dripping from metal",
+    3: "the female worker clearing strange objects from vehicles at the drain rack, draining fluids, puddles, oil sheen, industrial grit, LKQ pick-your-part atmosphere",
+    4: "the female worker directing rows of vehicles and setting the line, forklifts and loaders in the background, wet gravel, steel rows like grave markers",
+    5: "crush area of the salvage yard, engines rolled, parts ripped free, hydraulic machinery, mud, sparks, the worker surrounded by wrecked cars",
+    6: "rainy humid Alabama workday, worker exhausted but focused, stripped cars and wet metal all around, cinematic dark industrial realism",
+    7: "wide salvage-yard view with protagonist in foreground, rows of dead vehicles, floodlights, mud, puddles, orange dawn and blue shadows",
+    8: "close-up of dirty gloved hands gripping copper wire harnesses and vehicle parts, rainwater, mud, scratched metal, physical labor",
+    9: "the worker walking between wrecked cars in rain, reflective vest glowing, cinematic music video frame, dark emotional atmosphere",
+    10: "the worker at the drain rack under harsh floodlights, fluids draining, oil, water, wires, tools, stripped vehicles, gritty realism"
+  };
 
-  const worldIdentity =
-    safeText(environmentSheet?.world_identity_lock) ||
-    safeText(environmentSheet?.summary) ||
-    safeText(environmentSheet?.primary_location) ||
-    "rainy Alabama LKQ pick-your-part auto salvage yard, mud, stripped vehicles, wire harnesses, drain rack, metal, floodlights, humid industrial atmosphere";
+  const sceneAction =
+    sceneActionByNumber[sceneNumber] ||
+    rawScenePrompt ||
+    "female salvage-yard worker actively dismantling vehicles in a rainy Alabama auto salvage yard";
 
-  const styleIdentity =
-    safeText(styleBible?.visual_style) ||
-    safeText(styleBible?.summary) ||
-    "photoreal cinematic realism, gritty dark music-video frame, wet surfaces, dramatic industrial lighting, grounded documentary texture";
-
-  const actionPrompt = rawScenePrompt || [
-    "female salvage-yard worker actively dismantling a vehicle",
-    "pulling wire harnesses near a stripped dashboard",
-    "mud and rain on work clothes",
-    "junk cars and industrial lights in the background"
-  ].join(", ");
+  const BEATVISION_DNA = [
+    "PHOTOREALISTIC CINEMATIC MUSIC VIDEO STILL.",
+    "Dark gritty Alabama LKQ pick-your-part auto salvage yard.",
+    "Female auto dismantling worker, neon yellow reflective safety vest, dirty grounded workwear, gloves, wet skin and clothes, tattooed forearms when visible.",
+    "World details: drain rack, stripped cars, wire harnesses, muddy gravel, oil sheen puddles, rain, humid air, loaders, crushers, floodlights, wet metal, junkyard rows.",
+    "Mood: dark, emotional, industrial, exhausted, powerful, real labor, cinematic realism.",
+    "Camera: real lens, shallow depth of field, dramatic contrast, wet reflections, music-video framing.",
+    "This must look like a frame from the actual song world, not unrelated concept art."
+  ].join(" ");
 
   const finalPrompt = [
-    "Full-color photoreal cinematic music-video still frame.",
-    "Real camera look, 16:9 movie frame, gritty realism, no illustration.",
-    `Project/song world: ${projectTitle}.`,
+    BEATVISION_DNA,
+    `Song/project title: ${projectTitle}.`,
     `Scene ${sceneNumber}: ${sceneTitle}.`,
-    `Scene action: ${actionPrompt}.`,
-    `Protagonist continuity: ${charIdentity}.`,
-    `World continuity: ${worldIdentity}.`,
-    `Visual style: ${styleIdentity}.`,
-    anchorSummary ? `Anchor continuity: ${anchorSummary}.` : "",
-    worldSummary ? `World anchor: ${worldSummary}.` : "",
-    referenceNotes ? `Additional continuity notes: ${referenceNotes}.` : "",
-    "The frame must show the protagonist physically inside the salvage-yard scene doing the action.",
-    "Use real vehicles, wet mud, stripped car interiors, wires, tools, metal, rain, puddles, and industrial floodlights.",
-    "Make it look like a dark cinematic frame from the actual song, not a design document."
+    `Required scene action: ${sceneAction}.`,
+    rawScenePrompt ? `Additional scene prompt: ${rawScenePrompt}.` : "",
+    "The protagonist must be physically present inside the salvage yard scene doing the action.",
+    "The image must include salvage-yard evidence: wrecked vehicles, wet mud, stripped interiors, wire harnesses, drain rack, tools, metal, or industrial machinery.",
+    "No beach. No sunset field. No cartoon room. No empty corridor. No model sheet. No random concept panel.",
+    "Make it a finished cinematic frame, full color, realistic, grounded, dirty, wet, industrial."
   ].filter(Boolean).join("\n");
 
   const finalNegativePrompt = [
     negativePrompt,
+    "beach",
+    "ocean",
+    "lake",
+    "field",
+    "empty sunset landscape",
+    "person sitting at railing",
+    "balcony",
+    "peaceful vacation",
+    "cartoon room",
+    "comic panel",
+    "stained glass border",
+    "storybook illustration",
     "character turnaround",
     "character model sheet",
     "reference sheet",
@@ -194,8 +197,6 @@ function buildPrompt(payload: AnyObj) {
     "architecture concept",
     "environment-only image",
     "no protagonist",
-    "comic panel",
-    "cartoon",
     "anime",
     "illustration",
     "sketch",
@@ -203,8 +204,6 @@ function buildPrompt(payload: AnyObj) {
     "grayscale sketch",
     "blueprint",
     "wireframe",
-    "stained glass border",
-    "storybook frame",
     "fashion editorial",
     "glamour photoshoot",
     "futuristic showroom",

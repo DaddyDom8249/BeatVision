@@ -227,6 +227,12 @@ export default function SceneImageOptionsPanel({
             0
           ) || 12345;
 
+        const projectSeed =
+          Array.from(project.id || 'beatvision-project').reduce(
+            (acc, ch) => acc + ch.charCodeAt(0),
+            0
+          ) || 12345;
+
         const sceneText = [
           (prompt as any).scene_title ?? `Scene ${prompt.scene_number}`,
           (prompt as any).scene_description ?? '',
@@ -236,17 +242,29 @@ export default function SceneImageOptionsPanel({
 
         const body = {
           prompt: [
-            'Full-color photoreal cinematic music-video still frame.',
-            'Real camera look, gritty realism, 16:9 movie frame, not a sketch, not a model sheet, not concept art.',
-            `Song/project: ${project.title ?? 'Drain Rack Halo'}.`,
-            'World: rainy Alabama LKQ pick-your-part auto salvage yard, mud, stripped cars, wire harnesses, drain rack, industrial metal, floodlights, wet work clothes.',
-            'Protagonist: female salvage-yard worker / auto dismantling worker in neon yellow reflective safety vest, grounded workwear, tattooed forearms when visible.',
-            'The protagonist must be physically inside the salvage-yard scene doing the action.',
+            'PHOTOREALISTIC CINEMATIC MUSIC VIDEO STILL.',
+            'Dark gritty Alabama LKQ pick-your-part auto salvage yard.',
+            'Female auto dismantling worker in neon yellow reflective safety vest, dirty grounded workwear, gloves, wet clothes, tattooed forearms when visible.',
+            'Drain rack, stripped cars, wire harnesses, muddy gravel, oil sheen puddles, rain, humid air, loaders, crushers, floodlights, wet metal, junkyard rows.',
+            'Must show the protagonist physically inside the salvage yard scene doing the action.',
+            'No beach, no sunset field, no cartoon room, no reference sheet, no empty corridor.',
             sceneText,
           ].filter(Boolean).join(' '),
 
           negative_prompt: [
             prompt.negative_prompt ?? '',
+            'beach',
+            'ocean',
+            'lake',
+            'field',
+            'empty sunset landscape',
+            'person sitting at railing',
+            'balcony',
+            'peaceful vacation',
+            'cartoon room',
+            'comic panel',
+            'stained glass border',
+            'storybook illustration',
             'character turnaround',
             'character model sheet',
             'reference sheet',
@@ -260,8 +278,6 @@ export default function SceneImageOptionsPanel({
             'architecture concept',
             'environment-only image',
             'no protagonist',
-            'comic panel',
-            'cartoon',
             'anime',
             'illustration',
             'sketch',
@@ -269,8 +285,6 @@ export default function SceneImageOptionsPanel({
             'grayscale sketch',
             'blueprint',
             'wireframe',
-            'stained glass border',
-            'storybook frame',
             'fashion editorial',
             'glamour photoshoot',
             'futuristic showroom',
@@ -290,11 +304,11 @@ export default function SceneImageOptionsPanel({
           width: 1024,
           height: 576,
           num_steps: 20,
-          guidance: 8.5,
+          guidance: 10,
           model_name: '',
 
           project_id: project.id,
-          project_title: project.title ?? '',
+          project_title: project.title ?? 'Drain Rack Halo',
           scene_number: prompt.scene_number,
           scene_title: (prompt as any).scene_title ?? `Scene ${prompt.scene_number}`,
 
@@ -312,17 +326,13 @@ export default function SceneImageOptionsPanel({
           variation_total: variationCount,
 
           anchor_summary:
-            (characterSheet as any)?.identity_lock ||
-            (characterSheet as any)?.summary ||
-            'Same female salvage-yard worker, reflective safety vest, grounded workwear, muddy industrial setting.',
+            'Same female salvage-yard worker, reflective safety vest, muddy grounded workwear, dark LKQ auto dismantling world.',
 
           world_summary:
-            (envSheet as any)?.world_identity_lock ||
-            (envSheet as any)?.summary ||
-            'Rainy Alabama auto salvage yard, stripped cars, wire harnesses, drain rack, mud, puddles, metal, floodlights.',
+            'Rainy Alabama auto salvage yard, drain rack, stripped cars, wire harnesses, mud, puddles, oil sheen, tools, wet metal, floodlights.',
 
           reference_notes:
-            'Generate an actual scene from the song world. Do not create a character sheet, model sheet, comic panel, empty corridor, or environment-only concept image.',
+            'Generate an actual scene from the song world. Do not create beaches, sunsets, cartoons, model sheets, empty corridors, or unrelated concept images.',
         };
 
         const requestEndpoint = (() => {
