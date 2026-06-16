@@ -146,7 +146,7 @@ function buildPrompt(payload: AnyObj) {
   const sceneAction =
     sceneActionByNumber[sceneNumber] ||
     rawScenePrompt ||
-    "female salvage-yard worker actively dismantling vehicles in a rainy Alabama auto salvage yard";
+    "female salvage-yard worker actively pulling wire harnesses or draining fluids from a stripped wrecked vehicle in a rainy Alabama auto salvage yard";
 
   const BEATVISION_DNA = [
     "PHOTOREALISTIC CINEMATIC MUSIC VIDEO STILL.",
@@ -165,7 +165,7 @@ function buildPrompt(payload: AnyObj) {
     `Required scene action: ${sceneAction}.`,
     rawScenePrompt ? `Additional scene prompt: ${rawScenePrompt}.` : "",
     "The protagonist must be physically present inside the salvage yard scene doing the action.",
-    "The image must include salvage-yard evidence: wrecked vehicles, wet mud, stripped interiors, wire harnesses, drain rack, tools, metal, or industrial machinery.",
+    "The image must clearly include multiple salvage-yard evidence elements: stripped wrecked vehicles, open car interiors, dangling wire harnesses, drain rack, greasy tools, wet mud, oil sheen puddles, scrap metal, loaders, crushers, or industrial floodlights.",
     "No beach. No sunset field. No cartoon room. No empty corridor. No model sheet. No random concept panel.",
     "Make it a finished cinematic frame, full color, realistic, grounded, dirty, wet, industrial."
   ].filter(Boolean).join("\n");
@@ -176,7 +176,7 @@ function buildPrompt(payload: AnyObj) {
     "ocean",
     "lake",
     "field",
-    "empty sunset landscape",
+    "empty sunset landscape, parking lot, roadside, clean road, open field, beach, lake, ocean",
     "person sitting at railing",
     "balcony",
     "peaceful vacation",
@@ -207,7 +207,7 @@ function buildPrompt(payload: AnyObj) {
     "fashion editorial",
     "glamour photoshoot",
     "futuristic showroom",
-    "neon car show",
+    "neon car show, taxi, yellow cab, clean intact sedan, roadside cleanup, parking lot, shovel, broom, rake",
     "toy figure",
     "3D mannequin",
     "unrelated character",
