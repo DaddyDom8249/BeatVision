@@ -964,12 +964,17 @@ export default function SegmentedVideoRenderer({
   // Falls back gracefully if MediaRecorder or captureStream are unavailable.
 
   const handleSegmentImageOverride = (updatedSegment: any) => {
+    if (!updatedSegment?.id) return;
+
     setSegments((prev: any[]) =>
       prev.map((seg: any) =>
-        seg.id === updatedSegment.id ? { ...seg, ...updatedSegment } : seg
+        seg.id === updatedSegment.id
+          ? { ...seg, ...updatedSegment }
+          : seg
       )
     );
   };
+
 
   const handleBrowserRender = async () => {
     // 1. Check MediaRecorder support and pick best available codec
