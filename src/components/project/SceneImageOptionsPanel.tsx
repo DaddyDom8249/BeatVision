@@ -227,7 +227,17 @@ export default function SceneImageOptionsPanel({
           ) || 12345;
 
         const body = {
-          prompt: prompt.main_image_prompt ?? '',
+          prompt: [
+            'Finished cinematic music video frame, not a concept sheet or reference sheet.',
+            'Same gritty Alabama auto salvage yard world from the song.',
+            'Female salvage-yard worker / dismantling worker in reflective safety vest and grounded workwear.',
+            'Rain, mud, stripped cars, wire harnesses, drain rack, floodlights, industrial metal, LKQ pick-your-part atmosphere.',
+            'Preserve the same protagonist and world continuity.',
+            prompt.main_image_prompt ?? '',
+            (prompt as any).visual_prompt ?? '',
+            (prompt as any).scene_description ?? '',
+            (prompt as any).scene_title ?? '',
+          ].filter(Boolean).join(' '),
           negative_prompt: [
             prompt.negative_prompt ?? '',
             'different protagonist',
@@ -239,7 +249,20 @@ export default function SceneImageOptionsPanel({
             'fashion editorial',
             'text',
             'watermark',
-            'logo'
+            'logo',
+            'character turnaround',
+            'model sheet',
+            'reference sheet',
+            'orthographic view',
+            'T-pose',
+            'blank white background',
+            'empty hallway',
+            'empty corridor',
+            'blueprint',
+            'grayscale sketch',
+            '3D mannequin',
+            'environment-only image',
+            'no protagonist'
           ].filter(Boolean).join(', '),
 
           aspect_ratio: '16:9',

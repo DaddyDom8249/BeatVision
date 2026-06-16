@@ -139,13 +139,17 @@ function buildPrompt(payload: AnyObj) {
   const finalSeed = userSeed > 0 ? userSeed : projectSeed + sceneNumber * 100 + variationIndex;
 
   const strictRules = bulletList("STRICT CONTINUITY RULES:", [
-    "This image belongs to one continuous BeatVision visual story.",
+    "This image is a finished cinematic music-video frame, not a concept sheet.",
+    "Show one active scene from the song world, with the protagonist inside the environment.",
     "Keep the same protagonist identity across scenes.",
     "Preserve the same wardrobe logic, body proportions, mood, and world identity.",
     "Prioritize continuity over novelty.",
+    "The world is a gritty Alabama auto salvage yard / LKQ-style dismantling yard unless the scene explicitly says otherwise.",
+    "The protagonist should feel like a real salvage-yard worker, not a fashion model, superhero, mannequin, or 3D reference model.",
+    "Do not create character turnaround sheets, model sheets, blank white background studies, orthographic views, T-poses, empty hallways, blueprints, or environment-only concept art.",
     "Do not replace the salvage-yard world with a futuristic neon showroom.",
     "Do not create glamour fashion imagery unless the scene explicitly asks for it.",
-    "Keep the scene grounded, gritty, cinematic, and physically believable.",
+    "Keep the scene grounded, gritty, cinematic, wet, muddy, industrial, and physically believable.",
     consistencyMode === "final" ? "Final production mode: minimize drift as much as possible." : "",
     consistencyMode === "locked" ? "Locked continuity mode: keep character/world/style stable." : ""
   ]);
@@ -206,11 +210,13 @@ function buildPrompt(payload: AnyObj) {
   ]);
 
   const renderingGoal = bulletList("RENDERING GOAL:", [
-    "One cinematic storyboard image.",
-    "Music-video ready framing.",
+    "One finished cinematic storyboard frame from the song, full scene composition.",
+    "The protagonist must be doing the scene action, not posing for a reference sheet.",
+    "Music-video ready framing with cinematic depth, rain, mud, metal, vehicles, tools, and industrial atmosphere.",
     "Photoreal or near-photoreal unless style bible says otherwise.",
-    "Strong atmosphere, clear subject, consistent world.",
-    "No text overlays, no logos, no UI, no split panels, no collage."
+    "Strong atmosphere, clear subject, consistent salvage-yard world.",
+    "No text overlays, no logos, no UI, no split panels, no collage.",
+    "No character turnaround sheet, no model sheet, no empty environment plate, no grayscale sketch."
   ]);
 
   const finalPrompt = compact([
@@ -256,7 +262,24 @@ function buildPrompt(payload: AnyObj) {
     "text",
     "watermark",
     "logo",
-    "UI elements"
+    "UI elements",
+    "character turnaround",
+    "character model sheet",
+    "reference sheet",
+    "orthographic view",
+    "front side back view",
+    "T-pose",
+    "blank white background",
+    "empty hallway",
+    "empty corridor",
+    "architecture concept",
+    "blueprint",
+    "wireframe",
+    "gray sketch",
+    "3D mannequin",
+    "toy figure",
+    "environment-only image",
+    "no protagonist"
   ].filter(Boolean).join(", ");
 
   return {
