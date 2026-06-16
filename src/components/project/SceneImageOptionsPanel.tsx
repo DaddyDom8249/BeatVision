@@ -216,6 +216,7 @@ export default function SceneImageOptionsPanel({
       .neq('source_type', 'manual_upload');
 
     const generated: SceneImageOption[] = [];
+    const failures: string[] = [];
 
     for (let i = 0; i < variationCount; i++) {
       try {
@@ -280,7 +281,29 @@ export default function SceneImageOptionsPanel({
             'Preserve the current BeatVision protagonist and salvage-yard world. Keep continuity stronger than novelty. Do not drift into unrelated neon showroom/car commercial imagery unless explicitly requested.',
         };
 
-        const res = await fetch(activeProviderEndpoint, {
+        const requestEndpoint = (() => {
+          const raw = activeProviderEndpoint.trim();
+
+          try {
+            const url = new URL(raw);
+
+            // Cloudflare Worker may be saved as the base URL by mistake.
+            // Route it to /generate-image automatically.
+            if (
+              url.hostname.endsWith('workers.dev') &&
+              (url.pathname === '/' || url.pathname === '')
+            ) {
+              url.pathname = '/generate-image';
+              return url.toString();
+            }
+          } catch {
+            // Keep raw endpoint if parsing fails.
+          }
+
+          return raw;
+        })();
+
+        const res = await fetch(requestEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -366,15 +389,18 @@ export default function SceneImageOptionsPanel({
 
         if (optRow) generated.push(optRow as SceneImageOption);
       } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
         console.error(`Variation ${i + 1} failed:`, err);
-        toast.error(`Variation ${i + 1} failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        failures.push(`Variation ${i + 1}: ${message}`);
+        toast.error(`Variation ${i + 1} failed: ${message}`);
       }
     }
 
     await loadOptions();
 
     if (generated.length === 0) {
-      toast.warning('No variations were returned by the provider. Upload an image manually or check your provider settings.');
+      const lastFailure = failures.length ? ` Last error: ${failures[failures.length - 1]}` : '';
+      toast.warning(`No variations were returned by the provider.${lastFailure}`);
     } else {
       toast.success(`${generated.length} of ${variationCount} image options generated. Tap "Use This Image" to select one.`);
     }

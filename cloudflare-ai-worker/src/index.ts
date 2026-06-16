@@ -337,7 +337,7 @@ export default {
 
     const url = new URL(request.url);
 
-    if (url.pathname === "/" || url.pathname === "/health") {
+    if ((url.pathname === "/" || url.pathname === "/health") && request.method === "GET") {
       return jsonResponse({
         ok: true,
         name: "BeatVision Cloudflare AI Worker",
@@ -347,7 +347,7 @@ export default {
       }, 200, request, env);
     }
 
-    if (url.pathname !== "/generate-image") {
+    if (url.pathname !== "/generate-image" && url.pathname !== "/") {
       return jsonResponse({ ok: false, error: "Route not found." }, 404, request, env);
     }
 
