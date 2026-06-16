@@ -227,11 +227,6 @@ export default function SceneImageOptionsPanel({
             0
           ) || 12345;
 
-        const projectSeed =
-          Array.from(project.id || 'beatvision-project').reduce(
-            (acc, ch) => acc + ch.charCodeAt(0),
-            0
-          ) || 12345;
 
         const sceneText = [
           (prompt as any).scene_title ?? `Scene ${prompt.scene_number}`,
