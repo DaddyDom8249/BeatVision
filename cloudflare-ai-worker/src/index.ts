@@ -117,7 +117,7 @@ function hashString(input: string): number {
 }
 
 function buildPrompt(payload: AnyObj) {
-  const mainPrompt = safeText(payload.prompt);
+  const rawScenePrompt = safeText(payload.prompt);
   const negativePrompt = safeText(payload.negative_prompt);
 
   const styleBible = safeJsonParse(payload.style_bible);
@@ -125,161 +125,104 @@ function buildPrompt(payload: AnyObj) {
   const environmentSheet = safeJsonParse(payload.environment_sheet);
 
   const projectId = safeText(payload.project_id, "beatvision-project");
+  const projectTitle = safeText(payload.project_title, "BeatVision music video");
   const sceneNumber = safeNum(payload.scene_number, 0);
   const variationIndex = safeNum(payload.variation_index, 0);
   const sceneTitle = safeText(payload.scene_title, `Scene ${sceneNumber || "Unknown"}`);
 
-  const consistencyMode = safeText(payload.consistency_mode, "locked");
-  const referenceNotes = safeText(payload.reference_notes);
   const anchorSummary = safeText(payload.anchor_summary);
   const worldSummary = safeText(payload.world_summary);
+  const referenceNotes = safeText(payload.reference_notes);
 
   const userSeed = safeNum(payload.seed, 0);
   const projectSeed = safeNum(payload.project_seed, hashString(projectId));
   const finalSeed = userSeed > 0 ? userSeed : projectSeed + sceneNumber * 100 + variationIndex;
 
-  const strictRules = bulletList("STRICT CONTINUITY RULES:", [
-    "This image is a finished cinematic music-video frame, not a concept sheet.",
-    "Show one active scene from the song world, with the protagonist inside the environment.",
-    "Keep the same protagonist identity across scenes.",
-    "Preserve the same wardrobe logic, body proportions, mood, and world identity.",
-    "Prioritize continuity over novelty.",
-    "The world is a gritty Alabama auto salvage yard / LKQ-style dismantling yard unless the scene explicitly says otherwise.",
-    "The protagonist should feel like a real salvage-yard worker, not a fashion model, superhero, mannequin, or 3D reference model.",
-    "Do not create character turnaround sheets, model sheets, blank white background studies, orthographic views, T-poses, empty hallways, blueprints, or environment-only concept art.",
-    "Do not replace the salvage-yard world with a futuristic neon showroom.",
-    "Do not create glamour fashion imagery unless the scene explicitly asks for it.",
-    "Keep the scene grounded, gritty, cinematic, wet, muddy, industrial, and physically believable.",
-    consistencyMode === "final" ? "Final production mode: minimize drift as much as possible." : "",
-    consistencyMode === "locked" ? "Locked continuity mode: keep character/world/style stable." : ""
-  ]);
+  const charIdentity =
+    safeText(characterSheet?.identity_lock) ||
+    safeText(characterSheet?.summary) ||
+    safeText(characterSheet?.signature_clothing) ||
+    "same female auto salvage-yard worker, neon yellow reflective safety vest, grounded workwear, tattooed forearms when visible";
 
-  const characterBlock = objectToBulletSummary("CHARACTER LOCK:", characterSheet, [
-    "character_name",
-    "role",
-    "gender_presentation",
-    "age_appearance",
-    "body_type",
-    "face_shape",
-    "hair",
-    "eyes",
-    "skin_tone",
-    "signature_clothing",
-    "wardrobe",
-    "accessories",
-    "tattoos",
-    "expression",
-    "identity_lock"
-  ]);
+  const worldIdentity =
+    safeText(environmentSheet?.world_identity_lock) ||
+    safeText(environmentSheet?.summary) ||
+    safeText(environmentSheet?.primary_location) ||
+    "rainy Alabama LKQ pick-your-part auto salvage yard, mud, stripped vehicles, wire harnesses, drain rack, metal, floodlights, humid industrial atmosphere";
 
-  const environmentBlock = objectToBulletSummary("WORLD / ENVIRONMENT LOCK:", environmentSheet, [
-    "primary_location",
-    "time_of_day",
-    "weather",
-    "mood",
-    "lighting",
-    "palette",
-    "surface_details",
-    "background_elements",
-    "world_identity_lock"
-  ]);
+  const styleIdentity =
+    safeText(styleBible?.visual_style) ||
+    safeText(styleBible?.summary) ||
+    "photoreal cinematic realism, gritty dark music-video frame, wet surfaces, dramatic industrial lighting, grounded documentary texture";
 
-  const styleBlock = objectToBulletSummary("STYLE LOCK:", styleBible, [
-    "visual_style",
-    "camera_style",
-    "color_palette",
-    "contrast",
-    "texture",
-    "realism_level",
-    "cinematic_reference",
-    "do_not_introduce"
-  ]);
+  const actionPrompt = rawScenePrompt || [
+    "female salvage-yard worker actively dismantling a vehicle",
+    "pulling wire harnesses near a stripped dashboard",
+    "mud and rain on work clothes",
+    "junk cars and industrial lights in the background"
+  ].join(", ");
 
-  const referenceBlock = bulletList("REFERENCE / ANCHOR NOTES:", [
-    anchorSummary,
-    worldSummary,
-    referenceNotes,
-    payload.reference_image_url
-      ? "A reference image exists in BeatVision. Use its identity, wardrobe logic, and world feel as text-guided continuity."
-      : ""
-  ]);
-
-  const sceneBlock = bulletList("SCENE INSTRUCTION:", [
-    `Scene title: ${sceneTitle}`,
-    mainPrompt
-  ]);
-
-  const renderingGoal = bulletList("RENDERING GOAL:", [
-    "One finished cinematic storyboard frame from the song, full scene composition.",
-    "The protagonist must be doing the scene action, not posing for a reference sheet.",
-    "Music-video ready framing with cinematic depth, rain, mud, metal, vehicles, tools, and industrial atmosphere.",
-    "Photoreal or near-photoreal unless style bible says otherwise.",
-    "Strong atmosphere, clear subject, consistent salvage-yard world.",
-    "No text overlays, no logos, no UI, no split panels, no collage.",
-    "No character turnaround sheet, no model sheet, no empty environment plate, no grayscale sketch."
-  ]);
-
-  const finalPrompt = compact([
-    "You are generating one BeatVision scene image for a continuous music-video storyboard.",
-    "",
-    strictRules,
-    "",
-    characterBlock,
-    "",
-    environmentBlock,
-    "",
-    styleBlock,
-    "",
-    referenceBlock,
-    "",
-    sceneBlock,
-    "",
-    renderingGoal
-  ]);
+  const finalPrompt = [
+    "Full-color photoreal cinematic music-video still frame.",
+    "Real camera look, 16:9 movie frame, gritty realism, no illustration.",
+    `Project/song world: ${projectTitle}.`,
+    `Scene ${sceneNumber}: ${sceneTitle}.`,
+    `Scene action: ${actionPrompt}.`,
+    `Protagonist continuity: ${charIdentity}.`,
+    `World continuity: ${worldIdentity}.`,
+    `Visual style: ${styleIdentity}.`,
+    anchorSummary ? `Anchor continuity: ${anchorSummary}.` : "",
+    worldSummary ? `World anchor: ${worldSummary}.` : "",
+    referenceNotes ? `Additional continuity notes: ${referenceNotes}.` : "",
+    "The frame must show the protagonist physically inside the salvage-yard scene doing the action.",
+    "Use real vehicles, wet mud, stripped car interiors, wires, tools, metal, rain, puddles, and industrial floodlights.",
+    "Make it look like a dark cinematic frame from the actual song, not a design document."
+  ].filter(Boolean).join("\n");
 
   const finalNegativePrompt = [
     negativePrompt,
-    "different protagonist",
-    "inconsistent character",
-    "different outfit",
-    "different body type",
-    "unrelated location",
-    "futuristic neon showroom",
-    "vaporwave car show",
+    "character turnaround",
+    "character model sheet",
+    "reference sheet",
+    "front side back view",
+    "orthographic view",
+    "T-pose",
+    "blank white background",
+    "white studio background",
+    "empty hallway",
+    "empty corridor",
+    "architecture concept",
+    "environment-only image",
+    "no protagonist",
+    "comic panel",
+    "cartoon",
+    "anime",
+    "illustration",
+    "sketch",
+    "line art",
+    "grayscale sketch",
+    "blueprint",
+    "wireframe",
+    "stained glass border",
+    "storybook frame",
     "fashion editorial",
     "glamour photoshoot",
-    "anime",
-    "cartoon",
-    "illustration",
-    "low quality",
-    "blurry",
-    "distorted",
-    "extra fingers",
-    "extra limbs",
-    "deformed anatomy",
-    "cropped face",
-    "bad hands",
+    "futuristic showroom",
+    "neon car show",
+    "toy figure",
+    "3D mannequin",
+    "unrelated character",
+    "different outfit",
+    "different location",
     "text",
     "watermark",
     "logo",
     "UI elements",
-    "character turnaround",
-    "character model sheet",
-    "reference sheet",
-    "orthographic view",
-    "front side back view",
-    "T-pose",
-    "blank white background",
-    "empty hallway",
-    "empty corridor",
-    "architecture concept",
-    "blueprint",
-    "wireframe",
-    "gray sketch",
-    "3D mannequin",
-    "toy figure",
-    "environment-only image",
-    "no protagonist"
+    "low quality",
+    "blurry",
+    "distorted anatomy",
+    "extra limbs",
+    "bad hands"
   ].filter(Boolean).join(", ");
 
   return {
@@ -288,6 +231,7 @@ function buildPrompt(payload: AnyObj) {
     finalSeed
   };
 }
+
 
 function base64ToUint8Array(base64: string) {
   const clean = base64.includes(",") ? base64.split(",").pop() || base64 : base64;

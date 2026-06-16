@@ -208,10 +208,11 @@ export default function SceneImageOptionsPanel({
     const referenceUrl = image.image_url ?? null;
     const now = new Date().toISOString();
 
-    // Mark existing generated options as stale
+    // Clear old generated AI options before creating new ones.
+    // Keep manual/reference options so user uploads are not touched.
     await supabase
       .from('scene_image_options')
-      .update({ status: 'stale', updated_at: now })
+      .delete()
       .eq('scene_image_id', image.id)
       .neq('source_type', 'manual_upload');
 
@@ -226,43 +227,62 @@ export default function SceneImageOptionsPanel({
             0
           ) || 12345;
 
+        const sceneText = [
+          (prompt as any).scene_title ?? `Scene ${prompt.scene_number}`,
+          (prompt as any).scene_description ?? '',
+          (prompt as any).visual_prompt ?? '',
+          prompt.main_image_prompt ?? '',
+        ].filter(Boolean).join(' ');
+
         const body = {
           prompt: [
-            'Finished cinematic music video frame, not a concept sheet or reference sheet.',
-            'Same gritty Alabama auto salvage yard world from the song.',
-            'Female salvage-yard worker / dismantling worker in reflective safety vest and grounded workwear.',
-            'Rain, mud, stripped cars, wire harnesses, drain rack, floodlights, industrial metal, LKQ pick-your-part atmosphere.',
-            'Preserve the same protagonist and world continuity.',
-            prompt.main_image_prompt ?? '',
-            (prompt as any).visual_prompt ?? '',
-            (prompt as any).scene_description ?? '',
-            (prompt as any).scene_title ?? '',
+            'Full-color photoreal cinematic music-video still frame.',
+            'Real camera look, gritty realism, 16:9 movie frame, not a sketch, not a model sheet, not concept art.',
+            `Song/project: ${project.title ?? 'Drain Rack Halo'}.`,
+            'World: rainy Alabama LKQ pick-your-part auto salvage yard, mud, stripped cars, wire harnesses, drain rack, industrial metal, floodlights, wet work clothes.',
+            'Protagonist: female salvage-yard worker / auto dismantling worker in neon yellow reflective safety vest, grounded workwear, tattooed forearms when visible.',
+            'The protagonist must be physically inside the salvage-yard scene doing the action.',
+            sceneText,
           ].filter(Boolean).join(' '),
+
           negative_prompt: [
             prompt.negative_prompt ?? '',
-            'different protagonist',
-            'inconsistent character',
-            'different outfit',
-            'different world',
-            'neon car show',
-            'glamour photoshoot',
-            'fashion editorial',
-            'text',
-            'watermark',
-            'logo',
             'character turnaround',
-            'model sheet',
+            'character model sheet',
             'reference sheet',
             'orthographic view',
+            'front side back view',
             'T-pose',
             'blank white background',
+            'white studio background',
             'empty hallway',
             'empty corridor',
-            'blueprint',
-            'grayscale sketch',
-            '3D mannequin',
+            'architecture concept',
             'environment-only image',
-            'no protagonist'
+            'no protagonist',
+            'comic panel',
+            'cartoon',
+            'anime',
+            'illustration',
+            'sketch',
+            'line art',
+            'grayscale sketch',
+            'blueprint',
+            'wireframe',
+            'stained glass border',
+            'storybook frame',
+            'fashion editorial',
+            'glamour photoshoot',
+            'futuristic showroom',
+            'neon car show',
+            'toy figure',
+            '3D mannequin',
+            'different protagonist',
+            'different outfit',
+            'different world',
+            'text',
+            'watermark',
+            'logo'
           ].filter(Boolean).join(', '),
 
           aspect_ratio: '16:9',
@@ -274,6 +294,7 @@ export default function SceneImageOptionsPanel({
           model_name: '',
 
           project_id: project.id,
+          project_title: project.title ?? '',
           scene_number: prompt.scene_number,
           scene_title: (prompt as any).scene_title ?? `Scene ${prompt.scene_number}`,
 
@@ -293,15 +314,15 @@ export default function SceneImageOptionsPanel({
           anchor_summary:
             (characterSheet as any)?.identity_lock ||
             (characterSheet as any)?.summary ||
-            'Same protagonist across scenes. Preserve identity, build, clothing logic, workwear, and overall look.',
+            'Same female salvage-yard worker, reflective safety vest, grounded workwear, muddy industrial setting.',
 
           world_summary:
             (envSheet as any)?.world_identity_lock ||
             (envSheet as any)?.summary ||
-            'Same gritty Alabama auto salvage yard world. Preserve rain, mud, metal, floodlights, industrial mood, and grounded realism.',
+            'Rainy Alabama auto salvage yard, stripped cars, wire harnesses, drain rack, mud, puddles, metal, floodlights.',
 
           reference_notes:
-            'Preserve the current BeatVision protagonist and salvage-yard world. Keep continuity stronger than novelty. Do not drift into unrelated neon showroom/car commercial imagery unless explicitly requested.',
+            'Generate an actual scene from the song world. Do not create a character sheet, model sheet, comic panel, empty corridor, or environment-only concept image.',
         };
 
         const requestEndpoint = (() => {
