@@ -405,7 +405,7 @@ export default {
       return new Response(body, {
         status: 200,
         headers: {
-          "Content-Type": "image/jpeg",
+          "Content-Type": "image/png",
           "Cache-Control": "no-store",
           "X-BeatVision-Provider": "cloudflare_workers_ai",
           "X-BeatVision-Seed": String(finalSeed),
