@@ -58,8 +58,6 @@ import type {
 } from '@/types/types';
 import { MOTION_EFFECTS } from '@/types/types';
 
-import SegmentImageOverridePanel from './SegmentImageOverridePanel';
-
 const SEGMENTATION_MODES: SegmentationMode[] = [
   'Use Storyboard Scenes',
   'Split by Lyrics',
@@ -228,14 +226,7 @@ function SegmentRow({
           {isRendering ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Zap className="w-3 h-3 mr-1" />}
           Render Segment
         </Button>
-
-              <SegmentImageOverridePanel
-                project={project}
-                segment={seg}
-                sceneImages={sceneImages}
-                onSegmentUpdated={handleSegmentImageOverride}
-              />
-        {!seg.approved && (seg.render_status !== 'Not Rendered' && seg.render_status !== 'Failed') && (
+{!seg.approved && (seg.render_status !== 'Not Rendered' && seg.render_status !== 'Failed') && (
           <Button
             size="sm"
             variant="ghost"
@@ -962,20 +953,6 @@ export default function SegmentedVideoRenderer({
   // Produces a real WebM blob from canvas frames + scene images + captions.
   // Audio is captured separately from an <audio> element if available.
   // Falls back gracefully if MediaRecorder or captureStream are unavailable.
-
-  const handleSegmentImageOverride = (updatedSegment: any) => {
-    if (!updatedSegment?.id) return;
-
-    setSegments((prev: any[]) =>
-      prev.map((seg: any) =>
-        seg.id === updatedSegment.id
-          ? { ...seg, ...updatedSegment }
-          : seg
-      )
-    );
-  };
-
-
   const handleBrowserRender = async () => {
     // 1. Check MediaRecorder support and pick best available codec
     if (typeof MediaRecorder === 'undefined') {
