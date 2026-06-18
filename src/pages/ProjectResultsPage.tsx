@@ -253,9 +253,137 @@ export default function ProjectResultsPage() {
         .maybeSingle();
       if (saveErr) throw saveErr;
       if (saved) setWorldReport(saved);
-      if (seed > 1) toast.info('World regenerated. A fresh perspective on your song\'s world.');
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to generate world report');
+      if (seed > 1) toast.info('World regenerated. A fresh perspective on your song\'s world.');    } catch (err: unknown) {
+
+      const sourceErrorMessage = err instanceof Error ? err.message : 'Failed to generate world report';
+
+      console.error('[BeatVision] World generation failed:', err);
+
+
+      // Fallback protection:
+
+      // If the Supabase Edge Function fails, do not leave the project blank.
+
+      if (!worldReport) {
+
+        try {
+
+          const lyricsSnippet = (proj.lyrics || '')
+
+            .replace(/\s+/g, ' ')
+
+            .trim()
+
+            .slice(0, 700);
+
+
+          const fallbackSummary = lyricsSnippet
+
+            ? `This fallback report was created from the song title, style, notes, and lyrics preview: ${lyricsSnippet}`
+
+            : 'This fallback report was created from the song title, selected style, and creator notes.';
+
+
+          const { data: savedFallback, error: fallbackErr } = await supabase
+
+            .from('visual_world_reports')
+
+            .insert({
+
+              project_id: proj.id,
+
+              song_summary: `BeatVision fallback world report for "${proj.title}". ${fallbackSummary}`,
+
+              emotional_core: 'The emotional core centers on pressure, survival, transformation, and the inner world hidden inside the track.',
+
+              main_visual_world: `A ${proj.selected_style || 'cinematic'} music-video world built around the song atmosphere, symbols, and creator notes. The visuals should feel intentional, grounded, and ready for manual refinement.`,
+
+              color_palette: 'deep black, muted steel, dusty amber, electric blue highlights, worn industrial gray',
+
+              lighting_style: 'cinematic low-key lighting, hard rim light, glowing practicals, smoke, haze, dramatic contrast',
+
+              main_characters: 'A central protagonist shaped by the emotional weight of the song, shown through body language, environment, and symbolic action.',
+
+              symbolic_objects: 'light, shadow, broken machinery, weathered metal, reflections, sparks, smoke, doors, roads, wires',
+
+              key_locations: 'an emotionally charged cinematic world built from the song setting, with practical locations that can become storyboard scenes',
+
+              story_direction: 'Start with the protagonist inside pressure, reveal the world around them, build toward confrontation or release, and end with a clear visual transformation.',
+
+              creative_match_score: 72,
+
+              approved: false,
+
+            })
+
+            .select()
+
+            .maybeSingle();
+
+
+          if (fallbackErr) throw fallbackErr;
+
+
+          if (savedFallback) {
+
+            setWorldReport(savedFallback as VisualWorldReport);
+
+
+            const { data: updatedProject } = await supabase
+
+              .from('projects')
+
+              .update({
+
+                status: 'World Revealed',
+
+                updated_at: new Date().toISOString(),
+
+              })
+
+              .eq('id', proj.id)
+
+              .select()
+
+              .maybeSingle();
+
+
+            if (updatedProject) {
+
+              setProject(updatedProject as Project);
+
+            }
+
+
+            toast.warning('AI generation failed, so BeatVision created a local fallback world report. You can edit it or regenerate later.');
+
+            return;
+
+          }
+
+        } catch (fallbackErr: unknown) {
+
+          console.error('[BeatVision] Local fallback world report failed:', fallbackErr);
+
+          toast.error(
+
+            fallbackErr instanceof Error
+
+              ? `Generation failed and fallback save failed: ${fallbackErr.message}`
+
+              : sourceErrorMessage
+
+          );
+
+          return;
+
+        }
+
+      }
+
+
+      toast.error(sourceErrorMessage);
+
     } finally {
       setGeneratingWorld(false);
       worldGenRef.current = false;
