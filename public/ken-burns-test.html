@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BeatVision Ken Burns Test</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08090f;
+      --card: #12141d;
+      --border: #2a2d3a;
+      --text: #f5f5f7;
+      --muted: #a6a8b6;
+      --accent: #8b5cf6;
+      --danger: #ff5f6d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(139, 92, 246, 0.18), transparent 32rem),
+        radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.12), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    main {
+      width: min(920px, 100%);
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .card {
+      background: rgba(18, 20, 29, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.28);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(26px, 7vw, 42px);
+      letter-spacing: -0.04em;
+    }
+
+    p {
+      color: var(--muted);
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    button, .file-label {
+      border: 1px solid var(--border);
+      background: #191c27;
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, var(--accent), #0ea5e9);
+      border: 0;
+      width: 100%;
+      font-size: 16px;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #090a10;
+      color: var(--text);
+      padding: 12px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    label.title {
+      display: block;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .preview {
+      width: 100%;
+      max-height: 420px;
+      object-fit: contain;
+      background: #000;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      display: none;
+    }
+
+    video {
+      width: 100%;
+      background: #000;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      display: none;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 14px;
+      min-height: 22px;
+    }
+
+    .error {
+      color: var(--danger);
+    }
+
+    .download {
+      display: none;
+      text-decoration: none;
+      width: 100%;
+    }
+
+    .download button {
+      width: 100%;
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="top">
+      <button onclick="window.location.href='/'">← Back to BeatVision</button>
+      <div class="small">Standalone fallback test</div>
+    </div>
+
+    <section class="card">
+      <h1>Ken Burns Fallback Test</h1>
+      <p>
+        Upload one BeatVision scene image. This page renders a short browser-safe pan/zoom WebM clip without touching the main React app.
+      </p>
+    </section>
+
+    <section class="card grid">
+      <div>
+        <label class="title">Upload image</label>
+        <label class="file-label">
+          Pick image from device
+          <input id="fileInput" type="file" accept="image/*" />
+        </label>
+      </div>
+
+      <div>
+        <label class="title">Or paste image URL</label>
+        <input id="urlInput" type="text" placeholder="https://..." />
+      </div>
+
+      <img id="preview" class="preview" alt="Source preview" />
+
+      <button id="renderBtn" class="primary" disabled>Render Ken Burns Test Clip</button>
+
+      <div id="status" class="status">Choose an image first.</div>
+
+      <video id="videoPreview" controls></video>
+
+      <a id="downloadLink" class="download" download="beatvision_ken_burns_test.webm">
+        <button type="button">Download WebM Clip</button>
+      </a>
+    </section>
+  </main>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const urlInput = document.getElementById("urlInput");
+    const preview = document.getElementById("preview");
+    const renderBtn = document.getElementById("renderBtn");
+    const statusEl = document.getElementById("status");
+    const videoPreview = document.getElementById("videoPreview");
+    const downloadLink = document.getElementById("downloadLink");
+
+    let activeImageUrl = null;
+    let objectUrl = null;
+
+    function setStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.className = isError ? "status error" : "status";
+    }
+
+    function resetOutput() {
+      videoPreview.style.display = "none";
+      videoPreview.removeAttribute("src");
+      downloadLink.style.display = "none";
+      downloadLink.removeAttribute("href");
+    }
+
+    function setImage(url) {
+      activeImageUrl = url;
+      preview.src = url;
+      preview.style.display = "block";
+      renderBtn.disabled = false;
+      resetOutput();
+      setStatus("Image loaded. Ready to render.");
+    }
+
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(file);
+      urlInput.value = "";
+      setImage(objectUrl);
+    });
+
+    urlInput.addEventListener("input", () => {
+      const url = urlInput.value.trim();
+      if (!url) return;
+
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+        objectUrl = null;
+      }
+
+      setImage(url);
+    });
+
+    function loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Could not load image. Try uploading it instead of pasting a URL."));
+        img.src = url;
+      });
+    }
+
+    function pickMimeType() {
+      const types = [
+        "video/webm;codecs=vp9",
+        "video/webm;codecs=vp8",
+        "video/webm"
+      ];
+
+      for (const type of types) {
+        if (window.MediaRecorder && MediaRecorder.isTypeSupported(type)) {
+          return type;
+        }
+      }
+
+      return "video/webm";
+    }
+
+    function drawCover(ctx, img, width, height, zoom, panX, panY) {
+      const imgAspect = img.width / img.height;
+      const canvasAspect = width / height;
+
+      let drawWidth;
+      let drawHeight;
+
+      if (imgAspect > canvasAspect) {
+        drawHeight = height * zoom;
+        drawWidth = drawHeight * imgAspect;
+      } else {
+        drawWidth = width * zoom;
+        drawHeight = drawWidth / imgAspect;
+      }
+
+      const maxPanX = Math.max(0, (drawWidth - width) / 2);
+      const maxPanY = Math.max(0, (drawHeight - height) / 2);
+
+      const x = (width - drawWidth) / 2 + maxPanX * panX;
+      const y = (height - drawHeight) / 2 + maxPanY * panY;
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.drawImage(img, x, y, drawWidth, drawHeight);
+    }
+
+    async function renderKenBurns() {
+      if (!activeImageUrl) return;
+
+      if (!window.MediaRecorder) {
+        setStatus("This browser does not support MediaRecorder.", true);
+        return;
+      }
+
+      renderBtn.disabled = true;
+      resetOutput();
+      setStatus("Rendering 5 second WebM clip...");
+
+      try {
+        const img = await loadImage(activeImageUrl);
+
+        const width = 768;
+        const height = 432;
+        const fps = 24;
+        const seconds = 5;
+        const totalFrames = fps * seconds;
+        const canvas = document.createElement("canvas");
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        const stream = canvas.captureStream(fps);
+        const mimeType = pickMimeType();
+        const chunks = [];
+
+        const recorder = new MediaRecorder(stream, {
+          mimeType,
+          videoBitsPerSecond: 2500000
+        });
+
+        recorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            chunks.push(event.data);
+          }
+        };
+
+        const done = new Promise((resolve, reject) => {
+          recorder.onerror = () => reject(new Error("Recorder failed."));
+          recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: mimeType });
+            if (!blob.size) {
+              reject(new Error("Empty video created."));
+              return;
+            }
+            resolve(blob);
+          };
+        });
+
+        recorder.start();
+
+        for (let frame = 0; frame < totalFrames; frame++) {
+          const t = frame / Math.max(1, totalFrames - 1);
+          const eased = t * t * (3 - 2 * t);
+          const zoom = 1.02 + (1.16 - 1.02) * eased;
+
+          drawCover(ctx, img, width, height, zoom, 0.35 * eased, -0.18 * eased);
+
+          await new Promise((resolve) => setTimeout(resolve, 1000 / fps));
+        }
+
+        recorder.stop();
+
+        const blob = await done;
+        const url = URL.createObjectURL(blob);
+
+        videoPreview.src = url;
+        videoPreview.style.display = "block";
+
+        downloadLink.href = url;
+        downloadLink.style.display = "block";
+
+        setStatus("Rendered successfully. Size: " + blob.size.toLocaleString() + " bytes.");
+      } catch (error) {
+        setStatus(error.message || "Render failed.", true);
+      } finally {
+        renderBtn.disabled = !activeImageUrl;
+      }
+    }
+
+    renderBtn.addEventListener("click", renderKenBurns);
+  </script>
+</body>
+</html>
