@@ -24,7 +24,6 @@ import ImageProviderSettingsSection from '@/components/project/ImageProviderSett
 import SegmentedVideoRenderer from '@/components/project/SegmentedVideoRenderer';
 import { toast } from 'sonner';
 
-import KenBurnsFallbackButton from "@/components/project/KenBurnsFallbackButton";
 const STATUS_COLORS: Record<string, string> = {
   'Draft': 'bg-muted text-muted-foreground border-border',
   'World Revealed': 'bg-primary/10 text-primary/80 border-primary/20',
@@ -557,25 +556,6 @@ export default function ProjectResultsPage() {
   }, [id, project, worldReport, scenes, charEnv, scenePrompts, handleChangeLogged]);
 
   if (authLoading || loadingProject) {
-
-  const approvedFallbackImageUrl = (() => {
-    const imgs = Array.isArray(sceneImages) ? sceneImages : [];
-    const approved = imgs.find((img: any) =>
-      img?.approved && (img?.image_url || img?.url || img?.public_url || img?.storage_url)
-    );
-    const fallback = approved || imgs.find((img: any) =>
-      img?.image_url || img?.url || img?.public_url || img?.storage_url
-    );
-
-    return (
-      fallback?.image_url ||
-      fallback?.url ||
-      fallback?.public_url ||
-      fallback?.storage_url ||
-      null
-    );
-  })();
-
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex items-center gap-3 text-muted-foreground">
@@ -1043,14 +1023,6 @@ export default function ProjectResultsPage() {
                   <p className="text-xs text-muted-foreground">Style bible · Character sheet · Environment sheet · Scene prompts</p>
                 </div>
               </div>
-
-      <div className="mb-6">
-        <KenBurnsFallbackButton
-          imageUrl={approvedFallbackImageUrl}
-          filename="beatvision_ken_burns_project_test.webm"
-          label="Render Ken Burns Test Clip"
-        />
-      </div>
               <GenerateWorldSection
                 project={project}
                 worldReport={worldReport}
