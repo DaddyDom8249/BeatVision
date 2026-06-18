@@ -133,6 +133,30 @@ export default function ProjectResultsPage() {
         .maybeSingle();
       setWorldReport(reportData || null);
 
+      // Repair unlock state:
+      // If the visual world report is approved but the project flag was not updated,
+      // unlock storyboard generation instead of trapping the user on a locked story step.
+      if (reportData?.approved && !proj.world_approved) {
+        const { data: repairedProject } = await supabase
+          .from('projects')
+          .update({
+            world_approved: true,
+            status: 'World Approved',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id)
+          .select()
+          .maybeSingle();
+
+        if (repairedProject) {
+          setProject(repairedProject as Project);
+        }
+
+        // Keep this load cycle moving too, not just the next page refresh.
+        proj.world_approved = true;
+        proj.status = 'World Approved';
+      }
+
       // Load Storyboard Scenes
       const { data: scenesData } = await supabase
         .from('storyboard_scenes')
@@ -190,7 +214,7 @@ export default function ProjectResultsPage() {
       }
 
       // Auto-generate storyboard if world approved but no scenes
-      if (proj.world_approved && !scenesData?.length) {
+      if ((proj.world_approved || !!reportData?.approved) && !scenesData?.length) {
         setTimeout(() => triggerGenerateStoryboard(proj, reportData), 300);
       }
 
