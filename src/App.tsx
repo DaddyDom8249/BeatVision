@@ -5,7 +5,6 @@ import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { routes } from './routes';
 
-import KenBurnsTestPage from "@/pages/KenBurnsTestPage";
 const App: React.FC = () => {
   return (
     <Router>
@@ -17,7 +16,6 @@ const App: React.FC = () => {
               {routes.map((route, index) => (
                 <Route key={index} path={route.path} element={route.element} />
               ))}
-        <Route path="/ken-burns-test" component={KenBurnsTestPage} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
