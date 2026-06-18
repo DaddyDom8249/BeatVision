@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "wouter";
 import { ArrowLeft, ImagePlus } from "lucide-react";
 import KenBurnsFallbackButton from "@/components/project/KenBurnsFallbackButton";
 import { Button } from "@/components/ui/button";
@@ -32,12 +31,17 @@ export default function KenBurnsTestPage() {
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-4xl px-4 py-6 space-y-6">
         <div className="flex items-center justify-between gap-3">
-          <Link href="/">
-            <Button type="button" variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          </Link>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              window.location.href = "/";
+            }}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
 
           <div className="text-xs text-muted-foreground">
             BeatVision motion fallback test
