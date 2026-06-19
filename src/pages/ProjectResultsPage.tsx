@@ -24,6 +24,8 @@ import ImageProviderSettingsSection from '@/components/project/ImageProviderSett
 import SegmentedVideoRenderer from '@/components/project/SegmentedVideoRenderer';
 import { toast } from 'sonner';
 
+const CLEAN_CORE_MODE = true;
+
 const STATUS_COLORS: Record<string, string> = {
   'Draft': 'bg-muted text-muted-foreground border-border',
   'World Revealed': 'bg-primary/10 text-primary/80 border-primary/20',
@@ -930,7 +932,7 @@ export default function ProjectResultsPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              {previewReady && (
+              {!CLEAN_CORE_MODE && previewReady && (
                 <button
                   onClick={() => setShowPreview(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
@@ -940,7 +942,7 @@ export default function ProjectResultsPage() {
                   Full Preview
                 </button>
               )}
-              {exportReady && (
+              {!CLEAN_CORE_MODE && exportReady && (
                 <button
                   onClick={() => setShowExport(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
@@ -1010,9 +1012,9 @@ export default function ProjectResultsPage() {
         </div>
 
         {/* Full Preview + Export buttons — progress tracker area */}
-        {(previewReady || exportReady) && (
+        {!CLEAN_CORE_MODE && (previewReady || exportReady) && (
           <div className="flex items-center gap-3 mb-6">
-            {previewReady && (
+            {!CLEAN_CORE_MODE && previewReady && (
               <button
                 onClick={() => setShowPreview(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
@@ -1026,7 +1028,7 @@ export default function ProjectResultsPage() {
                 Full Preview
               </button>
             )}
-            {exportReady && (
+            {!CLEAN_CORE_MODE && exportReady && (
               <button
                 onClick={() => setShowExport(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
@@ -1250,7 +1252,7 @@ export default function ProjectResultsPage() {
                 <div>
                   <h2 className="font-bold text-lg text-foreground">Scene Images</h2>
                   <p className="text-xs text-muted-foreground">
-                    Upload an image per scene · Approve each one · All approved unlocks Motion
+                    Upload an image per scene · Approve each one · Clean-core visual workflow
                   </p>
                 </div>
               </div>
@@ -1320,7 +1322,7 @@ export default function ProjectResultsPage() {
           </section>
 
           {/* Bottom Full Preview + Export */}
-          {(previewReady || exportReady) && (
+          {!CLEAN_CORE_MODE && (previewReady || exportReady) && (
             <div
               className="rounded-2xl p-6 text-center space-y-3"
               style={{
@@ -1336,7 +1338,7 @@ export default function ProjectResultsPage() {
                 Preview the complete world BeatVision built for your song, or export your project materials.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-                {previewReady && (
+                {!CLEAN_CORE_MODE && previewReady && (
                   <button
                     onClick={() => setShowPreview(true)}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
@@ -1350,7 +1352,7 @@ export default function ProjectResultsPage() {
                     Open Full Preview
                   </button>
                 )}
-                {exportReady && (
+                {!CLEAN_CORE_MODE && exportReady && (
                   <button
                     onClick={() => setShowExport(true)}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
