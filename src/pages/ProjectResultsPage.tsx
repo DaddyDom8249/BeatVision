@@ -18,8 +18,6 @@ import ProjectChangeLogSection from '@/components/project/ProjectChangeLogSectio
 import type { AffectedSectionItem } from '@/components/project/ReviewChangesPanel';
 import { reapproveSection, createChangeLogEntry } from '@/hooks/useReviewChanges';
 import { ArrowLeft, Music2, Sparkles, Lock, Clapperboard, Loader2, ImageIcon, Eye, Download, Settings2 } from 'lucide-react';
-import FullPreviewModal from '@/components/project/FullPreviewModal';
-import ExportProjectPanel from '@/components/project/ExportProjectPanel';
 import ImageProviderSettingsSection from '@/components/project/ImageProviderSettingsSection';
 import { toast } from 'sonner';
 
@@ -1341,41 +1339,8 @@ export default function ProjectResultsPage() {
       </div>
 
       {/* ── Full Preview Modal ──────────────────────────────────────────── */}
-      {showPreview && (
-        <FullPreviewModal
-          project={project}
-          worldReport={worldReport}
-          scenes={scenes}
-          charEnv={charEnv}
-          styleBible={styleBible}
-          characterSheet={characterSheet}
-          envSheet={envSheet}
-          sceneImages={sceneImages}
-          sceneVideos={sceneVideos}
-          finalVideo={finalVideo}
-          onClose={() => setShowPreview(false)}
-        />
-      )}
 
       {/* ── Export Project Panel ────────────────────────────────────────── */}
-      {showExport && (
-        <ExportProjectPanel
-          project={project}
-          worldReport={worldReport}
-          scenes={scenes}
-          charEnv={charEnv}
-          styleBible={styleBible}
-          characterSheet={characterSheet}
-          envSheet={envSheet}
-          scenePrompts={scenePrompts}
-          sceneImages={sceneImages}
-          sceneVideos={sceneVideos}
-          changeLogs={changeLogs}
-          motionClips={motionClips}
-          finalVideo={finalVideo}
-          onClose={() => setShowExport(false)}
-        />
-      )}
     </div>
   );
 }
