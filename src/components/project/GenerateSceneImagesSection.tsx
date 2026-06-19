@@ -346,15 +346,113 @@ export default function GenerateSceneImagesSection({
     }
   };
 
+  // ── Manual upload preparation ──────────────────────────────────────────────
+  // When no paid/real provider is connected, create upload-ready cards instead
+  // of leaving the user staring at an empty panel like software owes them money.
+  const prepareManualUploadRows = async () => {
+    if (approvedPrompts.length === 0) {
+      toast.error('No approved scene prompts found. Approve scene visual prompts first.');
+      return;
+    }
+
+    setGeneratingAll(true);
+
+    try {
+      const now = new Date().toISOString();
+      let created = 0;
+      let updated = 0;
+      let kept = 0;
+
+      for (const prompt of approvedPrompts) {
+        const existing = sceneImages.find(si => si.scene_visual_prompt_id === prompt.id);
+        const hasUsableContent = Boolean(
+          existing?.real_generated ||
+          existing?.manual_upload ||
+          existing?.use_placeholder_as_draft_final ||
+          existing?.image_url
+        );
+
+        if (hasUsableContent) {
+          kept++;
+          continue;
+        }
+
+        const promptAny = prompt as any;
+
+        const uploadReadyRecord = {
+          project_id: project.id,
+          storyboard_scene_id: prompt.storyboard_scene_id,
+          scene_visual_prompt_id: prompt.id,
+          scene_number: prompt.scene_number,
+          scene_title: promptAny.scene_title ?? `Scene ${prompt.scene_number}`,
+          timestamp_range: promptAny.timestamp_range ?? null,
+          image_url: null,
+          thumbnail_url: null,
+          prompt_used: prompt.main_image_prompt ?? promptAny.visual_prompt ?? null,
+          prompt_summary: promptAny.prompt_summary ?? null,
+          mood: promptAny.mood ?? null,
+          camera_framing: promptAny.camera_framing ?? null,
+          location: promptAny.location ?? null,
+          character_presence: promptAny.character_presence ?? null,
+          lighting_direction: promptAny.lighting_direction ?? null,
+          style_consistency_summary: promptAny.style_consistency_summary ?? null,
+          real_generated: false,
+          manual_upload: false,
+          placeholder: false,
+          use_placeholder_as_draft_final: false,
+          provider_name: 'Manual Upload Only',
+          generation_status: 'awaiting_upload',
+          approved: false,
+          rejected: false,
+          pending: false,
+          failed: false,
+          active_version: existing?.active_version ?? 1,
+          updated_after_approval: false,
+          updated_at: now,
+        };
+
+        if (existing) {
+          const { error } = await supabase
+            .from('scene_images')
+            .update(uploadReadyRecord)
+            .eq('id', existing.id);
+
+          if (error) throw error;
+          updated++;
+        } else {
+          const { error } = await supabase
+            .from('scene_images')
+            .insert(uploadReadyRecord);
+
+          if (error) throw error;
+          created++;
+        }
+      }
+
+      await loadData();
+
+      const changed = created + updated;
+      if (changed > 0) {
+        toast.success(`${changed} manual upload card${changed !== 1 ? 's' : ''} ready. Upload images on each scene card.`);
+      } else if (kept > 0) {
+        toast.info('Scene image cards are already ready. Upload, approve, or replace images from the cards below.');
+      } else {
+        toast.info('No scene image cards needed to be created.');
+      }
+    } catch (err: unknown) {
+      console.error('[BeatVision] Failed to prepare manual upload rows:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to prepare manual upload cards.');
+    } finally {
+      setGeneratingAll(false);
+    }
+  };
+
   // ── Generate all scene images ──────────────────────────────────────────────
   // If real provider is active: show credit confirm first.
   // If no provider: show clear message — do NOT silently create fake generated records.
   const handleGenerateAllClick = () => {
     if (!realProvidersEnabled || !providerActive) {
-      toast.error(
-        'No real image provider is connected. Upload scene images manually or create placeholder previews for each scene.',
-        { duration: 6000 }
-      );
+      void prepareManualUploadRows();
       return;
     }
     setPendingCreditAction({ sceneImageId: '', promptId: '', mode: 'all' });
@@ -957,7 +1055,7 @@ export default function GenerateSceneImagesSection({
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex-1">
             <h3 className="font-mono text-sm font-bold text-foreground">
-              {hasAnyImages ? 'Regenerate All Scene Images' : 'Generate All Scene Images'}
+              {!realProvidersEnabled || !providerActive ? 'Prepare Manual Upload Cards' : hasAnyImages ? 'Regenerate All Scene Images' : 'Generate All Scene Images'}
             </h3>
             <p className="text-xs text-[#666] mt-1 leading-relaxed">
               {approvedPrompts.length} approved scene prompt{approvedPrompts.length !== 1 ? 's' : ''} ready.
