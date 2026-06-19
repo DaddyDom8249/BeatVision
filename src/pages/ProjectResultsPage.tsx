@@ -440,7 +440,132 @@ export default function ProjectResultsPage() {
       if (sErr) throw sErr;
       setScenes(Array.isArray(savedScenes) ? savedScenes : []);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to generate storyboard');
+      console.error('[BeatVision] Storyboard generation failed:', err);
+
+      try {
+        const fallbackScenes = [
+          {
+            project_id: proj.id,
+            scene_number: 1,
+            timestamp_range: '0:00 - 0:20',
+            scene_title: 'Opening Pressure',
+            visual_description: `Open inside the emotional world of "${proj.title}", introducing the main atmosphere, setting, and symbolic tension.`,
+            camera_direction: 'Slow cinematic push-in, low contrast shadows, careful environmental detail.',
+            mood: 'tense, cinematic, immersive',
+            location: 'primary world location',
+            lyric_moment: 'intro / opening feeling',
+            transition_style: 'slow dissolve',
+            approved: false,
+          },
+          {
+            project_id: proj.id,
+            scene_number: 2,
+            timestamp_range: '0:20 - 0:40',
+            scene_title: 'The Protagonist Appears',
+            visual_description: 'Reveal the central figure through posture, silhouette, and movement rather than exposition.',
+            camera_direction: 'Medium tracking shot with shallow depth of field.',
+            mood: 'focused, emotional, grounded',
+            location: 'inside the main environment',
+            lyric_moment: 'first verse',
+            transition_style: 'match cut',
+            approved: false,
+          },
+          {
+            project_id: proj.id,
+            scene_number: 3,
+            timestamp_range: '0:40 - 1:00',
+            scene_title: 'Symbols Surface',
+            visual_description: 'Key objects and visual motifs begin appearing around the protagonist, hinting at the song meaning.',
+            camera_direction: 'Insert shots, slow pans, close texture details.',
+            mood: 'mysterious, symbolic',
+            location: 'symbolic interior/exterior space',
+            lyric_moment: 'verse detail',
+            transition_style: 'glitch fade',
+            approved: false,
+          },
+          {
+            project_id: proj.id,
+            scene_number: 4,
+            timestamp_range: '1:00 - 1:25',
+            scene_title: 'World Expands',
+            visual_description: 'Pull back to show the larger world BeatVision has built around the track.',
+            camera_direction: 'Wide reveal shot with atmospheric motion.',
+            mood: 'expansive, cinematic',
+            location: 'main world wide view',
+            lyric_moment: 'pre-chorus / build',
+            transition_style: 'rising light transition',
+            approved: false,
+          },
+          {
+            project_id: proj.id,
+            scene_number: 5,
+            timestamp_range: '1:25 - 1:55',
+            scene_title: 'Emotional Collision',
+            visual_description: 'The protagonist confronts the main emotional conflict through action, weather, movement, or environment.',
+            camera_direction: 'Handheld energy mixed with dramatic closeups.',
+            mood: 'intense, conflicted',
+            location: 'conflict space',
+            lyric_moment: 'chorus / impact',
+            transition_style: 'hard cut',
+            approved: false,
+          },
+          {
+            project_id: proj.id,
+            scene_number: 6,
+            timestamp_range: '1:55 - 2:25',
+            scene_title: 'Breaking Point',
+            visual_description: 'The world becomes more unstable as the song reaches its strongest emotional pressure.',
+            camera_direction: 'Fast cuts, push-ins, moving shadows, kinetic framing.',
+            mood: 'overwhelming, dramatic',
+            location: 'fractured version of the main world',
+            lyric_moment: 'second build / bridge',
+            transition_style: 'strobe cut',
+            approved: false,
+          },
+          {
+            project_id: proj.id,
+            scene_number: 7,
+            timestamp_range: '2:25 - 2:55',
+            scene_title: 'Release',
+            visual_description: 'The protagonist finds a visual release, shift, surrender, or transformation.',
+            camera_direction: 'Slow motion, widening frame, symbolic light movement.',
+            mood: 'transformational, cathartic',
+            location: 'open or elevated space',
+            lyric_moment: 'final chorus',
+            transition_style: 'light bloom',
+            approved: false,
+          },
+          {
+            project_id: proj.id,
+            scene_number: 8,
+            timestamp_range: '2:55 - end',
+            scene_title: 'Final Image',
+            visual_description: 'End on a strong final frame that summarizes the song world in one memorable image.',
+            camera_direction: 'Locked-off cinematic final shot, lingering atmosphere.',
+            mood: 'resolved, haunting, memorable',
+            location: 'final symbolic location',
+            lyric_moment: 'outro',
+            transition_style: 'fade to black',
+            approved: false,
+          },
+        ];
+
+        await supabase.from('storyboard_scenes').delete().eq('project_id', proj.id);
+
+        const { data: savedScenes, error: fallbackErr } = await supabase
+          .from('storyboard_scenes')
+          .insert(fallbackScenes)
+          .select()
+          .order('scene_number', { ascending: true });
+
+        if (fallbackErr) throw fallbackErr;
+
+        setScenes(Array.isArray(savedScenes) ? savedScenes as StoryboardScene[] : []);
+        toast.warning('AI storyboard failed, so BeatVision created a local fallback storyboard. You can edit it or regenerate later.');
+      } catch (fallbackErr: unknown) {
+        console.error('[BeatVision] Local fallback storyboard failed:', fallbackErr);
+        toast.error(fallbackErr instanceof Error ? fallbackErr.message : 'Failed to generate storyboard');
+      }
     } finally {
       setGeneratingStoryboard(false);
       storyGenRef.current = false;
@@ -492,7 +617,36 @@ export default function ProjectResultsPage() {
       if (cErr) throw cErr;
       if (saved) setCharEnv(saved);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to generate characters');
+      console.error('[BeatVision] Character generation failed:', err);
+
+      try {
+        const fallbackCharacter = {
+          project_id: proj.id,
+          main_character: 'A central protagonist shaped by the emotional pressure of the song, visually defined by posture, movement, clothing, and symbolic contrast.',
+          supporting_character: 'A secondary presence or opposing force that reflects the song conflict. This can be a person, memory, shadow, environment, machine, or spiritual counterpart.',
+          main_environment: `A ${proj.selected_style || 'cinematic'} visual world built from the song title, lyrics, style, and creator notes.`,
+          visual_atmosphere: 'Cinematic contrast, symbolic lighting, textured environments, emotional realism, and a clear music-video identity.',
+          wardrobe_style: 'Practical, story-driven wardrobe that fits the world and helps the protagonist read clearly across scenes.',
+          world_rules: 'Every visual choice should support the song emotion. Symbols should repeat with purpose. The protagonist should remain visually consistent across the storyboard.',
+          approved: false,
+        };
+
+        await supabase.from('character_environments').delete().eq('project_id', proj.id);
+
+        const { data: saved, error: fallbackErr } = await supabase
+          .from('character_environments')
+          .insert(fallbackCharacter)
+          .select()
+          .maybeSingle();
+
+        if (fallbackErr) throw fallbackErr;
+
+        if (saved) setCharEnv(saved as CharacterEnvironment);
+        toast.warning('AI character generation failed, so BeatVision created a local fallback character/environment plan. You can edit it or regenerate later.');
+      } catch (fallbackErr: unknown) {
+        console.error('[BeatVision] Local fallback character generation failed:', fallbackErr);
+        toast.error(fallbackErr instanceof Error ? fallbackErr.message : 'Failed to generate characters');
+      }
     } finally {
       setGeneratingCharacters(false);
       charGenRef.current = false;
