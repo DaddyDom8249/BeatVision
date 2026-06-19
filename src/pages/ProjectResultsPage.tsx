@@ -17,11 +17,9 @@ import ReviewStatusCard from '@/components/project/ReviewStatusCard';
 import ProjectChangeLogSection from '@/components/project/ProjectChangeLogSection';
 import type { AffectedSectionItem } from '@/components/project/ReviewChangesPanel';
 import { reapproveSection, createChangeLogEntry } from '@/hooks/useReviewChanges';
-import { ArrowLeft, Music2, Sparkles, Lock, Clapperboard, Loader2, ImageIcon, Eye, Download, Settings2 } from 'lucide-react';
+import { ArrowLeft, Music2, Sparkles, Lock, Clapperboard, Loader2, ImageIcon, Settings2 } from 'lucide-react';
 import ImageProviderSettingsSection from '@/components/project/ImageProviderSettingsSection';
 import { toast } from 'sonner';
-
-const CLEAN_CORE_MODE = true;
 
 const STATUS_COLORS: Record<string, string> = {
   'Draft': 'bg-muted text-muted-foreground border-border',
@@ -70,8 +68,6 @@ export default function ProjectResultsPage() {
   const [envSheet, setEnvSheet] = useState<EnvironmentSheet | null>(null);
   const [sceneImages, setSceneImages] = useState<SceneImage[]>([]);
   const [sceneVideos, setSceneVideos] = useState<SceneVideo[]>([]);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showExport, setShowExport] = useState(false);
   const [generatingWorld, setGeneratingWorld] = useState(false);
   const [generatingStoryboard, setGeneratingStoryboard] = useState(false);
   const [generatingCharacters, setGeneratingCharacters] = useState(false);
@@ -735,9 +731,7 @@ export default function ProjectResultsPage() {
   const phase4Unlocked = sceneImagesUnlocked && !!project.images_approved;
 
   // Preview is ready as soon as world report + storyboard are approved
-  const previewReady = !!(worldReport?.approved && project.storyboard_approved);
   // Export is ready as soon as world report + storyboard exist
-  const exportReady = !!(worldReport && scenes.length > 0);
 
   // ── Review Changes: compute affected items across all sections ──────────────
 
@@ -929,26 +923,6 @@ export default function ProjectResultsPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              {!CLEAN_CORE_MODE && previewReady && (
-                <button
-                  onClick={() => setShowPreview(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                  style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.35)', color: '#93c5fd' }}
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  Full Preview
-                </button>
-              )}
-              {!CLEAN_CORE_MODE && exportReady && (
-                <button
-                  onClick={() => setShowExport(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                  style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.30)', color: '#6ee7b7' }}
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Export
-                </button>
-              )}
               <Badge className={`border ${STATUS_COLORS[project.status] || STATUS_COLORS['Draft']}`}>
                 {project.status}
               </Badge>
@@ -1008,39 +982,6 @@ export default function ProjectResultsPage() {
           ))}
         </div>
 
-        {/* Full Preview + Export buttons — progress tracker area */}
-        {!CLEAN_CORE_MODE && (previewReady || exportReady) && (
-          <div className="flex items-center gap-3 mb-6">
-            {!CLEAN_CORE_MODE && previewReady && (
-              <button
-                onClick={() => setShowPreview(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(139,92,246,0.15) 100%)',
-                  border: '1px solid rgba(59,130,246,0.35)',
-                  color: '#93c5fd',
-                }}
-              >
-                <Eye className="w-4 h-4" />
-                Full Preview
-              </button>
-            )}
-            {!CLEAN_CORE_MODE && exportReady && (
-              <button
-                onClick={() => setShowExport(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(6,182,212,0.12) 100%)',
-                  border: '1px solid rgba(16,185,129,0.30)',
-                  color: '#6ee7b7',
-                }}
-              >
-                <Download className="w-4 h-4" />
-                Export Project
-              </button>
-            )}
-          </div>
-        )}
 
         {/* Fix Project Status — beta/debug tool */}
         <div className="flex items-center justify-end mb-3">
@@ -1287,60 +1228,10 @@ export default function ProjectResultsPage() {
             {user && <BetaFeedbackSection project={project} userId={user.id} />}
           </section>
 
-          {/* Bottom Full Preview + Export */}
-          {!CLEAN_CORE_MODE && (previewReady || exportReady) && (
-            <div
-              className="rounded-2xl p-6 text-center space-y-3"
-              style={{
-                background: 'linear-gradient(135deg, rgba(15,15,25,0.9) 0%, rgba(20,20,35,0.9) 100%)',
-                border: '1px solid rgba(59,130,246,0.15)',
-              }}
-            >
-              <p className="font-mono text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">
-                Every Song Has a World. BeatVision Reveals It.
-              </p>
-              <h3 className="text-base font-bold text-foreground">Your project is ready.</h3>
-              <p className="text-sm text-muted-foreground">
-                Preview the complete world BeatVision built for your song, or export your project materials.
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-                {!CLEAN_CORE_MODE && previewReady && (
-                  <button
-                    onClick={() => setShowPreview(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(59,130,246,0.20) 0%, rgba(139,92,246,0.20) 100%)',
-                      border: '1px solid rgba(99,102,241,0.45)',
-                      color: '#c4b5fd',
-                    }}
-                  >
-                    <Eye className="w-4 h-4" />
-                    Open Full Preview
-                  </button>
-                )}
-                {!CLEAN_CORE_MODE && exportReady && (
-                  <button
-                    onClick={() => setShowExport(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(6,182,212,0.15) 100%)',
-                      border: '1px solid rgba(16,185,129,0.35)',
-                      color: '#6ee7b7',
-                    }}
-                  >
-                    <Download className="w-4 h-4" />
-                    Export Project
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* ── Full Preview Modal ──────────────────────────────────────────── */}
 
-      {/* ── Export Project Panel ────────────────────────────────────────── */}
     </div>
   );
 }
