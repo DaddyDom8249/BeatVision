@@ -37,3 +37,4 @@ tasks
 historical_context.txt
 backups/
 motion-providers/
+.env*

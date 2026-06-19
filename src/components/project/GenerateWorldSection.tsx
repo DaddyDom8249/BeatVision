@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/db/supabase';
+import { createLocalWorldAssets } from '@/lib/worldAssetFallbacks';
 import type {
   Project,
   VisualWorldReport,
@@ -360,25 +361,53 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
     setGenState('generating');
 
     try {
-      // Update project status
+      const now = new Date().toISOString();
+
       await supabase
         .from('projects')
-        .update({ status: 'Generating World Assets', updated_at: new Date().toISOString() })
+        .update({ status: 'Generating World Assets', updated_at: now })
         .eq('id', project.id);
+
       onProjectUpdate({ ...project, status: 'Generating World Assets' });
 
-      // Run all four generation calls sequentially so each feeds the next
       const bible = await generateStyleBible();
       const charSheet = await generateCharacterSheet();
       const envS = await generateEnvironmentSheet();
       const generatedPrompts = await generateScenePrompts(bible, charSheet, envS);
+
+      if (!generatedPrompts.length) {
+        throw new Error('No scene visual prompts were returned.');
+      }
+
       await generateScenePreviews(generatedPrompts);
 
       setGenState('done');
       toast.success('Your world has been generated. Review and approve each section.', { duration: 5000 });
     } catch (err) {
-      setGenState('idle');
-      toast.error(err instanceof Error ? err.message : 'World generation failed. Please try again.');
+      console.error('[BeatVision] World asset generation failed:', err);
+
+      try {
+        const fallback = await createLocalWorldAssets({ project, worldReport, scenes, charEnv });
+
+        setStyleBible(fallback.bible);
+        setCharacterSheet(fallback.charSheet);
+        setEnvSheet(fallback.envSheet);
+        setScenePrompts(fallback.prompts);
+        setScenePreviews(fallback.previews);
+        setGenState('done');
+
+        onProjectUpdate({ ...project, status: 'World Assets In Review' });
+
+        toast.warning('AI world asset generation failed, so BeatVision created local fallback assets. Review and approve each section.', { duration: 7000 });
+      } catch (fallbackErr: unknown) {
+        console.error('[BeatVision] Local fallback world assets failed:', fallbackErr);
+        setGenState('idle');
+        toast.error(
+          fallbackErr instanceof Error
+            ? `World generation failed and fallback failed: ${fallbackErr.message}`
+            : 'World generation failed. Please try again.'
+        );
+      }
     } finally {
       setGenerating(false);
       genRef.current = false;
