@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
-import type { Project, VisualWorldReport, StoryboardScene, CharacterEnvironment, SceneVisualPrompt, ProjectChangeLog, WorldStyleBible, CharacterSheet, EnvironmentSheet, SceneImage, SceneVideo, MotionClip, FinalVideo } from '@/types/types';
+import type { Project, VisualWorldReport, StoryboardScene, CharacterEnvironment, SceneVisualPrompt, ProjectChangeLog, WorldStyleBible, CharacterSheet, EnvironmentSheet, SceneImage, SceneVideo } from '@/types/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import Navbar from '@/components/layouts/Navbar';
@@ -21,7 +21,6 @@ import { ArrowLeft, Music2, Sparkles, Lock, Clapperboard, Loader2, ImageIcon, Ey
 import FullPreviewModal from '@/components/project/FullPreviewModal';
 import ExportProjectPanel from '@/components/project/ExportProjectPanel';
 import ImageProviderSettingsSection from '@/components/project/ImageProviderSettingsSection';
-import SegmentedVideoRenderer from '@/components/project/SegmentedVideoRenderer';
 import { toast } from 'sonner';
 
 const CLEAN_CORE_MODE = true;
