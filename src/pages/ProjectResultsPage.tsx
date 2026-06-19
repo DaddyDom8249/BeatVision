@@ -520,13 +520,53 @@ export default function ProjectResultsPage() {
   };
 
   const handleWorldApproved = () => {
-    setProject((p) => p ? { ...p, world_approved: true, status: 'World Approved' } : p);
-    setTimeout(() => triggerGenerateStoryboard(project!, worldReport), 300);
+    if (!project) return;
+
+    const nextProject: Project = {
+      ...project,
+      world_approved: true,
+      status: 'World Approved',
+    };
+
+    const nextReport: VisualWorldReport | null = worldReport
+      ? {
+          ...worldReport,
+          approved: true,
+          needs_review: false,
+          updated_after_approval: false,
+        }
+      : null;
+
+    setProject(nextProject);
+    if (nextReport) setWorldReport(nextReport);
+
+    if (nextReport) {
+      setTimeout(() => triggerGenerateStoryboard(nextProject, nextReport), 300);
+    } else {
+      toast.warning('World approved, but no report data was loaded. Refresh the project before generating storyboard.');
+    }
   };
 
   const handleStoryboardApproved = () => {
-    setProject((p) => p ? { ...p, storyboard_approved: true, status: 'Storyboard Approved' } : p);
-    setTimeout(() => triggerGenerateCharacters(project!, worldReport), 300);
+    if (!project) return;
+
+    const nextProject: Project = {
+      ...project,
+      storyboard_approved: true,
+      status: 'Storyboard Approved',
+    };
+
+    const nextScenes = scenes.map((scene) => ({
+      ...scene,
+      approved: true,
+      needs_review: false,
+      updated_after_approval: false,
+    }));
+
+    setProject(nextProject);
+    setScenes(nextScenes);
+
+    setTimeout(() => triggerGenerateCharacters(nextProject, worldReport), 300);
   };
 
   const handleCharactersApproved = () => {
