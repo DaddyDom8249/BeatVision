@@ -151,7 +151,40 @@ export async function createLocalWorldAssets({
 
   if (envErr) throw envErr;
 
-  const promptRows = scenes.map((scene, index) => {
+  let sourceScenes = scenes;
+
+  if (!sourceScenes.length) {
+    const { data: fetchedScenes, error: scenesErr } = await supabase
+      .from('storyboard_scenes')
+      .select('*')
+      .eq('project_id', project.id)
+      .order('scene_number', { ascending: true });
+
+    if (scenesErr) {
+      console.warn('[BeatVision] Fallback could not fetch storyboard scenes:', scenesErr);
+    }
+
+    sourceScenes = Array.isArray(fetchedScenes) ? fetchedScenes as StoryboardScene[] : [];
+  }
+
+  if (!sourceScenes.length) {
+    sourceScenes = [{
+      id: '',
+      project_id: project.id,
+      scene_number: 1,
+      scene_title: 'Core Visual Frame',
+      timestamp_range: null,
+      lyric_moment: '',
+      visual_description: worldDescription,
+      location: keyLocations,
+      mood: emotionalCore,
+      camera_direction: 'cinematic establishing frame',
+      created_at: now,
+      updated_at: now,
+    } as unknown as StoryboardScene];
+  }
+
+  const promptRows = sourceScenes.map((scene, index) => {
     const sceneNumber = scene.scene_number || index + 1;
     const sceneTitle = cleanText(scene.scene_title, `Scene ${sceneNumber}`);
     const sceneMood = cleanText(scene.mood, emotionalCore);
@@ -161,7 +194,7 @@ export async function createLocalWorldAssets({
 
     return {
       project_id: project.id,
-      storyboard_scene_id: scene.id ?? null,
+      storyboard_scene_id: scene.id || null,
       scene_number: sceneNumber,
       scene_title: sceneTitle,
       timestamp_range: scene.timestamp_range || null,
