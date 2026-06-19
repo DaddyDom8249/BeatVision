@@ -500,17 +500,41 @@ export default function ProjectResultsPage() {
   };
 
   const handleWorldApproved = () => {
-    setProject((p) => p ? { ...p, world_approved: true, status: 'World Approved' } : p);
-    setTimeout(() => triggerGenerateStoryboard(project!, worldReport), 300);
+    if (!project) return;
+
+    const approvedProject: Project = {
+      ...project,
+      world_approved: true,
+      status: 'World Approved',
+    };
+
+    setProject(approvedProject);
+    setTimeout(() => triggerGenerateStoryboard(approvedProject, worldReport), 300);
   };
 
   const handleStoryboardApproved = () => {
-    setProject((p) => p ? { ...p, storyboard_approved: true, status: 'Storyboard Approved' } : p);
-    setTimeout(() => triggerGenerateCharacters(project!, worldReport), 300);
+    if (!project) return;
+
+    const approvedProject: Project = {
+      ...project,
+      storyboard_approved: true,
+      status: 'Storyboard Approved',
+    };
+
+    setProject(approvedProject);
+    setTimeout(() => triggerGenerateCharacters(approvedProject, worldReport), 300);
   };
 
   const handleCharactersApproved = () => {
-    setProject((p) => p ? { ...p, characters_approved: true, status: 'Characters Approved' } : p);
+    if (!project) return;
+
+    const approvedProject: Project = {
+      ...project,
+      characters_approved: true,
+      status: 'Characters Approved',
+    };
+
+    setProject(approvedProject);
   };
 
   // Called by any section after it logs a change — refresh logs + all section data
