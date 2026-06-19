@@ -455,6 +455,7 @@ export default function GenerateSceneImagesSection({
       void prepareManualUploadRows();
       return;
     }
+
     setPendingCreditAction({ sceneImageId: '', promptId: '', mode: 'all' });
   };
 
