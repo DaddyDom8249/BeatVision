@@ -720,23 +720,47 @@ export default function ProjectResultsPage() {
 
   if (!project) return null;
 
-  const allApproved = project.world_approved && project.storyboard_approved && project.characters_approved;
-  const worldGenUnlocked = allApproved;
+  // Derived workflow approval state:
+  // Use project flags OR approved child records so stale project flags do not trap sections.
+  const worldApproved = !!(project.world_approved || worldReport?.approved);
+  const storyboardApproved = !!(
+    project.storyboard_approved ||
+    (scenes.length > 0 && scenes.every((scene) => scene.approved))
+  );
+  const charactersApproved = !!(project.characters_approved || charEnv?.approved);
+
+  const styleBibleApproved = !!(project.style_bible_approved || styleBible?.approved);
+  const characterSheetApproved = !!(project.character_sheet_approved || characterSheet?.approved);
+  const environmentSheetApproved = !!(project.environment_sheet_approved || environmentSheet?.approved);
+  const scenePromptsApproved = !!(
+    project.scene_prompts_approved ||
+    (scenePrompts.length > 0 && scenePrompts.every((prompt) => prompt.approved))
+  );
+  const imagesApproved = !!(
+    project.images_approved ||
+    (sceneImages.length > 0 && sceneImages.every((image) => image.approved))
+  );
+
+  const allApproved = worldApproved && storyboardApproved && charactersApproved;
+
+  // This unlocks later world asset generation, not the first Visual World Report.
+  const worldAssetsUnlocked = allApproved;
+
   const phase3Unlocked =
     allApproved &&
-    project.style_bible_approved &&
-    project.character_sheet_approved &&
-    project.environment_sheet_approved &&
-    project.scene_prompts_approved;
+    styleBibleApproved &&
+    characterSheetApproved &&
+    environmentSheetApproved &&
+    scenePromptsApproved;
 
   // Also unlock Scene Images section when rows already exist in the DB
   // (e.g. seeded externally or created via a prior workflow step with awaiting_upload status)
   const sceneImagesUnlocked = phase3Unlocked || sceneImages.length > 0;
 
-  const phase4Unlocked = sceneImagesUnlocked && !!project.images_approved;
+  const phase4Unlocked = sceneImagesUnlocked && imagesApproved;
 
   // Preview is ready as soon as world report + storyboard are approved
-  const previewReady = !!(worldReport?.approved && project.storyboard_approved);
+  const previewReady = !!(worldApproved && storyboardApproved);
   // Export is ready as soon as world report + storyboard exist
   const exportReady = !!(worldReport && scenes.length > 0);
 
@@ -1118,7 +1142,7 @@ export default function ProjectResultsPage() {
           </section>
 
           {/* Storyboard */}
-          {project.world_approved ? (
+          {worldApproved ? (
             <section className="section-unlock">
               <StoryboardSection
                 scenes={scenes}
@@ -1139,7 +1163,7 @@ export default function ProjectResultsPage() {
           )}
 
           {/* Characters and Environment */}
-          {project.storyboard_approved ? (
+          {storyboardApproved ? (
             <section className="section-unlock">
               <CharacterEnvironmentSection
                 charEnv={charEnv}
@@ -1160,7 +1184,7 @@ export default function ProjectResultsPage() {
           )}
 
           {/* Generate the World — Phase 2 */}
-          {worldGenUnlocked ? (
+          {worldAssetsUnlocked ? (
             <section className="section-unlock space-y-3">
               {/* Section heading */}
               <div className="flex items-center gap-3 mb-2">
@@ -1171,7 +1195,7 @@ export default function ProjectResultsPage() {
                   <Sparkles className="w-4 h-4" style={{ color: '#3b7eff' }} />
                 </div>
                 <div>
-                  <h2 className="font-bold text-lg text-foreground">Generate the World</h2>
+                  <h2 className="font-bold text-lg text-foreground">Generate World Assets</h2>
                   <p className="text-xs text-muted-foreground">Style bible · Character sheet · Environment sheet · Scene prompts</p>
                 </div>
               </div>
@@ -1198,7 +1222,7 @@ export default function ProjectResultsPage() {
           ) : (
             <LockedSection
               title="Generate the World"
-              message="Approve your world, storyboard, and characters to unlock visual world generation."
+              message="Approve your world, storyboard, and characters to unlock style bible, character sheet, environment sheet, and scene prompts."
               icon={<Sparkles className="w-5 h-5 text-muted-foreground/50" />}
             />
           )}
