@@ -1274,39 +1274,8 @@ export default function ProjectResultsPage() {
             />
           )}
 
-          {/* Segmented Video Renderer — Phase 4 */}
-          {phase4Unlocked ? (
-            <section className="section-unlock space-y-3">
-              <div className="flex items-center gap-3 mb-2">
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)' }}
-                >
-                  <Clapperboard className="w-4 h-4 text-violet-400" />
-                </div>
-                <div>
-                  <h2 className="font-bold text-lg text-foreground">Segmented Video Renderer</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Split song into segments · Render Browser Video (WebM) · Export Render Manifest · MP4 via server renderer
-                  </p>
-                </div>
-              </div>
-              <SegmentedVideoRenderer
-                project={project}
-                scenes={scenes}
-                sceneImages={sceneImages}
-                finalVideo={finalVideo}
-                onProjectUpdate={(updated) => setProject(p => p ? { ...p, ...updated } : p)}
-                onFinalVideoUpdate={(fv) => setFinalVideo(fv)}
-              />
-            </section>
-          ) : (
-            <LockedSection
-              title="Segmented Video Renderer"
-              message="Approve all scene images to unlock the full-length video renderer."
-              icon={<Clapperboard className="w-5 h-5 text-muted-foreground/50" />}
-            />
-          )}
+            {/* Segmented Video Renderer hidden in clean-core MVP. */}
+            {/* Motion/video export stays quarantined until the core workflow is stable. */}
 
           {/* Project Change Log */}
           {changeLogs.length > 0 && (
