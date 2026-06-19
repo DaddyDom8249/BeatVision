@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
-import type { Project, VisualWorldReport, StoryboardScene, CharacterEnvironment, SceneVisualPrompt, ProjectChangeLog, WorldStyleBible, CharacterSheet, EnvironmentSheet, SceneImage, SceneVideo } from '@/types/types';
+import type { Project, VisualWorldReport, StoryboardScene, CharacterEnvironment, SceneVisualPrompt, ProjectChangeLog, WorldStyleBible, CharacterSheet, EnvironmentSheet, SceneImage } from '@/types/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import Navbar from '@/components/layouts/Navbar';
@@ -67,14 +67,9 @@ export default function ProjectResultsPage() {
   const [characterSheet, setCharacterSheet] = useState<CharacterSheet | null>(null);
   const [envSheet, setEnvSheet] = useState<EnvironmentSheet | null>(null);
   const [sceneImages, setSceneImages] = useState<SceneImage[]>([]);
-  const [sceneVideos, setSceneVideos] = useState<SceneVideo[]>([]);
   const [generatingWorld, setGeneratingWorld] = useState(false);
   const [generatingStoryboard, setGeneratingStoryboard] = useState(false);
   const [generatingCharacters, setGeneratingCharacters] = useState(false);
-
-  // Phase 4 — Motion and Video Rendering
-  const [motionClips, setMotionClips] = useState<MotionClip[]>([]);
-  const [finalVideo, setFinalVideo] = useState<FinalVideo | null>(null);
 
   // Phase 3+ — Image provider settings (Credit-Safe Mode: default OFF)
   const [realProvidersEnabled, setRealProvidersEnabled] = useState(false);
@@ -178,27 +173,17 @@ export default function ProjectResultsPage() {
         .order('scene_number', { ascending: true });
       setScenePrompts(Array.isArray(promptsData) ? promptsData : []);
 
-      // Load world assets + scene images + scene videos
-      const [sbRes, csRes, esRes, imgRes, vidRes] = await Promise.all([
+      // Load world assets + scene images
+      const [sbRes, csRes, esRes, imgRes] = await Promise.all([
         supabase.from('world_style_bibles').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('character_sheets').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('environment_sheets').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('scene_images').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
-        supabase.from('scene_videos').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
-      ]);
+        ]);
       if (sbRes.data) setStyleBible(sbRes.data as WorldStyleBible);
       if (csRes.data) setCharacterSheet(csRes.data as CharacterSheet);
       if (esRes.data) setEnvSheet(esRes.data as EnvironmentSheet);
       if (Array.isArray(imgRes.data)) setSceneImages(imgRes.data as SceneImage[]);
-      if (Array.isArray(vidRes.data)) setSceneVideos(vidRes.data as SceneVideo[]);
-
-      // Load Phase 4 data
-      const [mcRes, fvRes] = await Promise.all([
-        supabase.from('motion_clips').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
-        supabase.from('final_videos').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-      ]);
-      if (Array.isArray(mcRes.data)) setMotionClips(mcRes.data as MotionClip[]);
-      if (fvRes.data) setFinalVideo(fvRes.data as FinalVideo);
 
       // Load change logs
       await loadChangeLogs(proj.id);
@@ -549,28 +534,17 @@ export default function ProjectResultsPage() {
     if (charRes.data) setCharEnv(charRes.data);
     if (Array.isArray(promptsRes.data)) setScenePrompts(promptsRes.data);
 
-    // Load additional data for preview and export
-    const [sbRes, csRes, esRes, imgRes, vidRes] = await Promise.all([
+    // Refresh world assets and scene images
+    const [sbRes, csRes, esRes, imgRes] = await Promise.all([
       supabase.from('world_style_bibles').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('character_sheets').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('environment_sheets').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('scene_images').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
-      supabase.from('scene_videos').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
     ]);
     if (sbRes.data) setStyleBible(sbRes.data as WorldStyleBible);
     if (csRes.data) setCharacterSheet(csRes.data as CharacterSheet);
     if (esRes.data) setEnvSheet(esRes.data as EnvironmentSheet);
     if (Array.isArray(imgRes.data)) setSceneImages(imgRes.data as SceneImage[]);
-    if (Array.isArray(vidRes.data)) setSceneVideos(vidRes.data as SceneVideo[]);
-
-    // Reload Phase 4 data
-    const [mcRes, fvRes] = await Promise.all([
-      supabase.from('motion_clips').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
-      supabase.from('final_videos').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-    ]);
-    if (Array.isArray(mcRes.data)) setMotionClips(mcRes.data as MotionClip[]);
-    if (fvRes.data) setFinalVideo(fvRes.data as FinalVideo);
-    else setFinalVideo(null);
   }, [id, loadChangeLogs]);
 
   // ── Fix Project Status ────────────────────────────────────────────────────
@@ -654,17 +628,7 @@ export default function ProjectResultsPage() {
           .eq('id', id);
       }
 
-      // Scene videos — clear stale flags on approved ones
-      const { data: allVideos } = await supabase
-        .from('scene_videos').select('id, approved').eq('project_id', id);
-      const approvedVideoIds = (allVideos || []).filter((v: { approved: boolean }) => v.approved).map((v: { id: string }) => v.id);
-      if (approvedVideoIds.length > 0) {
-        await supabase.from('scene_videos')
-          .update({ needs_review: false, updated_after_approval: false, generation_status: 'succeed', rejected: false, updated_at: now })
-          .in('id', approvedVideoIds);
-      }
-
-      // Compute exact readiness blockers from current (post-fix) state
+        // Compute exact readiness blockers from current (post-fix) state
       const blockers: string[] = [];
       const freshProj = (await supabase.from('projects').select('*').eq('id', id).maybeSingle()).data || project;
       if (!freshProj.world_approved) blockers.push('Visual World Report not approved.');
