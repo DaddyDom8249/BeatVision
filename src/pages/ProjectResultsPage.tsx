@@ -692,7 +692,6 @@ export default function ProjectResultsPage() {
   // (e.g. seeded externally or created via a prior workflow step with awaiting_upload status)
   const sceneImagesUnlocked = phase3Unlocked || sceneImages.length > 0;
 
-  const phase4Unlocked = sceneImagesUnlocked && !!project.images_approved;
 
   // Preview is ready as soon as world report + storyboard are approved
   // Export is ready as soon as world report + storyboard exist
@@ -1177,8 +1176,6 @@ export default function ProjectResultsPage() {
             />
           )}
 
-            {/* Segmented Video Renderer hidden in clean-core MVP. */}
-            {/* Motion/video export stays quarantined until the core workflow is stable. */}
 
           {/* Project Change Log */}
           {changeLogs.length > 0 && (
