@@ -756,7 +756,28 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
           />
           {expandedSections.prompts && (
             <div className="mt-3">
-              <SceneVisualPromptSection
+              
+              {/* NESTED SCENE PROMPT DIAGNOSTIC */}
+              <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-4 mb-4 text-xs font-mono text-yellow-100">
+                <div className="font-bold text-yellow-300 mb-2">NESTED SCENE PROMPT DIAGNOSTIC</div>
+                <div>project_id: {project.id}</div>
+                <div>project.status: {project.status || 'none'}</div>
+                <div>project.scene_prompts_approved: {String(Boolean(project.scene_prompts_approved))}</div>
+                <div>local scenePrompts count: {scenePrompts.length}</div>
+                <div>local approved prompt count: {scenePrompts.filter((p) => Boolean(p.approved)).length}</div>
+                <div>styleBible exists: {String(Boolean(styleBible))}</div>
+                <div>characterSheet exists: {String(Boolean(characterSheet))}</div>
+                <div>envSheet exists: {String(Boolean(envSheet))}</div>
+                <div className="break-words">
+                  prompt ids: {scenePrompts.map((p) => `${p.scene_number ?? '?'}:${p.id ?? 'missing-id'}:${p.approved ? 'approved' : 'not-approved'}`).join(' | ') || 'none'}
+                </div>
+                {scenePrompts.length === 0 && (
+                  <div className="mt-2 text-red-200">
+                    GenerateWorldSection has zero local scene prompts. Either fallback insertion failed, fetchInitial did not load rows, or setScenePrompts was not reached.
+                  </div>
+                )}
+              </div>
+<SceneVisualPromptSection
                 prompts={scenePrompts}
                 project={project}
                 generatingAll={genPrompts}
