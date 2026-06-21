@@ -307,6 +307,64 @@ export async function createLocalScenePromptsOnly({
     return cleanText(scene.timestamp_range, `${index * 15}s-${(index + 1) * 15}s`);
   };
 
+  const insertMany = async <T,>(table: string, payload: Record<string, unknown>[]): Promise<T[]> => {
+    if (!payload.length) return [];
+
+    let currentPayload = payload.map((row) => ({ ...row }));
+    let lastError: unknown = null;
+
+    for (let attempt = 1; attempt <= 12; attempt += 1) {
+      const { data, error } = await supabase
+        .from(table)
+        .insert(currentPayload)
+        .select();
+
+      if (!error) {
+        return (Array.isArray(data) ? data : []) as T[];
+      }
+
+      lastError = error;
+
+      const message = error.message || '';
+      const missingColumn = message.match(/'([^']+)' column/)?.[1];
+
+      if (error.code === 'PGRST204' && missingColumn) {
+        console.warn(`[BeatVision] Removing unsupported ${table} column "${missingColumn}" and retrying insert.`);
+        currentPayload = currentPayload.map((row) => {
+          const next = { ...row };
+          delete next[missingColumn];
+          return next;
+        });
+        continue;
+      }
+
+      throw new Error(
+        `[${table} insert failed] ${JSON.stringify(
+          {
+            code: error.code ?? null,
+            message: error.message ?? null,
+            details: error.details ?? null,
+            hint: error.hint ?? null,
+            payloadKeys: Object.keys(currentPayload[0] || {}),
+          },
+          null,
+          2
+        )}`
+      );
+    }
+
+    throw new Error(
+      `[${table} insert failed after adaptive retries] ${JSON.stringify(
+        {
+          lastError,
+          payloadKeys: Object.keys(currentPayload[0] || {}),
+        },
+        null,
+        2
+      )}`
+    );
+  };
+
   const now = new Date().toISOString();
   const style = cleanText(
     (project as Record<string, unknown>).selected_style ||
