@@ -8,15 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   CheckCircle2, RefreshCw, Edit3, Loader2, Film,
-  Camera, Lightbulb, User, Palette, Globe, Gem, ShieldCheck, AlertTriangle, Clock, Save, X
-} from 'lucide-react';
+  Camera, Lightbulb, User, Palette, Globe, Gem, ShieldCheck, AlertTriangle, Clock, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 import AfterEditChoiceDialog from '@/components/project/AfterEditChoiceDialog';
 import {
   DOWNSTREAM_DEPS,
   createChangeLogEntry,
-  reapproveSection,
-} from '@/hooks/useReviewChanges';
+  reapproveSection, } from '@/hooks/useReviewChanges';
 import { ReviewStatusBadge } from '@/components/project/ReviewChangesPanel';
 import type { ReviewSectionStatus } from '@/components/project/ReviewChangesPanel';
 
@@ -28,8 +26,7 @@ interface Props {
   onRefreshPrompt: (prompt: SceneVisualPrompt) => void;
   onAllApproved: () => void;
   onPromptUpdate: (p: SceneVisualPrompt) => void;
-  onChangeLogged?: () => void;
-}
+  onChangeLogged?: () => void; }
 
 const PROMPT_FIELDS: { key: keyof SceneVisualPrompt; label: string; icon: React.ElementType; fullWidth?: boolean }[] = [
   { key: 'main_image_prompt', label: 'Main Image Prompt', icon: Film, fullWidth: true },
@@ -49,15 +46,13 @@ function ScenePromptCard({
   refreshingId,
   onRefresh,
   onUpdate,
-  onChangeLogged,
-}: {
+  onChangeLogged, }: {
   prompt: SceneVisualPrompt;
   project: Project;
   refreshingId: string | null;
   onRefresh: (p: SceneVisualPrompt) => void;
   onUpdate: (p: SceneVisualPrompt) => void;
-  onChangeLogged?: () => void;
-}) {
+  onChangeLogged?: () => void; }) {
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<SceneVisualPrompt>>({});
   const [approving, setApproving] = useState(false);
@@ -68,25 +63,21 @@ function ScenePromptCard({
 
   const handleEdit = () => {
     setEditData({ ...prompt });
-    setEditing(true);
-  };
+    setEditing(true); };
 
   const handleSave = async () => {
     if (prompt.approved) {
       setPendingSaveData(editData);
       setShowChoiceDialog(true);
-      return;
-    }
-    await performSave(editData, false);
-  };
+      return; }
+    await performSave(editData, false); };
 
   const performSave = async (data: Partial<SceneVisualPrompt>, updatedAfterApproval: boolean) => {
     setSaving(true);
     try {
       const updates: Partial<SceneVisualPrompt> = {};
       PROMPT_FIELDS.forEach(({ key }) => {
-        if (data[key] !== undefined) (updates as Record<string, unknown>)[key] = data[key];
-      });
+        if (data[key] !== undefined) (updates as Record<string, unknown>)[key] = data[key]; });
       (updates as Record<string, unknown>).updated_after_approval = updatedAfterApproval;
       updates.updated_at = new Date().toISOString();
       const { data: saved, error } = await supabase
@@ -98,13 +89,9 @@ function ScenePromptCard({
       if (error) throw error;
       if (saved) onUpdate(saved as SceneVisualPrompt);
       setEditing(false);
-      toast.success(`Scene ${prompt.scene_number} prompt updated.`);
-    } catch {
-      toast.error('Failed to save changes.');
-    } finally {
-      setSaving(false);
-    }
-  };
+      toast.success(`Scene ${prompt.scene_number} prompt updated.`); } catch {
+      toast.error('Failed to save changes.'); } finally {
+      setSaving(false); } };
 
   const handleApprove = async () => {
     setApproving(true);
@@ -112,19 +99,15 @@ function ScenePromptCard({
       const now = new Date().toISOString();
       const { data: saved, error } = await supabase
         .from('scene_visual_prompts')
-        .update({ approved: true, needs_review: false, updated_after_approval: false, last_approved_at: now, updated_at: now })
+        .update({ approved: true, updated_at: now })
         .eq('id', prompt.id)
         .select()
         .maybeSingle();
       if (error) throw error;
       if (saved) onUpdate(saved as SceneVisualPrompt);
-      toast.success(`Scene ${prompt.scene_number} prompt approved.`);
-    } catch {
-      toast.error('Failed to approve prompt.');
-    } finally {
-      setApproving(false);
-    }
-  };
+      toast.success(`Scene ${prompt.scene_number} prompt approved.`); } catch {
+      toast.error('Failed to approve prompt.'); } finally {
+      setApproving(false); } };
 
   const handleMarkDownstream = async () => {
     setShowChoiceDialog(false);
@@ -143,12 +126,10 @@ function ScenePromptCard({
       changeType: 'marked_downstream_needs_review',
       changeSummary: `Scene ${prompt.scene_number} prompt edited after approval. Scene image marked for review.`,
       affectedSections: DOWNSTREAM_DEPS['scene_visual_prompt'],
-      userChoice: 'Mark affected sections as Needs Review',
-    });
+      userChoice: 'Mark affected sections as Needs Review', });
     onChangeLogged?.();
     toast.success(`Scene ${prompt.scene_number} updated. Scene image marked for review.`);
-    setPendingSaveData(null);
-  };
+    setPendingSaveData(null); };
 
   const handleKeepUnchanged = async () => {
     setShowChoiceDialog(false);
@@ -162,19 +143,17 @@ function ScenePromptCard({
       changeType: 'kept_later_sections_unchanged',
       changeSummary: `Scene ${prompt.scene_number} prompt edited after approval. Creator chose to keep scene image unchanged.`,
       affectedSections: DOWNSTREAM_DEPS['scene_visual_prompt'],
-      userChoice: 'Keep later sections unchanged',
-    });
+      userChoice: 'Keep later sections unchanged', });
     onChangeLogged?.();
     toast.success(`Scene ${prompt.scene_number} updated. Scene image kept unchanged.`);
-    setPendingSaveData(null);
-  };
+    setPendingSaveData(null); };
 
   const handleReapprove = async () => {
     setApproving(true);
     try {
       await reapproveSection('scene_visual_prompts', prompt.id);
       const now = new Date().toISOString();
-      onUpdate({ ...prompt, needs_review: false, updated_after_approval: false, last_approved_at: now });
+      onUpdate({ ...prompt });
       await createChangeLogEntry({
         projectId: project.id,
         sectionName: `Scene ${prompt.scene_number} Prompt`,
@@ -182,16 +161,11 @@ function ScenePromptCard({
         sectionRecordId: prompt.id,
         changeType: 'reapproved',
         changeSummary: `Scene ${prompt.scene_number} prompt reapproved.`,
-        affectedSections: [],
-      });
+        affectedSections: [], });
       onChangeLogged?.();
-      toast.success(`Scene ${prompt.scene_number} prompt reapproved.`);
-    } catch {
-      toast.error('Failed to reapprove prompt.');
-    } finally {
-      setApproving(false);
-    }
-  };
+      toast.success(`Scene ${prompt.scene_number} prompt reapproved.`); } catch {
+      toast.error('Failed to reapprove prompt.'); } finally {
+      setApproving(false); } };
 
   const reviewStatus: ReviewSectionStatus | null = prompt.needs_review
     ? 'Needs Review'
@@ -223,8 +197,7 @@ function ScenePromptCard({
             ? 'rgba(229,169,60,0.25)'
             : prompt.approved
             ? 'rgba(16,185,129,0.2)'
-            : undefined,
-        }}
+            : undefined, }}
       >
         {/* Scene header */}
         <CardHeader className="pb-3 pt-4 px-4 border-b border-white/5">
@@ -338,14 +311,12 @@ function ScenePromptCard({
                     </p>
                   )}
                 </div>
-              );
-            })}
+              ); })}
           </div>
         </CardContent>
       </Card>
     </>
-  );
-}
+  ); }
 
 export default function SceneVisualPromptSection({ prompts, project, generatingAll, refreshingId, onRefreshPrompt, onAllApproved, onPromptUpdate, onChangeLogged }: Props) {
   const approvedCount = prompts.filter((p) => p.approved).length;
@@ -366,28 +337,23 @@ export default function SceneVisualPromptSection({ prompts, project, generatingA
       .then(({ error }) => {
         if (!error) {
           onAllApproved();
-          toast.success('All scene prompts approved! Scene visual package complete.');
-        }
-      });
-  }, [allApproved, project.scene_prompts_approved, project.id, onAllApproved]);
+          toast.success('All scene prompts approved! Scene visual package complete.'); } }); }, [allApproved, project.scene_prompts_approved, project.id, onAllApproved]);
 
   // Reset the guard when prompts change (e.g. new generation run)
   useEffect(() => {
-    didAutoFireRef.current = false;
-  }, [prompts.length]);
+    didAutoFireRef.current = false; }, [prompts.length]);
 
   const handleApproveAll = async () => {
     try {
       const unapproved = prompts.filter((p) => !p.approved);
       if (unapproved.length === 0) {
         onAllApproved();
-        return;
-      }
+        return; }
       const ids = unapproved.map((p) => p.id);
       const now = new Date().toISOString();
       const { error } = await supabase
         .from('scene_visual_prompts')
-        .update({ approved: true, needs_review: false, updated_after_approval: false, last_approved_at: now, updated_at: now })
+        .update({ approved: true, updated_at: now })
         .in('id', ids);
       if (error) throw error;
 
@@ -397,14 +363,11 @@ export default function SceneVisualPromptSection({ prompts, project, generatingA
         .eq('id', project.id);
       if (pErr) throw pErr;
 
-      unapproved.forEach((p) => onPromptUpdate({ ...p, approved: true, needs_review: false, updated_after_approval: false, last_approved_at: now }));
+      unapproved.forEach((p) => onPromptUpdate({ ...p, approved: true }));
       didAutoFireRef.current = true; // prevent double-fire from useEffect
       onAllApproved();
-      toast.success('All scene prompts approved! Scene visual package complete.');
-    } catch {
-      toast.error('Failed to approve all prompts.');
-    }
-  };
+      toast.success('All scene prompts approved! Scene visual package complete.'); } catch {
+      toast.error('Failed to approve all prompts.'); } };
 
   return (
     <div className="space-y-4">
@@ -485,5 +448,4 @@ export default function SceneVisualPromptSection({ prompts, project, generatingA
         </div>
       )}
     </div>
-  );
-}
+  ); }
