@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
-import type { Project, VisualWorldReport, StoryboardScene, CharacterEnvironment, SceneVisualPrompt, ProjectChangeLog, WorldStyleBible, CharacterSheet, EnvironmentSheet, SceneImage, SceneVideo, MotionClip, FinalVideo } from '@/types/types';
+import type { Project, VisualWorldReport, StoryboardScene, CharacterEnvironment, SceneVisualPrompt, ProjectChangeLog, WorldStyleBible, CharacterSheet, EnvironmentSheet, SceneImage } from '@/types/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import Navbar from '@/components/layouts/Navbar';
@@ -17,11 +17,8 @@ import ReviewStatusCard from '@/components/project/ReviewStatusCard';
 import ProjectChangeLogSection from '@/components/project/ProjectChangeLogSection';
 import type { AffectedSectionItem } from '@/components/project/ReviewChangesPanel';
 import { reapproveSection, createChangeLogEntry } from '@/hooks/useReviewChanges';
-import { ArrowLeft, Music2, Sparkles, Lock, Clapperboard, Loader2, ImageIcon, Eye, Download, Settings2 } from 'lucide-react';
-import FullPreviewModal from '@/components/project/FullPreviewModal';
-import ExportProjectPanel from '@/components/project/ExportProjectPanel';
+import { ArrowLeft, Music2, Sparkles, Lock, Clapperboard, Loader2, ImageIcon, Settings2 } from 'lucide-react';
 import ImageProviderSettingsSection from '@/components/project/ImageProviderSettingsSection';
-import SegmentedVideoRenderer from '@/components/project/SegmentedVideoRenderer';
 import { toast } from 'sonner';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -70,16 +67,9 @@ export default function ProjectResultsPage() {
   const [characterSheet, setCharacterSheet] = useState<CharacterSheet | null>(null);
   const [envSheet, setEnvSheet] = useState<EnvironmentSheet | null>(null);
   const [sceneImages, setSceneImages] = useState<SceneImage[]>([]);
-  const [sceneVideos, setSceneVideos] = useState<SceneVideo[]>([]);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showExport, setShowExport] = useState(false);
   const [generatingWorld, setGeneratingWorld] = useState(false);
   const [generatingStoryboard, setGeneratingStoryboard] = useState(false);
   const [generatingCharacters, setGeneratingCharacters] = useState(false);
-
-  // Phase 4 — Motion and Video Rendering
-  const [motionClips, setMotionClips] = useState<MotionClip[]>([]);
-  const [finalVideo, setFinalVideo] = useState<FinalVideo | null>(null);
 
   // Phase 3+ — Image provider settings (Credit-Safe Mode: default OFF)
   const [realProvidersEnabled, setRealProvidersEnabled] = useState(false);
@@ -133,6 +123,30 @@ export default function ProjectResultsPage() {
         .maybeSingle();
       setWorldReport(reportData || null);
 
+      // Repair unlock state:
+      // If the visual world report is approved but the project flag was not updated,
+      // unlock storyboard generation instead of trapping the user on a locked story step.
+      if (reportData?.approved && !proj.world_approved) {
+        const { data: repairedProject } = await supabase
+          .from('projects')
+          .update({
+            world_approved: true,
+            status: 'World Approved',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id)
+          .select()
+          .maybeSingle();
+
+        if (repairedProject) {
+          setProject(repairedProject as Project);
+        }
+
+        // Keep this load cycle moving too, not just the next page refresh.
+        proj.world_approved = true;
+        proj.status = 'World Approved';
+      }
+
       // Load Storyboard Scenes
       const { data: scenesData } = await supabase
         .from('storyboard_scenes')
@@ -159,27 +173,17 @@ export default function ProjectResultsPage() {
         .order('scene_number', { ascending: true });
       setScenePrompts(Array.isArray(promptsData) ? promptsData : []);
 
-      // Load world assets + scene images + scene videos
-      const [sbRes, csRes, esRes, imgRes, vidRes] = await Promise.all([
+      // Load world assets + scene images
+      const [sbRes, csRes, esRes, imgRes] = await Promise.all([
         supabase.from('world_style_bibles').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('character_sheets').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('environment_sheets').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('scene_images').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
-        supabase.from('scene_videos').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
-      ]);
+        ]);
       if (sbRes.data) setStyleBible(sbRes.data as WorldStyleBible);
       if (csRes.data) setCharacterSheet(csRes.data as CharacterSheet);
       if (esRes.data) setEnvSheet(esRes.data as EnvironmentSheet);
       if (Array.isArray(imgRes.data)) setSceneImages(imgRes.data as SceneImage[]);
-      if (Array.isArray(vidRes.data)) setSceneVideos(vidRes.data as SceneVideo[]);
-
-      // Load Phase 4 data
-      const [mcRes, fvRes] = await Promise.all([
-        supabase.from('motion_clips').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
-        supabase.from('final_videos').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-      ]);
-      if (Array.isArray(mcRes.data)) setMotionClips(mcRes.data as MotionClip[]);
-      if (fvRes.data) setFinalVideo(fvRes.data as FinalVideo);
 
       // Load change logs
       await loadChangeLogs(proj.id);
@@ -190,7 +194,7 @@ export default function ProjectResultsPage() {
       }
 
       // Auto-generate storyboard if world approved but no scenes
-      if (proj.world_approved && !scenesData?.length) {
+      if ((proj.world_approved || !!reportData?.approved) && !scenesData?.length) {
         setTimeout(() => triggerGenerateStoryboard(proj, reportData), 300);
       }
 
@@ -253,9 +257,137 @@ export default function ProjectResultsPage() {
         .maybeSingle();
       if (saveErr) throw saveErr;
       if (saved) setWorldReport(saved);
-      if (seed > 1) toast.info('World regenerated. A fresh perspective on your song\'s world.');
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to generate world report');
+      if (seed > 1) toast.info('World regenerated. A fresh perspective on your song\'s world.');    } catch (err: unknown) {
+
+      const sourceErrorMessage = err instanceof Error ? err.message : 'Failed to generate world report';
+
+      console.error('[BeatVision] World generation failed:', err);
+
+
+      // Fallback protection:
+
+      // If the Supabase Edge Function fails, do not leave the project blank.
+
+      if (!worldReport) {
+
+        try {
+
+          const lyricsSnippet = (proj.lyrics || '')
+
+            .replace(/\s+/g, ' ')
+
+            .trim()
+
+            .slice(0, 700);
+
+
+          const fallbackSummary = lyricsSnippet
+
+            ? `This fallback report was created from the song title, style, notes, and lyrics preview: ${lyricsSnippet}`
+
+            : 'This fallback report was created from the song title, selected style, and creator notes.';
+
+
+          const { data: savedFallback, error: fallbackErr } = await supabase
+
+            .from('visual_world_reports')
+
+            .insert({
+
+              project_id: proj.id,
+
+              song_summary: `BeatVision fallback world report for "${proj.title}". ${fallbackSummary}`,
+
+              emotional_core: 'The emotional core centers on pressure, survival, transformation, and the inner world hidden inside the track.',
+
+              main_visual_world: `A ${proj.selected_style || 'cinematic'} music-video world built around the song atmosphere, symbols, and creator notes. The visuals should feel intentional, grounded, and ready for manual refinement.`,
+
+              color_palette: 'deep black, muted steel, dusty amber, electric blue highlights, worn industrial gray',
+
+              lighting_style: 'cinematic low-key lighting, hard rim light, glowing practicals, smoke, haze, dramatic contrast',
+
+              main_characters: 'A central protagonist shaped by the emotional weight of the song, shown through body language, environment, and symbolic action.',
+
+              symbolic_objects: 'light, shadow, broken machinery, weathered metal, reflections, sparks, smoke, doors, roads, wires',
+
+              key_locations: 'an emotionally charged cinematic world built from the song setting, with practical locations that can become storyboard scenes',
+
+              story_direction: 'Start with the protagonist inside pressure, reveal the world around them, build toward confrontation or release, and end with a clear visual transformation.',
+
+              creative_match_score: 72,
+
+              approved: false,
+
+            })
+
+            .select()
+
+            .maybeSingle();
+
+
+          if (fallbackErr) throw fallbackErr;
+
+
+          if (savedFallback) {
+
+            setWorldReport(savedFallback as VisualWorldReport);
+
+
+            const { data: updatedProject } = await supabase
+
+              .from('projects')
+
+              .update({
+
+                status: 'World Revealed',
+
+                updated_at: new Date().toISOString(),
+
+              })
+
+              .eq('id', proj.id)
+
+              .select()
+
+              .maybeSingle();
+
+
+            if (updatedProject) {
+
+              setProject(updatedProject as Project);
+
+            }
+
+
+            toast.warning('AI generation failed, so BeatVision created a local fallback world report. You can edit it or regenerate later.');
+
+            return;
+
+          }
+
+        } catch (fallbackErr: unknown) {
+
+          console.error('[BeatVision] Local fallback world report failed:', fallbackErr);
+
+          toast.error(
+
+            fallbackErr instanceof Error
+
+              ? `Generation failed and fallback save failed: ${fallbackErr.message}`
+
+              : sourceErrorMessage
+
+          );
+
+          return;
+
+        }
+
+      }
+
+
+      toast.error(sourceErrorMessage);
+
     } finally {
       setGeneratingWorld(false);
       worldGenRef.current = false;
@@ -308,7 +440,132 @@ export default function ProjectResultsPage() {
       if (sErr) throw sErr;
       setScenes(Array.isArray(savedScenes) ? savedScenes : []);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to generate storyboard');
+      console.error('[BeatVision] Storyboard generation failed:', err);
+
+      try {
+        const fallbackScenes = [
+          {
+            project_id: proj.id,
+            scene_number: 1,
+            timestamp_range: '0:00 - 0:20',
+            scene_title: 'Opening Pressure',
+            visual_description: `Open inside the emotional world of "${proj.title}", introducing the main atmosphere, setting, and symbolic tension.`,
+            camera_direction: 'Slow cinematic push-in, low contrast shadows, careful environmental detail.',
+            mood: 'tense, cinematic, immersive',
+            location: 'primary world location',
+            lyric_moment: 'intro / opening feeling',
+            transition_style: 'slow dissolve',
+            approved: false,
+          },
+          {
+            project_id: proj.id,
+            scene_number: 2,
+            timestamp_range: '0:20 - 0:40',
+            scene_title: 'The Protagonist Appears',
+            visual_description: 'Reveal the central figure through posture, silhouette, and movement rather than exposition.',
+            camera_direction: 'Medium tracking shot with shallow depth of field.',
+            mood: 'focused, emotional, grounded',
+            location: 'inside the main environment',
+            lyric_moment: 'first verse',
+            transition_style: 'match cut',
+            approved: false,
+          },
+          {
+            project_id: proj.id,
+            scene_number: 3,
+            timestamp_range: '0:40 - 1:00',
+            scene_title: 'Symbols Surface',
+            visual_description: 'Key objects and visual motifs begin appearing around the protagonist, hinting at the song meaning.',
+            camera_direction: 'Insert shots, slow pans, close texture details.',
+            mood: 'mysterious, symbolic',
+            location: 'symbolic interior/exterior space',
+            lyric_moment: 'verse detail',
+            transition_style: 'glitch fade',
+            approved: false,
+          },
+          {
+            project_id: proj.id,
+            scene_number: 4,
+            timestamp_range: '1:00 - 1:25',
+            scene_title: 'World Expands',
+            visual_description: 'Pull back to show the larger world BeatVision has built around the track.',
+            camera_direction: 'Wide reveal shot with atmospheric motion.',
+            mood: 'expansive, cinematic',
+            location: 'main world wide view',
+            lyric_moment: 'pre-chorus / build',
+            transition_style: 'rising light transition',
+            approved: false,
+          },
+          {
+            project_id: proj.id,
+            scene_number: 5,
+            timestamp_range: '1:25 - 1:55',
+            scene_title: 'Emotional Collision',
+            visual_description: 'The protagonist confronts the main emotional conflict through action, weather, movement, or environment.',
+            camera_direction: 'Handheld energy mixed with dramatic closeups.',
+            mood: 'intense, conflicted',
+            location: 'conflict space',
+            lyric_moment: 'chorus / impact',
+            transition_style: 'hard cut',
+            approved: false,
+          },
+          {
+            project_id: proj.id,
+            scene_number: 6,
+            timestamp_range: '1:55 - 2:25',
+            scene_title: 'Breaking Point',
+            visual_description: 'The world becomes more unstable as the song reaches its strongest emotional pressure.',
+            camera_direction: 'Fast cuts, push-ins, moving shadows, kinetic framing.',
+            mood: 'overwhelming, dramatic',
+            location: 'fractured version of the main world',
+            lyric_moment: 'second build / bridge',
+            transition_style: 'strobe cut',
+            approved: false,
+          },
+          {
+            project_id: proj.id,
+            scene_number: 7,
+            timestamp_range: '2:25 - 2:55',
+            scene_title: 'Release',
+            visual_description: 'The protagonist finds a visual release, shift, surrender, or transformation.',
+            camera_direction: 'Slow motion, widening frame, symbolic light movement.',
+            mood: 'transformational, cathartic',
+            location: 'open or elevated space',
+            lyric_moment: 'final chorus',
+            transition_style: 'light bloom',
+            approved: false,
+          },
+          {
+            project_id: proj.id,
+            scene_number: 8,
+            timestamp_range: '2:55 - end',
+            scene_title: 'Final Image',
+            visual_description: 'End on a strong final frame that summarizes the song world in one memorable image.',
+            camera_direction: 'Locked-off cinematic final shot, lingering atmosphere.',
+            mood: 'resolved, haunting, memorable',
+            location: 'final symbolic location',
+            lyric_moment: 'outro',
+            transition_style: 'fade to black',
+            approved: false,
+          },
+        ];
+
+        await supabase.from('storyboard_scenes').delete().eq('project_id', proj.id);
+
+        const { data: savedScenes, error: fallbackErr } = await supabase
+          .from('storyboard_scenes')
+          .insert(fallbackScenes)
+          .select()
+          .order('scene_number', { ascending: true });
+
+        if (fallbackErr) throw fallbackErr;
+
+        setScenes(Array.isArray(savedScenes) ? savedScenes as StoryboardScene[] : []);
+        toast.warning('AI storyboard failed, so BeatVision created a local fallback storyboard. You can edit it or regenerate later.');
+      } catch (fallbackErr: unknown) {
+        console.error('[BeatVision] Local fallback storyboard failed:', fallbackErr);
+        toast.error(fallbackErr instanceof Error ? fallbackErr.message : 'Failed to generate storyboard');
+      }
     } finally {
       setGeneratingStoryboard(false);
       storyGenRef.current = false;
@@ -360,7 +617,36 @@ export default function ProjectResultsPage() {
       if (cErr) throw cErr;
       if (saved) setCharEnv(saved);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to generate characters');
+      console.error('[BeatVision] Character generation failed:', err);
+
+      try {
+        const fallbackCharacter = {
+          project_id: proj.id,
+          main_character: 'A central protagonist shaped by the emotional pressure of the song, visually defined by posture, movement, clothing, and symbolic contrast.',
+          supporting_character: 'A secondary presence or opposing force that reflects the song conflict. This can be a person, memory, shadow, environment, machine, or spiritual counterpart.',
+          main_environment: `A ${proj.selected_style || 'cinematic'} visual world built from the song title, lyrics, style, and creator notes.`,
+          visual_atmosphere: 'Cinematic contrast, symbolic lighting, textured environments, emotional realism, and a clear music-video identity.',
+          wardrobe_style: 'Practical, story-driven wardrobe that fits the world and helps the protagonist read clearly across scenes.',
+          world_rules: 'Every visual choice should support the song emotion. Symbols should repeat with purpose. The protagonist should remain visually consistent across the storyboard.',
+          approved: false,
+        };
+
+        await supabase.from('character_environments').delete().eq('project_id', proj.id);
+
+        const { data: saved, error: fallbackErr } = await supabase
+          .from('character_environments')
+          .insert(fallbackCharacter)
+          .select()
+          .maybeSingle();
+
+        if (fallbackErr) throw fallbackErr;
+
+        if (saved) setCharEnv(saved as CharacterEnvironment);
+        toast.warning('AI character generation failed, so BeatVision created a local fallback character/environment plan. You can edit it or regenerate later.');
+      } catch (fallbackErr: unknown) {
+        console.error('[BeatVision] Local fallback character generation failed:', fallbackErr);
+        toast.error(fallbackErr instanceof Error ? fallbackErr.message : 'Failed to generate characters');
+      }
     } finally {
       setGeneratingCharacters(false);
       charGenRef.current = false;
@@ -368,17 +654,41 @@ export default function ProjectResultsPage() {
   };
 
   const handleWorldApproved = () => {
-    setProject((p) => p ? { ...p, world_approved: true, status: 'World Approved' } : p);
-    setTimeout(() => triggerGenerateStoryboard(project!, worldReport), 300);
+    if (!project) return;
+
+    const approvedProject: Project = {
+      ...project,
+      world_approved: true,
+      status: 'World Approved',
+    };
+
+    setProject(approvedProject);
+    setTimeout(() => triggerGenerateStoryboard(approvedProject, worldReport), 300);
   };
 
   const handleStoryboardApproved = () => {
-    setProject((p) => p ? { ...p, storyboard_approved: true, status: 'Storyboard Approved' } : p);
-    setTimeout(() => triggerGenerateCharacters(project!, worldReport), 300);
+    if (!project) return;
+
+    const approvedProject: Project = {
+      ...project,
+      storyboard_approved: true,
+      status: 'Storyboard Approved',
+    };
+
+    setProject(approvedProject);
+    setTimeout(() => triggerGenerateCharacters(approvedProject, worldReport), 300);
   };
 
   const handleCharactersApproved = () => {
-    setProject((p) => p ? { ...p, characters_approved: true, status: 'Characters Approved' } : p);
+    if (!project) return;
+
+    const approvedProject: Project = {
+      ...project,
+      characters_approved: true,
+      status: 'Characters Approved',
+    };
+
+    setProject(approvedProject);
   };
 
   // Called by any section after it logs a change — refresh logs + all section data
@@ -402,28 +712,17 @@ export default function ProjectResultsPage() {
     if (charRes.data) setCharEnv(charRes.data);
     if (Array.isArray(promptsRes.data)) setScenePrompts(promptsRes.data);
 
-    // Load additional data for preview and export
-    const [sbRes, csRes, esRes, imgRes, vidRes] = await Promise.all([
+    // Refresh world assets and scene images
+    const [sbRes, csRes, esRes, imgRes] = await Promise.all([
       supabase.from('world_style_bibles').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('character_sheets').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('environment_sheets').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('scene_images').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
-      supabase.from('scene_videos').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
     ]);
     if (sbRes.data) setStyleBible(sbRes.data as WorldStyleBible);
     if (csRes.data) setCharacterSheet(csRes.data as CharacterSheet);
     if (esRes.data) setEnvSheet(esRes.data as EnvironmentSheet);
     if (Array.isArray(imgRes.data)) setSceneImages(imgRes.data as SceneImage[]);
-    if (Array.isArray(vidRes.data)) setSceneVideos(vidRes.data as SceneVideo[]);
-
-    // Reload Phase 4 data
-    const [mcRes, fvRes] = await Promise.all([
-      supabase.from('motion_clips').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
-      supabase.from('final_videos').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-    ]);
-    if (Array.isArray(mcRes.data)) setMotionClips(mcRes.data as MotionClip[]);
-    if (fvRes.data) setFinalVideo(fvRes.data as FinalVideo);
-    else setFinalVideo(null);
   }, [id, loadChangeLogs]);
 
   // ── Fix Project Status ────────────────────────────────────────────────────
@@ -507,17 +806,7 @@ export default function ProjectResultsPage() {
           .eq('id', id);
       }
 
-      // Scene videos — clear stale flags on approved ones
-      const { data: allVideos } = await supabase
-        .from('scene_videos').select('id, approved').eq('project_id', id);
-      const approvedVideoIds = (allVideos || []).filter((v: { approved: boolean }) => v.approved).map((v: { id: string }) => v.id);
-      if (approvedVideoIds.length > 0) {
-        await supabase.from('scene_videos')
-          .update({ needs_review: false, updated_after_approval: false, generation_status: 'succeed', rejected: false, updated_at: now })
-          .in('id', approvedVideoIds);
-      }
-
-      // Compute exact readiness blockers from current (post-fix) state
+        // Compute exact readiness blockers from current (post-fix) state
       const blockers: string[] = [];
       const freshProj = (await supabase.from('projects').select('*').eq('id', id).maybeSingle()).data || project;
       if (!freshProj.world_approved) blockers.push('Visual World Report not approved.');
@@ -581,12 +870,9 @@ export default function ProjectResultsPage() {
   // (e.g. seeded externally or created via a prior workflow step with awaiting_upload status)
   const sceneImagesUnlocked = phase3Unlocked || sceneImages.length > 0;
 
-  const phase4Unlocked = sceneImagesUnlocked && !!project.images_approved;
 
   // Preview is ready as soon as world report + storyboard are approved
-  const previewReady = !!(worldReport?.approved && project.storyboard_approved);
   // Export is ready as soon as world report + storyboard exist
-  const exportReady = !!(worldReport && scenes.length > 0);
 
   // ── Review Changes: compute affected items across all sections ──────────────
 
@@ -778,26 +1064,6 @@ export default function ProjectResultsPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              {previewReady && (
-                <button
-                  onClick={() => setShowPreview(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                  style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.35)', color: '#93c5fd' }}
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  Full Preview
-                </button>
-              )}
-              {exportReady && (
-                <button
-                  onClick={() => setShowExport(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                  style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.30)', color: '#6ee7b7' }}
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Export
-                </button>
-              )}
               <Badge className={`border ${STATUS_COLORS[project.status] || STATUS_COLORS['Draft']}`}>
                 {project.status}
               </Badge>
@@ -857,39 +1123,6 @@ export default function ProjectResultsPage() {
           ))}
         </div>
 
-        {/* Full Preview + Export buttons — progress tracker area */}
-        {(previewReady || exportReady) && (
-          <div className="flex items-center gap-3 mb-6">
-            {previewReady && (
-              <button
-                onClick={() => setShowPreview(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(139,92,246,0.15) 100%)',
-                  border: '1px solid rgba(59,130,246,0.35)',
-                  color: '#93c5fd',
-                }}
-              >
-                <Eye className="w-4 h-4" />
-                Full Preview
-              </button>
-            )}
-            {exportReady && (
-              <button
-                onClick={() => setShowExport(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(6,182,212,0.12) 100%)',
-                  border: '1px solid rgba(16,185,129,0.30)',
-                  color: '#6ee7b7',
-                }}
-              >
-                <Download className="w-4 h-4" />
-                Export Project
-              </button>
-            )}
-          </div>
-        )}
 
         {/* Fix Project Status — beta/debug tool */}
         <div className="flex items-center justify-end mb-3">
@@ -1098,7 +1331,7 @@ export default function ProjectResultsPage() {
                 <div>
                   <h2 className="font-bold text-lg text-foreground">Scene Images</h2>
                   <p className="text-xs text-muted-foreground">
-                    Upload an image per scene · Approve each one · All approved unlocks Motion
+                    Upload an image per scene · Approve each one · Clean-core visual workflow
                   </p>
                 </div>
               </div>
@@ -1121,39 +1354,6 @@ export default function ProjectResultsPage() {
             />
           )}
 
-          {/* Segmented Video Renderer — Phase 4 */}
-          {phase4Unlocked ? (
-            <section className="section-unlock space-y-3">
-              <div className="flex items-center gap-3 mb-2">
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)' }}
-                >
-                  <Clapperboard className="w-4 h-4 text-violet-400" />
-                </div>
-                <div>
-                  <h2 className="font-bold text-lg text-foreground">Segmented Video Renderer</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Split song into segments · Render Browser Video (WebM) · Export Render Manifest · MP4 via server renderer
-                  </p>
-                </div>
-              </div>
-              <SegmentedVideoRenderer
-                project={project}
-                scenes={scenes}
-                sceneImages={sceneImages}
-                finalVideo={finalVideo}
-                onProjectUpdate={(updated) => setProject(p => p ? { ...p, ...updated } : p)}
-                onFinalVideoUpdate={(fv) => setFinalVideo(fv)}
-              />
-            </section>
-          ) : (
-            <LockedSection
-              title="Segmented Video Renderer"
-              message="Approve all scene images to unlock the full-length video renderer."
-              icon={<Clapperboard className="w-5 h-5 text-muted-foreground/50" />}
-            />
-          )}
 
           {/* Project Change Log */}
           {changeLogs.length > 0 && (
@@ -1167,93 +1367,10 @@ export default function ProjectResultsPage() {
             {user && <BetaFeedbackSection project={project} userId={user.id} />}
           </section>
 
-          {/* Bottom Full Preview + Export */}
-          {(previewReady || exportReady) && (
-            <div
-              className="rounded-2xl p-6 text-center space-y-3"
-              style={{
-                background: 'linear-gradient(135deg, rgba(15,15,25,0.9) 0%, rgba(20,20,35,0.9) 100%)',
-                border: '1px solid rgba(59,130,246,0.15)',
-              }}
-            >
-              <p className="font-mono text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">
-                Every Song Has a World. BeatVision Reveals It.
-              </p>
-              <h3 className="text-base font-bold text-foreground">Your project is ready.</h3>
-              <p className="text-sm text-muted-foreground">
-                Preview the complete world BeatVision built for your song, or export your project materials.
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-                {previewReady && (
-                  <button
-                    onClick={() => setShowPreview(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(59,130,246,0.20) 0%, rgba(139,92,246,0.20) 100%)',
-                      border: '1px solid rgba(99,102,241,0.45)',
-                      color: '#c4b5fd',
-                    }}
-                  >
-                    <Eye className="w-4 h-4" />
-                    Open Full Preview
-                  </button>
-                )}
-                {exportReady && (
-                  <button
-                    onClick={() => setShowExport(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(6,182,212,0.15) 100%)',
-                      border: '1px solid rgba(16,185,129,0.35)',
-                      color: '#6ee7b7',
-                    }}
-                  >
-                    <Download className="w-4 h-4" />
-                    Export Project
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* ── Full Preview Modal ──────────────────────────────────────────── */}
-      {showPreview && (
-        <FullPreviewModal
-          project={project}
-          worldReport={worldReport}
-          scenes={scenes}
-          charEnv={charEnv}
-          styleBible={styleBible}
-          characterSheet={characterSheet}
-          envSheet={envSheet}
-          sceneImages={sceneImages}
-          sceneVideos={sceneVideos}
-          finalVideo={finalVideo}
-          onClose={() => setShowPreview(false)}
-        />
-      )}
 
-      {/* ── Export Project Panel ────────────────────────────────────────── */}
-      {showExport && (
-        <ExportProjectPanel
-          project={project}
-          worldReport={worldReport}
-          scenes={scenes}
-          charEnv={charEnv}
-          styleBible={styleBible}
-          characterSheet={characterSheet}
-          envSheet={envSheet}
-          scenePrompts={scenePrompts}
-          sceneImages={sceneImages}
-          sceneVideos={sceneVideos}
-          changeLogs={changeLogs}
-          motionClips={motionClips}
-          finalVideo={finalVideo}
-          onClose={() => setShowExport(false)}
-        />
-      )}
     </div>
   );
 }
