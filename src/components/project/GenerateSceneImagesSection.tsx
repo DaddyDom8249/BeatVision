@@ -351,10 +351,152 @@ export default function GenerateSceneImagesSection({
   // If no provider: show clear message — do NOT silently create fake generated records.
   const handleGenerateAllClick = () => {
     if (!realProvidersEnabled || !providerActive) {
-      toast.error(
-        'No real image provider is connected. Upload scene images manually or create placeholder previews for each scene.',
-        { duration: 6000 }
-      );
+      void (async () => {
+        const manualNow = new Date().toISOString();
+        const approvedPromptsForManualSlots = prompts.filter((p) => Boolean(p.approved));
+
+        if (approvedPromptsForManualSlots.length === 0) {
+          toast.error('Approve scene visual prompts before preparing manual image slots.');
+          return;
+        }
+
+        const { data: existingManualRowsRaw } = await supabase
+          .from('scene_images')
+          .select('*')
+          .eq('project_id', project.id);
+
+        const existingManualRows = Array.isArray(existingManualRowsRaw) ? existingManualRowsRaw : [];
+        const existingPromptIds = new Set(
+          existingManualRows
+            .map((row: any) => row.scene_visual_prompt_id)
+            .filter(Boolean)
+        );
+
+        const manualSlotPayload: Record<string, unknown>[] = approvedPromptsForManualSlots
+          .filter((prompt) => !existingPromptIds.has(prompt.id))
+          .map((prompt) => ({
+            project_id: project.id,
+            scene_visual_prompt_id: prompt.id,
+            scene_number: prompt.scene_number,
+            prompt_text: prompt.main_image_prompt,
+            image_prompt: prompt.main_image_prompt,
+            generation_prompt: prompt.main_image_prompt,
+            provider: 'manual-upload',
+            provider_name: 'manual-upload',
+            generation_status: 'awaiting_upload',
+            approved: false,
+            rejected: false,
+            real_generated: false,
+            manual_upload: true,
+            use_placeholder_as_draft_final: false,
+            updated_at: manualNow,
+            created_at: manualNow,
+          }));
+
+        const adaptiveInsertManualSlots = async (payload: Record<string, unknown>[]) => {
+          if (payload.length === 0) return [];
+
+          let currentPayload = payload.map((row) => ({ ...row }));
+          let lastError: unknown = null;
+
+          for (let attempt = 1; attempt <= 12; attempt += 1) {
+            const { data, error } = await supabase
+              .from('scene_images')
+              .insert(currentPayload)
+              .select();
+
+            if (!error) {
+              return Array.isArray(data) ? data : [];
+            }
+
+            lastError = error;
+
+            const missingColumn = (error.message || '').match(/'([^']+)' column/)?.[1];
+
+            if (error.code === 'PGRST204' && missingColumn) {
+              console.warn(`[BeatVision] Removing unsupported scene_images column "${missingColumn}" and retrying manual slot insert.`);
+              currentPayload = currentPayload.map((row) => {
+                const next = { ...row };
+                delete next[missingColumn];
+                return next;
+              });
+              continue;
+            }
+
+            throw new Error(
+              `[scene_images manual slot insert failed] ${JSON.stringify(
+                {
+                  code: error.code ?? null,
+                  message: error.message ?? null,
+                  details: error.details ?? null,
+                  hint: error.hint ?? null,
+                  payloadKeys: Object.keys(currentPayload[0] || {}),
+                },
+                null,
+                2
+              )}`
+            );
+          }
+
+          throw new Error(
+            `[scene_images manual slot insert failed after adaptive retries] ${JSON.stringify(
+              {
+                lastError,
+                payloadKeys: Object.keys(currentPayload[0] || {}),
+              },
+              null,
+              2
+            )}`
+          );
+        };
+
+        try {
+          const insertedManualSlots = await adaptiveInsertManualSlots(manualSlotPayload);
+
+          const { data: refreshedManualRowsRaw } = await supabase
+            .from('scene_images')
+            .select('*')
+            .eq('project_id', project.id)
+            .order('scene_number', { ascending: true });
+
+          const refreshedManualRows = Array.isArray(refreshedManualRowsRaw)
+            ? refreshedManualRowsRaw
+            : [...existingManualRows, ...insertedManualSlots];
+
+          onSceneImagesUpdate(refreshedManualRows as any);
+
+          const { data: updatedManualProject } = await supabase
+            .from('projects')
+            .update({
+              status: 'Scene Images Awaiting Upload',
+              updated_at: manualNow,
+            })
+            .eq('id', project.id)
+            .select()
+            .maybeSingle();
+
+          if (updatedManualProject) {
+            onProjectUpdate(updatedManualProject as any);
+          } else {
+            onProjectUpdate({
+              ...project,
+              status: 'Scene Images Awaiting Upload',
+              updated_at: manualNow,
+            } as any);
+          }
+
+          toast.success(
+            insertedManualSlots.length > 0
+              ? `Provider-off manual upload slots prepared: ${insertedManualSlots.length}.`
+              : 'Provider-off manual upload slots were already prepared.'
+          );
+        } catch (manualSlotErr) {
+          const message = manualSlotErr instanceof Error ? manualSlotErr.message : String(manualSlotErr);
+          console.error('[BeatVision] Provider-off manual upload slot prep failed:', manualSlotErr);
+          toast.error(`Manual image slot prep failed: ${message}`, { duration: 20000 });
+        }
+      })();
+
       return;
     }
     setPendingCreditAction({ sceneImageId: '', promptId: '', mode: 'all' });
