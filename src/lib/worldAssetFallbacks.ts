@@ -98,8 +98,6 @@ export async function createLocalWorldAssets({
       symbolic_motifs: symbolicObjects,
       things_to_avoid: 'Avoid random unrelated locations, stock-photo looks, inconsistent protagonist design, and visuals that ignore the approved storyboard.',
       approved: false,
-      needs_review: false,
-      updated_after_approval: false,
       updated_at: now,
     })
     .select()
@@ -120,8 +118,6 @@ export async function createLocalWorldAssets({
       recurring_visual_traits: 'Consistent silhouette, repeated symbolic framing, recurring object interactions, and clear relationship to the environment.',
       consistency_notes: 'The protagonist must remain recognizable across every scene.',
       approved: false,
-      needs_review: false,
-      updated_after_approval: false,
       updated_at: now,
     })
     .select()
@@ -142,8 +138,6 @@ export async function createLocalWorldAssets({
       recurring_objects: symbolicObjects,
       world_consistency_rules: storyDirection,
       approved: false,
-      needs_review: false,
-      updated_after_approval: false,
       updated_at: now,
     })
     .select()
@@ -222,8 +216,6 @@ export async function createLocalWorldAssets({
       style_consistency_notes: 'Match the approved world style bible, character sheet, environment sheet, and storyboard scene direction.',
       negative_prompt: 'random unrelated location, stock photo, inconsistent character, blurry face, unreadable composition, empty background',
       approved: false,
-      needs_review: false,
-      updated_after_approval: false,
       preview_generated: false,
       updated_at: now,
     };
