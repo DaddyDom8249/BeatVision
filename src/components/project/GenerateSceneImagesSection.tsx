@@ -196,7 +196,192 @@ export default function GenerateSceneImagesSection({
         console.error('generate_scene_image_prompt error:', msg || error.message);
         return null;
       }
-      return (data as { data: Record<string, unknown> })?.data || null;
+    
+  const [manualUploadBusyByPromptId, setManualUploadBusyByPromptId] = useState<Record<string, boolean>>({});
+
+  const readManualUploadAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('Could not read selected image file.'));
+      reader.readAsDataURL(file);
+    });
+
+  const saveManualUploadForPrompt = async (prompt: SceneVisualPrompt, file: File) => {
+    if (!project?.id || !prompt?.id) return;
+
+    setManualUploadBusyByPromptId((prev) => ({ ...prev, [prompt.id]: true }));
+
+    try {
+      const now = new Date().toISOString();
+      const sceneNumber = Number(prompt.scene_number ?? 0);
+      const dataUrl = await readManualUploadAsDataUrl(file);
+
+      let imageUrl = dataUrl;
+      let storagePath: string | null = null;
+
+      try {
+        const ext = (file.name.split('.').pop() || 'jpg').replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+        const uploadPath = `${project.id}/${prompt.id}-${Date.now()}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('scene-images')
+          .upload(uploadPath, file, {
+            upsert: true,
+            contentType: file.type || 'image/jpeg',
+          });
+
+        if (!uploadError) {
+          const publicUrl = supabase.storage.from('scene-images').getPublicUrl(uploadPath);
+          imageUrl = publicUrl.data.publicUrl || dataUrl;
+          storagePath = uploadPath;
+        } else {
+          console.warn('[BeatVision] Supabase storage upload failed. Falling back to inline data URL:', uploadError);
+        }
+      } catch (storageErr) {
+        console.warn('[BeatVision] Supabase storage unavailable. Falling back to inline data URL:', storageErr);
+      }
+
+      const buildPayload = (): Record<string, unknown> => ({
+        project_id: project.id,
+        scene_visual_prompt_id: prompt.id,
+        scene_number: sceneNumber,
+        scene_index: sceneNumber,
+        prompt_text: prompt.main_image_prompt,
+        image_prompt: prompt.main_image_prompt,
+        generation_prompt: prompt.main_image_prompt,
+        image_url: imageUrl,
+        imageUrl,
+        url: imageUrl,
+        public_url: imageUrl,
+        manual_upload_url: imageUrl,
+        storage_path: storagePath,
+        file_name: file.name,
+        filename: file.name,
+        mime_type: file.type || 'image/jpeg',
+        provider: 'manual-upload',
+        provider_name: 'manual-upload',
+        generation_status: 'manual_uploaded',
+        approved: false,
+        rejected: false,
+        real_generated: false,
+        manual_upload: true,
+        use_placeholder_as_draft_final: false,
+        updated_at: now,
+        created_at: now,
+      });
+
+      const defaultColumnValue = (column: string): unknown => {
+        if (column === 'scene_index') return sceneNumber;
+        if (column === 'scene_number') return sceneNumber;
+        if (column.includes('project')) return project.id;
+        if (column.includes('prompt')) return prompt.main_image_prompt || '';
+        if (column.includes('url') || column.includes('image')) return imageUrl;
+        if (column.includes('status')) return 'manual_uploaded';
+        if (column.includes('approved')) return false;
+        if (column.includes('rejected')) return false;
+        if (column.includes('real_generated')) return false;
+        if (column.includes('manual')) return true;
+        if (column.includes('created') || column.includes('updated')) return now;
+        return '';
+      };
+
+      const { data: existingRow } = await supabase
+        .from('scene_images')
+        .select('id')
+        .eq('project_id', project.id)
+        .eq('scene_visual_prompt_id', prompt.id)
+        .maybeSingle();
+
+      let currentPayload = buildPayload();
+      let savedRow: any = null;
+
+      for (let attempt = 1; attempt <= 16; attempt += 1) {
+        const query = existingRow?.id
+          ? supabase.from('scene_images').update(currentPayload).eq('id', existingRow.id).select().maybeSingle()
+          : supabase.from('scene_images').insert(currentPayload).select().maybeSingle();
+
+        const { data, error } = await query;
+
+        if (!error) {
+          savedRow = data;
+          break;
+        }
+
+        const message = error.message || '';
+        const missingColumn = message.match(/'([^']+)' column/)?.[1];
+        const requiredColumn = message.match(/null value in column "([^"]+)"/)?.[1];
+
+        if (error.code === 'PGRST204' && missingColumn) {
+          console.warn(`[BeatVision] Removing unsupported scene_images column "${missingColumn}" and retrying upload save.`);
+          const next = { ...currentPayload };
+          delete next[missingColumn];
+          currentPayload = next;
+          continue;
+        }
+
+        if (error.code === '23502' && requiredColumn) {
+          console.warn(`[BeatVision] Filling required scene_images column "${requiredColumn}" and retrying upload save.`);
+          currentPayload = {
+            ...currentPayload,
+            [requiredColumn]: defaultColumnValue(requiredColumn),
+          };
+          continue;
+        }
+
+        throw new Error(
+          `[scene_images manual upload save failed] ${JSON.stringify(
+            {
+              code: error.code ?? null,
+              message: error.message ?? null,
+              details: error.details ?? null,
+              hint: error.hint ?? null,
+              payloadKeys: Object.keys(currentPayload),
+            },
+            null,
+            2
+          )}`
+        );
+      }
+
+      if (!savedRow) {
+        throw new Error('Manual upload save failed after adaptive retries.');
+      }
+
+      const { data: refreshedRowsRaw } = await supabase
+        .from('scene_images')
+        .select('*')
+        .eq('project_id', project.id)
+        .order('scene_index', { ascending: true });
+
+      const refreshedRows = Array.isArray(refreshedRowsRaw) ? refreshedRowsRaw : [savedRow];
+      onSceneImagesUpdate(refreshedRows as any);
+
+      const { data: updatedProject } = await supabase
+        .from('projects')
+        .update({
+          status: 'Scene Images Awaiting Approval',
+          updated_at: now,
+        })
+        .eq('id', project.id)
+        .select()
+        .maybeSingle();
+
+      if (updatedProject) {
+        onProjectUpdate(updatedProject as any);
+      }
+
+      toast.success(`Uploaded image for Scene ${sceneNumber || ''}. Review and approve it.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[BeatVision] Manual upload failed:', err);
+      toast.error(`Manual image upload failed: ${message}`, { duration: 20000 });
+    } finally {
+      setManualUploadBusyByPromptId((prev) => ({ ...prev, [prompt.id]: false }));
+    }
+  };
+
+  return (data as { data: Record<string, unknown> })?.data || null;
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') {
         console.error('generate_scene_image_prompt timed out after 30s');
@@ -378,6 +563,7 @@ export default function GenerateSceneImagesSection({
             project_id: project.id,
             scene_visual_prompt_id: prompt.id,
             scene_number: prompt.scene_number,
+            scene_index: Number(prompt.scene_number ?? 0),
             prompt_text: prompt.main_image_prompt,
             image_prompt: prompt.main_image_prompt,
             generation_prompt: prompt.main_image_prompt,
@@ -1260,7 +1446,64 @@ export default function GenerateSceneImagesSection({
         </div>
       )}
 
-      {/* Consistency Controls */}
+      
+      {/* Manual Image Upload Spots */}
+      {prompts.filter((prompt) => Boolean(prompt.approved)).length > 0 && (
+        <div className="rounded-2xl border border-blue-500/25 bg-blue-500/5 p-4 space-y-3">
+          <div>
+            <h3 className="text-sm font-bold text-blue-200 tracking-wide">Manual Image Upload</h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              No provider is required. Upload one image per approved scene prompt.
+            </p>
+          </div>
+
+          <div className="grid gap-2">
+            {prompts
+              .filter((prompt) => Boolean(prompt.approved))
+              .sort((a, b) => Number(a.scene_number ?? 0) - Number(b.scene_number ?? 0))
+              .map((prompt) => {
+                const busy = Boolean(manualUploadBusyByPromptId[prompt.id]);
+
+                return (
+                  <label
+                    key={`manual-upload-${prompt.id}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-xs cursor-pointer hover:border-blue-400/40 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-semibold text-white">
+                        Scene {prompt.scene_number ?? '?'} Upload
+                      </div>
+                      <div className="text-muted-foreground truncate">
+                        {prompt.scene_title || 'Untitled scene'}
+                      </div>
+                    </div>
+
+                    <span className="shrink-0 rounded-lg bg-blue-500 px-3 py-2 font-bold text-white">
+                      {busy ? 'Uploading...' : 'Choose Photo'}
+                    </span>
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={busy}
+                      onChange={(event) => {
+                        const file = event.currentTarget.files?.[0];
+                        event.currentTarget.value = '';
+
+                        if (!file) return;
+
+                        void saveManualUploadForPrompt(prompt, file);
+                      }}
+                    />
+                  </label>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+{/* Consistency Controls */}
       <div>
         <button
           onClick={() => setShowControls(v => !v)}
