@@ -299,6 +299,14 @@ export async function createLocalScenePromptsOnly({
     return cleanText(value, fallback).slice(0, max);
   };
 
+  const getSceneTitle = (scene: Partial<StoryboardScene>, index: number): string => {
+    return cleanText(scene.scene_title, `Scene ${index + 1}`);
+  };
+
+  const getSceneTime = (scene: Partial<StoryboardScene>, index: number): string => {
+    return cleanText(scene.timestamp_range, `${index * 15}s-${(index + 1) * 15}s`);
+  };
+
   const now = new Date().toISOString();
   const style = cleanText(
     (project as Record<string, unknown>).selected_style ||
