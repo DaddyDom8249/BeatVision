@@ -295,6 +295,10 @@ export async function createLocalScenePromptsOnly({
     throw new Error('Cannot repair scene prompts without a project id.');
   }
 
+  const safeSlice = (value: unknown, fallback: string, max = 900): string => {
+    return cleanText(value, fallback).slice(0, max);
+  };
+
   const now = new Date().toISOString();
   const style = cleanText(
     (project as Record<string, unknown>).selected_style ||
