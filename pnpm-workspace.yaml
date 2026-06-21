@@ -1,6 +1,5 @@
 packages:
   - "."
-  - "cloudflare-ai-worker"
 
 onlyBuiltDependencies:
   - esbuild

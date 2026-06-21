@@ -70,17 +70,6 @@ export default function SceneImageOptionsPanel({
   const [selectingId, setSelectingId] = useState<string | null>(null);
   const [approving, setApproving] = useState(false);
 
-  const cloudflareWorkerBase = import.meta.env.VITE_CLOUDFLARE_AI_WORKER_URL?.trim?.() ?? '';
-  const cloudflareWorkerEndpoint = cloudflareWorkerBase
-    ? `${cloudflareWorkerBase.replace(/\/+$/, '')}/generate-image`
-    : null;
-  const activeProviderEndpoint = providerEndpoint || cloudflareWorkerEndpoint;
-  const providerReady =
-    realProvidersEnabled &&
-    Boolean(activeProviderEndpoint) &&
-    (providerActive || Boolean(cloudflareWorkerEndpoint));
-
-
   const loadOptions = useCallback(async () => {
     const { data } = await supabase
       .from('scene_image_options')
@@ -190,7 +179,7 @@ export default function SceneImageOptionsPanel({
 
   // ── Generate options via provider ───────────────────────────────────────────
   const handleGenerate = async () => {
-    if (!providerReady || !activeProviderEndpoint) {
+    if (!realProvidersEnabled || !providerActive || !providerEndpoint) {
       toast.info(
         image.image_url
           ? 'Manual upload saved. Regenerated options require an image provider.'
@@ -208,167 +197,35 @@ export default function SceneImageOptionsPanel({
     const referenceUrl = image.image_url ?? null;
     const now = new Date().toISOString();
 
-    // Clear old generated AI options before creating new ones.
-    // Keep manual/reference options so user uploads are not touched.
+    // Mark existing generated options as stale
     await supabase
       .from('scene_image_options')
-      .delete()
+      .update({ status: 'stale', updated_at: now })
       .eq('scene_image_id', image.id)
       .neq('source_type', 'manual_upload');
 
     const generated: SceneImageOption[] = [];
-    const failures: string[] = [];
 
     for (let i = 0; i < variationCount; i++) {
       try {
-        const projectSeed =
-          Array.from(project.id || 'beatvision-project').reduce(
-            (acc, ch) => acc + ch.charCodeAt(0),
-            0
-          ) || 12345;
-
-
-        const sceneText = [
-          (prompt as any).scene_title ?? `Scene ${prompt.scene_number}`,
-          (prompt as any).scene_description ?? '',
-          (prompt as any).visual_prompt ?? '',
-          prompt.main_image_prompt ?? '',
-        ].filter(Boolean).join(' ');
-
         const body = {
-          prompt: [
-            'PHOTOREALISTIC CINEMATIC MUSIC VIDEO STILL.',
-            'Dark gritty Alabama LKQ pick-your-part auto salvage yard.',
-            'Female auto dismantling worker in neon yellow reflective safety vest, dirty grounded workwear, gloves, wet clothes, tattooed forearms when visible, surrounded by stripped junk cars and vehicle interiors.',
-            'Drain rack, stripped cars, wire harnesses, muddy gravel, oil sheen puddles, rain, humid air, loaders, crushers, floodlights, wet metal, junkyard rows.',
-            'Must show the protagonist physically inside the salvage yard scene doing a real dismantling action: pulling wire harnesses, clearing a stripped vehicle, draining fluids at the drain rack, or working beside wrecked junk cars.',
-            'No beach, no sunset field, no cartoon room, no reference sheet, no empty corridor.',
-            sceneText,
-          ].filter(Boolean).join(' '),
-
-          negative_prompt: [
-            prompt.negative_prompt ?? '',
-            'beach',
-            'ocean',
-            'lake',
-            'field',
-            'empty sunset landscape, parking lot, roadside, clean road, open field, beach, lake, ocean',
-            'person sitting at railing',
-            'balcony',
-            'peaceful vacation',
-            'cartoon room',
-            'comic panel',
-            'stained glass border',
-            'storybook illustration',
-            'character turnaround',
-            'character model sheet',
-            'reference sheet',
-            'orthographic view',
-            'front side back view',
-            'T-pose',
-            'blank white background',
-            'white studio background',
-            'empty hallway',
-            'empty corridor',
-            'architecture concept',
-            'environment-only image',
-            'no protagonist',
-            'anime',
-            'illustration',
-            'sketch',
-            'line art',
-            'grayscale sketch',
-            'blueprint',
-            'wireframe',
-            'fashion editorial',
-            'glamour photoshoot',
-            'futuristic showroom',
-            'neon car show, taxi, yellow cab, clean intact sedan, roadside cleanup, parking lot, shovel, broom, rake',
-            'toy figure',
-            '3D mannequin',
-            'different protagonist',
-            'different outfit',
-            'different world',
-            'text',
-            'watermark',
-            'logo',
-            'shovel',
-            'broom',
-            'rake',
-            'clean car',
-            'taxi',
-            'yellow cab',
-            'parking lot',
-            'roadside cleanup',
-            'highway shoulder',
-            'open empty road',
-            'normal car dealership',
-            'clean intact vehicle',
-            'forest roadside',
-            'woman sweeping',
-            'woman shoveling'
-          ].filter(Boolean).join(', '),
-
+          prompt: prompt.main_image_prompt ?? '',
+          negative_prompt: prompt.negative_prompt ?? '',
           aspect_ratio: '16:9',
           output_size: '1024x576',
-          width: 1024,
-          height: 576,
-          num_steps: 20,
-          guidance: 9.5,
-          strength: 0.52,
           model_name: '',
-
           project_id: project.id,
-          project_title: project.title ?? 'Drain Rack Halo',
           scene_number: prompt.scene_number,
-          scene_title: (prompt as any).scene_title ?? `Scene ${prompt.scene_number}`,
-
           reference_image_url: referenceUrl,
-
           style_bible: styleBible ? JSON.stringify(styleBible) : '',
           character_sheet: characterSheet ? JSON.stringify(characterSheet) : '',
           environment_sheet: envSheet ? JSON.stringify(envSheet) : '',
-
-          consistency_mode: 'locked',
-          project_seed: projectSeed,
-          seed: projectSeed + Number(prompt.scene_number ?? 0) * 100 + i,
-
+          seed: i + 1,
           variation_index: i,
           variation_total: variationCount,
-
-          anchor_summary:
-            'Same female salvage-yard worker, reflective safety vest, muddy grounded workwear, dark LKQ auto dismantling world.',
-
-          world_summary:
-            'Rainy Alabama auto salvage yard, drain rack, stripped cars, wire harnesses, mud, puddles, oil sheen, tools, wet metal, floodlights.',
-
-          reference_notes:
-            'Generate an actual scene from the song world. Do not create beaches, sunsets, cartoons, model sheets, empty corridors, or unrelated concept images.',
         };
 
-        const requestEndpoint = (() => {
-          const raw = activeProviderEndpoint.trim();
-
-          try {
-            const url = new URL(raw);
-
-            // Cloudflare Worker may be saved as the base URL by mistake.
-            // Route it to /generate-image automatically.
-            if (
-              url.hostname.endsWith('workers.dev') &&
-              (url.pathname === '/' || url.pathname === '')
-            ) {
-              url.pathname = '/generate-image';
-              return url.toString();
-            }
-          } catch {
-            // Keep raw endpoint if parsing fails.
-          }
-
-          return raw;
-        })();
-
-        const res = await fetch(requestEndpoint, {
+        const res = await fetch(providerEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -377,56 +234,24 @@ export default function SceneImageOptionsPanel({
           const errText = await res.text();
           throw new Error(`Provider returned ${res.status}: ${errText}`);
         }
-        const contentType = res.headers.get('content-type') || '';
-        let resolvedUrl: string | null = null;
-        let resolvedStoragePath: string | null = null;
+        const json = await res.json();
 
-        const uploadGeneratedBlob = async (blob: Blob, ext: 'jpg' | 'png' | 'webp' = 'jpg') => {
-          const path = `${project.id}/scene-${image.scene_number}/option-${i + 1}-${Date.now()}.${ext}`;
+        let resolvedUrl: string | null = null;
+
+        if (json.image_url) {
+          resolvedUrl = json.image_url as string;
+        } else if (json.base64 || json.data) {
+          const b64 = json.base64 || json.data;
+          const byteStr = atob(b64);
+          const arr = new Uint8Array(byteStr.length);
+          for (let j = 0; j < byteStr.length; j++) arr[j] = byteStr.charCodeAt(j);
+          const blob = new Blob([arr], { type: 'image/png' });
+          const path = `${project.id}/scene-${image.scene_number}/option-${i + 1}-${Date.now()}.png`;
           const { error: blobErr } = await supabase.storage
             .from('scene-images')
-            .upload(path, blob, {
-              upsert: true,
-              contentType: blob.type || `image/${ext === 'jpg' ? 'jpeg' : ext}`,
-            });
-
-          if (blobErr) {
-            throw new Error(`Generated image upload failed: ${blobErr.message}`);
-          }
-
-          resolvedStoragePath = path;
-          resolvedUrl = supabase.storage.from('scene-images').getPublicUrl(path).data.publicUrl;
-        };
-
-        if (contentType.startsWith('image/')) {
-          const blob = await res.blob();
-          const ext =
-            contentType.includes('png') ? 'png' :
-            contentType.includes('webp') ? 'webp' :
-            'jpg';
-
-          await uploadGeneratedBlob(blob, ext);
-        } else {
-          const json = await res.json();
-
-          if (json.ok === false) {
-            throw new Error(json.error || json.details || 'Provider returned an error.');
-          }
-
-          if (json.image_url) {
-            resolvedUrl = json.image_url as string;
-          } else if (json.base64 || json.data || json.image) {
-            let b64 = json.base64 || json.data || json.image;
-            if (typeof b64 === 'string' && b64.includes(',')) {
-              b64 = b64.split(',').pop();
-            }
-
-            const byteStr = atob(b64);
-            const arr = new Uint8Array(byteStr.length);
-            for (let j = 0; j < byteStr.length; j++) arr[j] = byteStr.charCodeAt(j);
-
-            const blob = new Blob([arr], { type: 'image/png' });
-            await uploadGeneratedBlob(blob, 'png');
+            .upload(path, blob, { upsert: true });
+          if (!blobErr) {
+            resolvedUrl = supabase.storage.from('scene-images').getPublicUrl(path).data.publicUrl;
           }
         }
 
@@ -440,9 +265,9 @@ export default function SceneImageOptionsPanel({
             owner_id: (await supabase.auth.getUser()).data.user?.id ?? null,
             option_index: i + 1,
             source_type: 'ai_generated',
-            provider: activeProviderEndpoint.includes('workers.dev') ? 'cloudflare_workers_ai' : 'provider',
+            provider: 'provider',
             image_url: resolvedUrl,
-            storage_path: resolvedStoragePath,
+            storage_path: null,
             reference_image_url: referenceUrl,
             status: 'ready',
             selected: false,
@@ -454,18 +279,15 @@ export default function SceneImageOptionsPanel({
 
         if (optRow) generated.push(optRow as SceneImageOption);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unknown error';
         console.error(`Variation ${i + 1} failed:`, err);
-        failures.push(`Variation ${i + 1}: ${message}`);
-        toast.error(`Variation ${i + 1} failed: ${message}`);
+        toast.error(`Variation ${i + 1} failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
     }
 
     await loadOptions();
 
     if (generated.length === 0) {
-      const lastFailure = failures.length ? ` Last error: ${failures[failures.length - 1]}` : '';
-      toast.warning(`No variations were returned by the provider.${lastFailure}`);
+      toast.warning('No variations were returned by the provider. Upload an image manually or check your provider settings.');
     } else {
       toast.success(`${generated.length} of ${variationCount} image options generated. Tap "Use This Image" to select one.`);
     }
@@ -597,6 +419,8 @@ export default function SceneImageOptionsPanel({
   const selectedOption = options.find(o => o.selected);
   const hasImage = !!image.image_url;
   const canApprove = hasImage && !image.approved;
+  const providerReady = realProvidersEnabled && providerActive && !!providerEndpoint;
+
   return (
     <div className="border-t border-[#1a1a1a] bg-[#0d0d0d] p-4 space-y-4">
       {/* ── Header label ── */}
