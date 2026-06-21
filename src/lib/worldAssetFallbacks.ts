@@ -275,3 +275,115 @@ export async function createLocalWorldAssets({
     previews: savedPreviews,
   };
 }
+
+export async function createLocalScenePromptsOnly({
+  project,
+  worldReport,
+  scenes,
+  styleBible,
+  characterSheet,
+  envSheet,
+}: {
+  project: Project;
+  worldReport: VisualWorldReport | null;
+  scenes: StoryboardScene[];
+  styleBible: WorldStyleBible | null;
+  characterSheet: CharacterSheet | null;
+  envSheet: EnvironmentSheet | null;
+}): Promise<SceneVisualPrompt[]> {
+  if (!project?.id) {
+    throw new Error('Cannot repair scene prompts without a project id.');
+  }
+
+  const now = new Date().toISOString();
+  const style = projectStyle(project);
+
+  const emotionalCore = safeSlice(
+    worldReport?.emotional_core,
+    'pressure, survival, transformation, confrontation, release, and emotional truth'
+  );
+
+  const visualWorld = safeSlice(
+    envSheet?.main_world_description || worldReport?.main_visual_world,
+    `a ${style} music-video world shaped by the song atmosphere`
+  );
+
+  const colors = safeSlice(
+    styleBible?.color_rules || worldReport?.color_palette,
+    'deep black, worn steel, dusty amber, electric blue highlights, pale white glow'
+  );
+
+  const lighting = safeSlice(
+    styleBible?.lighting_rules || worldReport?.lighting_style,
+    'cinematic low-key lighting, hard rim light, haze, smoke, glowing practicals'
+  );
+
+  const symbols = safeSlice(
+    styleBible?.symbolic_motifs || envSheet?.recurring_objects || worldReport?.symbolic_objects,
+    'light, shadow, metal, sparks, smoke, reflections, roads, wires, rain, glass'
+  );
+
+  const protagonist = cleanText(
+    characterSheet?.appearance,
+    'A central protagonist shaped by the song, visually grounded and emotionally readable.'
+  );
+
+  const sceneSource: Partial<StoryboardScene>[] =
+    Array.isArray(scenes) && scenes.length ? scenes : defaultScenes(project);
+
+  await supabase.from('scene_previews').delete().eq('project_id', project.id);
+  await supabase.from('scene_visual_prompts').delete().eq('project_id', project.id);
+
+  const promptPayload = sceneSource.map((scene, index) => {
+    const sceneNumber = typeof scene.scene_number === 'number' ? scene.scene_number : index + 1;
+    const title = getSceneTitle(scene, index);
+    const description = cleanText(
+      scene.visual_description,
+      `A ${style} cinematic scene showing the protagonist inside the emotional world of "${project.title}".`
+    );
+    const location = cleanText(scene.location, 'symbolic cinematic location');
+    const mood = cleanText(scene.mood, emotionalCore);
+
+    return {
+      project_id: project.id,
+      storyboard_scene_id: scene.id ?? null,
+      scene_number: sceneNumber,
+      scene_title: title,
+      timestamp_range: getSceneTime(scene, index),
+      main_image_prompt:
+        `${style} cinematic music video still for "${project.title}". Scene ${sceneNumber}: ${title}. ${description} ` +
+        `Location: ${location}. Mood: ${mood}. Protagonist: ${protagonist}. ` +
+        `World: ${visualWorld}. Palette: ${colors}. Lighting: ${lighting}. ` +
+        `Symbols: ${symbols}. Highly cinematic, emotionally grounded, coherent visual world, no text, no watermark.`,
+      camera_framing:
+        cleanText(scene.camera_direction, 'cinematic framing, emotionally motivated camera movement'),
+      lighting_direction: lighting,
+      character_placement:
+        'Place the protagonist clearly in the frame with consistent silhouette, wardrobe, and emotional posture.',
+      mood,
+      environment_details: location,
+      symbolic_objects: symbols,
+      style_consistency_notes:
+        `${style}. Match the same character, palette, lighting rules, environment logic, and symbolic motifs across every scene.`,
+      negative_prompt:
+        'text, watermark, logo, extra fingers, broken anatomy, duplicate faces, inconsistent protagonist, random props, blurry subject, low quality, unrelated style',
+      approved: false,
+      preview_generated: false,
+      updated_at: now,
+    };
+  });
+
+  const prompts = await insertMany<SceneVisualPrompt>('scene_visual_prompts', promptPayload);
+
+  await supabase
+    .from('projects')
+    .update({
+      status: 'World Assets In Review',
+      scene_prompts_approved: false,
+      updated_at: now,
+    })
+    .eq('id', project.id);
+
+  return prompts;
+}
+

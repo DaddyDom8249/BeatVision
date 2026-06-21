@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/db/supabase';
-import { createLocalWorldAssets } from '@/lib/worldAssetFallbacks';
+import { createLocalWorldAssets, createLocalScenePromptsOnly } from '@/lib/worldAssetFallbacks';
 import type {
   Project,
   VisualWorldReport,
@@ -47,6 +47,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
   const [characterSheet, setCharacterSheet] = useState<CharacterSheet | null>(null);
   const [envSheet, setEnvSheet] = useState<EnvironmentSheet | null>(null);
   const [scenePrompts, setScenePrompts] = useState<SceneVisualPrompt[]>([]);
+  const [repairingScenePrompts, setRepairingScenePrompts] = useState(false);
   const [scenePreviews, setScenePreviews] = useState<ScenePreview[]>([]);
 
   // Per-sub-section generating flags
@@ -441,6 +442,57 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
   };
 
   // ── Refresh single scene prompt ───────────────────────────────────────────
+
+  const handleRepairMissingScenePrompts = async () => {
+    if (!project?.id) return;
+
+    try {
+      setRepairingScenePrompts(true);
+
+      const repairedPrompts = await createLocalScenePromptsOnly({
+        project,
+        worldReport,
+        scenes,
+        styleBible,
+        characterSheet,
+        envSheet,
+      });
+
+      setScenePrompts(repairedPrompts);
+
+      const now = new Date().toISOString();
+      const { data: updatedProject } = await supabase
+        .from('projects')
+        .update({
+          status: 'World Assets In Review',
+          scene_prompts_approved: false,
+          updated_at: now,
+        })
+        .eq('id', project.id)
+        .select()
+        .maybeSingle();
+
+      if (updatedProject) {
+        onProjectUpdate(updatedProject as Project);
+      } else {
+        onProjectUpdate({
+          ...project,
+          status: 'World Assets In Review',
+          scene_prompts_approved: false,
+          updated_at: now,
+        } as Project);
+      }
+
+      toast.success(`Rebuilt ${repairedPrompts.length} missing scene visual prompt${repairedPrompts.length === 1 ? '' : 's'}.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[BeatVision] Missing scene prompt repair failed:', err);
+      toast.error(`Scene prompt repair failed: ${message}`, { duration: 20000 });
+    } finally {
+      setRepairingScenePrompts(false);
+    }
+  };
+
   const handleRefreshPrompt = async (prompt: SceneVisualPrompt) => {
     setRefreshingPromptId(prompt.id);
     try {
@@ -772,8 +824,20 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
                   prompt ids: {scenePrompts.map((p) => `${p.scene_number ?? '?'}:${p.id ?? 'missing-id'}:${p.approved ? 'approved' : 'not-approved'}`).join(' | ') || 'none'}
                 </div>
                 {scenePrompts.length === 0 && (
-                  <div className="mt-2 text-red-200">
-                    GenerateWorldSection has zero local scene prompts. Either fallback insertion failed, fetchInitial did not load rows, or setScenePrompts was not reached.
+                  <div className="mt-2 text-red-200 space-y-3">
+                    <div>
+                      GenerateWorldSection has zero local scene prompts. Either fallback insertion failed, fetchInitial did not load rows, or setScenePrompts was not reached.
+                    </div>
+                    {styleBible && characterSheet && envSheet && (
+                      <button
+                        type="button"
+                        onClick={handleRepairMissingScenePrompts}
+                        disabled={repairingScenePrompts}
+                        className="rounded-lg border border-yellow-400/50 bg-yellow-400/20 px-3 py-2 text-xs font-bold text-yellow-100 disabled:opacity-60"
+                      >
+                        {repairingScenePrompts ? 'Repairing Scene Prompts...' : 'Repair Missing Scene Prompts'}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
