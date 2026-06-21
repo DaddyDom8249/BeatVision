@@ -394,9 +394,46 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
     } catch (err: unknown) {
       console.error('[BeatVision] Local-first world asset generation failed:', err);
       setGenState('idle');
-      const diagnosticMessage = err instanceof Error ? err.message : 'Local world asset generation failed.';
+      const diagnosticObject = err instanceof Error
+        ? {
+            name: err.name,
+            message: err.message,
+            stack: err.stack,
+          }
+        : {
+            rawType: typeof err,
+            rawValue: (() => {
+              try {
+                return JSON.stringify(err, null, 2);
+              } catch {
+                return String(err);
+              }
+            })(),
+          };
+
+      const diagnosticMessage = `[BeatVision World Asset Runtime Diagnostic]\\n${JSON.stringify(diagnosticObject, null, 2)}`;
+
       console.error('[BeatVision] FULL LOCAL WORLD ASSET DIAGNOSTIC:', diagnosticMessage);
-      toast.error(diagnosticMessage, { duration: 20000 });
+
+      try {
+        window.localStorage.setItem('beatvision:lastWorldAssetError', diagnosticMessage);
+      } catch (storageErr) {
+        console.warn('[BeatVision] Could not save diagnostic to localStorage:', storageErr);
+      }
+
+      try {
+        void navigator.clipboard?.writeText?.(diagnosticMessage);
+      } catch (clipErr) {
+        console.warn('[BeatVision] Could not copy diagnostic:', clipErr);
+      }
+
+      try {
+        window.alert(diagnosticMessage);
+      } catch {
+        // alert can be blocked, toast still shows.
+      }
+
+      toast.error('World asset generation failed. Diagnostic was shown and saved to localStorage.', { duration: 20000 });
     } finally {
       setGenerating(false);
       genRef.current = false;
