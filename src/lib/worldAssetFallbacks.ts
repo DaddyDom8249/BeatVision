@@ -296,7 +296,12 @@ export async function createLocalScenePromptsOnly({
   }
 
   const now = new Date().toISOString();
-  const style = projectStyle(project);
+  const style = cleanText(
+    (project as Record<string, unknown>).selected_style ||
+      (project as Record<string, unknown>).style ||
+      (project as Record<string, unknown>).visual_style,
+    'cinematic'
+  );
 
   const emotionalCore = safeSlice(
     worldReport?.emotional_core,
