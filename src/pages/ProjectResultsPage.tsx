@@ -211,186 +211,77 @@ export default function ProjectResultsPage() {
   };
 
   const triggerGenerateWorld = async (proj: Project, seed = 1) => {
-    if (worldGenRef.current) return;
-    worldGenRef.current = true;
-    setGeneratingWorld(true);
     try {
-      const res = await supabase.functions.invoke('beatvision-generate', {
-        body: {
-          action: 'generate_world_report',
-          projectTitle: proj.title,
-          lyrics: proj.lyrics || '',
-          style: proj.selected_style,
-          notes: proj.optional_notes || '',
-          seed,
-        },
-      });
-      if (res.error) {
-        const msg = await res.error?.context?.text?.();
-        throw new Error(msg || 'Generation failed');
-      }
-      const reportData = res.data?.data;
-      if (!reportData) throw new Error('No data returned');
+      const now = new Date().toISOString();
+      const lyricsSnippet = (proj.lyrics || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 900);
 
-      // Delete old report if exists
-      if (worldReport) {
-        await supabase.from('visual_world_reports').delete().eq('project_id', proj.id);
-      }
+      const fallbackSummary = lyricsSnippet
+        ? `Created locally from the song title, style, notes, and lyrics preview: ${lyricsSnippet}`
+        : 'Created locally from the song title, selected style, and creator notes.';
+
+      await supabase.from('visual_world_reports').delete().eq('project_id', proj.id);
 
       const { data: saved, error: saveErr } = await supabase
         .from('visual_world_reports')
         .insert({
           project_id: proj.id,
-          song_summary: reportData.song_summary || null,
-          emotional_core: reportData.emotional_core || null,
-          main_visual_world: reportData.main_visual_world || null,
-          color_palette: reportData.color_palette || null,
-          lighting_style: reportData.lighting_style || null,
-          main_characters: reportData.main_characters || null,
-          symbolic_objects: reportData.symbolic_objects || null,
-          key_locations: reportData.key_locations || null,
-          story_direction: reportData.story_direction || null,
-          creative_match_score: typeof reportData.creative_match_score === 'number' ? reportData.creative_match_score : 85,
+          song_summary: `BeatVision local world report for "${proj.title}". ${fallbackSummary}`,
+          emotional_core:
+            'The emotional core centers on pressure, survival, transformation, memory, conflict, release, and the hidden visual world inside the track.',
+          main_visual_world:
+            `A ${proj.selected_style || 'cinematic'} music-video world built around the song atmosphere, creator notes, and emotional arc. The visuals should feel intentional, grounded, symbolic, and ready for storyboard/image generation.`,
+          color_palette:
+            'deep black, muted steel, dusty amber, electric blue highlights, worn industrial gray, pale white glow, smoke-shadow contrast',
+          lighting_style:
+            'cinematic low-key lighting, hard rim light, glowing practicals, haze, smoke, selective highlights, dramatic contrast',
+          main_characters:
+            'A central protagonist shaped by the emotional weight of the song, shown through body language, environment, symbolic action, and visual transformation.',
+          symbolic_objects:
+            'light, shadow, broken machinery, weathered metal, reflections, sparks, smoke, doors, roads, wires, glass, rain, dust',
+          key_locations:
+            'emotionally charged cinematic locations shaped by the song: an opening pressure space, a transitional path, a symbolic confrontation zone, and a final transformed space',
+          story_direction:
+            'Start with the protagonist trapped inside pressure, reveal the world around them, build toward confrontation or release, and end with a clear visual transformation.',
+          creative_match_score: seed > 1 ? 78 : 72,
           approved: false,
         })
         .select()
         .maybeSingle();
+
       if (saveErr) throw saveErr;
-      if (saved) setWorldReport(saved);
-      if (seed > 1) toast.info('World regenerated. A fresh perspective on your song\'s world.');    } catch (err: unknown) {
-
-      const sourceErrorMessage = err instanceof Error ? err.message : 'Failed to generate world report';
-
-      console.error('[BeatVision] World generation failed:', err);
-
-
-      // Fallback protection:
-
-      // If the Supabase Edge Function fails, do not leave the project blank.
-
-      if (!worldReport) {
-
-        try {
-
-          const lyricsSnippet = (proj.lyrics || '')
-
-            .replace(/\s+/g, ' ')
-
-            .trim()
-
-            .slice(0, 700);
-
-
-          const fallbackSummary = lyricsSnippet
-
-            ? `This fallback report was created from the song title, style, notes, and lyrics preview: ${lyricsSnippet}`
-
-            : 'This fallback report was created from the song title, selected style, and creator notes.';
-
-
-          const { data: savedFallback, error: fallbackErr } = await supabase
-
-            .from('visual_world_reports')
-
-            .insert({
-
-              project_id: proj.id,
-
-              song_summary: `BeatVision fallback world report for "${proj.title}". ${fallbackSummary}`,
-
-              emotional_core: 'The emotional core centers on pressure, survival, transformation, and the inner world hidden inside the track.',
-
-              main_visual_world: `A ${proj.selected_style || 'cinematic'} music-video world built around the song atmosphere, symbols, and creator notes. The visuals should feel intentional, grounded, and ready for manual refinement.`,
-
-              color_palette: 'deep black, muted steel, dusty amber, electric blue highlights, worn industrial gray',
-
-              lighting_style: 'cinematic low-key lighting, hard rim light, glowing practicals, smoke, haze, dramatic contrast',
-
-              main_characters: 'A central protagonist shaped by the emotional weight of the song, shown through body language, environment, and symbolic action.',
-
-              symbolic_objects: 'light, shadow, broken machinery, weathered metal, reflections, sparks, smoke, doors, roads, wires',
-
-              key_locations: 'an emotionally charged cinematic world built from the song setting, with practical locations that can become storyboard scenes',
-
-              story_direction: 'Start with the protagonist inside pressure, reveal the world around them, build toward confrontation or release, and end with a clear visual transformation.',
-
-              creative_match_score: 72,
-
-              approved: false,
-
-            })
-
-            .select()
-
-            .maybeSingle();
-
-
-          if (fallbackErr) throw fallbackErr;
-
-
-          if (savedFallback) {
-
-            setWorldReport(savedFallback as VisualWorldReport);
-
-
-            const { data: updatedProject } = await supabase
-
-              .from('projects')
-
-              .update({
-
-                status: 'World Revealed',
-
-                updated_at: new Date().toISOString(),
-
-              })
-
-              .eq('id', proj.id)
-
-              .select()
-
-              .maybeSingle();
-
-
-            if (updatedProject) {
-
-              setProject(updatedProject as Project);
-
-            }
-
-
-            toast.warning('AI generation failed, so BeatVision created a local fallback world report. You can edit it or regenerate later.');
-
-            return;
-
-          }
-
-        } catch (fallbackErr: unknown) {
-
-          console.error('[BeatVision] Local fallback world report failed:', fallbackErr);
-
-          toast.error(
-
-            fallbackErr instanceof Error
-
-              ? `Generation failed and fallback save failed: ${fallbackErr.message}`
-
-              : sourceErrorMessage
-
-          );
-
-          return;
-
-        }
-
+      if (!saved) throw new Error('Local world report save returned no row.');
+
+      setWorldReport(saved as VisualWorldReport);
+
+      const { data: updatedProject, error: projectErr } = await supabase
+        .from('projects')
+        .update({
+          status: 'World Revealed',
+          updated_at: now,
+        })
+        .eq('id', proj.id)
+        .select()
+        .maybeSingle();
+
+      if (projectErr) {
+        console.warn('[BeatVision] Project status update after local world report failed:', projectErr);
       }
 
+      if (updatedProject) {
+        setProject(updatedProject as Project);
+      } else {
+        setProject({ ...proj, status: 'World Revealed', updated_at: now } as Project);
+      }
 
-      toast.error(sourceErrorMessage);
-
-    } finally {
-      setGeneratingWorld(false);
-      worldGenRef.current = false;
+      toast.success(seed > 1 ? 'World regenerated locally.' : 'Visual World Report created locally.', {
+        duration: 5000,
+      });
+    } catch (err: unknown) {
+      console.error('[BeatVision] Local-first world report failed:', err);
+      toast.error(err instanceof Error ? `Local world generation failed: ${err.message}` : 'Local world generation failed.');
     }
   };
 
