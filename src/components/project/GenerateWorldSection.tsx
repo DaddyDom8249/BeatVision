@@ -394,11 +394,9 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
     } catch (err: unknown) {
       console.error('[BeatVision] Local-first world asset generation failed:', err);
       setGenState('idle');
-      toast.error(
-        err instanceof Error
-          ? `Local world asset generation failed: ${err.message}`
-          : 'Local world asset generation failed.'
-      );
+      const diagnosticMessage = err instanceof Error ? err.message : 'Local world asset generation failed.';
+      console.error('[BeatVision] FULL LOCAL WORLD ASSET DIAGNOSTIC:', diagnosticMessage);
+      toast.error(diagnosticMessage, { duration: 20000 });
     } finally {
       setGenerating(false);
       genRef.current = false;
