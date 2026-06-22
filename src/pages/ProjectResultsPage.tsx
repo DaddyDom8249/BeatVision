@@ -2,7 +2,9 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
-import type { Project, VisualWorldReport, StoryboardScene, CharacterEnvironment, SceneVisualPrompt, ProjectChangeLog, WorldStyleBible, CharacterSheet, EnvironmentSheet, SceneImage } from '@/types/types';
+import type { Project, VisualWorldReport, StoryboardScene, CharacterEnvironment, SceneVisualPrompt, ProjectChangeLog, WorldStyleBible, CharacterSheet, EnvironmentSheet, SceneImage,
+  FinalVideo,
+} from '@/types/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import Navbar from '@/components/layouts/Navbar';
@@ -11,6 +13,9 @@ import StoryboardSection from '@/components/project/StoryboardSection';
 import CharacterEnvironmentSection from '@/components/project/CharacterEnvironmentSection';
 import GenerateWorldSection from '@/components/project/GenerateWorldSection';
 import GenerateSceneImagesSection from '@/components/project/GenerateSceneImagesSection';
+import ExportProjectPanel from '@/components/project/ExportProjectPanel';
+import SegmentedVideoRenderer from '@/components/project/SegmentedVideoRenderer';
+import GenerateMotionSection from '@/components/project/GenerateMotionSection';
 import BetaFeedbackSection from '@/components/project/BetaFeedbackSection';
 import ReviewChangesPanel from '@/components/project/ReviewChangesPanel';
 import ReviewStatusCard from '@/components/project/ReviewStatusCard';
@@ -67,6 +72,8 @@ export default function ProjectResultsPage() {
   const [characterSheet, setCharacterSheet] = useState<CharacterSheet | null>(null);
   const [envSheet, setEnvSheet] = useState<EnvironmentSheet | null>(null);
   const [sceneImages, setSceneImages] = useState<SceneImage[]>([]);
+  const [finalVideo, setFinalVideo] = useState<FinalVideo | null>(null);
+  const [showExportPanel, setShowExportPanel] = useState(false);
   const [generatingWorld, setGeneratingWorld] = useState(false);
   const [generatingStoryboard, setGeneratingStoryboard] = useState(false);
   const [generatingCharacters, setGeneratingCharacters] = useState(false);
@@ -1274,6 +1281,70 @@ export default function ProjectResultsPage() {
             />
           )}
 
+
+
+            {/* Phase 4 — Motion / Preview / Export */}
+            {(sceneImagesUnlocked || sceneImages.length > 0) && (
+              <section className="section-unlock space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)' }}
+                  >
+                    <span className="text-violet-300 text-sm">▶</span>
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-lg text-foreground">Motion / Preview / Export</h2>
+                    <p className="text-xs text-muted-foreground">
+                      Create motion segments from approved scene images · preview in browser · export manifest or WebM draft
+                    </p>
+                  </div>
+                </div>
+
+                <GenerateMotionSection
+                  project={project}
+                  onProjectUpdate={(updated) => setProject(p => p ? { ...p, ...updated } : p)}
+                />
+
+                <SegmentedVideoRenderer
+                  project={project}
+                  scenes={scenes}
+                  sceneImages={sceneImages}
+                  finalVideo={finalVideo}
+                  onProjectUpdate={(updated) => setProject(p => p ? { ...p, ...updated } : p)}
+                  onFinalVideoUpdate={(fv) => setFinalVideo(fv)}
+                />
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowExportPanel(true)}
+                    className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-xs font-mono text-violet-200 hover:bg-violet-500/15 transition-colors"
+                  >
+                    Open Export Panel
+                  </button>
+                </div>
+
+                {showExportPanel && (
+                  <ExportProjectPanel
+                    project={project}
+                    worldReport={worldReport}
+                    scenes={scenes}
+                    charEnv={charEnv}
+                    styleBible={styleBible}
+                    characterSheet={characterSheet}
+                    envSheet={envSheet}
+                    scenePrompts={scenePrompts}
+                    sceneImages={sceneImages}
+                    sceneVideos={[]}
+                    changeLogs={changeLogs}
+                    motionClips={[]}
+                    finalVideo={finalVideo}
+                    onClose={() => setShowExportPanel(false)}
+                  />
+                )}
+              </section>
+            )}
 
           {/* Project Change Log */}
           {changeLogs.length > 0 && (
