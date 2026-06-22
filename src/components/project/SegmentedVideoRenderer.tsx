@@ -608,7 +608,62 @@ export default function SegmentedVideoRenderer({
       .forEach(si => { if (si.storyboard_scene_id) approvedImgByScene[si.storyboard_scene_id] = si; });
 
     // Fallback: best available image
-    const fallbackImage = sceneImages.find(si => si.image_url) ?? null;
+    const approvedImagesForSegments = (sceneImages as any[])
+      .filter((si: any) =>
+        si.approved &&
+        (si.image_url || si.scene_image_url || si.reference_image_url) &&
+        (
+          si.real_generated ||
+          si.manual_upload ||
+          si.use_placeholder_as_draft_final ||
+          si.provider === 'manual_upload' ||
+          si.provider_name === 'manual_upload' ||
+          si.generation_status === 'uploaded' ||
+          si.generation_status === 'manual_upload'
+        )
+      )
+      .sort((a: any, b: any) => {
+        const an = Number(a.scene_number ?? a.scene_index ?? 999999);
+        const bn = Number(b.scene_number ?? b.scene_index ?? 999999);
+        return an - bn;
+      });
+
+    const fallbackImage =
+      approvedImagesForSegments[0] ??
+      (sceneImages as any[]).find((si: any) => si.image_url || si.scene_image_url || si.reference_image_url) ??
+      null;
+
+    const imageUrlOf = (si: any) => si?.image_url ?? si?.scene_image_url ?? si?.reference_image_url ?? null;
+
+    const pickImageForSegment = (r: TimeRange, idx: number, matchedScene: any): any | null => {
+      const sceneId = r.sceneId ?? matchedScene?.id ?? null;
+      const sceneNo = Number(matchedScene?.scene_number ?? matchedScene?.scene_index ?? 0);
+
+      if (sceneId) {
+        const byId = approvedImagesForSegments.find((si: any) =>
+          String(si.storyboard_scene_id ?? si.source_storyboard_scene_id ?? '') === String(sceneId)
+        );
+        if (byId) return byId;
+      }
+
+      if (sceneNo > 0) {
+        const byNo = approvedImagesForSegments.find((si: any) =>
+          Number(si.scene_number ?? si.scene_index ?? 0) === sceneNo
+        );
+        if (byNo) return byNo;
+      }
+
+      if (approvedImagesForSegments.length > 0) {
+        const proportionalIndex = Math.min(
+          approvedImagesForSegments.length - 1,
+          Math.max(0, Math.floor((r.start / Math.max(effectiveDuration, 1)) * approvedImagesForSegments.length))
+        );
+        const sequenceIndex = ranges.length <= approvedImagesForSegments.length ? idx : proportionalIndex;
+        return approvedImagesForSegments[Math.min(sequenceIndex, approvedImagesForSegments.length - 1)] ?? fallbackImage;
+      }
+
+      return fallbackImage;
+    };
 
     // Delete old segments
     await supabase.from('video_segments').delete()
@@ -627,7 +682,8 @@ export default function SegmentedVideoRenderer({
       }) ?? null;
 
       const sceneId = r.sceneId ?? matchedScene?.id ?? null;
-      const img = sceneId ? (approvedImgByScene[sceneId] ?? fallbackImage) : fallbackImage;
+      const img = pickImageForSegment(r, idx, matchedScene);
+      const imgUrl = imageUrlOf(img);
 
       return {
         project_id: project.id,
@@ -638,7 +694,7 @@ export default function SegmentedVideoRenderer({
         end_time: r.end,
         duration: r.end - r.start,
         segment_title: r.title ?? matchedScene?.scene_title ?? `Segment ${idx + 1}`,
-        image_url: img?.image_url ?? null,
+          image_url: imgUrl,
         motion_effect: motionEffects[idx % motionEffects.length],
         transition_in: 'Fade',
         transition_out: 'Fade',
