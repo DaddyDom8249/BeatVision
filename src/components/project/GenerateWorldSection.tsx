@@ -806,7 +806,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
                 : null
             }
           />
-          {expandedSections.prompts && (
+          {false && expandedSections.prompts && (
             <div className="mt-3">
               
               {/* NESTED SCENE PROMPT DIAGNOSTIC */}
