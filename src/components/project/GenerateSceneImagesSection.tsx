@@ -378,6 +378,7 @@ export default function GenerateSceneImagesSection({
             project_id: project.id,
             scene_visual_prompt_id: prompt.id,
             scene_number: prompt.scene_number,
+            scene_index: Number(prompt.scene_number ?? 0),
             prompt_text: prompt.main_image_prompt,
             image_prompt: prompt.main_image_prompt,
             generation_prompt: prompt.main_image_prompt,
