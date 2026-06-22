@@ -762,6 +762,9 @@ export default function ProjectResultsPage() {
     approvedScenePromptCountForMotion > 0 &&
     validApprovedSceneImagesForMotion.length >= approvedScenePromptCountForMotion;
 
+  const hasAnyApprovedSceneImageForMotion =
+    validApprovedSceneImagesForMotion.length > 0;
+
   return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex items-center gap-3 text-muted-foreground">
@@ -1070,7 +1073,7 @@ export default function ProjectResultsPage() {
             ))}
           </div>
         )}
-        {readinessBlockers.length === 0 && !fixingStatus && (project.images_approved || hasApprovedSceneImagesForMotion) && (
+        {!fixingStatus && (project.images_approved || hasApprovedSceneImagesForMotion || hasAnyApprovedSceneImageForMotion) && (
           <div
             className="mb-4 rounded-xl px-4 py-2 flex items-center gap-2"
             style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)' }}
