@@ -988,6 +988,94 @@ export default function GenerateSceneImagesSection({
 
   const hasAnyImages = sceneImages.length > 0;
 
+  const approvedScenePromptCountForMotion = prompts.filter((prompt) => Boolean(prompt.approved)).length;
+  const validApprovedSceneImagesForMotion = sceneImages.filter((image) =>
+    Boolean(
+      image.approved &&
+      (
+        image.real_generated ||
+        image.manual_upload ||
+        image.use_placeholder_as_draft_final ||
+        image.provider === 'manual_upload' ||
+        image.provider_name === 'manual_upload' ||
+        image.generation_status === 'uploaded' ||
+        image.generation_status === 'manual_upload'
+      ) &&
+      (
+        image.image_url ||
+        image.use_placeholder_as_draft_final ||
+        image.placeholder
+      )
+    )
+  );
+
+  const allSceneImagesApprovedForMotion =
+    approvedScenePromptCountForMotion > 0 &&
+    validApprovedSceneImagesForMotion.length >= approvedScenePromptCountForMotion;
+
+  useEffect(() => {
+    if (!project?.id || !allSceneImagesApprovedForMotion) return;
+
+    if (project.images_approved && project.status === 'Scene Images Approved') return;
+
+    let cancelled = false;
+
+    void (async () => {
+      const now = new Date().toISOString();
+      let updatePayload: Record<string, unknown> = {
+        images_approved: true,
+        status: 'Scene Images Approved',
+        updated_at: now,
+      };
+
+      for (let attempt = 1; attempt <= 4; attempt += 1) {
+        const { data, error } = await supabase
+          .from('projects')
+          .update(updatePayload)
+          .eq('id', project.id)
+          .select()
+          .maybeSingle();
+
+        if (!error) {
+          if (!cancelled) {
+            onProjectUpdate(data ?? updatePayload);
+          }
+          return;
+        }
+
+        const missingColumn = error.message?.match(/'([^']+)' column/)?.[1];
+
+        if (error.code === 'PGRST204' && missingColumn && missingColumn in updatePayload) {
+          const next = { ...updatePayload };
+          delete next[missingColumn];
+          updatePayload = next;
+          continue;
+        }
+
+        console.warn('[BeatVision] Could not sync image approval project gate:', error);
+        if (!cancelled) {
+          onProjectUpdate({
+            images_approved: true,
+            status: 'Scene Images Approved',
+            updated_at: now,
+          } as any);
+        }
+        return;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    allSceneImagesApprovedForMotion,
+    onProjectUpdate,
+    project?.id,
+    project?.images_approved,
+    project?.status,
+  ]);
+
+
   // Provider status label for display
   const providerStatusLabel = realProvidersEnabled && providerActive
     ? `Provider: ${providerName}`

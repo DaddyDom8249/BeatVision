@@ -681,7 +681,7 @@ export default function ProjectResultsPage() {
           .eq('id', id);
       }
 
-      // Recalculate project.images_approved: all approved prompts must have an approved image,
+      // Recalculate (project.images_approved || hasApprovedSceneImagesForMotion): all approved prompts must have an approved image,
       // or all active scene images are approved (handles manual-upload-only workflows)
       const approvedPromptIds2 = fp.filter((p: { approved: boolean }) => p.approved).map((p: { id: string }) => p.id);
       const allPromptsCovered = approvedPromptIds2.length > 0 &&
@@ -691,7 +691,7 @@ export default function ProjectResultsPage() {
       // Fallback: if no prompts exist but manual uploads are approved, allow images_approved
       const hasAnyApprovedImages = freshImages.some((i) => i.approved);
       const noPromptWorkflow = fp.length === 0 && hasAnyApprovedImages;
-      if ((allPromptsCovered || noPromptWorkflow) && !project.images_approved) {
+      if ((allPromptsCovered || noPromptWorkflow) && !(project.images_approved || hasApprovedSceneImagesForMotion)) {
         await supabase.from('projects')
           .update({ status: 'Scene Images Approved', images_approved: true, updated_at: now })
           .eq('id', id);
@@ -736,7 +736,33 @@ export default function ProjectResultsPage() {
   }, [id, project, worldReport, scenes, charEnv, scenePrompts, handleChangeLogged]);
 
   if (authLoading || loadingProject) {
-    return (
+  
+  const approvedScenePromptCountForMotion = scenePrompts.filter((prompt: any) => Boolean(prompt.approved)).length;
+  const validApprovedSceneImagesForMotion = sceneImages.filter((image: any) =>
+    Boolean(
+      image.approved &&
+      (
+        image.real_generated ||
+        image.manual_upload ||
+        image.use_placeholder_as_draft_final ||
+        image.provider === 'manual_upload' ||
+        image.provider_name === 'manual_upload' ||
+        image.generation_status === 'uploaded' ||
+        image.generation_status === 'manual_upload'
+      ) &&
+      (
+        image.image_url ||
+        image.use_placeholder_as_draft_final ||
+        image.placeholder
+      )
+    )
+  );
+
+  const hasApprovedSceneImagesForMotion =
+    approvedScenePromptCountForMotion > 0 &&
+    validApprovedSceneImagesForMotion.length >= approvedScenePromptCountForMotion;
+
+  return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex items-center gap-3 text-muted-foreground">
           <Loader2 className="w-5 h-5 animate-spin text-primary" />
@@ -985,7 +1011,7 @@ export default function ProjectResultsPage() {
               done: project.style_bible_approved && project.character_sheet_approved && project.environment_sheet_approved && project.scene_prompts_approved,
               changed: scenePrompts.some((p) => p.updated_after_approval || p.needs_review),
             },
-            { label: 'Scene Images', done: !!project.images_approved, changed: false },
+            { label: 'Scene Images', done: !!(project.images_approved || hasApprovedSceneImagesForMotion), changed: false },
             {
               label: 'Motion',
               done: ['Motion Settings Ready', 'Motion Plan Ready', 'Motion Clips In Review', 'Motion Clips Approved', 'Preview Render Ready', 'Final Video Rendered'].includes(project.status ?? ''),
@@ -1044,7 +1070,7 @@ export default function ProjectResultsPage() {
             ))}
           </div>
         )}
-        {readinessBlockers.length === 0 && !fixingStatus && project.images_approved && (
+        {readinessBlockers.length === 0 && !fixingStatus && (project.images_approved || hasApprovedSceneImagesForMotion) && (
           <div
             className="mb-4 rounded-xl px-4 py-2 flex items-center gap-2"
             style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)' }}
