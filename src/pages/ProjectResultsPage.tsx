@@ -1073,7 +1073,7 @@ export default function ProjectResultsPage() {
             ))}
           </div>
         )}
-        {!fixingStatus && (project.images_approved || hasApprovedSceneImagesForMotion || hasAnyApprovedSceneImageForMotion) && (
+        {!fixingStatus && (sceneImages.length > 0 || project.images_approved || hasApprovedSceneImagesForMotion || hasAnyApprovedSceneImageForMotion) && (
           <div
             className="mb-4 rounded-xl px-4 py-2 flex items-center gap-2"
             style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)' }}
