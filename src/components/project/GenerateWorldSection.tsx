@@ -720,7 +720,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
                 bible={styleBible}
                 project={project}
                 generating={genBible}
-                onGenerate={() => generateStyleBible(Date.now())}
+                onGenerate={() => handleGenerateWorld()}
                 onApproved={handleStyleBibleApproved}
                 onBibleUpdate={setStyleBible}
                 onChangeLogged={onChangeLogged}
@@ -750,7 +750,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
                 sheet={characterSheet}
                 project={project}
                 generating={genCharSheet}
-                onGenerate={() => generateCharacterSheet(Date.now())}
+                onGenerate={() => handleGenerateWorld()}
                 onApproved={handleCharSheetApproved}
                 onSheetUpdate={setCharacterSheet}
                 onChangeLogged={onChangeLogged}
@@ -780,7 +780,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
                 envSheet={envSheet}
                 project={project}
                 generating={genEnvSheet}
-                onGenerate={() => generateEnvironmentSheet(Date.now())}
+                onGenerate={() => handleGenerateWorld()}
                 onApproved={handleEnvSheetApproved}
                 onSheetUpdate={setEnvSheet}
                 onChangeLogged={onChangeLogged}
