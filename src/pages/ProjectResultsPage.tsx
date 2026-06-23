@@ -15,7 +15,6 @@ import GenerateWorldSection from '@/components/project/GenerateWorldSection';
 import GenerateSceneImagesSection from '@/components/project/GenerateSceneImagesSection';
 import ExportProjectPanel from '@/components/project/ExportProjectPanel';
 import SegmentedVideoRenderer from '@/components/project/SegmentedVideoRenderer';
-import GenerateMotionSection from '@/components/project/GenerateMotionSection';
 import BetaFeedbackSection from '@/components/project/BetaFeedbackSection';
 import ReviewChangesPanel from '@/components/project/ReviewChangesPanel';
 import ReviewStatusCard from '@/components/project/ReviewStatusCard';
@@ -1296,15 +1295,11 @@ export default function ProjectResultsPage() {
                   <div>
                     <h2 className="font-bold text-lg text-foreground">Motion / Preview / Export</h2>
                     <p className="text-xs text-muted-foreground">
-                      Create motion segments from approved scene images · preview in browser · export manifest or WebM draft
+                      Create segments, render a free browser WebM draft, and export the production manifest
                     </p>
                   </div>
                 </div>
 
-                <GenerateMotionSection
-                  project={project}
-                  onProjectUpdate={(updated) => setProject(p => p ? { ...p, ...updated } : p)}
-                />
 
                 <SegmentedVideoRenderer
                   project={project}
