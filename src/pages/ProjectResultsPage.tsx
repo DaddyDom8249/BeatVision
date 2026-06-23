@@ -458,7 +458,7 @@ export default function ProjectResultsPage() {
         if (fallbackErr) throw fallbackErr;
 
         setScenes(Array.isArray(savedScenes) ? savedScenes as StoryboardScene[] : []);
-        toast.warning('AI storyboard failed, so BeatVision created a local fallback storyboard. You can edit it or regenerate later.');
+        toast.success('Local storyboard created. You can edit it or regenerate later.');
       } catch (fallbackErr: unknown) {
         console.error('[BeatVision] Local fallback storyboard failed:', fallbackErr);
         toast.error(fallbackErr instanceof Error ? fallbackErr.message : 'Failed to generate storyboard');
@@ -539,7 +539,7 @@ export default function ProjectResultsPage() {
         if (fallbackErr) throw fallbackErr;
 
         if (saved) setCharEnv(saved as CharacterEnvironment);
-        toast.warning('AI character generation failed, so BeatVision created a local fallback character/environment plan. You can edit it or regenerate later.');
+        toast.success('Local character/environment plan created. You can edit it or regenerate later.');
       } catch (fallbackErr: unknown) {
         console.error('[BeatVision] Local fallback character generation failed:', fallbackErr);
         toast.error(fallbackErr instanceof Error ? fallbackErr.message : 'Failed to generate characters');
