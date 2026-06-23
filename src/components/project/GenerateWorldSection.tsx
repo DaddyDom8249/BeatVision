@@ -136,29 +136,22 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
 
   // ── Generate Style Bible ──────────────────────────────────────────────────
   const generateStyleBible = async (seed = 1): Promise<WorldStyleBible | null> => {
+    void seed;
     setGenBible(true);
     try {
-      const result = await callEdgeFn({
-        ...baseContext,
-        action: 'generate_style_bible',
-        worldReport: worldReportContext,
-        charEnv: charEnvContext,
-        seed,
-      });
-      const d = result?.data as Record<string, string>;
-      if (!d) throw new Error('No data returned');
+      const fallback = await createLocalWorldAssets({ project, worldReport, scenes, charEnv });
 
-      await supabase.from('world_style_bibles').delete().eq('project_id', project.id);
-      const { data: saved, error } = await supabase
-        .from('world_style_bibles')
-        .insert({ project_id: project.id, ...d, approved: false })
-        .select()
-        .maybeSingle();
-      if (error) throw error;
-      if (saved) {
-        setStyleBible(saved as WorldStyleBible);
-        return saved as WorldStyleBible;
-      }
+      if (fallback.bible) setStyleBible(fallback.bible);
+      if (fallback.charSheet) setCharacterSheet(fallback.charSheet);
+      if (fallback.envSheet) setEnvSheet(fallback.envSheet);
+      setScenePrompts(fallback.prompts);
+      setScenePreviews(fallback.previews);
+
+      toast.success('World Style Bible regenerated locally.');
+      return fallback.bible;
+    } catch (err: unknown) {
+      console.error('[BeatVision] Local style bible regeneration failed:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to regenerate World Style Bible.');
       return null;
     } finally {
       setGenBible(false);
@@ -167,29 +160,22 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
 
   // ── Generate Character Sheet ──────────────────────────────────────────────
   const generateCharacterSheet = async (seed = 1): Promise<CharacterSheet | null> => {
+    void seed;
     setGenCharSheet(true);
     try {
-      const result = await callEdgeFn({
-        ...baseContext,
-        action: 'generate_character_sheet',
-        worldReport: worldReportContext,
-        charEnv: charEnvContext,
-        seed,
-      });
-      const d = result?.data as Record<string, string>;
-      if (!d) throw new Error('No data returned');
+      const fallback = await createLocalWorldAssets({ project, worldReport, scenes, charEnv });
 
-      await supabase.from('character_sheets').delete().eq('project_id', project.id);
-      const { data: saved, error } = await supabase
-        .from('character_sheets')
-        .insert({ project_id: project.id, ...d, approved: false })
-        .select()
-        .maybeSingle();
-      if (error) throw error;
-      if (saved) {
-        setCharacterSheet(saved as CharacterSheet);
-        return saved as CharacterSheet;
-      }
+      if (fallback.bible) setStyleBible(fallback.bible);
+      if (fallback.charSheet) setCharacterSheet(fallback.charSheet);
+      if (fallback.envSheet) setEnvSheet(fallback.envSheet);
+      setScenePrompts(fallback.prompts);
+      setScenePreviews(fallback.previews);
+
+      toast.success('Character Sheet regenerated locally.');
+      return fallback.charSheet;
+    } catch (err: unknown) {
+      console.error('[BeatVision] Local character sheet regeneration failed:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to regenerate Character Sheet.');
       return null;
     } finally {
       setGenCharSheet(false);
@@ -198,29 +184,22 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
 
   // ── Generate Environment Sheet ────────────────────────────────────────────
   const generateEnvironmentSheet = async (seed = 1): Promise<EnvironmentSheet | null> => {
+    void seed;
     setGenEnvSheet(true);
     try {
-      const result = await callEdgeFn({
-        ...baseContext,
-        action: 'generate_environment_sheet',
-        worldReport: worldReportContext,
-        charEnv: charEnvContext,
-        seed,
-      });
-      const d = result?.data as Record<string, string>;
-      if (!d) throw new Error('No data returned');
+      const fallback = await createLocalWorldAssets({ project, worldReport, scenes, charEnv });
 
-      await supabase.from('environment_sheets').delete().eq('project_id', project.id);
-      const { data: saved, error } = await supabase
-        .from('environment_sheets')
-        .insert({ project_id: project.id, ...d, approved: false })
-        .select()
-        .maybeSingle();
-      if (error) throw error;
-      if (saved) {
-        setEnvSheet(saved as EnvironmentSheet);
-        return saved as EnvironmentSheet;
-      }
+      if (fallback.bible) setStyleBible(fallback.bible);
+      if (fallback.charSheet) setCharacterSheet(fallback.charSheet);
+      if (fallback.envSheet) setEnvSheet(fallback.envSheet);
+      setScenePrompts(fallback.prompts);
+      setScenePreviews(fallback.previews);
+
+      toast.success('Environment Sheet regenerated locally.');
+      return fallback.envSheet;
+    } catch (err: unknown) {
+      console.error('[BeatVision] Local environment sheet regeneration failed:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to regenerate Environment Sheet.');
       return null;
     } finally {
       setGenEnvSheet(false);
@@ -720,7 +699,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
                 bible={styleBible}
                 project={project}
                 generating={genBible}
-                onGenerate={() => handleGenerateWorld()}
+                onGenerate={() => generateStyleBible(Date.now())}
                 onApproved={handleStyleBibleApproved}
                 onBibleUpdate={setStyleBible}
                 onChangeLogged={onChangeLogged}
@@ -750,7 +729,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
                 sheet={characterSheet}
                 project={project}
                 generating={genCharSheet}
-                onGenerate={() => handleGenerateWorld()}
+                onGenerate={() => generateCharacterSheet(Date.now())}
                 onApproved={handleCharSheetApproved}
                 onSheetUpdate={setCharacterSheet}
                 onChangeLogged={onChangeLogged}
@@ -780,7 +759,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
                 envSheet={envSheet}
                 project={project}
                 generating={genEnvSheet}
-                onGenerate={() => handleGenerateWorld()}
+                onGenerate={() => generateEnvironmentSheet(Date.now())}
                 onApproved={handleEnvSheetApproved}
                 onSheetUpdate={setEnvSheet}
                 onChangeLogged={onChangeLogged}
