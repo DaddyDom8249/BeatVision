@@ -134,20 +134,87 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
       }
     : {};
 
+  const approveAllWorldAssetSheets = async (assets: {
+    bible: WorldStyleBible | null;
+    charSheet: CharacterSheet | null;
+    envSheet: EnvironmentSheet | null;
+  }): Promise<{
+    bible: WorldStyleBible | null;
+    charSheet: CharacterSheet | null;
+    envSheet: EnvironmentSheet | null;
+  }> => {
+    if (assets.bible?.id) {
+      const { error } = await supabase
+        .from('world_style_bibles')
+        .update({ approved: true })
+        .eq('id', assets.bible.id);
+      if (error) throw error;
+    }
+
+    if (assets.charSheet?.id) {
+      const { error } = await supabase
+        .from('character_sheets')
+        .update({ approved: true })
+        .eq('id', assets.charSheet.id);
+      if (error) throw error;
+    }
+
+    if (assets.envSheet?.id) {
+      const { error } = await supabase
+        .from('environment_sheets')
+        .update({ approved: true })
+        .eq('id', assets.envSheet.id);
+      if (error) throw error;
+    }
+
+    const now = new Date().toISOString();
+
+    const { error: projectError } = await supabase
+      .from('projects')
+      .update({
+        style_bible_approved: true,
+        character_sheet_approved: true,
+        environment_sheet_approved: true,
+        updated_at: now,
+      })
+      .eq('id', project.id);
+
+    if (projectError) throw projectError;
+
+    onProjectUpdate({
+      ...project,
+      style_bible_approved: true,
+      character_sheet_approved: true,
+      environment_sheet_approved: true,
+      updated_at: now,
+    });
+
+    return {
+      bible: assets.bible ? { ...assets.bible, approved: true } : null,
+      charSheet: assets.charSheet ? { ...assets.charSheet, approved: true } : null,
+      envSheet: assets.envSheet ? { ...assets.envSheet, approved: true } : null,
+    };
+  };
+
   // ── Generate Style Bible ──────────────────────────────────────────────────
   const generateStyleBible = async (seed = 1): Promise<WorldStyleBible | null> => {
     void seed;
     setGenBible(true);
     try {
       const fallback = await createLocalWorldAssets({ project, worldReport, scenes, charEnv });
+      const approvedAssets = await approveAllWorldAssetSheets({
+        bible: fallback.bible,
+        charSheet: fallback.charSheet,
+        envSheet: fallback.envSheet,
+      });
 
-      if (fallback.bible) setStyleBible(fallback.bible);
-      if (fallback.charSheet) setCharacterSheet(fallback.charSheet);
-      if (fallback.envSheet) setEnvSheet(fallback.envSheet);
+      if (approvedAssets.bible) setStyleBible(approvedAssets.bible);
+      if (approvedAssets.charSheet) setCharacterSheet(approvedAssets.charSheet);
+      if (approvedAssets.envSheet) setEnvSheet(approvedAssets.envSheet);
       setScenePrompts(fallback.prompts);
       setScenePreviews(fallback.previews);
 
-      toast.success('World Style Bible regenerated locally.');
+      toast.success('World Style Bible regenerated locally. All three world asset sheets are approved.');
       return fallback.bible;
     } catch (err: unknown) {
       console.error('[BeatVision] Local style bible regeneration failed:', err);
@@ -164,14 +231,19 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
     setGenCharSheet(true);
     try {
       const fallback = await createLocalWorldAssets({ project, worldReport, scenes, charEnv });
+      const approvedAssets = await approveAllWorldAssetSheets({
+        bible: fallback.bible,
+        charSheet: fallback.charSheet,
+        envSheet: fallback.envSheet,
+      });
 
-      if (fallback.bible) setStyleBible(fallback.bible);
-      if (fallback.charSheet) setCharacterSheet(fallback.charSheet);
-      if (fallback.envSheet) setEnvSheet(fallback.envSheet);
+      if (approvedAssets.bible) setStyleBible(approvedAssets.bible);
+      if (approvedAssets.charSheet) setCharacterSheet(approvedAssets.charSheet);
+      if (approvedAssets.envSheet) setEnvSheet(approvedAssets.envSheet);
       setScenePrompts(fallback.prompts);
       setScenePreviews(fallback.previews);
 
-      toast.success('Character Sheet regenerated locally.');
+      toast.success('Character Sheet regenerated locally. All three world asset sheets are approved.');
       return fallback.charSheet;
     } catch (err: unknown) {
       console.error('[BeatVision] Local character sheet regeneration failed:', err);
@@ -188,14 +260,19 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
     setGenEnvSheet(true);
     try {
       const fallback = await createLocalWorldAssets({ project, worldReport, scenes, charEnv });
+      const approvedAssets = await approveAllWorldAssetSheets({
+        bible: fallback.bible,
+        charSheet: fallback.charSheet,
+        envSheet: fallback.envSheet,
+      });
 
-      if (fallback.bible) setStyleBible(fallback.bible);
-      if (fallback.charSheet) setCharacterSheet(fallback.charSheet);
-      if (fallback.envSheet) setEnvSheet(fallback.envSheet);
+      if (approvedAssets.bible) setStyleBible(approvedAssets.bible);
+      if (approvedAssets.charSheet) setCharacterSheet(approvedAssets.charSheet);
+      if (approvedAssets.envSheet) setEnvSheet(approvedAssets.envSheet);
       setScenePrompts(fallback.prompts);
       setScenePreviews(fallback.previews);
 
-      toast.success('Environment Sheet regenerated locally.');
+      toast.success('Environment Sheet regenerated locally. All three world asset sheets are approved.');
       return fallback.envSheet;
     } catch (err: unknown) {
       console.error('[BeatVision] Local environment sheet regeneration failed:', err);
