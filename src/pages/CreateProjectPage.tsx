@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
@@ -20,6 +20,48 @@ export default function CreateProjectPage() {
   const [title, setTitle] = useState('');
   const [lyrics, setLyrics] = useState('');
   const [style, setStyle] = useState('Cinematic');
+
+  const demoLyrics = `[Verse 1]
+I clock in where the engines sleep
+Steel bones stacked in crooked rows
+Sun cuts hard through the dust and grease
+But I keep walking where the wreckage glows
+
+[Pre-Chorus]
+There is a halo over broken things
+A spark inside the oil and rain
+I turn the damage into wings
+And drag a little light from pain
+
+[Chorus]
+Drain rack halo, shine on me
+Make something holy out of machinery
+I am not finished, I am not gone
+I build a world from what went wrong
+
+[Verse 2]
+Every scar has a rhythm underneath
+Every ghost has a place to stand
+I hear thunder in the battery teeth
+And hold tomorrow in my hands
+
+[Final Chorus]
+Drain rack halo, burn through the dark
+One last ember, one last spark
+If I fade down to a single flame
+Let the world remember my name`;
+
+  const demoNotes =
+    'Demo concept: gritty industrial music video, emotional but powerful, one consistent protagonist, LKQ-style salvage yard, drain rack halo symbolism, dust, steel, oil shine, sunlight through wrecked cars, ending with one surviving spark.';
+
+  const loadDemoProject = () => {
+    setTitle('Drain Rack Halo');
+    setArtist('BeatVision Demo');
+    setLyrics(demoLyrics);
+    setStyle('Apocalyptic Industrial');
+    setNotes(demoNotes);
+    toast.success('Demo project loaded. Add an audio file if you want, then reveal the world.');
+  };
   const [notes, setNotes] = useState('');
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -28,6 +70,14 @@ export default function CreateProjectPage() {
   useEffect(() => {
     if (!authLoading && !user) navigate('/auth');
   }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('demo') === '1') {
+      loadDemoProject();
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -246,6 +296,23 @@ export default function CreateProjectPage() {
           </Card>
 
           {/* Submit */}
+          <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Demo Mode</p>
+              <p className="text-xs text-muted-foreground">
+                Loads a complete sample song concept so you can test BeatVision without writing anything first.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={loadDemoProject}
+              className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+            >
+              Load Demo Project
+            </Button>
+          </div>
+
           <Button
             type="submit"
             disabled={submitting}

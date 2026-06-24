@@ -78,10 +78,8 @@ export default function LandingPage() {
               size="lg"
               variant="ghost"
               className="border border-border/60 text-foreground hover:bg-accent h-12 px-8 text-base"
-              onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-            >
-              View Demo
-            </Button>
+              onClick={() => navigate('/create?demo=1')}
+            >Try Demo</Button>
           </div>
 
           {/* Hero visual */}
