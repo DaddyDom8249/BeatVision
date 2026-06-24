@@ -78,7 +78,7 @@ export default function LandingPage() {
               size="lg"
               variant="ghost"
               className="border border-border/60 text-foreground hover:bg-accent h-12 px-8 text-base"
-              onClick={() => navigate('/create?demo=1')}
+              onClick={() => navigate('/create')}
             >Try Demo</Button>
           </div>
 

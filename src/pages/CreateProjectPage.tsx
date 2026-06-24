@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
@@ -70,14 +70,6 @@ Let the world remember my name`;
   useEffect(() => {
     if (!authLoading && !user) navigate('/auth');
   }, [user, authLoading, navigate]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('demo') === '1') {
-      loadDemoProject();
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  }, []);
 
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
