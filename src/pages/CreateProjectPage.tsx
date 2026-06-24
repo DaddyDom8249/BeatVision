@@ -21,6 +21,9 @@ export default function CreateProjectPage() {
   const [lyrics, setLyrics] = useState('');
   const [style, setStyle] = useState('Cinematic');
 
+  const [notes, setNotes] = useState('');
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const demoLyrics = `[Verse 1]
 I clock in where the engines sleep
 Steel bones stacked in crooked rows
@@ -54,17 +57,23 @@ Let the world remember my name`;
   const demoNotes =
     'Demo concept: gritty industrial music video, emotional but powerful, one consistent protagonist, LKQ-style salvage yard, drain rack halo symbolism, dust, steel, oil shine, sunlight through wrecked cars, ending with one surviving spark.';
 
-  const loadDemoProject = () => {
+  const loadDemoProject = (event?: { preventDefault?: () => void; stopPropagation?: () => void }) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+
     setTitle('Drain Rack Halo');
     setArtist('BeatVision Demo');
     setLyrics(demoLyrics);
-    setStyle('Apocalyptic Industrial');
+    setStyle('Cinematic');
     setNotes(demoNotes);
-    toast.success('Demo project loaded. Add an audio file if you want, then reveal the world.');
+
+    window.setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 0);
+
+    toast.success('Demo project loaded. The fields are filled in at the top of the form.');
   };
-  const [notes, setNotes] = useState('');
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -167,6 +176,24 @@ Let the world remember my name`;
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <Card className="bg-blue-500/5 border-blue-500/20">
+            <CardContent className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Quick Demo</p>
+                <p className="text-xs text-muted-foreground">
+                  Load a complete sample song concept, then submit it to reveal a world.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={(e) => loadDemoProject(e)}
+                className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+              >
+                Load Demo Project
+              </Button>
+            </CardContent>
+          </Card>
           {/* Project Title */}
           <Card className="bg-card border-border">
             <CardContent className="p-5 space-y-2">
@@ -298,7 +325,7 @@ Let the world remember my name`;
             <Button
               type="button"
               variant="outline"
-              onClick={loadDemoProject}
+              onClick={(e) => loadDemoProject(e)}
               className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
             >
               Load Demo Project
