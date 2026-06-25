@@ -98,6 +98,27 @@ Let the world remember my name`;
     }, 900);
   };
 
+
+  useEffect(() => {
+    const handleDemoButtonClick = (event: MouseEvent) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const button = target?.closest('button');
+      const label = button?.textContent?.trim().toLowerCase() || '';
+
+      const isDemoButton =
+        label === 'load demo project' ||
+        label === 'create demo project' ||
+        label === 'fill demo form';
+
+      if (!isDemoButton) return;
+
+      loadDemoProject(event);
+    };
+
+    document.addEventListener('click', handleDemoButtonClick, true);
+    return () => document.removeEventListener('click', handleDemoButtonClick, true);
+  }, []);
+
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
@@ -208,17 +229,13 @@ Let the world remember my name`;
                   onClick={(e) => createDemoProjectNow(e)}
                   disabled={submitting}
                   className="bg-blue-500 hover:bg-blue-600 text-white"
-                >
-                  Create Demo Project
-                </Button>
+                >Load Demo Project</Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={(e) => loadDemoProject(e)}
                   className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
-                >
-                  Fill Demo Form
-                </Button>
+                >Load Demo Project</Button>
               </div>
             </CardContent>
           </Card>
