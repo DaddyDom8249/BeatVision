@@ -1284,14 +1284,16 @@ export default function ProjectResultsPage() {
 
 
                       <SceneImageGenerationSection
-                        projectId={project?.id ?? id ?? ''}
-                        scenePrompts={scenePrompts}
-                        sceneImages={sceneImages}
-                        realProvidersEnabled={realProvidersEnabled}
-                        providerActive={providerActive}
-                        providerName={providerName}
-                        onImagesUpdated={(images) => setSceneImages(images)}
-                      />
+            projectId={project?.id ?? id ?? ''}
+            scenePrompts={scenePrompts}
+            sceneImages={sceneImages}
+            storyboardScenes={scenes}
+            projectScenePromptsApproved={Boolean(project?.scene_prompts_approved)}
+            realProvidersEnabled={realProvidersEnabled}
+            providerActive={providerActive}
+            providerName={providerName}
+            onImagesUpdated={(images) => setSceneImages(images)}
+          />
 
             {/* Phase 4 — Motion / Preview / Export */}
             {(sceneImagesUnlocked || sceneImages.length > 0) && (
