@@ -147,6 +147,19 @@ Let the world remember my name`;
     return () => document.removeEventListener('click', handleDemoButtonClick, true);
   }, []);
 
+  useEffect(() => {
+    if (authLoading || !user) return;
+
+    const shouldLoadDemo = window.localStorage.getItem('beatvision_demo_autoload') === '1';
+    if (!shouldLoadDemo) return;
+
+    window.localStorage.removeItem('beatvision_demo_autoload');
+
+    window.setTimeout(() => {
+      loadDemoProject();
+    }, 0);
+  }, [authLoading, user]);
+
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];

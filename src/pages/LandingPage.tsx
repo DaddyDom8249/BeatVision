@@ -78,7 +78,10 @@ export default function LandingPage() {
               size="lg"
               variant="ghost"
               className="border border-border/60 text-foreground hover:bg-accent h-12 px-8 text-base"
-              onClick={() => navigate('/create')}
+              onClick={() => {
+                window.localStorage.setItem('beatvision_demo_autoload', '1');
+                navigate('/create');
+              }}
             >Try Demo</Button>
           </div>
 
