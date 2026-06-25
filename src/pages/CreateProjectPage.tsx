@@ -24,6 +24,7 @@ export default function CreateProjectPage() {
   const [notes, setNotes] = useState('');
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [demoLoaded, setDemoLoaded] = useState(false);
   const demoLyrics = `[Verse 1]
 I clock in where the engines sleep
 Steel bones stacked in crooked rows
@@ -61,38 +62,44 @@ Let the world remember my name`;
     event?.preventDefault?.();
     event?.stopPropagation?.();
 
-    const filledTitle = 'Drain Rack Halo';
-    const filledArtist = 'BeatVision Demo';
-    const filledLyrics = demoLyrics.trim();
-    const filledStyle = 'Cinematic';
-    const filledNotes = demoNotes;
+    const demoTitle = 'Drain Rack Halo';
+    const demoArtist = 'BeatVision Demo';
 
-    setTitle(filledTitle);
-    setArtist(filledArtist);
-    setLyrics(filledLyrics);
-    setStyle(filledStyle);
-    setNotes(filledNotes);
+    setTitle(demoTitle);
+    setArtist(demoArtist);
+    setLyrics(demoLyrics);
+    setStyle('Cinematic');
+    setNotes(demoNotes);
+    setDemoLoaded(true);
 
-    const hardFill = (id: string, value: string) => {
-      const el = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null;
-      if (!el) return;
-      el.value = value;
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-    };
+    // Backup force-fill for any input that is not behaving as a controlled React field.
+    window.setTimeout(() => {
+      const forceValue = (selector: string, value: string) => {
+        const el = document.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement | null;
+        if (!el) return;
+        const setter =
+          el instanceof HTMLTextAreaElement
+            ? Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set
+            : Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
 
-    window.requestAnimationFrame(() => {
-      hardFill('title', filledTitle);
-      hardFill('artist', filledArtist);
-      hardFill('lyrics', filledLyrics);
-      hardFill('notes', filledNotes);
+        setter?.call(el, value);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      };
 
-      const lyricsBox = document.getElementById('lyrics');
-      lyricsBox?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      (lyricsBox as HTMLTextAreaElement | null)?.focus();
-    });
+      forceValue('#title', demoTitle);
+      forceValue('input[name="title"]', demoTitle);
+      forceValue('#artist', demoArtist);
+      forceValue('input[name="artist"]', demoArtist);
+      forceValue('#lyrics', demoLyrics);
+      forceValue('textarea[name="lyrics"]', demoLyrics);
+      forceValue('#notes', demoNotes);
+      forceValue('textarea[name="notes"]', demoNotes);
 
-    toast.success('Demo loaded. Lyrics were filled and the page moved to the lyrics box.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 50);
+
+    toast.success('Demo loaded. If fields do not visibly fill, refresh this preview once.');
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -261,6 +268,12 @@ Let the world remember my name`;
             </CardContent>
           </Card>
 
+          {demoLoaded && (
+            <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-sm text-green-300">
+              Demo Loaded Successfully. Title, artist, lyrics, style, and notes were filled.
+            </div>
+          )}
+
           {/* Project Title */}
           <Card className="bg-card border-border">
             <CardContent className="p-5 space-y-2">
@@ -389,14 +402,13 @@ Let the world remember my name`;
                 Loads a complete sample song concept so you can test BeatVision without writing anything first.
               </p>
             </div>
-            <Button
+            <button
               type="button"
-              variant="outline"
               onClick={(e) => loadDemoProject(e)}
-              className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+              className="rounded-md border border-blue-500/30 px-4 py-2 text-sm font-medium text-blue-300 hover:bg-blue-500/10"
             >
               Load Demo Project
-            </Button>
+            </button>
           </div>
 
           <Button
