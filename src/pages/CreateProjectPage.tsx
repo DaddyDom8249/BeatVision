@@ -257,13 +257,13 @@ Let the world remember my name`;
                   onClick={(e) => createDemoProjectNow(e)}
                   disabled={submitting}
                   className="bg-blue-500 hover:bg-blue-600 text-white"
-                >Load Demo Project</Button>
+                >Create Demo Project</Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={(e) => loadDemoProject(e)}
                   className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
-                >Load Demo Project</Button>
+                >Fill Demo Form</Button>
               </div>
             </CardContent>
           </Card>
