@@ -46,7 +46,8 @@ const text = (value: unknown, fallback = ''): string =>
   typeof value === 'string' && value.trim() ? value.trim() : fallback;
 
 const hasVisual = (img: SceneImage): boolean =>
-  Boolean(img.image_url || img.storage_path || img.manual_upload || img.real_generated);
+  // Strict: flags can be stale. Only a real URL/path proves an image exists.
+  Boolean(img.image_url || img.storage_path);
 
 const missingColumn = (error: unknown, payload: LooseRow): string | null => {
   const message =
