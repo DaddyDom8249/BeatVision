@@ -23,6 +23,7 @@ import type { AffectedSectionItem } from '@/components/project/ReviewChangesPane
 import { reapproveSection, createChangeLogEntry } from '@/hooks/useReviewChanges';
 import { ArrowLeft, Music2, Sparkles, Lock, Clapperboard, Loader2, ImageIcon, Settings2 } from 'lucide-react';
 import ImageProviderSettingsSection from '@/components/project/ImageProviderSettingsSection';
+import SceneImageGenerationSection from '@/components/project/SceneImageGenerationSection';
 import { toast } from 'sonner';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -1281,6 +1282,16 @@ export default function ProjectResultsPage() {
           )}
 
 
+
+                      <SceneImageGenerationSection
+                        projectId={project?.id ?? id ?? ''}
+                        scenePrompts={scenePrompts}
+                        sceneImages={sceneImages}
+                        realProvidersEnabled={realProvidersEnabled}
+                        providerActive={providerActive}
+                        providerName={providerName}
+                        onImagesUpdated={(images) => setSceneImages(images)}
+                      />
 
             {/* Phase 4 — Motion / Preview / Export */}
             {(sceneImagesUnlocked || sceneImages.length > 0) && (
