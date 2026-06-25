@@ -61,17 +61,38 @@ Let the world remember my name`;
     event?.preventDefault?.();
     event?.stopPropagation?.();
 
-    setTitle('Drain Rack Halo');
-    setArtist('BeatVision Demo');
-    setLyrics(demoLyrics);
-    setStyle('Cinematic');
-    setNotes(demoNotes);
+    const filledTitle = 'Drain Rack Halo';
+    const filledArtist = 'BeatVision Demo';
+    const filledLyrics = demoLyrics.trim();
+    const filledStyle = 'Cinematic';
+    const filledNotes = demoNotes;
 
-    window.setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 0);
+    setTitle(filledTitle);
+    setArtist(filledArtist);
+    setLyrics(filledLyrics);
+    setStyle(filledStyle);
+    setNotes(filledNotes);
 
-    toast.success('Demo project loaded. The fields are filled in at the top of the form.');
+    const hardFill = (id: string, value: string) => {
+      const el = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null;
+      if (!el) return;
+      el.value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    window.requestAnimationFrame(() => {
+      hardFill('title', filledTitle);
+      hardFill('artist', filledArtist);
+      hardFill('lyrics', filledLyrics);
+      hardFill('notes', filledNotes);
+
+      const lyricsBox = document.getElementById('lyrics');
+      lyricsBox?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      (lyricsBox as HTMLTextAreaElement | null)?.focus();
+    });
+
+    toast.success('Demo loaded. Lyrics were filled and the page moved to the lyrics box.');
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
