@@ -20,7 +20,7 @@ type Props = {
 };
 
 const hasUsableImage = (image: SceneImage): boolean =>
-  Boolean(image.approved || image.image_url || image.storage_path || image.manual_upload || image.real_generated);
+  Boolean(image.image_url || image.storage_path || image.manual_upload || image.real_generated);
 
 export default function SceneImageGenerationSection({
   projectId,
@@ -157,7 +157,7 @@ export default function SceneImageGenerationSection({
           </div>
 
           <div className="rounded-xl bg-secondary/50 border border-border px-3 py-3">
-            <p className="text-xs text-muted-foreground">Uploaded/approved</p>
+            <p className="text-xs text-muted-foreground">Uploaded/generated</p>
             <p className="text-xl font-bold text-foreground">{usableImageCount}</p>
           </div>
         </div>

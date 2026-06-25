@@ -46,7 +46,7 @@ const text = (value: unknown, fallback = ''): string =>
   typeof value === 'string' && value.trim() ? value.trim() : fallback;
 
 const hasVisual = (img: SceneImage): boolean =>
-  Boolean(img.approved || img.image_url || img.storage_path || img.manual_upload || img.real_generated);
+  Boolean(img.image_url || img.storage_path || img.manual_upload || img.real_generated);
 
 const missingColumn = (error: unknown, payload: LooseRow): string | null => {
   const message =
