@@ -5,8 +5,8 @@ type LooseRow = Record<string, unknown>;
 
 type Args = {
   projectId: string;
-  scenePrompts: SceneVisualPrompt[];
-  existingSceneImages?: SceneImage[];
+  scenePrompts?: SceneVisualPrompt[] | null;
+  existingSceneImages?: SceneImage[] | null;
   allowUnapprovedPrompts?: boolean;
 };
 
@@ -39,6 +39,8 @@ const optionalColumns = [
   'updated_at',
 ];
 
+const rows = <T,>(value: T[] | null | undefined): T[] => Array.isArray(value) ? value : [];
+
 const field = (row: unknown, key: string): unknown =>
   (row as Record<string, unknown> | null | undefined)?.[key];
 
@@ -46,7 +48,7 @@ const text = (value: unknown, fallback = ''): string =>
   typeof value === 'string' && value.trim() ? value.trim() : fallback;
 
 const hasVisual = (img: SceneImage): boolean =>
-  // Strict: flags can be stale. Only a real URL/path proves an image exists.
+  // Strict: flags can lie. Only an actual image URL/path proves a real image exists.
   Boolean(img.image_url || img.storage_path);
 
 const missingColumn = (error: unknown, payload: LooseRow): string | null => {
@@ -98,7 +100,7 @@ async function updateCompat(id: string, row: LooseRow): Promise<SceneImage | nul
 }
 
 function buildRow(projectId: string, prompt: SceneVisualPrompt): LooseRow {
-  const sceneNumber = Number(field(prompt, 'scene_number') ?? 1);
+  const sceneNumber = Number(field(prompt, 'scene_number') ?? 1) || 1;
   const sceneTitle = text(field(prompt, 'scene_title'), `Scene ${sceneNumber}`);
   const mainPrompt =
     text(field(prompt, 'main_image_prompt')) ||
@@ -143,17 +145,20 @@ function buildRow(projectId: string, prompt: SceneVisualPrompt): LooseRow {
 export async function prepareProviderOffSceneImages({
   projectId,
   scenePrompts,
-  existingSceneImages = [],
+  existingSceneImages,
   allowUnapprovedPrompts = false,
 }: Args): Promise<Result> {
   if (!projectId) throw new Error('Cannot prepare scene images without a project id.');
 
+  const promptRows = rows(scenePrompts);
+  const existingRows = rows(existingSceneImages);
+
   const usablePrompts = allowUnapprovedPrompts
-    ? scenePrompts
-    : scenePrompts.filter((p) => Boolean(field(p, 'approved')));
+    ? promptRows
+    : promptRows.filter((p) => Boolean(field(p, 'approved')));
 
   if (!usablePrompts.length) {
-    return { images: existingSceneImages, inserted: 0, repaired: 0, preserved: 0, skipped: scenePrompts.length };
+    return { images: existingRows, inserted: 0, repaired: 0, preserved: 0, skipped: promptRows.length };
   }
 
   const { data, error } = await supabase
@@ -164,7 +169,7 @@ export async function prepareProviderOffSceneImages({
 
   if (error) throw error;
 
-  const current = (Array.isArray(data) ? data : []) as SceneImage[];
+  const current = rows(data as SceneImage[] | null);
 
   let inserted = 0;
   let repaired = 0;
@@ -203,10 +208,10 @@ export async function prepareProviderOffSceneImages({
   if (finalError) throw finalError;
 
   return {
-    images: (Array.isArray(finalData) ? finalData : []) as SceneImage[],
+    images: rows(finalData as SceneImage[] | null),
     inserted,
     repaired,
     preserved,
-    skipped: scenePrompts.length - usablePrompts.length,
+    skipped: promptRows.length - usablePrompts.length,
   };
 }

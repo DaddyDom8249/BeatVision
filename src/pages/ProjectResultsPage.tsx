@@ -1285,12 +1285,12 @@ export default function ProjectResultsPage() {
 
                       <SceneImageGenerationSection
             projectId={project?.id ?? id ?? ''}
-            scenePrompts={scenePrompts}
-            sceneImages={sceneImages}
-            storyboardScenes={scenes}
+            scenePrompts={scenePrompts ?? []}
+            sceneImages={sceneImages ?? []}
+            storyboardScenes={scenes ?? []}
             projectScenePromptsApproved={Boolean(project?.scene_prompts_approved)}
-            realProvidersEnabled={realProvidersEnabled}
-            providerActive={providerActive}
+            realProvidersEnabled={Boolean(realProvidersEnabled)}
+            providerActive={Boolean(providerActive)}
             providerName={providerName}
             onImagesUpdated={(images) => setSceneImages(images)}
           />

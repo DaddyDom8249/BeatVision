@@ -8,26 +8,28 @@ import { prepareProviderOffSceneImages } from '@/lib/sceneImageProviderOff';
 import type { SceneImage, SceneVisualPrompt, StoryboardScene } from '@/types/types';
 
 type Props = {
-  projectId: string;
-  scenePrompts: SceneVisualPrompt[];
-  sceneImages: SceneImage[];
-  storyboardScenes?: StoryboardScene[];
+  projectId?: string | null;
+  scenePrompts?: SceneVisualPrompt[] | null;
+  sceneImages?: SceneImage[] | null;
+  storyboardScenes?: StoryboardScene[] | null;
   projectScenePromptsApproved?: boolean;
   realProvidersEnabled?: boolean;
   providerActive?: boolean;
   providerName?: string | null;
-  onImagesUpdated: (images: SceneImage[]) => void;
+  onImagesUpdated?: (images: SceneImage[]) => void;
 };
 
-const hasUsableImage = (image: SceneImage): boolean =>
-  // Strict: approval/manual flags do not prove an image file exists.
+const arr = <T,>(value: T[] | null | undefined): T[] => Array.isArray(value) ? value : [];
+
+const hasRealImageFile = (image: SceneImage): boolean =>
+  // Strict: approval/manual/generated flags can be stale. Only URL/path proves a real image file exists.
   Boolean(image.image_url || image.storage_path);
 
 export default function SceneImageGenerationSection({
   projectId,
   scenePrompts,
   sceneImages,
-  storyboardScenes = [],
+  storyboardScenes,
   projectScenePromptsApproved = false,
   realProvidersEnabled = false,
   providerActive = false,
@@ -36,36 +38,40 @@ export default function SceneImageGenerationSection({
 }: Props) {
   const [working, setWorking] = useState(false);
 
+  const promptRows = useMemo(() => arr(scenePrompts), [scenePrompts]);
+  const imageRows = useMemo(() => arr(sceneImages), [sceneImages]);
+  const storyboardRows = useMemo(() => arr(storyboardScenes), [storyboardScenes]);
+
   const explicitlyApprovedPrompts = useMemo(
-    () => scenePrompts.filter((prompt) => Boolean(prompt.approved)),
-    [scenePrompts],
+    () => promptRows.filter((prompt) => Boolean(prompt.approved)),
+    [promptRows],
   );
 
   const allStoryboardScenesApproved = useMemo(
-    () => storyboardScenes.length > 0 && storyboardScenes.every((scene) => Boolean(scene.approved)),
-    [storyboardScenes],
+    () => storyboardRows.length > 0 && storyboardRows.every((scene) => Boolean(scene.approved)),
+    [storyboardRows],
   );
 
   const promptGateApproved =
     explicitlyApprovedPrompts.length > 0 ||
-    projectScenePromptsApproved ||
+    Boolean(projectScenePromptsApproved) ||
     allStoryboardScenesApproved;
 
   const usablePrompts = useMemo(() => {
     if (explicitlyApprovedPrompts.length > 0) return explicitlyApprovedPrompts;
-    if (promptGateApproved) return scenePrompts;
+    if (promptGateApproved) return promptRows;
     return [];
-  }, [explicitlyApprovedPrompts, promptGateApproved, scenePrompts]);
+  }, [explicitlyApprovedPrompts, promptGateApproved, promptRows]);
 
   const preparedCount = useMemo(
     () =>
       usablePrompts.filter((prompt) =>
-        sceneImages.some((image) => image.scene_visual_prompt_id === prompt.id || image.scene_number === prompt.scene_number),
+        imageRows.some((image) => image.scene_visual_prompt_id === prompt.id || image.scene_number === prompt.scene_number),
       ).length,
-    [usablePrompts, sceneImages],
+    [usablePrompts, imageRows],
   );
 
-  const usableImageCount = useMemo(() => sceneImages.filter(hasUsableImage).length, [sceneImages]);
+  const realImageFileCount = useMemo(() => imageRows.filter(hasRealImageFile).length, [imageRows]);
   const providerIsSafeOff = !realProvidersEnabled || !providerActive;
   const canPrepare = Boolean(projectId) && usablePrompts.length > 0 && !working;
 
@@ -75,7 +81,7 @@ export default function SceneImageGenerationSection({
       return;
     }
 
-    if (!scenePrompts.length) {
+    if (!promptRows.length) {
       toast.error('Scene visual prompts have not been created yet.');
       return;
     }
@@ -91,11 +97,11 @@ export default function SceneImageGenerationSection({
       const result = await prepareProviderOffSceneImages({
         projectId,
         scenePrompts: usablePrompts,
-        existingSceneImages: sceneImages,
+        existingSceneImages: imageRows,
         allowUnapprovedPrompts: true,
       });
 
-      onImagesUpdated(result.images);
+      onImagesUpdated?.(result.images);
       toast.success(`Scene image slots ready: ${result.inserted} created, ${result.repaired} repaired, ${result.preserved} preserved.`);
     } catch (error) {
       console.error('[BeatVision Phase 3] Failed to prepare scene image slots:', error);
@@ -135,7 +141,7 @@ export default function SceneImageGenerationSection({
             </p>
             <p className="text-xs text-muted-foreground text-pretty">
               {providerIsSafeOff
-                ? 'BeatVision will not call external image APIs. It will prepare real scene image records and wait for manual uploads.'
+                ? 'BeatVision will not call external image APIs. It prepares scene image records and waits for manual uploads.'
                 : `Provider setting says ${providerName || 'unknown provider'} may be active, but this safe foundation does not call paid APIs yet.`}
             </p>
           </div>
@@ -144,7 +150,7 @@ export default function SceneImageGenerationSection({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="rounded-xl bg-secondary/50 border border-border px-3 py-3">
             <p className="text-xs text-muted-foreground">Prompt rows</p>
-            <p className="text-xl font-bold text-foreground">{scenePrompts.length}</p>
+            <p className="text-xl font-bold text-foreground">{promptRows.length}</p>
           </div>
 
           <div className="rounded-xl bg-secondary/50 border border-border px-3 py-3">
@@ -159,11 +165,11 @@ export default function SceneImageGenerationSection({
 
           <div className="rounded-xl bg-secondary/50 border border-border px-3 py-3">
             <p className="text-xs text-muted-foreground">Real image files</p>
-            <p className="text-xl font-bold text-foreground">{usableImageCount}</p>
+            <p className="text-xl font-bold text-foreground">{realImageFileCount}</p>
           </div>
         </div>
 
-        {!scenePrompts.length ? (
+        {!promptRows.length ? (
           <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 flex gap-3">
             <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
             <p className="text-xs text-muted-foreground text-pretty">
@@ -174,7 +180,7 @@ export default function SceneImageGenerationSection({
           <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 flex gap-3">
             <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
             <p className="text-xs text-muted-foreground text-pretty">
-              Approval mismatch detected. BeatVision sees {scenePrompts.length} prompt rows, {explicitlyApprovedPrompts.length} explicitly approved prompt rows, project approval {projectScenePromptsApproved ? 'true' : 'false'}, and storyboard approval {allStoryboardScenesApproved ? 'true' : 'false'}.
+              Approval mismatch detected. BeatVision sees {promptRows.length} prompt rows, {explicitlyApprovedPrompts.length} explicitly approved prompt rows, project approval {projectScenePromptsApproved ? 'true' : 'false'}, and storyboard approval {allStoryboardScenesApproved ? 'true' : 'false'}.
             </p>
           </div>
         ) : (
