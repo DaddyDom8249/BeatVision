@@ -80,6 +80,24 @@ Let the world remember my name`;
     if (!authLoading && !user) navigate('/auth');
   }, [user, authLoading, navigate]);
 
+  const createDemoProjectNow = (event?: { preventDefault?: () => void; stopPropagation?: () => void }) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+
+    setTitle('Drain Rack Halo');
+    setArtist('BeatVision Demo');
+    setLyrics(demoLyrics);
+    setStyle('Cinematic');
+    setNotes(demoNotes);
+
+    toast.success('Demo loaded. Creating project now...');
+
+    window.setTimeout(() => {
+      const form = document.querySelector('form') as HTMLFormElement | null;
+      form?.requestSubmit();
+    }, 900);
+  };
+
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
@@ -181,19 +199,30 @@ Let the world remember my name`;
               <div>
                 <p className="text-sm font-semibold text-foreground">Quick Demo</p>
                 <p className="text-xs text-muted-foreground">
-                  Load a complete sample song concept, then submit it to reveal a world.
+                  Create a complete demo project instantly using BeatVision&apos;s safe local fallback workflow.
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={(e) => loadDemoProject(e)}
-                className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
-              >
-                Load Demo Project
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  type="button"
+                  onClick={(e) => createDemoProjectNow(e)}
+                  disabled={submitting}
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  Create Demo Project
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={(e) => loadDemoProject(e)}
+                  className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+                >
+                  Fill Demo Form
+                </Button>
+              </div>
             </CardContent>
           </Card>
+
           {/* Project Title */}
           <Card className="bg-card border-border">
             <CardContent className="p-5 space-y-2">
