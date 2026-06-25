@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import type { ReactNode } from 'react';
+import TextToImagePage from '@/pages/TextToImagePage';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const AuthPage = lazy(() => import('./pages/AuthPage'));
@@ -27,4 +28,5 @@ export const routes: RouteConfig[] = [
   { name: 'Create Project', path: '/create', element: <Wrap><CreateProjectPage /></Wrap> },
   { name: 'Project Results', path: '/project/:id', element: <Wrap><ProjectResultsPage /></Wrap> },
   { name: 'Provider Settings', path: '/settings/providers', element: <Wrap><ProviderSettingsPage /></Wrap>, public: true },
+  { name: 'Text to Image', path: '/text-to-image', element: <Wrap><TextToImagePage /></Wrap>, public: true },
 ];
