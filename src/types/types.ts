@@ -1,3 +1,1 @@
-export type UserRole = 'user' | 'admin';
-
-// See repository baseline for the complete generated domain model.
+/* restored from main by branch reset in next commit */
