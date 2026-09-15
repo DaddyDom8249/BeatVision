@@ -1,4 +1,7 @@
 #!/bin/bash
+set -e
+
+bash .rules/beatvision-content-guard.sh
 
 ast-grep scan -r .rules/SelectItem.yml
 
