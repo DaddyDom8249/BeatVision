@@ -1,3 +1,5 @@
+import { ARENA_PROVIDER_NAME } from './arena';
+
 export type ProviderStatus = 'available' | 'unavailable' | 'failed';
 
 export type ProviderResult<T> = {
@@ -62,6 +64,20 @@ export interface JobProvider {
     payload: Record<string, unknown>;
   }): Promise<ProviderResult<{ jobId: string }>>;
 }
+
+export type PrimaryCreativeProvider = 'beatvision-arena';
+
+export const PRIMARY_CREATIVE_PROVIDER: PrimaryCreativeProvider = 'beatvision-arena';
+export const PRIMARY_CREATIVE_PROVIDER_LABEL = ARENA_PROVIDER_NAME;
+
+// Other provider implementations remain in the repository as optional integration seams.
+// They are not selected by the default production path.
+export const OPTIONAL_PROVIDER_NAMES = [
+  'custom-image-provider',
+  'local-image-provider',
+  'kling',
+  'legacy-cloudflare-ai',
+] as const;
 
 export function unavailableProvider<T>(provider: string, reason: string): ProviderResult<T> {
   return { status: 'unavailable', provider, error: reason };
