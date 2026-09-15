@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
 import { VISUAL_STYLES } from '@/types/types';
+import { validateAudioFile, AUDIO_STORAGE_LIMIT_BYTES } from '@/lib/beatvision/audio';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,14 +11,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import Navbar from '@/components/layouts/Navbar';
-import { Upload, Music2, Sparkles, FileText, X, ArrowLeft, Loader2 } from 'lucide-react';
+import { Upload, Music2, Sparkles, FileText, UserRound, X, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+const MAX_AUDIO_MB = AUDIO_STORAGE_LIMIT_BYTES / 1024 / 1024;
 
 export default function CreateProjectPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [title, setTitle] = useState('');
+  const [artist, setArtist] = useState('');
   const [lyrics, setLyrics] = useState('');
   const [style, setStyle] = useState('Cinematic');
   const [notes, setNotes] = useState('');
@@ -29,59 +33,57 @@ export default function CreateProjectPage() {
     if (!authLoading && !user) navigate('/auth');
   }, [user, authLoading, navigate]);
 
+  const acceptAudioFile = (file: File | undefined) => {
+    if (!file) return;
+    const validation = validateAudioFile(file);
+    if (!validation.ok) {
+      toast.error(validation.error);
+      return;
+    }
+    setAudioFile(file);
+  };
+
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('audio/')) {
-      setAudioFile(file);
-    } else {
-      toast.error('Please upload a valid audio file.');
-    }
+    acceptAudioFile(e.dataTransfer.files[0]);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('audio/')) {
-        toast.error('Please upload a valid audio file.');
-        return;
-      }
-      setAudioFile(file);
-    }
+    acceptAudioFile(e.target.files?.[0]);
+    e.target.value = '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) { toast.error('Please enter a project title.'); return; }
+    if (!artist.trim()) { toast.error('Please enter the artist name.'); return; }
+    if (!audioFile) { toast.error('Please upload the song. BeatVision uses the song as the master creative and timeline source.'); return; }
     if (!lyrics.trim()) { toast.error('Please paste your lyrics.'); return; }
     if (!user) { navigate('/auth'); return; }
 
+    const audioValidation = validateAudioFile(audioFile);
+    if (!audioValidation.ok) { toast.error(audioValidation.error); return; }
+
     setSubmitting(true);
     try {
-      let songFileUrl: string | null = null;
-      let songFileName: string | null = null;
+      const ext = audioFile.name.split('.').pop()?.toLowerCase() || 'mp3';
+      const filePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('songs')
+        .upload(filePath, audioFile, { contentType: audioFile.type, upsert: false });
+      if (uploadError) throw uploadError;
 
-      // Upload audio to Supabase Storage
-      if (audioFile) {
-        const ext = audioFile.name.split('.').pop() || 'mp3';
-        const filePath = `${user.id}/${Date.now()}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from('songs')
-          .upload(filePath, audioFile, { contentType: audioFile.type });
-        if (uploadError) throw uploadError;
-        const { data: urlData } = supabase.storage.from('songs').getPublicUrl(filePath);
-        songFileUrl = urlData.publicUrl;
-        songFileName = audioFile.name;
-      }
+      const { data: urlData } = supabase.storage.from('songs').getPublicUrl(filePath);
+      const songFileUrl = urlData.publicUrl;
 
-      // Create project
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
           owner_id: user.id,
           title: title.trim(),
+          artist: artist.trim(),
           song_file: songFileUrl,
-          song_file_name: songFileName,
+          song_file_name: audioFile.name,
           lyrics: lyrics.trim(),
           selected_style: style,
           optional_notes: notes.trim() || null,
@@ -120,12 +122,11 @@ export default function CreateProjectPage() {
             Create New Project
           </h1>
           <p className="text-muted-foreground text-sm text-pretty">
-            Upload your song, paste your lyrics, and let BeatVision reveal the world inside your music.
+            Start with the song. BeatVision will reveal the visual world inside it before generation continues.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Project Title */}
           <Card className="bg-card border-border">
             <CardContent className="p-5 space-y-2">
               <Label htmlFor="title" className="text-sm font-normal text-muted-foreground flex items-center gap-2">
@@ -143,12 +144,28 @@ export default function CreateProjectPage() {
             </CardContent>
           </Card>
 
-          {/* Song Upload */}
+          <Card className="bg-card border-border">
+            <CardContent className="p-5 space-y-2">
+              <Label htmlFor="artist" className="text-sm font-normal text-muted-foreground flex items-center gap-2">
+                <UserRound className="w-3.5 h-3.5" />
+                Artist <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="artist"
+                value={artist}
+                onChange={(e) => setArtist(e.target.value)}
+                placeholder="Artist or performer name..."
+                className="bg-secondary border-border text-foreground placeholder:text-muted-foreground/50 h-10"
+                maxLength={120}
+              />
+            </CardContent>
+          </Card>
+
           <Card className="bg-card border-border">
             <CardContent className="p-5 space-y-3">
               <Label className="text-sm font-normal text-muted-foreground flex items-center gap-2">
                 <Music2 className="w-3.5 h-3.5" />
-                Song Upload <span className="text-muted-foreground/50 font-normal ml-1">(optional)</span>
+                Song Upload <span className="text-destructive">*</span>
               </Label>
               <div
                 onDragOver={(e) => e.preventDefault()}
@@ -169,6 +186,7 @@ export default function CreateProjectPage() {
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setAudioFile(null); }}
                       className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
+                      aria-label="Remove selected song"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -177,15 +195,17 @@ export default function CreateProjectPage() {
                   <div>
                     <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
                     <p className="text-sm text-foreground mb-1">Drop your song here or click to browse</p>
-                    <p className="text-xs text-muted-foreground">MP3, WAV, FLAC, AAC, OGG supported</p>
+                    <p className="text-xs text-muted-foreground">MP3, WAV, M4A, AAC, OGG, FLAC · max {MAX_AUDIO_MB} MB</p>
                   </div>
                 )}
-                <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileChange} />
+                <input ref={fileInputRef} type="file" accept="audio/*,.m4a,.aac,.flac,.ogg" className="hidden" onChange={handleFileChange} />
               </div>
+              <p className="text-xs text-muted-foreground">
+                The uploaded song is the master timeline source. BeatVision stores it in project-scoped cloud storage.
+              </p>
             </CardContent>
           </Card>
 
-          {/* Lyrics */}
           <Card className="bg-card border-border">
             <CardContent className="p-5 space-y-2">
               <Label htmlFor="lyrics" className="text-sm font-normal text-muted-foreground flex items-center gap-2">
@@ -196,13 +216,12 @@ export default function CreateProjectPage() {
                 id="lyrics"
                 value={lyrics}
                 onChange={(e) => setLyrics(e.target.value)}
-                placeholder="Paste your full lyrics here. The more complete, the richer the world BeatVision will reveal..."
+                placeholder="Paste your full lyrics here. The more complete, the richer the world BeatVision can reveal..."
                 className="bg-secondary border-border text-foreground placeholder:text-muted-foreground/50 min-h-40 resize-y"
               />
             </CardContent>
           </Card>
 
-          {/* Visual Style */}
           <Card className="bg-card border-border">
             <CardContent className="p-5 space-y-2">
               <Label className="text-sm font-normal text-muted-foreground flex items-center gap-2">
@@ -227,7 +246,6 @@ export default function CreateProjectPage() {
             </CardContent>
           </Card>
 
-          {/* Additional Notes */}
           <Card className="bg-card border-border">
             <CardContent className="p-5 space-y-2">
               <Label htmlFor="notes" className="text-sm font-normal text-muted-foreground flex items-center gap-2">
@@ -245,7 +263,6 @@ export default function CreateProjectPage() {
             </CardContent>
           </Card>
 
-          {/* Submit */}
           <Button
             type="submit"
             disabled={submitting}
