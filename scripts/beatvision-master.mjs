@@ -20,7 +20,6 @@ const failures = [];
 const warnings = [];
 const checked = [];
 
-function rel(p) { return path.relative(ROOT, p) || '.'; }
 function exists(p) { return fs.existsSync(p); }
 function text(p) { return fs.readFileSync(p, 'utf8'); }
 function check(name, ok, detail) {
@@ -37,14 +36,6 @@ function run(command, commandArgs, options = {}) {
   catch (error) { if (!options.allowFailure) throw error; return null; }
 }
 function arenaFile(name) { return path.join(ARENA, name); }
-function copyArena(name) {
-  const source = arenaFile(name);
-  const target = path.join(ROOT, name);
-  if (!exists(source)) throw new Error(`Arena reference missing: ${name}`);
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.copyFileSync(source, target);
-  console.log(`REPAIR copied ${name} from BeatVision-arena`);
-}
 
 console.log(`BeatVision master runner | mode=${repair ? 'audit+repair' : 'audit'} | credits=0`);
 console.log(`Repository: ${ROOT}`);
@@ -59,30 +50,29 @@ check('worker fail-closed CORS', /ALLOWED_ORIGIN/.test(text(path.join(ROOT, 'clo
 check('credit safe defaults', /VITE_CREDIT_SAFE_MODE/.test(text(path.join(ROOT, '.env.example'))), 'frontend safe-mode variable documented');
 
 const workerToml = text(path.join(ROOT, 'cloudflare-ai-worker/wrangler.toml'));
+const workerSource = text(path.join(ROOT, 'cloudflare-ai-worker/src/index.ts'));
 check('worker has deployment name', /^name\s*=\s*"[^"]+"/m.test(workerToml), 'wrangler worker name present');
 check('worker AI binding', /\[ai\]/.test(workerToml), 'Workers AI binding present');
+check('worker Durable Object binding', /name\s*=\s*"MOTION_JOBS"/.test(workerToml) && /class_name\s*=\s*"BeatVisionMotionJob"/.test(workerToml), 'motion Durable Object binding present');
+check('worker motion route', /v1\/motion\/jobs/.test(workerSource), 'motion job route present');
+check('worker motion implementation', exists(path.join(ROOT, 'cloudflare-ai-worker/src/motion-job.ts')), 'durable motion job implementation present');
+check('frontend Worker client', exists(path.join(ROOT, 'src/services/beatvision-worker.ts')), 'frontend Worker client present');
+check('Worker URL configuration', /VITE_BEATVISION_WORKER_URL/.test(text(path.join(ROOT, '.env.example'))), 'frontend Worker URL documented');
 
 const arenaAvailable = exists(ARENA);
-check('Arena reference available', arenaAvailable, arenaAvailable ? 'comparison source available' : 'clone BeatVision-arena or set BEATVISION_ARENA_DIR');
-if (arenaAvailable) {
+if (!arenaAvailable) {
+  warn('Arena reference unavailable', 'Arena is an external comparison repository, not a required BeatVision build dependency. Set BEATVISION_ARENA_DIR to enable reference-file checks.');
+} else {
   const arenaTests = ['tests/static-audit.mjs', 'tests/security-audit.mjs', 'tests/pipeline-coherence-audit.mjs', 'tests/termux-runner-audit.mjs', 'tests/animation-state-audit.mjs', 'tests/render-integrity.mjs'];
   for (const file of arenaTests) check(`Arena gate ${file}`, exists(arenaFile(file)), 'reference gate available');
   check('Arena validated worker', exists(arenaFile('worker/src/arena-validated-entry.ts')), 'validated entrypoint available');
   check('Arena durable animation worker', exists(arenaFile('worker/src/animation-jobs.ts')), 'durable animation job implementation available');
-  warn('pipeline capability gap', 'BeatVision cloudflare-ai-worker is image-only; Arena full pipeline requires validated entry, animation jobs, and deterministic assembly before claiming parity.');
+  warn('Arena parity reference', 'Arena is used as the behavioral reference; BeatVision must pass its own deterministic Worker and render gates before claiming full parity.');
 }
 
-if (repair && arenaAvailable) {
-  // Safe repair only: install deterministic audit gates and CI. No runtime provider code is copied.
-  // The Arena gates are reference-only until BeatVision implements their required runtime modules.
-  warn('Arena gates not transplanted', 'Skipped incompatible Arena-only tests; the master runner audits capability boundaries instead.');
-  const workflow = path.join(ROOT, ".github/workflows/beatvision-master.yml");
-  check("master workflow", exists(workflow), "create .github/workflows/beatvision-master.yml from the repository template if absent");
-}
+if (repair) check('master workflow', exists(path.join(ROOT, '.github/workflows/beatvision-master.yml')), 'CI workflow present');
 
-if (!skipBuild) {
-  check('frontend build', run('pnpm', ['run', 'build'], { allowFailure: true }) !== null, 'production build');
-}
+if (!skipBuild) check('frontend build', run('pnpm', ['run', 'build'], { allowFailure: true }) !== null, 'production build');
 
 const report = {
   generated_at: new Date().toISOString(),
