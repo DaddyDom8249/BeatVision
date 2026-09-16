@@ -1,12 +1,12 @@
 import LegacyMotionClipSection from './MotionClipSectionLegacy';
 import CloudflareMotionClipSection from './CloudflareMotionClipSection';
-import type { Project, SceneMotionPlan, SceneImage, MotionClip } from '@/types/types';
+import type { Project, SceneMotionPlan, SceneImage, MotionClip, MotionSettings } from '@/types/types';
 
 interface Props {
   project: Project;
   plans: SceneMotionPlan[];
   sceneImages: SceneImage[];
-  motionSettings: any;
+  motionSettings: MotionSettings | null;
   clips: MotionClip[];
   onClipsUpdate: (clips: MotionClip[]) => void;
   onProjectUpdate: (p: Partial<Project>) => void;
