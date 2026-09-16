@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2026-06-15"
 
 [vars]
-ALLOWED_ORIGIN = "https://beat-vision.vercel.app,https://beat-vision-theta.vercel.app,http://localhost:5173"
+ALLOWED_ORIGIN = "https://beat-vision.vercel.app"
 
 [ai]
 binding = "AI"
