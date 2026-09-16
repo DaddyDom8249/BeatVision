@@ -1,0 +1,107 @@
+{
+  "generated_at": "2026-09-16T10:10:50.475Z",
+  "credits_used": 0,
+  "mode": "audit",
+  "repository": "/home/ubuntu/BeatVision",
+  "arena_reference": "/home/ubuntu/BeatVision-arena",
+  "checks": [
+    {
+      "name": "repository",
+      "ok": true,
+      "detail": "package.json present"
+    },
+    {
+      "name": "cloudflare worker",
+      "ok": true,
+      "detail": "current worker source present"
+    },
+    {
+      "name": "worker config",
+      "ok": true,
+      "detail": "wrangler config present"
+    },
+    {
+      "name": "worker image route",
+      "ok": true,
+      "detail": "Cloudflare image generation route present"
+    },
+    {
+      "name": "worker health route",
+      "ok": true,
+      "detail": "health route present"
+    },
+    {
+      "name": "worker fail-closed CORS",
+      "ok": true,
+      "detail": "explicit origin configuration present"
+    },
+    {
+      "name": "credit safe defaults",
+      "ok": true,
+      "detail": "frontend safe-mode variable documented"
+    },
+    {
+      "name": "worker has deployment name",
+      "ok": true,
+      "detail": "wrangler worker name present"
+    },
+    {
+      "name": "worker AI binding",
+      "ok": true,
+      "detail": "Workers AI binding present"
+    },
+    {
+      "name": "Arena reference available",
+      "ok": true,
+      "detail": "comparison source available"
+    },
+    {
+      "name": "Arena gate tests/static-audit.mjs",
+      "ok": true,
+      "detail": "reference gate available"
+    },
+    {
+      "name": "Arena gate tests/security-audit.mjs",
+      "ok": true,
+      "detail": "reference gate available"
+    },
+    {
+      "name": "Arena gate tests/pipeline-coherence-audit.mjs",
+      "ok": true,
+      "detail": "reference gate available"
+    },
+    {
+      "name": "Arena gate tests/termux-runner-audit.mjs",
+      "ok": true,
+      "detail": "reference gate available"
+    },
+    {
+      "name": "Arena gate tests/animation-state-audit.mjs",
+      "ok": true,
+      "detail": "reference gate available"
+    },
+    {
+      "name": "Arena gate tests/render-integrity.mjs",
+      "ok": true,
+      "detail": "reference gate available"
+    },
+    {
+      "name": "Arena validated worker",
+      "ok": true,
+      "detail": "validated entrypoint available"
+    },
+    {
+      "name": "Arena durable animation worker",
+      "ok": true,
+      "detail": "durable animation job implementation available"
+    }
+  ],
+  "warnings": [
+    {
+      "name": "pipeline capability gap",
+      "detail": "BeatVision cloudflare-ai-worker is image-only; Arena full pipeline requires validated entry, animation jobs, and deterministic assembly before claiming parity."
+    }
+  ],
+  "failures": [],
+  "status": "PASS_WITH_WARNINGS"
+}
