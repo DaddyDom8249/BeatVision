@@ -294,7 +294,7 @@ export default function SegmentImageOverridePanel({
                       <Button
                         type="button"
                         size="sm"
-                        disabled={busy || selected}
+                        disabled={busy || Boolean(selected)}
                         onClick={() => useSceneImage(img)}
                         className="w-full h-8"
                         variant={selected ? 'secondary' : 'outline'}

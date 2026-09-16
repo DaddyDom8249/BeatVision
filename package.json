@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
+    "typecheck": "tsc -p tsconfig.check.json --noEmit",
     "start": "vite preview --host 0.0.0.0",
     "preview": "vite preview --host 0.0.0.0",
     "master": "node scripts/beatvision-master.mjs",
