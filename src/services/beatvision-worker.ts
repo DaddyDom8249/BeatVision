@@ -55,12 +55,20 @@ export async function createWorkerMotionJob(args: {
   const base = baseUrl();
   if (!base) throw new Error('VITE_BEATVISION_WORKER_URL is not configured.');
   const headers = await authHeaders();
+  const duration = Math.max(1, Math.min(20, Math.round(args.durationSeconds || 4)));
   const res = await fetch(`${base}/v1/motion/jobs/${encodeURIComponent(args.jobId)}`, {
     method: 'POST', headers,
     body: JSON.stringify({
-      project_id: args.projectId, job_id: args.jobId, idempotency_key: args.idempotencyKey,
-      provider: 'pixazo-ltx',
-      input: { prompt: args.prompt, image_url: args.imageUrl, aspect: '16:9', num_frames: Math.round((args.durationSeconds || 4) * 24) + 1, frame_rate: 24, steps: 8, cfg: 3, scene: args.scene }
+      project_id: args.projectId,
+      job_id: args.jobId,
+      idempotency_key: args.idempotencyKey,
+      provider: 'pixazo-ltx-2-5-lite',
+      input: {
+        prompt: args.prompt,
+        image_url: args.imageUrl,
+        duration,
+        resolution: '720p'
+      }
     })
   });
   const data = await res.json();
