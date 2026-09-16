@@ -7,150 +7,52 @@ import { supabase } from '@/db/supabase';
 import { createWorkerMotionJob, getWorkerMotionJob, isBeatVisionWorkerConfigured } from '@/services/beatvision-worker';
 import { toast } from 'sonner';
 
-interface Props {
-  project: Project;
-  plans: SceneMotionPlan[];
-  sceneImages: SceneImage[];
-  motionSettings: MotionSettings | null;
-  clips: MotionClip[];
-  onClipsUpdate: (clips: MotionClip[]) => void;
-  onProjectUpdate: (p: Partial<Project>) => void;
-}
-
-const POLL_MS = 7000;
-const MAX_POLL_MS = 10 * 60 * 1000;
-
+interface Props { project: Project; plans: SceneMotionPlan[]; sceneImages: SceneImage[]; motionSettings: MotionSettings | null; clips: MotionClip[]; onClipsUpdate: (clips: MotionClip[]) => void; onProjectUpdate: (p: Partial<Project>) => void; }
+const POLL_MS = 7000; const MAX_POLL_MS = 10 * 60 * 1000;
 type WorkerOutput = { video_url?: string; asset_id?: string; provider_job_id?: string | null };
-
-function promptFor(plan: SceneMotionPlan, img: SceneImage) {
-  return [
-    'BeatVision cinematic music-video motion shot.',
-    `Scene ${plan.scene_number}: ${plan.scene_title || 'Untitled scene'}.`,
-    plan.motion_effect ? `Motion direction: ${plan.motion_effect}.` : '',
-    plan.lyric_moment ? `Lyric moment: ${plan.lyric_moment}.` : '',
-    img.prompt_summary || img.prompt_used || '',
-    img.camera_framing ? `Camera: ${img.camera_framing}.` : '',
-    img.mood ? `Mood: ${img.mood}.` : '',
-    img.lighting_direction ? `Lighting: ${img.lighting_direction}.` : '',
-    'Preserve the approved character, environment, composition and visual identity. No text, logos, captions or unrelated visual changes.'
-  ].filter(Boolean).join('\n');
-}
-
-function statusBadge(status: string) {
-  if (status === 'approved') return <Badge variant="outline">APPROVED</Badge>;
-  if (status === 'ready_for_review') return <Badge variant="outline">READY FOR REVIEW</Badge>;
-  if (status === 'generating') return <Badge variant="outline">GENERATING</Badge>;
-  if (status === 'failed') return <Badge variant="destructive">FAILED</Badge>;
-  return <Badge variant="outline">NOT GENERATED</Badge>;
-}
+function promptFor(plan: SceneMotionPlan, img: SceneImage) { return ['BeatVision cinematic music-video motion shot.', `Scene ${plan.scene_number}: ${plan.scene_title || 'Untitled scene'}.`, plan.motion_effect ? `Motion direction: ${plan.motion_effect}.` : '', plan.lyric_moment ? `Lyric moment: ${plan.lyric_moment}.` : '', img.prompt_summary || img.prompt_used || '', img.camera_framing ? `Camera: ${img.camera_framing}.` : '', img.mood ? `Mood: ${img.mood}.` : '', img.lighting_direction ? `Lighting: ${img.lighting_direction}.` : '', 'Preserve the approved character, environment, composition and visual identity. No text, logos, captions or unrelated visual changes.'].filter(Boolean).join('\n'); }
+function statusBadge(status: string) { if (status === 'approved') return <Badge variant="outline">APPROVED</Badge>; if (status === 'ready_for_review') return <Badge variant="outline">READY FOR REVIEW</Badge>; if (status === 'generating') return <Badge variant="outline">GENERATING</Badge>; if (status === 'failed') return <Badge variant="destructive">FAILED</Badge>; return <Badge variant="outline">NOT GENERATED</Badge>; }
 
 export default function MotionClipSection({ project, plans, sceneImages, motionSettings, clips, onClipsUpdate, onProjectUpdate }: Props) {
-  const [busy, setBusy] = useState<Record<string, boolean>>({});
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const polling = useRef(new Map<string, { jobId: string; started: number }>());
-  const workerConfigured = isBeatVisionWorkerConfigured();
-
-  const imageFor = useCallback((plan: SceneMotionPlan) => sceneImages.find(i =>
-    (i.storyboard_scene_id === plan.storyboard_scene_id || i.scene_number === plan.scene_number) && i.approved && Boolean(i.image_url)
-  ), [sceneImages]);
-
+  const [busy, setBusy] = useState<Record<string, boolean>>({}); const [errors, setErrors] = useState<Record<string, string>>({}); const polling = useRef(new Map<string, { jobId: string; started: number }>()); const workerConfigured = isBeatVisionWorkerConfigured();
+  const imageFor = useCallback((plan: SceneMotionPlan) => sceneImages.find(i => (i.storyboard_scene_id === plan.storyboard_scene_id || i.scene_number === plan.scene_number) && i.approved && Boolean(i.image_url)), [sceneImages]);
   const clipFor = useCallback((plan: SceneMotionPlan) => clips.find(c => c.scene_motion_plan_id === plan.id || c.scene_number === plan.scene_number), [clips]);
-
-  const refreshClips = useCallback(async () => {
-    const { data } = await supabase.from('motion_clips').select('*').eq('project_id', project.id).order('scene_number', { ascending: true });
-    if (Array.isArray(data)) onClipsUpdate(data as MotionClip[]);
-  }, [project.id, onClipsUpdate]);
-
+  const refreshClips = useCallback(async () => { const { data } = await supabase.from('motion_clips').select('*').eq('project_id', project.id).order('scene_number', { ascending: true }); if (Array.isArray(data)) onClipsUpdate(data as MotionClip[]); }, [project.id, onClipsUpdate]);
   useEffect(() => () => { polling.current.clear(); }, []);
 
-  const persistGeneration = async (plan: SceneMotionPlan, image: SceneImage, existing: MotionClip | undefined, jobId: string) => {
-    const payload = {
-      project_id: project.id, scene_motion_plan_id: plan.id, storyboard_scene_id: plan.storyboard_scene_id ?? null,
-      scene_image_id: image.id, scene_number: plan.scene_number, scene_title: plan.scene_title ?? null,
-      clip_url: null, preview_url: image.image_url, duration: plan.duration ?? 4,
-      motion_effect: plan.motion_effect ?? 'Cloudflare Worker / Pixazo LTX', transition_in: plan.transition_in ?? 'Fade', transition_out: plan.transition_out ?? 'Fade',
-      caption_text: plan.caption_text ?? null, generation_status: 'generating' as const, status: 'generating' as const,
-      approved: false, rejected: false, fallback_generated: false, pending: true, failed: false, needs_review: false,
-      updated_after_approval: false, error_message: null, last_approved_at: null, provider_name: 'cloudflare-worker', provider_job_id: jobId,
-      updated_at: new Date().toISOString(),
-    } as Record<string, unknown>;
-    if (existing) {
-      const { data, error } = await supabase.from('motion_clips').update(payload).eq('id', existing.id).select().maybeSingle();
-      if (error || !data) throw new Error(error?.message || 'Failed to update motion clip.');
-      return data as MotionClip;
-    }
-    const { data, error } = await supabase.from('motion_clips').insert(payload).select().maybeSingle();
-    if (error || !data) throw new Error(error?.message || 'Failed to create motion clip.');
-    return data as MotionClip;
+  const persistGeneration = async (plan: SceneMotionPlan, image: SceneImage, existing: MotionClip | undefined) => {
+    const payload = { project_id: project.id, scene_motion_plan_id: plan.id, storyboard_scene_id: plan.storyboard_scene_id ?? null, scene_image_id: image.id, scene_number: plan.scene_number, scene_title: plan.scene_title ?? null, clip_url: null, preview_url: image.image_url, duration: plan.duration ?? 4, motion_effect: plan.motion_effect ?? 'Cloudflare Worker / Pixazo LTX', transition_in: plan.transition_in ?? 'Fade', transition_out: plan.transition_out ?? 'Fade', caption_text: plan.caption_text ?? null, generation_status: 'generating' as const, status: 'generating' as const, approved: false, rejected: false, fallback_generated: false, pending: true, failed: false, needs_review: false, updated_after_approval: false, error_message: null, last_approved_at: null, updated_at: new Date().toISOString() } as Record<string, unknown>;
+    if (existing) { const { data, error } = await supabase.from('motion_clips').update(payload).eq('id', existing.id).select().maybeSingle(); if (error || !data) throw new Error(error?.message || 'Failed to update motion clip.'); return data as MotionClip; }
+    const { data, error } = await supabase.from('motion_clips').insert(payload).select().maybeSingle(); if (error || !data) throw new Error(error?.message || 'Failed to create motion clip.'); return data as MotionClip;
   };
 
   const pollJob = useCallback(async (plan: SceneMotionPlan, clipId: string, jobId: string) => {
     const started = polling.current.get(plan.id)?.started ?? Date.now();
-    if (Date.now() - started > MAX_POLL_MS) {
-      polling.current.delete(plan.id);
-      const message = 'Motion job timed out while waiting for the Cloudflare Worker/provider.';
-      await supabase.from('motion_clips').update({ generation_status: 'failed', status: 'failed', pending: false, failed: true, error_message: message, updated_at: new Date().toISOString() }).eq('id', clipId);
-      setErrors(p => ({ ...p, [plan.id]: message })); setBusy(p => ({ ...p, [plan.id]: false })); await refreshClips(); return;
-    }
+    if (Date.now() - started > MAX_POLL_MS) { polling.current.delete(plan.id); const message = 'Motion job timed out while waiting for the Cloudflare Worker/provider.'; await supabase.from('motion_clips').update({ generation_status: 'failed', status: 'failed', pending: false, failed: true, error_message: message, updated_at: new Date().toISOString() }).eq('id', clipId); setErrors(p => ({ ...p, [plan.id]: message })); setBusy(p => ({ ...p, [plan.id]: false })); await refreshClips(); return; }
     try {
-      const job = await getWorkerMotionJob(jobId);
-      const output = (job.output || {}) as WorkerOutput;
-      if (job.status === 'succeeded' && output.video_url) {
-        polling.current.delete(plan.id);
-        await supabase.from('motion_clips').update({ clip_url: output.video_url, preview_url: output.video_url, generation_status: 'ready_for_review', status: 'ready_for_review', pending: false, failed: false, error_message: null, updated_at: new Date().toISOString() }).eq('id', clipId);
-        setBusy(p => ({ ...p, [plan.id]: false })); toast.success(`Scene ${plan.scene_number} motion is ready for review.`); await refreshClips(); return;
-      }
-      if (job.status === 'failed' || job.status === 'cancelled') {
-        polling.current.delete(plan.id); const message = job.error || `Worker motion job ${job.status}.`;
-        await supabase.from('motion_clips').update({ generation_status: 'failed', status: 'failed', pending: false, failed: true, error_message: message, updated_at: new Date().toISOString() }).eq('id', clipId);
-        setErrors(p => ({ ...p, [plan.id]: message })); setBusy(p => ({ ...p, [plan.id]: false })); await refreshClips(); return;
-      }
+      const job = await getWorkerMotionJob(jobId); const output = (job.output || {}) as WorkerOutput;
+      if (job.status === 'succeeded' && output.video_url) { polling.current.delete(plan.id); await supabase.from('motion_clips').update({ clip_url: output.video_url, preview_url: output.video_url, generation_status: 'ready_for_review', status: 'ready_for_review', pending: false, failed: false, error_message: null, updated_at: new Date().toISOString() }).eq('id', clipId); setBusy(p => ({ ...p, [plan.id]: false })); toast.success(`Scene ${plan.scene_number} motion is ready for review.`); await refreshClips(); return; }
+      if (job.status === 'failed' || job.status === 'cancelled') { polling.current.delete(plan.id); const message = job.error || `Worker motion job ${job.status}.`; await supabase.from('motion_clips').update({ generation_status: 'failed', status: 'failed', pending: false, failed: true, error_message: message, updated_at: new Date().toISOString() }).eq('id', clipId); setErrors(p => ({ ...p, [plan.id]: message })); setBusy(p => ({ ...p, [plan.id]: false })); await refreshClips(); return; }
       window.setTimeout(() => { void pollJob(plan, clipId, jobId); }, POLL_MS);
-    } catch (error) {
-      setErrors(p => ({ ...p, [plan.id]: error instanceof Error ? error.message : String(error) }));
-      window.setTimeout(() => { void pollJob(plan, clipId, jobId); }, POLL_MS);
-    }
+    } catch (error) { setErrors(p => ({ ...p, [plan.id]: error instanceof Error ? error.message : String(error) })); window.setTimeout(() => { void pollJob(plan, clipId, jobId); }, POLL_MS); }
   }, [refreshClips]);
 
   const generateOne = async (plan: SceneMotionPlan) => {
     if (busy[plan.id]) return;
     if (!workerConfigured) { const message = 'Cloudflare Worker is not configured. Set VITE_BEATVISION_WORKER_URL before generating motion.'; setErrors(p => ({ ...p, [plan.id]: message })); toast.error(message); return; }
-    const image = imageFor(plan);
-    if (!image?.image_url) { const message = `Scene ${plan.scene_number} needs an approved image before motion can start.`; setErrors(p => ({ ...p, [plan.id]: message })); toast.error(message); return; }
+    const image = imageFor(plan); if (!image?.image_url) { const message = `Scene ${plan.scene_number} needs an approved image before motion can start.`; setErrors(p => ({ ...p, [plan.id]: message })); toast.error(message); return; }
     setBusy(p => ({ ...p, [plan.id]: true })); setErrors(p => { const n = { ...p }; delete n[plan.id]; return n; });
-    try {
-      const existing = clipFor(plan); const jobId = existing?.id || crypto.randomUUID();
-      const job = await createWorkerMotionJob({ projectId: project.id, jobId, idempotencyKey: `${project.id}:motion:${plan.id}`, scene: { scene: plan.scene_number, scene_number: plan.scene_number, scene_title: plan.scene_title, duration_seconds: plan.duration ?? 4, motion_effect: plan.motion_effect, transition_in: plan.transition_in, transition_out: plan.transition_out }, imageUrl: image.image_url, prompt: promptFor(plan, image), durationSeconds: plan.duration ?? 4 });
-      const saved = await persistGeneration(plan, image, existing, job.job_id); polling.current.set(plan.id, { jobId: job.job_id, started: Date.now() });
-      void pollJob(plan, saved.id, job.job_id); onProjectUpdate({ status: 'Generating Motion' });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error); setErrors(p => ({ ...p, [plan.id]: message })); setBusy(p => ({ ...p, [plan.id]: false })); toast.error(`Scene ${plan.scene_number}: ${message}`);
-    }
+    try { const existing = clipFor(plan); const jobId = existing?.id || crypto.randomUUID(); const job = await createWorkerMotionJob({ projectId: project.id, jobId, idempotencyKey: `${project.id}:motion:${plan.id}`, scene: { scene: plan.scene_number, scene_number: plan.scene_number, scene_title: plan.scene_title, duration_seconds: plan.duration ?? 4, motion_effect: plan.motion_effect, transition_in: plan.transition_in, transition_out: plan.transition_out }, imageUrl: image.image_url, prompt: promptFor(plan, image), durationSeconds: plan.duration ?? 4 }); const saved = await persistGeneration(plan, image, existing); polling.current.set(plan.id, { jobId: job.job_id, started: Date.now() }); void pollJob(plan, saved.id, job.job_id); onProjectUpdate({ status: 'Generating Motion' }); }
+    catch (error) { const message = error instanceof Error ? error.message : String(error); setErrors(p => ({ ...p, [plan.id]: message })); setBusy(p => ({ ...p, [plan.id]: false })); toast.error(`Scene ${plan.scene_number}: ${message}`); }
   };
 
-  const approve = async (plan: SceneMotionPlan) => {
-    const clip = clipFor(plan); if (!clip?.clip_url) return;
-    await supabase.from('motion_clips').update({ approved: true, rejected: false, needs_review: false, updated_after_approval: false, generation_status: 'approved', status: 'approved', last_approved_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', clip.id);
-    await refreshClips(); toast.success(`Scene ${plan.scene_number} motion approved.`);
-  };
-
+  const approve = async (plan: SceneMotionPlan) => { const clip = clipFor(plan); if (!clip?.clip_url) return; await supabase.from('motion_clips').update({ approved: true, rejected: false, needs_review: false, updated_after_approval: false, generation_status: 'approved', status: 'approved', last_approved_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', clip.id); await refreshClips(); toast.success(`Scene ${plan.scene_number} motion approved.`); };
   const generateAll = async () => { for (const plan of plans.filter(p => p.include_in_final_video !== false && p.approved)) await generateOne(plan); onProjectUpdate({ status: 'Motion In Review' }); };
-  const includedPlans = useMemo(() => plans.filter(p => p.include_in_final_video !== false), [plans]);
-  const ready = includedPlans.filter(p => Boolean(clipFor(p)?.clip_url)).length;
-  const approved = includedPlans.filter(p => clipFor(p)?.approved).length;
+  const includedPlans = useMemo(() => plans.filter(p => p.include_in_final_video !== false), [plans]); const ready = includedPlans.filter(p => Boolean(clipFor(p)?.clip_url)).length; const approved = includedPlans.filter(p => clipFor(p)?.approved).length;
 
   return <div className="space-y-4">
-    <div className="rounded-xl border border-border bg-card p-4 flex flex-wrap items-center gap-3">
-      <Film className="w-5 h-5 text-primary" />
-      <div className="flex-1 min-w-0"><p className="font-semibold">Cloudflare Worker Motion Pipeline</p><p className="text-xs text-muted-foreground">{ready}/{includedPlans.length} ready · {approved}/{includedPlans.length} approved · no simulated success</p></div>
-      <Button onClick={() => void generateAll()} disabled={!workerConfigured || includedPlans.length === 0}><Play className="w-4 h-4 mr-2" /> Generate Approved Scenes</Button>
-    </div>
+    <div className="rounded-xl border border-border bg-card p-4 flex flex-wrap items-center gap-3"><Film className="w-5 h-5 text-primary" /><div className="flex-1 min-w-0"><p className="font-semibold">Cloudflare Worker Motion Pipeline</p><p className="text-xs text-muted-foreground">{ready}/{includedPlans.length} ready · {approved}/{includedPlans.length} approved · no simulated success</p></div><Button onClick={() => void generateAll()} disabled={!workerConfigured || includedPlans.length === 0}><Play className="w-4 h-4 mr-2" /> Generate Approved Scenes</Button></div>
     {!workerConfigured && <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-300"><AlertTriangle className="w-4 h-4 inline mr-2" />Set VITE_BEATVISION_WORKER_URL to enable the production motion pipeline.</div>}
-    {includedPlans.map(plan => { const clip = clipFor(plan); const image = imageFor(plan); const isBusy = Boolean(busy[plan.id]); return <div key={plan.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
-      <div className="flex items-center gap-3"><span className="text-xs font-mono text-muted-foreground">SCENE {plan.scene_number}</span><span className="font-medium flex-1">{plan.scene_title || `Scene ${plan.scene_number}`}</span>{statusBadge(clip?.status || 'not_generated')}</div>
-      {clip?.clip_url ? <video src={clip.clip_url} controls className="w-full rounded-lg aspect-video bg-black" /> : image?.image_url ? <img src={image.image_url} alt="" className="w-full rounded-lg aspect-video object-cover" /> : null}
-      {errors[plan.id] && <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-3 text-sm text-destructive">{errors[plan.id]}</div>}
-      <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => void generateOne(plan)} disabled={isBusy || !plan.approved || !image?.image_url}>{isBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}{clip?.clip_url ? 'Regenerate Motion' : 'Generate Motion'}</Button>{clip?.clip_url && !clip.approved && <Button size="sm" onClick={() => void approve(plan)}><CheckCircle2 className="w-4 h-4 mr-2" />Approve</Button>}</div>
-    </div>; })}
+    {includedPlans.map(plan => { const clip = clipFor(plan); const image = imageFor(plan); const isBusy = Boolean(busy[plan.id]); return <div key={plan.id} className="rounded-xl border border-border bg-card p-4 space-y-3"><div className="flex items-center gap-3"><span className="text-xs font-mono text-muted-foreground">SCENE {plan.scene_number}</span><span className="font-medium flex-1">{plan.scene_title || `Scene ${plan.scene_number}`}</span>{statusBadge(clip?.status || 'not_generated')}</div>{clip?.clip_url ? <video src={clip.clip_url} controls className="w-full rounded-lg aspect-video bg-black" /> : image?.image_url ? <img src={image.image_url} alt="" className="w-full rounded-lg aspect-video object-cover" /> : null}{errors[plan.id] && <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-3 text-sm text-destructive">{errors[plan.id]}</div>}<div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => void generateOne(plan)} disabled={isBusy || !plan.approved || !image?.image_url}>{isBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}{clip?.clip_url ? 'Regenerate Motion' : 'Generate Motion'}</Button>{clip?.clip_url && !clip.approved && <Button size="sm" onClick={() => void approve(plan)}><CheckCircle2 className="w-4 h-4 mr-2" />Approve</Button>}</div></div>; })}
   </div>;
 }
