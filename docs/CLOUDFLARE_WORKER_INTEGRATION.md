@@ -8,13 +8,16 @@ Set:
 
 The frontend Worker client is `src/services/beatvision-worker.ts`.
 
-## Worker secrets
+## Worker secrets and variables
 
-Configure these with Wrangler or the Cloudflare dashboard. Never commit them:
+Configure these with Wrangler or the Cloudflare dashboard. Never commit secrets:
 
 - `PIXAZO_API_KEY` — enables real Pixazo LTX motion generation.
-- `SHOTSTACK_API_KEY` — optional server-side camera-motion fallback/assembly capability when implemented/configured.
-- `GATEWAY_TOKEN` — optional gateway authentication for server-to-server callers.
+- `PIXAZO_LTX_ENDPOINT` — optional override. Default is the Pixazo LTX 2.5 Lite image-to-video endpoint.
+- `GATEWAY_TOKEN` — optional Worker-to-client bearer protection.
+- `ALLOWED_ORIGIN` — deployed BeatVision frontend origin.
+
+The default LTX 2.5 Lite request uses `prompt`, `image_url`, `duration` and `resolution`. The Worker deliberately strips unsupported frontend fields before submitting to the provider.
 
 ## Motion contract
 
@@ -26,9 +29,10 @@ Body requires:
 - `idempotency_key`
 - `input.prompt`
 - `input.image_url`
-- motion parameters
 
-The Worker persists the job in `MOTION_JOBS`, submits to Pixazo LTX, stores the provider request ID, and polls using Durable Object alarms.
+Optional motion input includes `duration` and `resolution`.
+
+The Worker persists the job in `MOTION_JOBS`, submits to Pixazo LTX, stores the provider request ID, and polls using Durable Object alarms. Polling has a durable upper bound so a provider that never completes cannot create an infinite job.
 
 `GET /v1/motion/jobs/:job_id`
 
