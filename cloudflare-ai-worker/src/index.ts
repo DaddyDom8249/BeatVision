@@ -1,6 +1,9 @@
+import { BeatVisionMotionJob } from "./motion-job";
+
 interface Env {
   AI: any;
   ALLOWED_ORIGIN?: string;
+  MOTION_JOBS: any;
 }
 
 type AnyObj = Record<string, any>;
@@ -333,12 +336,19 @@ export default {
       return jsonResponse({
         ok: true,
         name: "BeatVision Cloudflare AI Worker",
-        routes: ["/generate-image"],
+        routes: ["/generate-image", "/v1/motion/jobs/:job_id"],
+        pipeline_authority: "cloudflare-worker",
         model: "@cf/runwayml/stable-diffusion-v1-5-img2img when reference image exists, otherwise @cf/stabilityai/stable-diffusion-xl-base-1.0",
         continuity_prompting: true,
         prompt_mode: "beatvision_lkq_song_world_v5_img2img_reference",
         reference_img2img: true
       }, 200, request, env);
+    }
+
+    const motionMatch = url.pathname.match(/^\/v1\/motion\/jobs\/([^/]+)$/);
+    if (motionMatch && env.MOTION_JOBS) {
+      const id = env.MOTION_JOBS.idFromName(motionMatch[1]);
+      return env.MOTION_JOBS.get(id).fetch(request);
     }
 
     if (url.pathname !== "/generate-image" && url.pathname !== "/") {
@@ -440,3 +450,5 @@ export default {
     }
   }
 };
+
+export { BeatVisionMotionJob };

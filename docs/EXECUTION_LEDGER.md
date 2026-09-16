@@ -8,9 +8,9 @@
 
 **Tests:** No native revised-repository test suite was present at baseline. The Arena tests were inspected as behavioral references but were not transplanted because they require Arena-only modules and would produce false failures in Revised.
 
-**Worker:** Existing `cloudflare-ai-worker` is a Cloudflare Workers AI image-generation worker with `/health` and `/generate-image` routes. Deterministic esbuild bundle passed.
+**Worker:** Existing `cloudflare-ai-worker` remains the authority. It now exposes durable `/v1/motion/jobs/:job_id` state through a Durable Object, while retaining `/health` and `/generate-image`. Deterministic esbuild bundle passed.
 
-**Pipeline:** Revised frontend and Supabase Edge Functions contain project, creative, scene, motion, and render data paths. Full Arena-equivalent orchestration is not present in the existing Cloudflare worker.
+**Pipeline:** Revised frontend and Supabase Edge Functions contain project, creative, scene, motion, and render data paths. Worker-side durable motion state, stable timeline identity, deterministic assembly guards, and reload/resume fixtures are now implemented.
 
 **Render:** Revised repository contains motion/render UI and Supabase schema, but no verified local deterministic final-render test or inspected produced final video in this session.
 
@@ -21,11 +21,9 @@
 
 ## Repair Queue
 
-1. Complete final Batch A verification: typecheck, build, Worker bundle.
-2. Preserve the existing Cloudflare Worker as the image-provider authority and document its current capability boundary.
-3. Add deterministic low-credit audit and CI execution path.
-4. Verify persistence, timeline, motion, assembly, and reload behavior with repository-native tests or fixtures before marking them verified.
-5. Implement or adapt Arena-compatible Worker jobs and assembly only where Revised interfaces require them.
+1. Preserve the existing Cloudflare Worker as the execution authority and document provider boundaries.
+2. Complete provider-specific motion integration only when credentials/provider contracts are available.
+3. Add real final-render metadata verification when a non-credit-consuming render fixture or local renderer is available.
 
 ## Completed
 
@@ -35,6 +33,9 @@
 - Confirmed safe-mode defaults and explicit Cloudflare CORS configuration.
 - Confirmed Arena reference repositories remain unmodified.
 - Repaired nullable selection typing in `SegmentImageOverridePanel.tsx`.
+- Added durable idempotent motion jobs with bounded retry state.
+- Added song-derived stable scene/timeline identity and deterministic assembly rejection rules.
+- Added deterministic Worker unit tests and zero-provider reload/resume E2E coverage.
 
 ## Verification
 
@@ -46,9 +47,13 @@
 - Final frontend build: passed.
 - Final Cloudflare Worker bundle: passed.
 - Final master audit: passed with the documented full-pipeline capability warning.
+- Worker contract tests: 4 passed.
+- Deterministic reload/resume E2E: 1 passed.
+- Wrangler dry-run: passed; `MOTION_JOBS` Durable Object and `AI` bindings resolved.
 
 ## Remaining
 
-- Full Arena-consistent Worker job orchestration, retries, durable state, deterministic assembly, and final-render verification remain unverified and incomplete.
+- Provider-specific motion polling against a real external provider remains unverified by design; deterministic job retry/persistence behavior is covered.
+- Final media rendering and metadata inspection remain unverified; no provider render was invoked.
 - Cloudflare connector enablement and deployment secrets are not configured in this session; deployment is gated by GitHub environment secrets.
 - No claim is made that a final video was rendered or visually inspected.

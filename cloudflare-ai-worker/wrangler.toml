@@ -4,3 +4,11 @@ compatibility_date = "2026-06-15"
 
 [ai]
 binding = "AI"
+
+[[durable_objects.bindings]]
+name = "MOTION_JOBS"
+class_name = "BeatVisionMotionJob"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["BeatVisionMotionJob"]

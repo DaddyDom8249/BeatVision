@@ -6,6 +6,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "typecheck": "tsc -p tsconfig.check.json --noEmit",
+    "test:e2e:deterministic": "node --experimental-strip-types --test tests/deterministic-e2e.mjs",
     "start": "vite preview --host 0.0.0.0",
     "preview": "vite preview --host 0.0.0.0",
     "master": "node scripts/beatvision-master.mjs",
