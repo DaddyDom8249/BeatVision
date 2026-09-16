@@ -21,6 +21,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: node scripts/beatvision-master.mjs --skip-build
       - run: pnpm run build
+      - run: npm install --prefix cloudflare-ai-worker
+      - run: npm test --prefix cloudflare-ai-worker
+      - run: npm run bundle --prefix cloudflare-ai-worker
   deploy-worker:
     if: github.ref == 'refs/heads/main'
     needs: audit
