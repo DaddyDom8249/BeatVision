@@ -427,6 +427,7 @@ export default function ProjectResultsPage() {
           style: proj.selected_style,
           notes: proj.optional_notes || '',
           worldReport: report || {},
+          songDurationSeconds: proj.song_duration || undefined,
         },
       });
       if (res.error) {
