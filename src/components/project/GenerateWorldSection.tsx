@@ -146,12 +146,9 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
       const d = result?.data as Record<string, string>;
       if (!d) throw new Error('No data returned');
 
-      await supabase.from('world_style_bibles').delete().eq('project_id', project.id);
-      const { data: saved, error } = await supabase
-        .from('world_style_bibles')
-        .insert({ project_id: project.id, ...d, approved: false })
-        .select()
-        .maybeSingle();
+      const { data: saved, error } = styleBible
+        ? await supabase.from('world_style_bibles').update({ ...d, approved: false, updated_at: new Date().toISOString() }).eq('id', styleBible.id).select().maybeSingle()
+        : await supabase.from('world_style_bibles').insert({ project_id: project.id, ...d, approved: false }).select().maybeSingle();
       if (error) throw error;
       if (saved) {
         setStyleBible(saved as WorldStyleBible);
@@ -177,12 +174,9 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
       const d = result?.data as Record<string, string>;
       if (!d) throw new Error('No data returned');
 
-      await supabase.from('character_sheets').delete().eq('project_id', project.id);
-      const { data: saved, error } = await supabase
-        .from('character_sheets')
-        .insert({ project_id: project.id, ...d, approved: false })
-        .select()
-        .maybeSingle();
+      const { data: saved, error } = characterSheet
+        ? await supabase.from('character_sheets').update({ ...d, approved: false, updated_at: new Date().toISOString() }).eq('id', characterSheet.id).select().maybeSingle()
+        : await supabase.from('character_sheets').insert({ project_id: project.id, ...d, approved: false }).select().maybeSingle();
       if (error) throw error;
       if (saved) {
         setCharacterSheet(saved as CharacterSheet);
@@ -208,12 +202,9 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
       const d = result?.data as Record<string, string>;
       if (!d) throw new Error('No data returned');
 
-      await supabase.from('environment_sheets').delete().eq('project_id', project.id);
-      const { data: saved, error } = await supabase
-        .from('environment_sheets')
-        .insert({ project_id: project.id, ...d, approved: false })
-        .select()
-        .maybeSingle();
+      const { data: saved, error } = envSheet
+        ? await supabase.from('environment_sheets').update({ ...d, approved: false, updated_at: new Date().toISOString() }).eq('id', envSheet.id).select().maybeSingle()
+        : await supabase.from('environment_sheets').insert({ project_id: project.id, ...d, approved: false }).select().maybeSingle();
       if (error) throw error;
       if (saved) {
         setEnvSheet(saved as EnvironmentSheet);
@@ -262,9 +253,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
         environmentSheet: envSheetContext,
       });
       const promptsData = (Array.isArray(result?.data) ? result.data : []) as Record<string, unknown>[];
-      if (!promptsData.length) return [];
-
-      await supabase.from('scene_visual_prompts').delete().eq('project_id', project.id);
+      if (!promptsData.length || promptsData.length !== scenes.length) throw new Error(`Arena returned ${promptsData.length} scene prompts for ${scenes.length} scenes.`);
 
       const toInsert = promptsData.map((d, i) => {
         const matchingScene = scenes.find((s) => s.scene_number === (d.scene_number as number)) || scenes[i];
@@ -288,10 +277,22 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
         };
       });
 
-      const { data: saved, error } = await supabase
-        .from('scene_visual_prompts')
-        .insert(toInsert)
-        .select();
+      const savedRows: SceneVisualPrompt[] = [];
+      for (const row of toInsert) {
+        const existing = scenePrompts.find((p) => p.scene_number === row.scene_number);
+        const result = existing
+          ? await supabase.from('scene_visual_prompts').update(row).eq('id', existing.id).select().maybeSingle()
+          : await supabase.from('scene_visual_prompts').insert(row).select().maybeSingle();
+        if (result.error || !result.data) throw result.error || new Error(`Failed to save scene prompt ${row.scene_number}.`);
+        savedRows.push(result.data as SceneVisualPrompt);
+      }
+      const keepNumbers = new Set(toInsert.map((row) => row.scene_number));
+      const stale = scenePrompts.filter((p) => !keepNumbers.has(p.scene_number)).map((p) => p.id);
+      if (stale.length) {
+        const { error: staleError } = await supabase.from('scene_visual_prompts').delete().in('id', stale);
+        if (staleError) throw staleError;
+      }
+      const data = savedRows; const error = null;
       if (error) throw error;
       const savedPrompts = (Array.isArray(saved) ? saved : []) as SceneVisualPrompt[];
       setScenePrompts(savedPrompts);
