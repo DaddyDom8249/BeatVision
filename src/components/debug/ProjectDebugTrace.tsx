@@ -1,0 +1,159 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Bug, Download, Trash2, Pause, Play, ChevronDown, ChevronUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { debugTraceClear, debugTraceEnsure, debugTraceExport, debugTraceLog, debugTraceRead, type DebugTraceEvent } from '@/lib/beatvision/debugTrace';
+
+function projectIdFromPath(pathname: string): string | null {
+  const match = pathname.match(/\/(?:project|projects)\/([0-9a-f-]{20,})/i);
+  return match?.[1] ?? null;
+}
+
+function redactUrl(input: string): string {
+  try {
+    const url = new URL(input, window.location.origin);
+    url.search = '';
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return input.split('?')[0];
+  }
+}
+
+export default function ProjectDebugTrace() {
+  const projectId = useMemo(() => projectIdFromPath(window.location.pathname), [window.location.pathname]);
+  const [events, setEvents] = useState<DebugTraceEvent[]>(() => projectId ? (debugTraceRead(projectId)?.events ?? []) : []);
+  const [open, setOpen] = useState(false);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (!projectId) return;
+    debugTraceEnsure(projectId);
+    setEvents(debugTraceRead(projectId)?.events ?? []);
+    debugTraceLog(projectId, 'info', 'lifecycle', 'Project debug trace attached', { path: window.location.pathname });
+
+    const onTrace = (event: Event) => {
+      const detail = (event as CustomEvent<{ projectId: string; event: DebugTraceEvent }>).detail;
+      if (detail?.projectId === projectId) setEvents(debugTraceRead(projectId)?.events ?? []);
+    };
+    const onError = (event: ErrorEvent) => {
+      debugTraceLog(projectId, 'error', 'browser', 'Unhandled browser error', {
+        message: event.message,
+        source: event.filename,
+        line: event.lineno,
+        column: event.colno,
+        stack: event.error?.stack,
+      });
+    };
+    const onRejection = (event: PromiseRejectionEvent) => {
+      debugTraceLog(projectId, 'error', 'browser', 'Unhandled promise rejection', { reason: event.reason });
+    };
+    const onClick = (event: MouseEvent) => {
+      if (paused) return;
+      const target = event.target as HTMLElement | null;
+      const control = target?.closest('button,[role="button"],a') as HTMLElement | null;
+      if (!control) return;
+      const text = (control.innerText || control.getAttribute('aria-label') || control.getAttribute('title') || '').trim().slice(0, 200);
+      debugTraceLog(projectId, 'info', 'ui', 'User control activated', {
+        tag: control.tagName,
+        text,
+        href: control instanceof HTMLAnchorElement ? redactUrl(control.href) : undefined,
+      });
+    };
+
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const started = performance.now();
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      const method = init?.method || (input instanceof Request ? input.method : 'GET');
+      try {
+        const response = await originalFetch(input, init);
+        debugTraceLog(projectId, response.ok ? 'info' : 'error', 'network', 'Fetch completed', {
+          method,
+          url: redactUrl(url),
+          status: response.status,
+          ok: response.ok,
+          durationMs: Math.round(performance.now() - started),
+        });
+        return response;
+      } catch (error) {
+        debugTraceLog(projectId, 'error', 'network', 'Fetch failed', {
+          method,
+          url: redactUrl(url),
+          durationMs: Math.round(performance.now() - started),
+          error,
+        });
+        throw error;
+      }
+    };
+
+    window.addEventListener('beatvision-debug-trace', onTrace);
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRejection);
+    window.addEventListener('click', onClick, true);
+    return () => {
+      window.fetch = originalFetch;
+      window.removeEventListener('beatvision-debug-trace', onTrace);
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection);
+      window.removeEventListener('click', onClick, true);
+    };
+  }, [projectId, paused]);
+
+  if (!projectId) return null;
+  const trace = debugTraceRead(projectId);
+
+  const download = () => {
+    const blob = new Blob([debugTraceExport(projectId)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `beatvision-debug-${projectId}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    debugTraceLog(projectId, 'success', 'debug', 'Debug report exported');
+  };
+
+  const clear = () => {
+    debugTraceClear(projectId);
+    debugTraceEnsure(projectId);
+    setEvents([]);
+    debugTraceLog(projectId, 'info', 'debug', 'Debug trace cleared');
+  };
+
+  return (
+    <div className="fixed bottom-4 right-4 z-[100] w-[min(92vw,430px)] text-white">
+      <div className="rounded-xl border border-red-400/30 bg-black/90 shadow-2xl backdrop-blur">
+        <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-white/10">
+          <button type="button" onClick={() => setOpen(v => !v)} className="flex items-center gap-2 text-sm font-semibold">
+            <Bug className="h-4 w-4 text-red-400" />
+            Debug Trace
+            <Badge className="bg-red-500/15 text-red-300 border-red-400/20">{events.length}</Badge>
+            {open ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+          </button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-white/70" onClick={() => setPaused(v => !v)} title={paused ? 'Resume trace' : 'Pause trace'}>
+              {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-white/70" onClick={download} title="Export debug report">
+              <Download className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-white/70" onClick={clear} title="Clear debug trace">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+        {open && (
+          <div className="max-h-80 overflow-auto p-2 space-y-1 text-[11px] font-mono">
+            {trace?.events.length ? trace.events.slice(-100).map(event => (
+              <div key={event.id} className="rounded bg-white/5 px-2 py-1">
+                <div className="flex gap-2 text-white/50"><span>{new Date(event.at).toLocaleTimeString()}</span><span>[{event.level}]</span><span>{event.category}</span></div>
+                <div className="text-white/90">{event.message}</div>
+                {event.details && <pre className="mt-1 whitespace-pre-wrap break-words text-white/45">{JSON.stringify(event.details)}</pre>}
+              </div>
+            )) : <div className="p-4 text-center text-white/40">No events yet.</div>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
