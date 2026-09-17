@@ -11,6 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: DaddyDom8249/BeatVision-arena
+          path: BeatVision-arena
+          ref: main
       - uses: pnpm/action-setup@v4
         with:
           version: 10.11.1
