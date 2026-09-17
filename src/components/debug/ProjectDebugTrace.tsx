@@ -28,7 +28,9 @@ export default function ProjectDebugTrace() {
   const [open, setOpen] = useState(false);
   const [paused, setPaused] = useState(false);
   const userIdRef = useRef<string | null>(null);
-  const persistingRef = useRef(false);
+  const remoteQueueRef = useRef<DebugTraceEvent[]>([]);
+  const flushingRef = useRef(false);
+  const disposedRef = useRef(false);
 
   useEffect(() => {
     const onNavigation = () => setPathname(window.location.pathname);
@@ -43,52 +45,68 @@ export default function ProjectDebugTrace() {
   useEffect(() => {
     if (!projectId) return;
 
-    let disposed = false;
+    disposedRef.current = false;
     userIdRef.current = null;
-    void supabase.auth.getUser().then(({ data }) => {
-      if (!disposed) userIdRef.current = data.user?.id ?? null;
-    }).catch(() => {
-      // Local diagnostics remain available if auth lookup is temporarily unavailable.
-    });
+    remoteQueueRef.current = [];
+    flushingRef.current = false;
 
-    const persistEvent = async (event: DebugTraceEvent) => {
-      if (!userIdRef.current || persistingRef.current || event.category === 'remotePersistence') return;
-      persistingRef.current = true;
+    const flushRemoteQueue = async () => {
+      if (disposedRef.current || flushingRef.current || !userIdRef.current || remoteQueueRef.current.length === 0) return;
+      flushingRef.current = true;
       try {
-        const { error } = await supabase.from('project_debug_trace_events').insert({
-          project_id: projectId,
-          user_id: userIdRef.current,
-          created_at: event.at,
-          level: event.level,
-          category: event.category,
-          message: event.message,
-          details: event.details ?? {},
-        });
-        if (error) {
-          debugTraceLog(projectId, 'warn', 'remotePersistence', 'Remote debug trace write failed', {
-            code: error.code,
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-          });
+        while (!disposedRef.current && userIdRef.current && remoteQueueRef.current.length) {
+          const batch = remoteQueueRef.current.splice(0, 50);
+          const rows = batch.map(event => ({
+            project_id: projectId,
+            user_id: userIdRef.current,
+            event_at: event.at,
+            level: event.level,
+            category: event.category,
+            message: event.message,
+            details: event.details ?? {},
+          }));
+          const { error } = await supabase.from('project_debug_trace_events').insert(rows);
+          if (error) {
+            // Keep the failure visible locally. Do not enqueue this diagnostic again or
+            // a broken remote sink could create an infinite diagnostic loop.
+            debugTraceLog(projectId, 'warn', 'remotePersistence', 'Remote debug trace write failed', {
+              code: error.code,
+              message: error.message,
+              details: error.details,
+              hint: error.hint,
+              queuedEvents: batch.length,
+            });
+            remoteQueueRef.current = [...batch, ...remoteQueueRef.current].slice(-2500);
+            break;
+          }
         }
-      } catch (error) {
-        debugTraceLog(projectId, 'warn', 'remotePersistence', 'Remote debug trace write threw', { error });
       } finally {
-        persistingRef.current = false;
+        flushingRef.current = false;
       }
     };
-
-    debugTraceEnsure(projectId);
-    setEvents(debugTraceRead(projectId)?.events ?? []);
-    debugTraceLog(projectId, 'info', 'lifecycle', 'Project debug trace attached', { path: pathname });
 
     const onTrace = (event: Event) => {
       const detail = (event as CustomEvent<{ projectId: string; event: DebugTraceEvent }>).detail;
       if (detail?.projectId !== projectId) return;
       setEvents(debugTraceRead(projectId)?.events ?? []);
-      void persistEvent(detail.event);
+      if (detail.event.category !== 'remotePersistence') {
+        remoteQueueRef.current.push(detail.event);
+        void flushRemoteQueue();
+      }
     };
+
+    void supabase.auth.getUser().then(({ data }) => {
+      if (disposedRef.current) return;
+      userIdRef.current = data.user?.id ?? null;
+      void flushRemoteQueue();
+    }).catch(error => {
+      debugTraceLog(projectId, 'warn', 'auth', 'Unable to resolve current user for remote debug trace', { error });
+    });
+
+    debugTraceEnsure(projectId);
+    setEvents(debugTraceRead(projectId)?.events ?? []);
+    debugTraceLog(projectId, 'info', 'lifecycle', 'Project debug trace attached', { path: pathname });
+
     const onError = (event: ErrorEvent) => {
       debugTraceLog(projectId, 'error', 'browser', 'Unhandled browser error', {
         message: event.message,
@@ -113,12 +131,8 @@ export default function ProjectDebugTrace() {
         href: control instanceof HTMLAnchorElement ? debugTraceRedactUrl(control.href) : undefined,
       });
     };
-    const onConsoleError = (...args: unknown[]) => {
-      debugTraceLog(projectId, 'error', 'console', 'console.error', { args });
-    };
-    const onConsoleWarn = (...args: unknown[]) => {
-      debugTraceLog(projectId, 'warn', 'console', 'console.warn', { args });
-    };
+    const onConsoleError = (...args: unknown[]) => debugTraceLog(projectId, 'error', 'console', 'console.error', { args });
+    const onConsoleWarn = (...args: unknown[]) => debugTraceLog(projectId, 'warn', 'console', 'console.warn', { args });
 
     const originalFetch = window.fetch.bind(window);
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -137,7 +151,6 @@ export default function ProjectDebugTrace() {
 
       try {
         const response = await originalFetch(input, init);
-        if (persistingRef.current) return response;
         const durationMs = Math.round(performance.now() - started);
         const details: Record<string, unknown> = {
           traceId,
@@ -150,7 +163,6 @@ export default function ProjectDebugTrace() {
           responseContentType: response.headers.get('content-type'),
           responseRequestId: response.headers.get('x-request-id') || response.headers.get('x-supabase-request-id'),
         };
-
         if (!response.ok) {
           details.requestHeaders = debugTraceHeaders(requestHeaders);
           const requestCapture = await debugTraceRequestBody(requestBody, requestContentType);
@@ -166,7 +178,6 @@ export default function ProjectDebugTrace() {
         }
         return response;
       } catch (error) {
-        if (persistingRef.current) throw error;
         debugTraceLog(projectId, 'error', 'network', 'Fetch failed before HTTP response', {
           traceId,
           method,
@@ -182,21 +193,16 @@ export default function ProjectDebugTrace() {
 
     const originalConsoleError = console.error;
     const originalConsoleWarn = console.warn;
-    console.error = (...args: unknown[]) => {
-      originalConsoleError(...args);
-      onConsoleError(...args);
-    };
-    console.warn = (...args: unknown[]) => {
-      originalConsoleWarn(...args);
-      onConsoleWarn(...args);
-    };
+    console.error = (...args: unknown[]) => { originalConsoleError(...args); onConsoleError(...args); };
+    console.warn = (...args: unknown[]) => { originalConsoleWarn(...args); onConsoleWarn(...args); };
 
     window.addEventListener('beatvision-debug-trace', onTrace);
     window.addEventListener('error', onError);
     window.addEventListener('unhandledrejection', onRejection);
     window.addEventListener('click', onClick, true);
+
     return () => {
-      disposed = true;
+      disposedRef.current = true;
       window.fetch = originalFetch;
       console.error = originalConsoleError;
       console.warn = originalConsoleWarn;
