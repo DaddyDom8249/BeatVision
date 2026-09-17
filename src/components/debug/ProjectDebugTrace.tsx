@@ -2,34 +2,45 @@ import { useEffect, useMemo, useState } from 'react';
 import { Bug, Download, Trash2, Pause, Play, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { debugTraceClear, debugTraceEnsure, debugTraceExport, debugTraceLog, debugTraceRead, type DebugTraceEvent } from '@/lib/beatvision/debugTrace';
+import {
+  debugTraceClear,
+  debugTraceEnsure,
+  debugTraceExport,
+  debugTraceHeaders,
+  debugTraceLog,
+  debugTraceRead,
+  debugTraceRedactUrl,
+  debugTraceResponseBody,
+  type DebugTraceEvent,
+} from '@/lib/beatvision/debugTrace';
 
 function projectIdFromPath(pathname: string): string | null {
   const match = pathname.match(/\/(?:project|projects)\/([0-9a-f-]{20,})/i);
   return match?.[1] ?? null;
 }
 
-function redactUrl(input: string): string {
-  try {
-    const url = new URL(input, window.location.origin);
-    url.search = '';
-    return `${url.origin}${url.pathname}`;
-  } catch {
-    return input.split('?')[0];
-  }
-}
-
 export default function ProjectDebugTrace() {
-  const projectId = useMemo(() => projectIdFromPath(window.location.pathname), [window.location.pathname]);
+  const [pathname, setPathname] = useState(() => window.location.pathname);
+  const projectId = useMemo(() => projectIdFromPath(pathname), [pathname]);
   const [events, setEvents] = useState<DebugTraceEvent[]>(() => projectId ? (debugTraceRead(projectId)?.events ?? []) : []);
   const [open, setOpen] = useState(false);
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
+    const onNavigation = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', onNavigation);
+    window.addEventListener('beatvision-route-change', onNavigation);
+    return () => {
+      window.removeEventListener('popstate', onNavigation);
+      window.removeEventListener('beatvision-route-change', onNavigation);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!projectId) return;
     debugTraceEnsure(projectId);
     setEvents(debugTraceRead(projectId)?.events ?? []);
-    debugTraceLog(projectId, 'info', 'lifecycle', 'Project debug trace attached', { path: window.location.pathname });
+    debugTraceLog(projectId, 'info', 'lifecycle', 'Project debug trace attached', { path: pathname });
 
     const onTrace = (event: Event) => {
       const detail = (event as CustomEvent<{ projectId: string; event: DebugTraceEvent }>).detail;
@@ -56,34 +67,77 @@ export default function ProjectDebugTrace() {
       debugTraceLog(projectId, 'info', 'ui', 'User control activated', {
         tag: control.tagName,
         text,
-        href: control instanceof HTMLAnchorElement ? redactUrl(control.href) : undefined,
+        href: control instanceof HTMLAnchorElement ? debugTraceRedactUrl(control.href) : undefined,
       });
+    };
+    const onConsoleError = (...args: unknown[]) => {
+      debugTraceLog(projectId, 'error', 'console', 'console.error', { args });
+    };
+    const onConsoleWarn = (...args: unknown[]) => {
+      debugTraceLog(projectId, 'warn', 'console', 'console.warn', { args });
     };
 
     const originalFetch = window.fetch.bind(window);
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const started = performance.now();
+      const request = input instanceof Request ? input : null;
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-      const method = init?.method || (input instanceof Request ? input.method : 'GET');
+      const method = init?.method || request?.method || 'GET';
+      const requestHeaders = new Headers(request?.headers);
+      if (init?.headers) {
+        const extraHeaders = new Headers(init.headers);
+        extraHeaders.forEach((value, key) => requestHeaders.set(key, value));
+      }
+      const traceId = crypto.randomUUID();
+
       try {
         const response = await originalFetch(input, init);
-        debugTraceLog(projectId, response.ok ? 'info' : 'error', 'network', 'Fetch completed', {
+        const durationMs = Math.round(performance.now() - started);
+        const details: Record<string, unknown> = {
+          traceId,
           method,
-          url: redactUrl(url),
+          url: debugTraceRedactUrl(url),
           status: response.status,
+          statusText: response.statusText,
           ok: response.ok,
-          durationMs: Math.round(performance.now() - started),
-        });
+          durationMs,
+          responseContentType: response.headers.get('content-type'),
+          responseRequestId: response.headers.get('x-request-id') || response.headers.get('x-supabase-request-id'),
+        };
+
+        // Keep successful traffic compact. For failures, capture the actual response body.
+        if (!response.ok) {
+          details.requestHeaders = debugTraceHeaders(requestHeaders);
+          const captured = await debugTraceResponseBody(response);
+          details.responseBody = captured.body;
+          details.responseBodyTruncated = captured.truncated ?? false;
+          debugTraceLog(projectId, 'error', 'network', 'Fetch failed with HTTP error', details);
+        } else {
+          debugTraceLog(projectId, 'info', 'network', 'Fetch completed', details);
+        }
         return response;
       } catch (error) {
-        debugTraceLog(projectId, 'error', 'network', 'Fetch failed', {
+        debugTraceLog(projectId, 'error', 'network', 'Fetch failed before HTTP response', {
+          traceId,
           method,
-          url: redactUrl(url),
+          url: debugTraceRedactUrl(url),
           durationMs: Math.round(performance.now() - started),
+          requestHeaders: debugTraceHeaders(requestHeaders),
           error,
         });
         throw error;
       }
+    };
+
+    const originalConsoleError = console.error;
+    const originalConsoleWarn = console.warn;
+    console.error = (...args: unknown[]) => {
+      originalConsoleError(...args);
+      onConsoleError(...args);
+    };
+    console.warn = (...args: unknown[]) => {
+      originalConsoleWarn(...args);
+      onConsoleWarn(...args);
     };
 
     window.addEventListener('beatvision-debug-trace', onTrace);
@@ -92,12 +146,14 @@ export default function ProjectDebugTrace() {
     window.addEventListener('click', onClick, true);
     return () => {
       window.fetch = originalFetch;
+      console.error = originalConsoleError;
+      console.warn = originalConsoleWarn;
       window.removeEventListener('beatvision-debug-trace', onTrace);
       window.removeEventListener('error', onError);
       window.removeEventListener('unhandledrejection', onRejection);
       window.removeEventListener('click', onClick, true);
     };
-  }, [projectId, paused]);
+  }, [projectId, pathname, paused]);
 
   if (!projectId) return null;
   const trace = debugTraceRead(projectId);
