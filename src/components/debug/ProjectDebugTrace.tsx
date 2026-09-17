@@ -10,6 +10,7 @@ import {
   debugTraceLog,
   debugTraceRead,
   debugTraceRedactUrl,
+  debugTraceRequestBody,
   debugTraceResponseBody,
   type DebugTraceEvent,
 } from '@/lib/beatvision/debugTrace';
@@ -89,6 +90,8 @@ export default function ProjectDebugTrace() {
         extraHeaders.forEach((value, key) => requestHeaders.set(key, value));
       }
       const traceId = crypto.randomUUID();
+      const requestBody = init?.body ?? null;
+      const requestContentType = requestHeaders.get('content-type');
 
       try {
         const response = await originalFetch(input, init);
@@ -105,9 +108,13 @@ export default function ProjectDebugTrace() {
           responseRequestId: response.headers.get('x-request-id') || response.headers.get('x-supabase-request-id'),
         };
 
-        // Keep successful traffic compact. For failures, capture the actual response body.
+        // Keep successful traffic compact. For failures, capture the actual request and response diagnostics.
         if (!response.ok) {
           details.requestHeaders = debugTraceHeaders(requestHeaders);
+          const requestCapture = await debugTraceRequestBody(requestBody, requestContentType);
+          if (requestCapture.body !== undefined) details.requestBody = requestCapture.body;
+          if (requestCapture.kind) details.requestBodyKind = requestCapture.kind;
+          details.requestBodyTruncated = requestCapture.truncated ?? false;
           const captured = await debugTraceResponseBody(response);
           details.responseBody = captured.body;
           details.responseBodyTruncated = captured.truncated ?? false;
@@ -123,6 +130,7 @@ export default function ProjectDebugTrace() {
           url: debugTraceRedactUrl(url),
           durationMs: Math.round(performance.now() - started),
           requestHeaders: debugTraceHeaders(requestHeaders),
+          requestBody: (await debugTraceRequestBody(requestBody, requestContentType)).body,
           error,
         });
         throw error;
