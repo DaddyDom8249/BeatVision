@@ -436,28 +436,33 @@ export default function ProjectResultsPage() {
       }
       const scenesData: Record<string, unknown>[] = res.data?.data || [];
 
-      // Clear old scenes
-      await supabase.from('storyboard_scenes').delete().eq('project_id', proj.id);
+      if (!Array.isArray(scenesData) || scenesData.length === 0) {
+        throw new Error('Arena returned an empty storyboard.');
+      }
 
-      const toInsert = scenesData.map((s) => ({
-        project_id: proj.id,
-        scene_number: s.scene_number,
-        timestamp_range: s.timestamp_range,
-        scene_title: s.scene_title,
-        visual_description: s.visual_description,
-        camera_direction: s.camera_direction,
-        mood: s.mood,
-        location: s.location,
-        lyric_moment: s.lyric_moment,
-        transition_style: s.transition_style,
-        approved: false,
+      const normalizedScenes = scenesData.map((s, index) => ({
+        scene_number: Number(s.scene_number ?? index + 1),
+        timestamp_range: String(s.timestamp_range ?? ''),
+        scene_title: String(s.scene_title ?? ''),
+        visual_description: String(s.visual_description ?? ''),
+        camera_direction: String(s.camera_direction ?? ''),
+        mood: String(s.mood ?? ''),
+        location: String(s.location ?? ''),
+        lyric_moment: String(s.lyric_moment ?? ''),
+        transition_style: String(s.transition_style ?? ''),
       }));
 
-      const { data: savedScenes, error: sErr } = await supabase
-        .from('storyboard_scenes')
-        .insert(toInsert)
-        .select()
-        .order('scene_number', { ascending: true });
+      const invalid = normalizedScenes.some((s, index) =>
+        s.scene_number !== index + 1 ||
+        !s.timestamp_range ||
+        !s.visual_description
+      );
+      if (invalid) throw new Error('Arena returned an invalid storyboard. Nothing was written.');
+
+      const { data: savedScenes, error: sErr } = await supabase.rpc('beatvision_replace_storyboard', {
+        p_project_id: proj.id,
+        p_scenes: normalizedScenes,
+      });
       if (sErr) throw sErr;
       setScenes(Array.isArray(savedScenes) ? savedScenes : []);
     } catch (err: unknown) {
