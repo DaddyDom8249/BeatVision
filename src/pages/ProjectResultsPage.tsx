@@ -1121,6 +1121,10 @@ export default function ProjectResultsPage() {
               <GenerateSceneImagesSection
                 project={project}
                 prompts={scenePrompts}
+                initialImages={sceneImages}
+                initialStyleBible={styleBible}
+                initialCharacterSheet={characterSheet}
+                initialEnvironmentSheet={envSheet}
                 realProvidersEnabled={true}
                 providerActive={true}
                 providerName="BeatVision Arena"
