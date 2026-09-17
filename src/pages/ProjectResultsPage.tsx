@@ -252,29 +252,23 @@ export default function ProjectResultsPage() {
       const reportData = res.data?.data;
       if (!reportData) throw new Error('No data returned');
 
-      // Delete old report if exists
-      if (worldReport) {
-        await supabase.from('visual_world_reports').delete().eq('project_id', proj.id);
-      }
-
-      const { data: saved, error: saveErr } = await supabase
-        .from('visual_world_reports')
-        .insert({
-          project_id: proj.id,
-          song_summary: reportData.song_summary || null,
-          emotional_core: reportData.emotional_core || null,
-          main_visual_world: reportData.main_visual_world || null,
-          color_palette: reportData.color_palette || null,
-          lighting_style: reportData.lighting_style || null,
-          main_characters: reportData.main_characters || null,
-          symbolic_objects: reportData.symbolic_objects || null,
-          key_locations: reportData.key_locations || null,
-          story_direction: reportData.story_direction || null,
-          creative_match_score: typeof reportData.creative_match_score === 'number' ? reportData.creative_match_score : 85,
-          approved: false,
-        })
-        .select()
-        .maybeSingle();
+      const reportPayload = {
+        song_summary: reportData.song_summary || null,
+        emotional_core: reportData.emotional_core || null,
+        main_visual_world: reportData.main_visual_world || null,
+        color_palette: reportData.color_palette || null,
+        lighting_style: reportData.lighting_style || null,
+        main_characters: reportData.main_characters || null,
+        symbolic_objects: reportData.symbolic_objects || null,
+        key_locations: reportData.key_locations || null,
+        story_direction: reportData.story_direction || null,
+        creative_match_score: typeof reportData.creative_match_score === 'number' ? reportData.creative_match_score : 85,
+        approved: false,
+        updated_at: new Date().toISOString(),
+      };
+      const { data: saved, error: saveErr } = worldReport
+        ? await supabase.from('visual_world_reports').update(reportPayload).eq('id', worldReport.id).select().maybeSingle()
+        : await supabase.from('visual_world_reports').insert({ project_id: proj.id, ...reportPayload }).select().maybeSingle();
       if (saveErr) throw saveErr;
       if (saved) setWorldReport(saved);
       if (seed > 1) toast.info('World regenerated. A fresh perspective on your song\'s world.');    } catch (err: unknown) {
@@ -376,25 +370,19 @@ export default function ProjectResultsPage() {
       const charData = res.data?.data;
       if (!charData) throw new Error('No character data returned');
 
-      // Delete old entry if exists
-      if (charEnv) {
-        await supabase.from('character_environments').delete().eq('project_id', proj.id);
-      }
-
-      const { data: saved, error: cErr } = await supabase
-        .from('character_environments')
-        .insert({
-          project_id: proj.id,
-          main_character: charData.main_character || null,
-          supporting_character: charData.supporting_character || null,
-          main_environment: charData.main_environment || null,
-          visual_atmosphere: charData.visual_atmosphere || null,
-          wardrobe_style: charData.wardrobe_style || null,
-          world_rules: charData.world_rules || null,
-          approved: false,
-        })
-        .select()
-        .maybeSingle();
+      const charPayload = {
+        main_character: charData.main_character || null,
+        supporting_character: charData.supporting_character || null,
+        main_environment: charData.main_environment || null,
+        visual_atmosphere: charData.visual_atmosphere || null,
+        wardrobe_style: charData.wardrobe_style || null,
+        world_rules: charData.world_rules || null,
+        approved: false,
+        updated_at: new Date().toISOString(),
+      };
+      const { data: saved, error: cErr } = charEnv
+        ? await supabase.from('character_environments').update(charPayload).eq('id', charEnv.id).select().maybeSingle()
+        : await supabase.from('character_environments').insert({ project_id: proj.id, ...charPayload }).select().maybeSingle();
       if (cErr) throw cErr;
       if (saved) setCharEnv(saved);
     } catch (err: unknown) {
