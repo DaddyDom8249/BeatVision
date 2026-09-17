@@ -138,3 +138,24 @@ export async function debugTraceResponseBody(response: Response): Promise<{ body
     return { body: { captureError: error instanceof Error ? error.message : String(error) } };
   }
 }
+
+export async function debugTraceRequestBody(
+  body: BodyInit | null | undefined,
+  contentType: string | null,
+): Promise<{ body?: unknown; truncated?: boolean; kind?: string }> {
+  if (!body) return {};
+  if (typeof body === 'string') {
+    const truncated = body.length > MAX_RESPONSE_BODY;
+    const clipped = truncated ? `${body.slice(0, MAX_RESPONSE_BODY)}…[TRUNCATED]` : body;
+    if (contentType?.includes('json')) {
+      try { return { body: safeValue(JSON.parse(clipped)), truncated, kind: 'json' }; } catch { /* fall through */ }
+    }
+    return { body: clipped, truncated, kind: contentType ?? 'text' };
+  }
+  if (body instanceof URLSearchParams) return { body: safeValue(Object.fromEntries(body.entries())), kind: 'urlencoded' };
+  if (body instanceof FormData) return { body: '[FormData omitted from trace]', kind: 'form-data' };
+  if (body instanceof Blob) return { body: `[Blob ${body.type || 'unknown'} ${body.size} bytes omitted from trace]`, kind: 'blob' };
+  if (body instanceof ArrayBuffer) return { body: `[ArrayBuffer ${body.byteLength} bytes omitted from trace]`, kind: 'array-buffer' };
+  if (ArrayBuffer.isView(body)) return { body: `[Binary ${body.byteLength} bytes omitted from trace]`, kind: 'binary' };
+  return { body: '[Unsupported request body omitted from trace]', kind: typeof body };
+}
