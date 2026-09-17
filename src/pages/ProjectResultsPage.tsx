@@ -1047,6 +1047,11 @@ export default function ProjectResultsPage() {
                 worldReport={worldReport}
                 scenes={scenes}
                 charEnv={charEnv}
+                initialStyleBible={styleBible}
+                initialCharacterSheet={characterSheet}
+                initialEnvironmentSheet={envSheet}
+                initialScenePrompts={scenePrompts}
+                initialScenePreviews={[]}
                 onProjectUpdate={(updated) => {
                   setProject(updated);
                   // Refresh scene prompts when world assets are generated/approved
