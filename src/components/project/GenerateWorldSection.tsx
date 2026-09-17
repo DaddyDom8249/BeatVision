@@ -30,23 +30,28 @@ interface Props {
   worldReport: VisualWorldReport | null;
   scenes: StoryboardScene[];
   charEnv: CharacterEnvironment | null;
+  initialStyleBible: WorldStyleBible | null;
+  initialCharacterSheet: CharacterSheet | null;
+  initialEnvironmentSheet: EnvironmentSheet | null;
+  initialScenePrompts: SceneVisualPrompt[];
+  initialScenePreviews: ScenePreview[];
   onProjectUpdate: (p: Project) => void;
   onChangeLogged?: () => void;
 }
 
 type GenState = 'idle' | 'generating' | 'done';
 
-export default function GenerateWorldSection({ project, worldReport, scenes, charEnv, onProjectUpdate, onChangeLogged }: Props) {
+export default function GenerateWorldSection({ project, worldReport, scenes, charEnv, initialStyleBible, initialCharacterSheet, initialEnvironmentSheet, initialScenePrompts, initialScenePreviews, onProjectUpdate, onChangeLogged }: Props) {
   const [genState, setGenState] = useState<GenState>('idle');
   const [generating, setGenerating] = useState(false);
   const genRef = useRef(false);
 
   // Phase 2 data
-  const [styleBible, setStyleBible] = useState<WorldStyleBible | null>(null);
-  const [characterSheet, setCharacterSheet] = useState<CharacterSheet | null>(null);
-  const [envSheet, setEnvSheet] = useState<EnvironmentSheet | null>(null);
-  const [scenePrompts, setScenePrompts] = useState<SceneVisualPrompt[]>([]);
-  const [scenePreviews, setScenePreviews] = useState<ScenePreview[]>([]);
+  const [styleBible, setStyleBible] = useState<WorldStyleBible | null>(initialStyleBible);
+  const [characterSheet, setCharacterSheet] = useState<CharacterSheet | null>(initialCharacterSheet);
+  const [envSheet, setEnvSheet] = useState<EnvironmentSheet | null>(initialEnvironmentSheet);
+  const [scenePrompts, setScenePrompts] = useState<SceneVisualPrompt[]>(initialScenePrompts);
+  const [scenePreviews, setScenePreviews] = useState<ScenePreview[]>(initialScenePreviews);
 
   // Per-sub-section generating flags
   const [genBible, setGenBible] = useState(false);
@@ -69,30 +74,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
   const toggle = (key: string) =>
     setExpandedSections((p) => ({ ...p, [key]: !p[key] }));
 
-  // ── Fetch existing Phase 2 data on mount ──────────────────────────────────
-  const fetchExistingData = useCallback(async () => {
-    const pid = project.id;
-    const [bRes, csRes, esRes, svpRes, spRes] = await Promise.all([
-      supabase.from('world_style_bibles').select('*').eq('project_id', pid).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('character_sheets').select('*').eq('project_id', pid).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('environment_sheets').select('*').eq('project_id', pid).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('scene_visual_prompts').select('*').eq('project_id', pid).order('scene_number', { ascending: true }),
-      supabase.from('scene_previews').select('*').eq('project_id', pid).order('created_at', { ascending: true }),
-    ]);
-    if (bRes.data) setStyleBible(bRes.data as WorldStyleBible);
-    if (csRes.data) setCharacterSheet(csRes.data as CharacterSheet);
-    if (esRes.data) setEnvSheet(esRes.data as EnvironmentSheet);
-    if (svpRes.data) setScenePrompts(Array.isArray(svpRes.data) ? svpRes.data as SceneVisualPrompt[] : []);
-    if (spRes.data) setScenePreviews(Array.isArray(spRes.data) ? spRes.data as ScenePreview[] : []);
-    if (bRes.data || csRes.data || esRes.data || (svpRes.data && svpRes.data.length > 0)) {
-      setGenState('done');
-    }
-  }, [project.id]);
-
-  // Load existing data when component first mounts
-  useState(() => {
-    fetchExistingData();
-  });
+  // ProjectResultsPage owns the canonical project-data load. Child sections consume that snapshot and only write changes.
 
   // ── Helper: call edge function ────────────────────────────────────────────
   const callEdgeFn = async (body: Record<string, unknown>) => {

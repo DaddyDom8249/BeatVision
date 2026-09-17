@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
-import type { Project, VisualWorldReport, StoryboardScene, CharacterEnvironment, SceneVisualPrompt, ProjectChangeLog, WorldStyleBible, CharacterSheet, EnvironmentSheet, SceneImage, SceneVideo, MotionClip, FinalVideo } from '@/types/types';
+import type { Project, VisualWorldReport, StoryboardScene, CharacterEnvironment, SceneVisualPrompt, ScenePreview, ProjectChangeLog, WorldStyleBible, CharacterSheet, EnvironmentSheet, SceneImage, SceneVideo, MotionClip, FinalVideo } from '@/types/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import Navbar from '@/components/layouts/Navbar';
@@ -63,6 +63,7 @@ export default function ProjectResultsPage() {
   const [scenes, setScenes] = useState<StoryboardScene[]>([]);
   const [charEnv, setCharEnv] = useState<CharacterEnvironment | null>(null);
   const [scenePrompts, setScenePrompts] = useState<SceneVisualPrompt[]>([]);
+  const [scenePreviews, setScenePreviews] = useState<ScenePreview[]>([]);
   const [changeLogs, setChangeLogs] = useState<ProjectChangeLog[]>([]);
   const [loadingProject, setLoadingProject] = useState(true);
   const [styleBible, setStyleBible] = useState<WorldStyleBible | null>(null);
@@ -177,16 +178,18 @@ export default function ProjectResultsPage() {
       setScenePrompts(Array.isArray(promptsData) ? promptsData : []);
 
       // Load world assets + scene images + scene videos
-      const [sbRes, csRes, esRes, imgRes, vidRes] = await Promise.all([
+      const [sbRes, csRes, esRes, previewRes, imgRes, vidRes] = await Promise.all([
         supabase.from('world_style_bibles').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('character_sheets').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('environment_sheets').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('scene_previews').select('*').eq('project_id', id).order('created_at', { ascending: true }),
         supabase.from('scene_images').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
         supabase.from('scene_videos').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
       ]);
       if (sbRes.data) setStyleBible(sbRes.data as WorldStyleBible);
       if (csRes.data) setCharacterSheet(csRes.data as CharacterSheet);
       if (esRes.data) setEnvSheet(esRes.data as EnvironmentSheet);
+      if (Array.isArray(previewRes.data)) setScenePreviews(previewRes.data as ScenePreview[]);
       if (Array.isArray(imgRes.data)) setSceneImages(imgRes.data as SceneImage[]);
       if (Array.isArray(vidRes.data)) setSceneVideos(vidRes.data as SceneVideo[]);
 
@@ -1047,6 +1050,11 @@ export default function ProjectResultsPage() {
                 worldReport={worldReport}
                 scenes={scenes}
                 charEnv={charEnv}
+                initialStyleBible={styleBible}
+                initialCharacterSheet={characterSheet}
+                initialEnvironmentSheet={envSheet}
+                initialScenePrompts={scenePrompts}
+                initialScenePreviews={scenePreviews}
                 onProjectUpdate={(updated) => {
                   setProject(updated);
                   // Refresh scene prompts when world assets are generated/approved
@@ -1113,6 +1121,10 @@ export default function ProjectResultsPage() {
               <GenerateSceneImagesSection
                 project={project}
                 prompts={scenePrompts}
+                initialImages={sceneImages}
+                initialStyleBible={styleBible}
+                initialCharacterSheet={characterSheet}
+                initialEnvironmentSheet={envSheet}
                 realProvidersEnabled={true}
                 providerActive={true}
                 providerName="BeatVision Arena"
