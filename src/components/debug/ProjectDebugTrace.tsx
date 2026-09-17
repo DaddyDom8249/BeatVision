@@ -13,6 +13,7 @@ import {
   debugTraceRedactUrl,
   debugTraceRequestBody,
   debugTraceResponseBody,
+  debugTraceSetPaused,
   type DebugTraceEvent,
 } from '@/lib/beatvision/debugTrace';
 
@@ -57,7 +58,7 @@ export default function ProjectDebugTrace() {
       if (disposedRef.current || pausedRef.current || flushingRef.current || !userIdRef.current || remoteQueueRef.current.length === 0) return;
       flushingRef.current = true;
       try {
-        while (!disposedRef.current && userIdRef.current && remoteQueueRef.current.length) {
+        while (!disposedRef.current && !pausedRef.current && userIdRef.current && remoteQueueRef.current.length) {
           const batch = remoteQueueRef.current.splice(0, 50);
           const rows = batch.map(event => ({
             project_id: projectId,
