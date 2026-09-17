@@ -9,11 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Film, Loader2, CheckCircle2, XCircle, RefreshCw, Play, AlertTriangle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface Props { project: Project; onProjectUpdate: (updated: Partial<Project>) => void; }
+interface Props { project: Project; initialImages: SceneImage[]; initialVideos: SceneVideo[]; initialScenes: StoryboardScene[]; onProjectUpdate: (updated: Partial<Project>) => void; }
 
-export default function GenerateMotionSection({ project, onProjectUpdate }: Props) {
-  const [images,setImages]=useState<SceneImage[]>([]), [videos,setVideos]=useState<SceneVideo[]>([]), [scenes,setScenes]=useState<StoryboardScene[]>([]);
-  const [loading,setLoading]=useState(true), [running,setRunning]=useState(false), [busy,setBusy]=useState<Set<string>>(new Set());
+export default function GenerateMotionSection({ project, initialImages, initialVideos, initialScenes, onProjectUpdate }: Props) {
+  const [images,setImages]=useState<SceneImage[]>(initialImages), [videos,setVideos]=useState<SceneVideo[]>(initialVideos), [scenes,setScenes]=useState<StoryboardScene[]>(initialScenes);
+  const [loading,setLoading]=useState(false), [running,setRunning]=useState(false), [busy,setBusy]=useState<Set<string>>(new Set());
   const pollers=useRef<Map<string,ReturnType<typeof setInterval>>>(new Map());
 
   const load=useCallback(async()=>{
@@ -22,9 +22,10 @@ export default function GenerateMotionSection({ project, onProjectUpdate }: Prop
       supabase.from('scene_videos').select('*').eq('project_id',project.id).order('scene_number'),
       supabase.from('storyboard_scenes').select('*').eq('project_id',project.id).order('scene_number'),
     ]);
-    setImages((i.data||[]) as SceneImage[]); setVideos((v.data||[]) as SceneVideo[]); setScenes((s.data||[]) as StoryboardScene[]); setLoading(false);
+    setImages((i.data||[]) as SceneImage[]); setVideos((v.data||[]) as SceneVideo[]); setScenes((s.data||[]) as StoryboardScene[]);
   },[project.id]);
-  useEffect(()=>{load(); return()=>{pollers.current.forEach(clearInterval); pollers.current.clear();};},[load]);
+  useEffect(()=>{setImages(initialImages);setVideos(initialVideos);setScenes(initialScenes);},[initialImages,initialVideos,initialScenes]);
+  useEffect(()=>()=>{pollers.current.forEach(clearInterval); pollers.current.clear();},[]);
 
   const stop=(id:string)=>{const p=pollers.current.get(id); if(p) clearInterval(p); pollers.current.delete(id);};
   const persistClip=useCallback(async(videoId:string, sceneNumber:number, clip:any)=>{
