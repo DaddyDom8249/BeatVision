@@ -21,6 +21,11 @@ const MAX_EVENTS = 2500;
 const MAX_STRING = 4000;
 const MAX_RESPONSE_BODY = 8000;
 const keyFor = (projectId: string) => `beatvision-debug-trace:${projectId}`;
+const pausedProjects = new Set<string>();
+export function debugTraceSetPaused(projectId: string, paused: boolean) {
+  if (paused) pausedProjects.add(projectId);
+  else pausedProjects.delete(projectId);
+}
 
 function safeValue(value: unknown, depth = 0): unknown {
   if (depth > 6) return '[MAX_DEPTH]';
@@ -81,6 +86,7 @@ export function debugTraceLog(
   message: string,
   details?: Record<string, unknown>,
 ) {
+  if (pausedProjects.has(projectId)) return;
   const store = debugTraceEnsure(projectId);
   const event: DebugTraceEvent = {
     id: crypto.randomUUID(),
