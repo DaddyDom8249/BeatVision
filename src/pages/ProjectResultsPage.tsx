@@ -252,29 +252,23 @@ export default function ProjectResultsPage() {
       const reportData = res.data?.data;
       if (!reportData) throw new Error('No data returned');
 
-      // Delete old report if exists
-      if (worldReport) {
-        await supabase.from('visual_world_reports').delete().eq('project_id', proj.id);
-      }
-
-      const { data: saved, error: saveErr } = await supabase
-        .from('visual_world_reports')
-        .insert({
-          project_id: proj.id,
-          song_summary: reportData.song_summary || null,
-          emotional_core: reportData.emotional_core || null,
-          main_visual_world: reportData.main_visual_world || null,
-          color_palette: reportData.color_palette || null,
-          lighting_style: reportData.lighting_style || null,
-          main_characters: reportData.main_characters || null,
-          symbolic_objects: reportData.symbolic_objects || null,
-          key_locations: reportData.key_locations || null,
-          story_direction: reportData.story_direction || null,
-          creative_match_score: typeof reportData.creative_match_score === 'number' ? reportData.creative_match_score : 85,
-          approved: false,
-        })
-        .select()
-        .maybeSingle();
+      const reportPayload = {
+        song_summary: reportData.song_summary || null,
+        emotional_core: reportData.emotional_core || null,
+        main_visual_world: reportData.main_visual_world || null,
+        color_palette: reportData.color_palette || null,
+        lighting_style: reportData.lighting_style || null,
+        main_characters: reportData.main_characters || null,
+        symbolic_objects: reportData.symbolic_objects || null,
+        key_locations: reportData.key_locations || null,
+        story_direction: reportData.story_direction || null,
+        creative_match_score: typeof reportData.creative_match_score === 'number' ? reportData.creative_match_score : 85,
+        approved: false,
+        updated_at: new Date().toISOString(),
+      };
+      const { data: saved, error: saveErr } = worldReport
+        ? await supabase.from('visual_world_reports').update(reportPayload).eq('id', worldReport.id).select().maybeSingle()
+        : await supabase.from('visual_world_reports').insert({ project_id: proj.id, ...reportPayload }).select().maybeSingle();
       if (saveErr) throw saveErr;
       if (saved) setWorldReport(saved);
       if (seed > 1) toast.info('World regenerated. A fresh perspective on your song\'s world.');    } catch (err: unknown) {
@@ -284,129 +278,9 @@ export default function ProjectResultsPage() {
       console.error('[BeatVision] World generation failed:', err);
 
 
-      // Fallback protection:
-
-      // If the Supabase Edge Function fails, do not leave the project blank.
-
-      if (!worldReport) {
-
-        try {
-
-          const lyricsSnippet = (proj.lyrics || '')
-
-            .replace(/\s+/g, ' ')
-
-            .trim()
-
-            .slice(0, 700);
-
-
-          const fallbackSummary = lyricsSnippet
-
-            ? `This fallback report was created from the song title, style, notes, and lyrics preview: ${lyricsSnippet}`
-
-            : 'This fallback report was created from the song title, selected style, and creator notes.';
-
-
-          const { data: savedFallback, error: fallbackErr } = await supabase
-
-            .from('visual_world_reports')
-
-            .insert({
-
-              project_id: proj.id,
-
-              song_summary: `BeatVision fallback world report for "${proj.title}". ${fallbackSummary}`,
-
-              emotional_core: 'The emotional core centers on pressure, survival, transformation, and the inner world hidden inside the track.',
-
-              main_visual_world: `A ${proj.selected_style || 'cinematic'} music-video world built around the song atmosphere, symbols, and creator notes. The visuals should feel intentional, grounded, and ready for manual refinement.`,
-
-              color_palette: 'deep black, muted steel, dusty amber, electric blue highlights, worn industrial gray',
-
-              lighting_style: 'cinematic low-key lighting, hard rim light, glowing practicals, smoke, haze, dramatic contrast',
-
-              main_characters: 'A central protagonist shaped by the emotional weight of the song, shown through body language, environment, and symbolic action.',
-
-              symbolic_objects: 'light, shadow, broken machinery, weathered metal, reflections, sparks, smoke, doors, roads, wires',
-
-              key_locations: 'an emotionally charged cinematic world built from the song setting, with practical locations that can become storyboard scenes',
-
-              story_direction: 'Start with the protagonist inside pressure, reveal the world around them, build toward confrontation or release, and end with a clear visual transformation.',
-
-              creative_match_score: 72,
-
-              approved: false,
-
-            })
-
-            .select()
-
-            .maybeSingle();
-
-
-          if (fallbackErr) throw fallbackErr;
-
-
-          if (savedFallback) {
-
-            setWorldReport(savedFallback as VisualWorldReport);
-
-
-            const { data: updatedProject } = await supabase
-
-              .from('projects')
-
-              .update({
-
-                status: 'World Revealed',
-
-                updated_at: new Date().toISOString(),
-
-              })
-
-              .eq('id', proj.id)
-
-              .select()
-
-              .maybeSingle();
-
-
-            if (updatedProject) {
-
-              setProject(updatedProject as Project);
-
-            }
-
-
-            toast.warning('AI generation failed, so BeatVision created a local fallback world report. You can edit it or regenerate later.');
-
-            return;
-
-          }
-
-        } catch (fallbackErr: unknown) {
-
-          console.error('[BeatVision] Local fallback world report failed:', fallbackErr);
-
-          toast.error(
-
-            fallbackErr instanceof Error
-
-              ? `Generation failed and fallback save failed: ${fallbackErr.message}`
-
-              : sourceErrorMessage
-
-          );
-
-          return;
-
-        }
-
-      }
-
-
+      // Arena is the sole creative provider. Never synthesize a local fake world when it fails.
       toast.error(sourceErrorMessage);
+
 
     } finally {
       setGeneratingWorld(false);
@@ -496,25 +370,19 @@ export default function ProjectResultsPage() {
       const charData = res.data?.data;
       if (!charData) throw new Error('No character data returned');
 
-      // Delete old entry if exists
-      if (charEnv) {
-        await supabase.from('character_environments').delete().eq('project_id', proj.id);
-      }
-
-      const { data: saved, error: cErr } = await supabase
-        .from('character_environments')
-        .insert({
-          project_id: proj.id,
-          main_character: charData.main_character || null,
-          supporting_character: charData.supporting_character || null,
-          main_environment: charData.main_environment || null,
-          visual_atmosphere: charData.visual_atmosphere || null,
-          wardrobe_style: charData.wardrobe_style || null,
-          world_rules: charData.world_rules || null,
-          approved: false,
-        })
-        .select()
-        .maybeSingle();
+      const charPayload = {
+        main_character: charData.main_character || null,
+        supporting_character: charData.supporting_character || null,
+        main_environment: charData.main_environment || null,
+        visual_atmosphere: charData.visual_atmosphere || null,
+        wardrobe_style: charData.wardrobe_style || null,
+        world_rules: charData.world_rules || null,
+        approved: false,
+        updated_at: new Date().toISOString(),
+      };
+      const { data: saved, error: cErr } = charEnv
+        ? await supabase.from('character_environments').update(charPayload).eq('id', charEnv.id).select().maybeSingle()
+        : await supabase.from('character_environments').insert({ project_id: proj.id, ...charPayload }).select().maybeSingle();
       if (cErr) throw cErr;
       if (saved) setCharEnv(saved);
     } catch (err: unknown) {
