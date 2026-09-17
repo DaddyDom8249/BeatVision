@@ -50,6 +50,8 @@ export default function ProjectDebugTrace() {
     if (!projectId) return;
 
     disposedRef.current = false;
+    pausedRef.current = false;
+    debugTraceSetPaused(projectId, false);
     userIdRef.current = null;
     remoteQueueRef.current = [];
     flushingRef.current = false;
@@ -216,6 +218,8 @@ export default function ProjectDebugTrace() {
 
     return () => {
       disposedRef.current = true;
+      pausedRef.current = false;
+      debugTraceSetPaused(projectId, false);
       if (flushTimerRef.current !== null) {
         window.clearTimeout(flushTimerRef.current);
         flushTimerRef.current = null;
