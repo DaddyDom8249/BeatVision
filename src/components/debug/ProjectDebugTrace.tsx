@@ -31,6 +31,9 @@ export default function ProjectDebugTrace() {
   const remoteQueueRef = useRef<DebugTraceEvent[]>([]);
   const flushingRef = useRef(false);
   const disposedRef = useRef(false);
+  const pausedRef = useRef(false);
+  const flushTimerRef = useRef<number | null>(null);
+  const flushRemoteRef = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
     const onNavigation = () => setPathname(window.location.pathname);
@@ -51,7 +54,7 @@ export default function ProjectDebugTrace() {
     flushingRef.current = false;
 
     const flushRemoteQueue = async () => {
-      if (disposedRef.current || flushingRef.current || !userIdRef.current || remoteQueueRef.current.length === 0) return;
+      if (disposedRef.current || pausedRef.current || flushingRef.current || !userIdRef.current || remoteQueueRef.current.length === 0) return;
       flushingRef.current = true;
       try {
         while (!disposedRef.current && userIdRef.current && remoteQueueRef.current.length) {
@@ -85,13 +88,22 @@ export default function ProjectDebugTrace() {
       }
     };
 
+    const scheduleFlush = () => {
+      if (pausedRef.current || disposedRef.current || flushTimerRef.current !== null) return;
+      flushTimerRef.current = window.setTimeout(() => {
+        flushTimerRef.current = null;
+        void flushRemoteQueue();
+      }, 250);
+    };
+    flushRemoteRef.current = flushRemoteQueue;
+
     const onTrace = (event: Event) => {
       const detail = (event as CustomEvent<{ projectId: string; event: DebugTraceEvent }>).detail;
-      if (detail?.projectId !== projectId) return;
+      if (detail?.projectId !== projectId || pausedRef.current) return;
       setEvents(debugTraceRead(projectId)?.events ?? []);
       if (detail.event.category !== 'remotePersistence') {
         remoteQueueRef.current.push(detail.event);
-        void flushRemoteQueue();
+        scheduleFlush();
       }
     };
 
@@ -203,6 +215,11 @@ export default function ProjectDebugTrace() {
 
     return () => {
       disposedRef.current = true;
+      if (flushTimerRef.current !== null) {
+        window.clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+      flushRemoteRef.current = null;
       window.fetch = originalFetch;
       console.error = originalConsoleError;
       console.warn = originalConsoleWarn;
@@ -211,7 +228,7 @@ export default function ProjectDebugTrace() {
       window.removeEventListener('unhandledrejection', onRejection);
       window.removeEventListener('click', onClick, true);
     };
-  }, [projectId, pathname, paused]);
+  }, [projectId, pathname]);
 
   if (!projectId) return null;
   const trace = debugTraceRead(projectId);
@@ -245,7 +262,13 @@ export default function ProjectDebugTrace() {
             {open ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
           </button>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-white/70" onClick={() => setPaused(v => !v)} title={paused ? 'Resume trace' : 'Pause trace'}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-white/70" onClick={() => {
+              const next = !pausedRef.current;
+              pausedRef.current = next;
+              debugTraceSetPaused(projectId, next);
+              setPaused(next);
+              if (!next) void flushRemoteRef.current?.();
+            }} title={paused ? 'Resume trace' : 'Pause trace'}>
               {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
             </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7 text-white/70" onClick={download} title="Export debug report">
