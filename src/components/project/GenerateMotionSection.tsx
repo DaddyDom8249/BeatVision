@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/db/supabase';
 import { arenaAnimate, arenaAnimationJob } from '@/lib/beatvision/arena';
+import { sceneTimeline } from '@/lib/beatvision/timeline';
 import type { Project, SceneImage, SceneVideo, StoryboardScene } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -55,8 +56,8 @@ export default function GenerateMotionSection({ project, onProjectUpdate }: Prop
     if(!videoId){const {data,error}=await supabase.from('scene_videos').insert({project_id:project.id,scene_image_id:img.id,scene_number:img.scene_number,scene_title:img.scene_title,generation_status:'submitted',prompt_used:'BeatVision Arena LTX motion'}).select().maybeSingle(); if(error||!data) throw error||new Error('Could not create motion record.'); videoId=data.id;}
     else await supabase.from('scene_videos').update({generation_status:'submitted',video_url:null,approved:false,rejected:false,updated_at:new Date().toISOString()}).eq('id',videoId);
     setBusy(x=>new Set(x).add(videoId));
-    const storyboardScene=scenes.find(s=>s.scene_number===img.scene_number);
-    const response=await arenaAnimate({project_id:project.id,storyboard:{songDuration:project.song_duration||0,scenes:[{scene:img.scene_number,scene_title:img.scene_title,startTime:0,endTime:Number(img.timestamp_range?.split('-')?.[1]||5),duration_seconds:5,visualEvent:img.prompt_summary||img.prompt_used||img.scene_title}]},images:{images:[{scene:img.scene_number,image_url:img.image_url,asset_id:img.id}]},world:{style:project.selected_style,storyboard_scene:storyboardScene||null}});
+    const storyboardScene=scenes.find(s=>s.scene_number===img.scene_number);const timeline=sceneTimeline(storyboardScene||img,5);
+    const response=await arenaAnimate({project_id:project.id,storyboard:{songDuration:project.song_duration||0,scenes:[{scene:img.scene_number,scene_title:img.scene_title,startTime:timeline.startTime,endTime:timeline.endTime,duration_seconds:timeline.duration,visualEvent:img.prompt_summary||img.prompt_used||img.scene_title}]},images:{images:[{scene:img.scene_number,image_url:img.image_url,asset_id:img.id}]},world:{style:project.selected_style,storyboard_scene:storyboardScene||null}});
     const clips=response?.result?.clips;
     if(Array.isArray(clips)&&clips.length){await persistClip(videoId,img.scene_number,clips[0]); stop(videoId); setBusy(x=>{const n=new Set(x);n.delete(videoId);return n;}); return;}
     const jobId=response?.job_id||response?.result?.job_id||response?.result?.animation_job_id;
