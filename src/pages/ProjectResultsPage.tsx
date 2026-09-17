@@ -17,10 +17,9 @@ import ReviewStatusCard from '@/components/project/ReviewStatusCard';
 import ProjectChangeLogSection from '@/components/project/ProjectChangeLogSection';
 import type { AffectedSectionItem } from '@/components/project/ReviewChangesPanel';
 import { reapproveSection, createChangeLogEntry } from '@/hooks/useReviewChanges';
-import { ArrowLeft, Music2, Sparkles, Lock, Clapperboard, Loader2, ImageIcon, Eye, Download, Settings2 } from 'lucide-react';
+import { ArrowLeft, Music2, Sparkles, Lock, Clapperboard, Loader2, ImageIcon, Eye, Download } from 'lucide-react';
 import FullPreviewModal from '@/components/project/FullPreviewModal';
 import ExportProjectPanel from '@/components/project/ExportProjectPanel';
-import ImageProviderSettingsSection from '@/components/project/ImageProviderSettingsSection';
 import SegmentedVideoRenderer from '@/components/project/SegmentedVideoRenderer';
 import { toast } from 'sonner';
 
@@ -80,12 +79,6 @@ export default function ProjectResultsPage() {
   // Phase 4 — Motion and Video Rendering
   const [motionClips, setMotionClips] = useState<MotionClip[]>([]);
   const [finalVideo, setFinalVideo] = useState<FinalVideo | null>(null);
-
-  // Phase 3+ — Image provider settings (Credit-Safe Mode: default OFF)
-  const [realProvidersEnabled, setRealProvidersEnabled] = useState(false);
-  const [providerActive, setProviderActive] = useState(false);
-  const [providerName, setProviderName] = useState<string>('Manual Upload Only');
-  const [providerEndpoint, setProviderEndpoint] = useState<string | null>(null);
 
   // Review panel interaction state
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
@@ -1077,7 +1070,7 @@ export default function ProjectResultsPage() {
             />
           )}
 
-          {/* Image Provider Settings — Phase 3+ (shown BEFORE Generate Scene Images) */}
+          {/* Arena Provider Authority — Phase 3+ */}
           {sceneImagesUnlocked && (
             <section className="section-unlock space-y-3">
               <div className="flex items-center gap-3 mb-2">
@@ -1085,29 +1078,18 @@ export default function ProjectResultsPage() {
                   className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                   style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}
                 >
-                  <Settings2 className="w-4 h-4 text-emerald-400" />
+                  <Sparkles className="w-4 h-4 text-emerald-400" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-lg text-foreground">Image Provider Settings</h2>
+                  <h2 className="font-bold text-lg text-foreground">Arena Provider Pipeline</h2>
                   <p className="text-xs text-muted-foreground">
-                    Credit-Safe Mode · Real AI providers disabled by default · Manual upload always available
+                    BeatVision does not call third-party image providers directly. Arena owns language, image, motion, and final assembly execution.
                   </p>
                 </div>
               </div>
-              <ImageProviderSettingsSection
-                project={project}
-                onProvidersEnabledChange={(enabled) => setRealProvidersEnabled(enabled)}
-                onSettingsSaved={(s) => {
-                  setRealProvidersEnabled(s.real_ai_providers_enabled);
-                  const isActive = s.real_ai_providers_enabled &&
-                    s.enabled &&
-                    s.provider_name !== 'Manual Upload Only' &&
-                    s.provider_name !== 'Disabled';
-                  setProviderActive(isActive);
-                  setProviderName(s.provider_name);
-                  setProviderEndpoint(s.api_endpoint ?? null);
-                }}
-              />
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-xs text-emerald-300/80">
+                Language: Pollinations · Images: Pixazo SDXL/Flux · Motion: Pixazo LTX · Assembly: Shotstack. Provider credentials remain server-side in Arena.
+              </div>
             </section>
           )}
 
@@ -1131,10 +1113,10 @@ export default function ProjectResultsPage() {
               <GenerateSceneImagesSection
                 project={project}
                 prompts={scenePrompts}
-                realProvidersEnabled={realProvidersEnabled}
-                providerActive={providerActive}
-                providerName={providerName}
-                providerEndpoint={providerEndpoint}
+                realProvidersEnabled={true}
+                providerActive={true}
+                providerName="BeatVision Arena"
+                providerEndpoint={null}
                 onProjectUpdate={(updated) => setProject(p => p ? { ...p, ...updated } : p)}
                 onSceneImagesUpdate={(imgs) => setSceneImages(imgs)}
               />
