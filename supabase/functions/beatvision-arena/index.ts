@@ -1,19 +1,34 @@
 const CONTRACT = '1.1';
+const JOB_PATH = /^\/v1\/video\/animate\/jobs\/[A-Za-z0-9._:-]+$/;
+const ALLOWED_POST_PATHS = [
+  '/v1/image/scenes',
+  '/v1/video/animate',
+  '/v1/video/assemble',
+  '/v1/capabilities',
+];
 
-function cors(request: Request) {
+function allowedOrigins(env: Record<string, string>) {
+  return String(env.BEATVISION_ALLOWED_ORIGINS || '').split(',').map((x) => x.trim()).filter(Boolean);
+}
+
+function cors(request: Request, env: Record<string, string>) {
   const origin = request.headers.get('Origin') || '';
-  return {
-    'Access-Control-Allow-Origin': origin || '*',
+  const allowed = allowedOrigins(env);
+  const headers: Record<string, string> = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-beatvision-request',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Vary': 'Origin',
   };
+  if (origin && (!allowed.length || allowed.includes(origin))) headers['Access-Control-Allow-Origin'] = origin;
+  else if (!origin && allowed[0]) headers['Access-Control-Allow-Origin'] = allowed[0];
+  else if (!allowed.length) headers['Access-Control-Allow-Origin'] = '*';
+  return headers;
 }
 
-function json(request: Request, body: unknown, status = 200) {
+function json(request: Request, env: Record<string, string>, body: unknown, status = 200) {
   return new Response(JSON.stringify(body, null, 2), {
     status,
-    headers: { 'Content-Type': 'application/json', ...cors(request) },
+    headers: { 'Content-Type': 'application/json', ...cors(request, env) },
   });
 }
 
@@ -40,41 +55,82 @@ async function hydrateAudio(payload: Record<string, unknown>) {
   return { ...payload, audio_base64: base64(bytes) };
 }
 
+async function assertProjectAccess(request: Request, env: Record<string, string>, projectId: unknown) {
+  if (!projectId) return;
+  const supabaseUrl = String(env.SUPABASE_URL || '').replace(/\/$/, '');
+  const anonKey = String(env.SUPABASE_ANON_KEY || '');
+  const authorization = request.headers.get('Authorization') || '';
+  if (!supabaseUrl || !anonKey || !/^Bearer\s+\S+$/i.test(authorization)) throw new Error('Authenticated project access could not be established.');
+  const url = `${supabaseUrl}/rest/v1/projects?select=id&id=eq.${encodeURIComponent(String(projectId))}&limit=1`;
+  const response = await fetch(url, {
+    headers: {
+      apikey: anonKey,
+      Authorization: authorization,
+      Accept: 'application/json',
+    },
+  });
+  if (!response.ok) throw new Error('Project authorization check failed.');
+  const rows = await response.json().catch(() => []);
+  if (!Array.isArray(rows) || rows.length !== 1) throw new Error('Project access denied.');
+}
+
+function validPath(path: string, method: string) {
+  if (method === 'GET') return /^\/health$|^\/v1\/capabilities$|^\/v1\/video\/animate\/jobs\/[A-Za-z0-9._:-]+$/.test(path);
+  return ALLOWED_POST_PATHS.includes(path) || JOB_PATH.test(path);
+}
+
 export default {
   async fetch(request: Request, env: Record<string, string>) {
-    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(request) });
+    if (request.method === 'OPTIONS') {
+      const origin = request.headers.get('Origin') || '';
+      const allowed = allowedOrigins(env);
+      if (origin && allowed.length && !allowed.includes(origin)) return new Response(null, { status: 403, headers: cors(request, env) });
+      return new Response(null, { status: 204, headers: cors(request, env) });
+    }
 
     // Supabase Edge Functions validate the caller JWT before entering this function.
     // Never accept an Arena credential from browser input.
     const arenaUrl = String(env.ARENA_GATEWAY_URL || '').trim().replace(/\/$/, '');
     const arenaToken = String(env.ARENA_GATEWAY_TOKEN || '').trim();
-    if (!arenaUrl || !arenaToken) return json(request, { ok: false, status: 'provider_unavailable', error: 'BeatVision Arena gateway is not configured.' }, 503);
+    if (!arenaUrl || !arenaToken) return json(request, env, { ok: false, status: 'provider_unavailable', error: 'BeatVision Arena gateway is not configured.' }, 503);
+    if (!validPath(new URL(request.url).pathname === '/functions/v1/beatvision-arena' ? '/' : String(new URL(request.url).pathname), request.method)) {
+      // Supabase invokes this function at a fixed outer path; callers provide the Arena route in the POST body.
+    }
 
     let input: any = {};
     if (request.method === 'POST') {
       try { input = await request.json(); }
-      catch { return json(request, { ok: false, error: 'Invalid JSON body.' }, 400); }
+      catch { return json(request, env, { ok: false, error: 'Invalid JSON body.' }, 400); }
     }
 
     const id = requestId(request, input?.request_id);
     const path = String(input?.path || '/');
     const operation = String(input?.operation || '');
-    const target = `${arenaUrl}${path.startsWith('/') ? path : `/${path}`}`;
+    const isJobPath = JOB_PATH.test(path);
 
     if (request.method === 'GET') {
-      if (!/^\/health$|^\/v1\/capabilities$|^\/v1\/video\/animate\/jobs\/[A-Za-z0-9._:-]+$/.test(path)) return json(request, { ok: false, error: 'Unsupported Arena GET path.' }, 400);
+      if (!validPath(path, request.method)) return json(request, env, { ok: false, error: 'Unsupported Arena GET path.' }, 400);
     } else if (request.method !== 'POST') {
-      return json(request, { ok: false, error: 'POST or GET required.' }, 405);
+      return json(request, env, { ok: false, error: 'POST or GET required.' }, 405);
+    } else if (!validPath(path, request.method)) {
+      return json(request, env, { ok: false, error: 'Unsupported Arena POST path.' }, 400);
     }
 
     try {
       let body: string | undefined;
       if (request.method === 'POST') {
-        if (input.contract_version !== CONTRACT) return json(request, { ok: false, error: `Expected BeatVision contract ${CONTRACT}.`, request_id: id }, 400);
-        const payload = operation === 'assemble' ? await hydrateAudio(input.payload || {}) : (input.payload || {});
-        body = JSON.stringify({ contract_version: CONTRACT, operation, payload, request_id: id, job_id: input.job_id });
+        if (input.contract_version !== CONTRACT) return json(request, env, { ok: false, error: `Expected BeatVision contract ${CONTRACT}.`, request_id: id }, 400);
+        const payload = input.payload && typeof input.payload === 'object' ? input.payload : {};
+        await assertProjectAccess(request, env, payload.project_id);
+        if (operation === 'animationJob' && isJobPath) {
+          body = JSON.stringify({ ...payload, contract_version: CONTRACT, request_id: id, job_id: input.job_id || path.split('/').pop() });
+        } else {
+          const hydrated = operation === 'assemble' ? await hydrateAudio(payload) : payload;
+          body = JSON.stringify({ contract_version: CONTRACT, operation, payload: hydrated, request_id: id, job_id: input.job_id });
+        }
       }
 
+      const target = `${arenaUrl}${path.startsWith('/') ? path : `/${path}`}`;
       const response = await fetch(target, {
         method: request.method,
         headers: {
@@ -87,18 +143,20 @@ export default {
       });
       const text = await response.text();
       let data: any;
-      try { data = JSON.parse(text); } catch { data = { ok: false, error: text.slice(0, 4000) }; }
+      try { data = JSON.parse(text); } catch { data = { ok: false, error: text.slice(0, 1200) }; }
       if (data && typeof data === 'object' && !data.request_id) data.request_id = id;
-      return json(request, data, response.status);
+      return json(request, env, data, response.status);
     } catch (error) {
-      return json(request, {
+      const message = error instanceof Error ? error.message : String(error);
+      const status = /access denied|authorization check/i.test(message) ? 403 : 502;
+      return json(request, env, {
         ok: false,
         contract_version: CONTRACT,
-        status: 'provider_error',
+        status: status === 403 ? 'project_access_denied' : 'provider_error',
         provider: 'beatvision-arena',
         request_id: id,
-        error: error instanceof Error ? error.message : String(error),
-      }, 502);
+        error: message.slice(0, 500),
+      }, status);
     }
   },
 };
