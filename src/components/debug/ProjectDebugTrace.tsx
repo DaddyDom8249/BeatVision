@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Bug, Download, Trash2, Pause, Play, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/db/supabase';
 import {
   debugTraceClear,
   debugTraceEnsure,
@@ -26,6 +27,8 @@ export default function ProjectDebugTrace() {
   const [events, setEvents] = useState<DebugTraceEvent[]>(() => projectId ? (debugTraceRead(projectId)?.events ?? []) : []);
   const [open, setOpen] = useState(false);
   const [paused, setPaused] = useState(false);
+  const userIdRef = useRef<string | null>(null);
+  const persistingRef = useRef(false);
 
   useEffect(() => {
     const onNavigation = () => setPathname(window.location.pathname);
@@ -39,13 +42,52 @@ export default function ProjectDebugTrace() {
 
   useEffect(() => {
     if (!projectId) return;
+
+    let disposed = false;
+    userIdRef.current = null;
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!disposed) userIdRef.current = data.user?.id ?? null;
+    }).catch(() => {
+      // Local diagnostics remain available if auth lookup is temporarily unavailable.
+    });
+
+    const persistEvent = async (event: DebugTraceEvent) => {
+      if (!userIdRef.current || persistingRef.current || event.category === 'remotePersistence') return;
+      persistingRef.current = true;
+      try {
+        const { error } = await supabase.from('project_debug_trace_events').insert({
+          project_id: projectId,
+          user_id: userIdRef.current,
+          created_at: event.at,
+          level: event.level,
+          category: event.category,
+          message: event.message,
+          details: event.details ?? {},
+        });
+        if (error) {
+          debugTraceLog(projectId, 'warn', 'remotePersistence', 'Remote debug trace write failed', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+          });
+        }
+      } catch (error) {
+        debugTraceLog(projectId, 'warn', 'remotePersistence', 'Remote debug trace write threw', { error });
+      } finally {
+        persistingRef.current = false;
+      }
+    };
+
     debugTraceEnsure(projectId);
     setEvents(debugTraceRead(projectId)?.events ?? []);
     debugTraceLog(projectId, 'info', 'lifecycle', 'Project debug trace attached', { path: pathname });
 
     const onTrace = (event: Event) => {
       const detail = (event as CustomEvent<{ projectId: string; event: DebugTraceEvent }>).detail;
-      if (detail?.projectId === projectId) setEvents(debugTraceRead(projectId)?.events ?? []);
+      if (detail?.projectId !== projectId) return;
+      setEvents(debugTraceRead(projectId)?.events ?? []);
+      void persistEvent(detail.event);
     };
     const onError = (event: ErrorEvent) => {
       debugTraceLog(projectId, 'error', 'browser', 'Unhandled browser error', {
@@ -95,6 +137,7 @@ export default function ProjectDebugTrace() {
 
       try {
         const response = await originalFetch(input, init);
+        if (persistingRef.current) return response;
         const durationMs = Math.round(performance.now() - started);
         const details: Record<string, unknown> = {
           traceId,
@@ -108,7 +151,6 @@ export default function ProjectDebugTrace() {
           responseRequestId: response.headers.get('x-request-id') || response.headers.get('x-supabase-request-id'),
         };
 
-        // Keep successful traffic compact. For failures, capture the actual request and response diagnostics.
         if (!response.ok) {
           details.requestHeaders = debugTraceHeaders(requestHeaders);
           const requestCapture = await debugTraceRequestBody(requestBody, requestContentType);
@@ -124,6 +166,7 @@ export default function ProjectDebugTrace() {
         }
         return response;
       } catch (error) {
+        if (persistingRef.current) throw error;
         debugTraceLog(projectId, 'error', 'network', 'Fetch failed before HTTP response', {
           traceId,
           method,
@@ -153,6 +196,7 @@ export default function ProjectDebugTrace() {
     window.addEventListener('unhandledrejection', onRejection);
     window.addEventListener('click', onClick, true);
     return () => {
+      disposed = true;
       window.fetch = originalFetch;
       console.error = originalConsoleError;
       console.warn = originalConsoleWarn;
