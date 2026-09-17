@@ -292,9 +292,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
         const { error: staleError } = await supabase.from('scene_visual_prompts').delete().in('id', stale);
         if (staleError) throw staleError;
       }
-      const data = savedRows; const error = null;
-      if (error) throw error;
-      const savedPrompts = (Array.isArray(saved) ? saved : []) as SceneVisualPrompt[];
+      const savedPrompts = savedRows;
       setScenePrompts(savedPrompts);
       return savedPrompts;
     } finally {
@@ -320,9 +318,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
         worldReport: worldReportContext,
       });
       const previewsData = (Array.isArray(result?.data) ? result.data : []) as Record<string, unknown>[];
-      if (!previewsData.length) return;
-
-      await supabase.from('scene_previews').delete().eq('project_id', project.id);
+      if (!previewsData.length || previewsData.length !== promptsList.length) throw new Error(`Arena returned ${previewsData.length} scene previews for ${promptsList.length} prompts.`);
 
       const toInsert = previewsData.map((d, i) => {
         const matchingPrompt = promptsList.find((p) => p.scene_number === (d.scene_number as number)) || promptsList[i];
@@ -342,12 +338,22 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
         };
       });
 
-      const { data: saved, error } = await supabase
-        .from('scene_previews')
-        .insert(toInsert)
-        .select();
-      if (error) throw error;
-      setScenePreviews((Array.isArray(saved) ? saved : []) as ScenePreview[]);
+      const savedRows: ScenePreview[] = [];
+      for (const row of toInsert) {
+        const existing = scenePreviews.find((p) => p.scene_visual_prompt_id === row.scene_visual_prompt_id);
+        const result = existing
+          ? await supabase.from('scene_previews').update(row).eq('id', existing.id).select().maybeSingle()
+          : await supabase.from('scene_previews').insert(row).select().maybeSingle();
+        if (result.error || !result.data) throw result.error || new Error('Failed to save scene preview.');
+        savedRows.push(result.data as ScenePreview);
+      }
+      const keepIds = new Set(toInsert.map((row) => row.scene_visual_prompt_id).filter(Boolean));
+      const stale = scenePreviews.filter((p) => !keepIds.has(p.scene_visual_prompt_id)).map((p) => p.id);
+      if (stale.length) {
+        const { error: staleError } = await supabase.from('scene_previews').delete().in('id', stale);
+        if (staleError) throw staleError;
+      }
+      setScenePreviews(savedRows);
     } finally {
       setGenPreviews(false);
     }
