@@ -9,6 +9,7 @@ import type {
 } from '@/types/types';
 import { supabase } from '@/db/supabase';
 import { arenaAnimate, arenaAnimationJob } from '@/lib/beatvision/arena';
+import { sceneTimeline } from '@/lib/beatvision/timeline';
 import { toast } from 'sonner';
 
 interface Props {
@@ -306,6 +307,7 @@ export default function MotionClipSection({
       const img = getImage(plan);
       if (!img?.image_url) throw new Error(`Scene ${plan.scene_number} has no approved image for Arena motion.`);
       const existing = getClip(plan);
+      const timeline = sceneTimeline(plan, Number(plan.duration || 4));
       if (existing && regenerate) {
         await supabase.from('motion_clips').delete().eq('id', existing.id);
       }
@@ -316,9 +318,9 @@ export default function MotionClipSection({
           scenes: [{
             scene: plan.scene_number,
             scene_title: plan.scene_title,
-            startTime: 0,
-            endTime: Number(plan.duration || 4),
-            duration_seconds: Number(plan.duration || 4),
+            startTime: timeline.startTime,
+            endTime: timeline.endTime,
+            duration_seconds: timeline.duration,
             visualEvent: plan.scene_title || `Scene ${plan.scene_number}`,
             cameraDirection: 'Cinematic',
           }],
