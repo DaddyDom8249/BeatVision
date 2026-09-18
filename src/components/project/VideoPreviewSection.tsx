@@ -70,7 +70,7 @@ function InAppPreviewPlayer({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Accept ready_for_review OR approved — fallback clips count as valid
+  // Preview can inspect Arena clips that are ready for review or already approved
   const playableClips = clips
     .filter((c) => c.approved || c.generation_status === 'ready_for_review')
     .sort((a, b) => a.scene_number - b.scene_number);
@@ -303,7 +303,7 @@ export default function VideoPreviewSection({
 
       <p className="text-sm text-muted-foreground/70">
         Combine all motion clips into a playable preview with your song audio, captions, and transitions.
-        Fallback canvas clips are fully supported — no real AI video required.
+        Motion clips shown here come from the Arena execution pipeline; this screen is preview-only and never generates production media.
       </p>
 
       {/* Blocker help toggle */}
