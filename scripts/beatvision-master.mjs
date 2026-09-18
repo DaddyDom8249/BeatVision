@@ -72,6 +72,7 @@ if (arenaAvailable) {
   check('Arena storyboard quality gate', exists(arenaFile('worker/src/visual-beat-engine.ts')) && /normalizeVisualBeats/.test(text(arenaFile('worker/src/visual-beat-engine.ts'))), 'duration-aware visual beat normalization available');
   const arenaActive = ['worker/src/arena-entry.ts','worker/src/arena-validated-entry.ts','worker/src/animation-jobs.ts','worker/src/render-integrity.ts','worker/src/shotstack-gateway.ts','worker/src/video-fallback-gateway.ts'].filter(existsArena => exists(arenaFile(existsArena))).map(existsArena => text(arenaFile(existsArena))).join('\\n');
   check('Arena generative-only motion', !/CAMERA_MOTION_FALLBACK|camera-motion fallback|allow_camera_motion_fallback/i.test(arenaActive), 'no camera-motion fallback in active Arena execution');
+  check('Arena motion provenance contract', /approval_status/.test(arenaActive) && /generation_type:\'GENERATIVE_VIDEO\'/.test(arenaActive), 'motion responses preserve provider provenance and generative-video identity');
 }
 
 const generateFunction = path.join(ROOT, 'supabase/functions/beatvision-generate/index.ts');
