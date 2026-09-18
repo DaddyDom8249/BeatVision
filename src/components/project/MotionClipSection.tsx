@@ -600,7 +600,7 @@ export default function MotionClipSection({
                   </span>
                   {clip?.fallback_generated && (
                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(139,92,246,0.12)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.25)' }}>
-                      Canvas Fallback
+                      Arena motion unavailable
                     </span>
                   )}
                   {planError && <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
@@ -669,7 +669,7 @@ export default function MotionClipSection({
                     <p className="text-muted-foreground/50 mt-1">
                       Scene: {plan.scene_title ?? `Scene ${plan.scene_number}`} ·{' '}
                       Motion: {plan.motion_effect} ·{' '}
-                      Image: {img ? 'Found' : 'Missing (using placeholder)'}
+                      Image: {img ? 'Found' : 'Missing'}
                     </p>
                   </div>
                   <button
@@ -687,7 +687,7 @@ export default function MotionClipSection({
                     style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.35)', color: '#93c5fd' }}
                   >
                     {isGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                    Retry with Fallback
+                    Retry with Arena
                   </button>
                 </div>
               </div>
