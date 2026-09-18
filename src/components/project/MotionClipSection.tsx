@@ -8,6 +8,7 @@ import type {
   Project, SceneMotionPlan, SceneImage, MotionClip, MotionSettings,
 } from '@/types/types';
 import { supabase } from '@/db/supabase';
+import { arenaAnimate, arenaAnimationJob } from '@/lib/beatvision/arena';
 import { toast } from 'sonner';
 
 interface Props {
@@ -235,35 +236,63 @@ export default function MotionClipSection({
   const clearClipError = (planId: string) =>
     setClipErrors((prev) => { const n = { ...prev }; delete n[planId]; return n; });
 
-  // Build fallback clip insert payload — every column matches the DB schema
-  const buildFallbackClipData = (plan: SceneMotionPlan, img: SceneImage | undefined) => ({
-    project_id: project.id,
-    scene_motion_plan_id: plan.id,
-    storyboard_scene_id: plan.storyboard_scene_id ?? null,
-    scene_image_id: img?.id ?? plan.scene_image_id ?? null,
-    scene_number: plan.scene_number,
-    scene_title: plan.scene_title ?? null,
-    clip_url: null,
-    preview_url: img?.image_url ?? null,
-    duration: plan.duration ?? 4,
-    motion_effect: plan.motion_effect ?? 'Slow Zoom In',
-    transition_in: plan.transition_in ?? 'Fade',
-    transition_out: plan.transition_out ?? 'Fade',
-    caption_text: plan.caption_text ?? null,
-    generation_status: 'ready_for_review' as const,
-    status: 'ready_for_review' as const,
-    approved: false,
-    rejected: false,
-    fallback_generated: true,
-    pending: false,
-    failed: false,
-    needs_review: false,
-    updated_after_approval: false,
-    error_message: null,
-    last_approved_at: null,
-  });
+  // Persist only real Arena motion output. Canvas previews remain UI-only and never become production clips.
+  const persistArenaClip = async (plan: SceneMotionPlan, clip: any): Promise<MotionClip> => {
+    const url = clip?.video_url || clip?.url || null;
+    if (!url) throw new Error(`Arena returned no motion video for Scene ${plan.scene_number}.`);
+    const payload = {
+      project_id: project.id,
+      scene_motion_plan_id: plan.id,
+      storyboard_scene_id: plan.storyboard_scene_id ?? null,
+      scene_image_id: plan.scene_image_id ?? getImage(plan)?.id ?? null,
+      scene_number: plan.scene_number,
+      scene_title: plan.scene_title ?? null,
+      clip_url: url,
+      preview_url: url,
+      duration: Number(clip?.duration_seconds || clip?.requested_duration_seconds || plan.duration || 4),
+      motion_effect: plan.motion_effect ?? 'Arena LTX Motion',
+      transition_in: plan.transition_in ?? 'Fade',
+      transition_out: plan.transition_out ?? 'Fade',
+      caption_text: plan.caption_text ?? null,
+      generation_status: 'ready_for_review' as const,
+      status: 'ready_for_review' as const,
+      approved: false,
+      rejected: false,
+      fallback_generated: false,
+      pending: false,
+      failed: false,
+      needs_review: true,
+      updated_after_approval: false,
+      error_message: null,
+      prompt_used: clip?.source || 'BeatVision Arena LTX motion',
+      updated_at: new Date().toISOString(),
+    };
+    const existing = getClip(plan);
+    const query = existing
+      ? supabase.from('motion_clips').update(payload).eq('id', existing.id).select().maybeSingle()
+      : supabase.from('motion_clips').upsert(payload, { onConflict: 'project_id,scene_number' }).select().maybeSingle();
+    const { data, error } = await query;
+    if (error) throw new Error(`DB error saving Arena motion for Scene ${plan.scene_number}: ${error.message}`);
+    if (!data) throw new Error(`Arena motion record was not saved for Scene ${plan.scene_number}.`);
+    return data as MotionClip;
+  };
 
-  // Generate one clip — always succeeds via fallback; surfaces exact DB error
+  const waitForArenaJob = async (jobId: string, plan: SceneMotionPlan): Promise<MotionClip> => {
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const data = await arenaAnimationJob(jobId);
+      const result = data?.result || data;
+      if (Array.isArray(result?.clips) && result.clips.length) {
+        const matching = result.clips.find((clip: any) => Number(clip?.scene) === plan.scene_number) || result.clips[0];
+        return persistArenaClip(plan, matching);
+      }
+      const status = String(result?.status || '');
+      if (status === 'failed') throw new Error(result?.error || `Arena motion job failed for Scene ${plan.scene_number}.`);
+      if (status === 'completed' || status === 'partial') throw new Error(`Arena motion job completed without a clip for Scene ${plan.scene_number}.`);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+    throw new Error(`Arena motion job timed out for Scene ${plan.scene_number}.`);
+  };
+
   const generateClip = async (plan: SceneMotionPlan, regenerate = false): Promise<MotionClip | null> => {
     if (!project.id) {
       const msg = 'Motion clip could not save because project_id was missing.';
@@ -271,50 +300,49 @@ export default function MotionClipSection({
       toast.error(`Scene ${plan.scene_number}: ${msg}`);
       return null;
     }
-    if (!plan.storyboard_scene_id) {
-      // Allow — storyboard_scene_id is nullable; just log it
-      console.warn(`Scene ${plan.scene_number}: storyboard_scene_id is null — creating clip without it.`);
-    }
-
     setGenerating((p) => ({ ...p, [plan.id]: true }));
     clearClipError(plan.id);
     try {
       const img = getImage(plan);
+      if (!img?.image_url) throw new Error(`Scene ${plan.scene_number} has no approved image for Arena motion.`);
       const existing = getClip(plan);
-      const clipData = buildFallbackClipData(plan, img);
-
-      let result: MotionClip;
-      if (existing && !regenerate) {
-        const updatePayload = { ...clipData, updated_at: new Date().toISOString() };
-        const { data, error } = await supabase
-          .from('motion_clips')
-          .update(updatePayload)
-          .eq('id', existing.id)
-          .select()
-          .maybeSingle();
-        if (error) throw new Error(`DB update error for Scene ${plan.scene_number}: ${error.message} (code: ${error.code})`);
-        if (!data) throw new Error(`Motion clip update returned no data for Scene ${plan.scene_number}. Row may have been deleted.`);
-        result = data as MotionClip;
-      } else {
-        if (existing) {
-          await supabase.from('motion_clips').delete().eq('id', existing.id);
-        }
-        const { data, error } = await supabase
-          .from('motion_clips')
-          .insert(clipData)
-          .select()
-          .maybeSingle();
-        if (error) throw new Error(`DB insert error for Scene ${plan.scene_number}: ${error.message} (code: ${error.code})`);
-        if (!data) throw new Error(`Motion clip insert returned no data for Scene ${plan.scene_number}.`);
-        result = data as MotionClip;
+      if (existing && regenerate) {
+        await supabase.from('motion_clips').delete().eq('id', existing.id);
       }
-
-      onClipsUpdate([...clips.filter((c) => c.id !== existing?.id), result]);
-      toast.success(`Scene ${plan.scene_number} motion clip ready. (Fallback canvas mode)`);
-      return result;
+      const response = await arenaAnimate({
+        project_id: project.id,
+        storyboard: {
+          songDuration: project.song_duration || 0,
+          scenes: [{
+            scene: plan.scene_number,
+            scene_title: plan.scene_title,
+            startTime: 0,
+            endTime: Number(plan.duration || 4),
+            duration_seconds: Number(plan.duration || 4),
+            visualEvent: plan.scene_title || `Scene ${plan.scene_number}`,
+            cameraDirection: 'Cinematic',
+          }],
+        },
+        images: { images: [{ scene: plan.scene_number, image_url: img.image_url, asset_id: img.id }] },
+        world: { style: project.selected_style, motion_plan: plan },
+      });
+      const immediate = response?.result?.clips;
+      if (Array.isArray(immediate) && immediate.length) {
+        const matching = immediate.find((clip: any) => Number(clip?.scene) === plan.scene_number) || immediate[0];
+        const saved = await persistArenaClip(plan, matching);
+        onClipsUpdate([...clips.filter((c) => c.id !== existing?.id), saved]);
+        toast.success(`Scene ${plan.scene_number} generated by Arena.`);
+        return saved;
+      }
+      const jobId = response?.job_id || response?.result?.job_id || response?.result?.animation_job_id;
+      if (!jobId) throw new Error(`Arena returned neither a motion clip nor a durable job for Scene ${plan.scene_number}.`);
+      const saved = await waitForArenaJob(jobId, plan);
+      onClipsUpdate([...clips.filter((c) => c.id !== existing?.id), saved]);
+      toast.success(`Scene ${plan.scene_number} generated by Arena.`);
+      return saved;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : `Unknown error generating clip for Scene ${plan.scene_number}.`;
-      console.error('generateClip error', err);
+      const msg = err instanceof Error ? err.message : `Unknown Arena motion error for Scene ${plan.scene_number}.`;
+      console.error('Arena generateClip error', err);
       setClipErrors((p) => ({ ...p, [plan.id]: msg }));
       toast.error(`Scene ${plan.scene_number}: ${msg}`);
       return null;
@@ -389,7 +417,7 @@ export default function MotionClipSection({
     if (failCount === 0) {
       await supabase.from('projects').update({ status: 'Motion Clips In Review' }).eq('id', project.id);
       onProjectUpdate({ status: 'Motion Clips In Review' });
-      toast.success(`All ${successCount} motion clips created using fallback canvas motion.`);
+      toast.success(`All ${successCount} motion clips generated by Arena.`);
     } else if (successCount > 0) {
       await supabase.from('projects').update({ status: 'Motion Clips In Review' }).eq('id', project.id);
       onProjectUpdate({ status: 'Motion Clips In Review' });
