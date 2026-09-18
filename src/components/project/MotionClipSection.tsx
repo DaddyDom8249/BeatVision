@@ -308,9 +308,6 @@ export default function MotionClipSection({
       if (!img?.image_url) throw new Error(`Scene ${plan.scene_number} has no approved image for Arena motion.`);
       const existing = getClip(plan);
       const timeline = sceneTimeline(plan, Number(plan.duration || 4));
-      if (existing && regenerate) {
-        await supabase.from('motion_clips').delete().eq('id', existing.id);
-      }
       const response = await arenaAnimate({
         project_id: project.id,
         storyboard: {
