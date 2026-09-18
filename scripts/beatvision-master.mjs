@@ -71,7 +71,6 @@ if (arenaAvailable) {
   check('Arena durable animation worker', exists(arenaFile('worker/src/animation-jobs.ts')), 'durable animation job implementation available');
   check('Arena storyboard quality gate', exists(arenaFile('worker/src/visual-beat-engine.ts')) && /normalizeVisualBeats/.test(text(arenaFile('worker/src/visual-beat-engine.ts'))), 'duration-aware visual beat normalization available');
 }
-}
 
 const generateFunction = path.join(ROOT, 'supabase/functions/beatvision-generate/index.ts');
 const projectPage = path.join(ROOT, 'src/pages/ProjectResultsPage.tsx');
@@ -87,7 +86,6 @@ check('legacy segmented renderer removed', !exists(path.join(ROOT, 'src/componen
 
 if (repair && arenaAvailable) {
   // Safe repair only: install deterministic audit gates and CI. No runtime provider code is copied.
-  // The Arena gates are reference-only until BeatVision implements their required runtime modules.
   warn('Arena gates not transplanted', 'Skipped incompatible Arena-only tests; the master runner audits capability boundaries instead.');
   const workflow = path.join(ROOT, ".github/workflows/beatvision-master.yml");
   check("master workflow", exists(workflow), "create .github/workflows/beatvision-master.yml from the repository template if absent");
