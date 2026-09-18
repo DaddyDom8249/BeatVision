@@ -12,7 +12,7 @@ interface Props { project:Project; scenes:StoryboardScene[]; plans:SceneMotionPl
 export default function FinalVideoRenderSection({project,scenes,plans,clips,motionSettings,finalVideo,onFinalVideoUpdate,onRenderJobUpdate,onProjectUpdate}:Props){
   const [running,setRunning]=useState(false); const [error,setError]=useState<string|null>(null); const [url,setUrl]=useState(finalVideo?.video_url||null);
   const approvedScenes=scenes.filter(s=>s.approved);
-  const renderable=clips.filter(c=>c.approved && !c.fallback_generated);
+  const renderable=clips.filter(c=>c.approved);
   const renderableSceneNumbers=new Set(renderable.map(c=>c.scene_number));
   const exactCoverage=approvedScenes.length===scenes.length &&
     renderable.length===approvedScenes.length &&
@@ -27,8 +27,8 @@ export default function FinalVideoRenderSection({project,scenes,plans,clips,moti
       const {data:jd,error:je}=await supabase.from('video_render_jobs').insert({project_id:project.id,render_type:'final',status:'running',video_format:motionSettings?.video_format||'16:9 Landscape',video_quality:motionSettings?.video_quality||'HD 1080p',started_at:new Date().toISOString()}).select().maybeSingle();
       if(je||!jd)throw je||new Error('Unable to create render job.'); job=jd as VideoRenderJob;onRenderJobUpdate(job);
       const storyboard={songDuration:project.song_duration||0,scenes:scenes.map(s=>{const timeline=sceneTimeline(s,5);return{scene:s.scene_number,scene_title:s.scene_title,startTime:timeline.startTime,endTime:timeline.endTime,duration_seconds:timeline.duration,visualEvent:s.visual_description,cameraDirection:s.camera_direction,mood:s.mood,location:s.location,lyricMoment:s.lyric_moment};})};
-      const motion={clips:renderable.map(c=>({scene:c.scene_number,asset_id:c.id,video_url:c.clip_url||c.preview_url,duration_seconds:c.duration||5,requested_duration_seconds:c.duration||5,provider:'pixazo',model:'ltx-video',generation_type:c.fallback_generated?'CAMERA_MOTION_FALLBACK':'GENERATIVE_VIDEO'}))};
-      const result=await arenaAssemble({project_id:project.id,storyboard,motion,audio_url:project.song_file,song_duration_seconds:project.song_duration||null,allow_camera_motion_fallback:false});
+      const motion={clips:renderable.map(c=>({scene:c.scene_number,asset_id:c.id,video_url:c.clip_url||c.preview_url,duration_seconds:c.duration||5,requested_duration_seconds:c.duration||5,provider:'pixazo',model:'ltx-video',generation_type:'GENERATIVE_VIDEO'}))};
+      const result=await arenaAssemble({project_id:project.id,storyboard,motion,audio_url:project.song_file,song_duration_seconds:project.song_duration||null});
       const finalUrl=result?.result?.video_url||result?.result?.preview_url||null;
       if(!finalUrl)throw new Error('Arena/Shotstack completed without a final MP4 URL.');
       setUrl(finalUrl);
