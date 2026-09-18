@@ -239,8 +239,8 @@ export default function MotionClipSection({
 
   // Persist only real Arena motion output. Canvas previews remain UI-only and never become production clips.
   const persistArenaClip = async (plan: SceneMotionPlan, clip: any): Promise<MotionClip> => {
-    if (String(clip?.generation_type || '') === 'CAMERA_MOTION_FALLBACK') {
-      throw new Error(`Arena returned a non-generative camera-motion fallback for Scene ${plan.scene_number}. Production BeatVision clips require Arena generative motion output.`);
+    if (String(clip?.generation_type || '') !== 'GENERATIVE_VIDEO') {
+      throw new Error(`Arena returned a non-generative motion result for Scene ${plan.scene_number}. Production BeatVision clips require Arena generative motion output.`);
     }
     const url = clip?.video_url || clip?.url || null;
     if (!url) throw new Error(`Arena returned no motion video for Scene ${plan.scene_number}.`);
@@ -601,11 +601,7 @@ export default function MotionClipSection({
                   >
                     {STATUS_LABELS[status] ?? status}
                   </span>
-                  {clip?.fallback_generated && (
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(139,92,246,0.12)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.25)' }}>
-                      Arena motion unavailable
-                    </span>
-                  )}
+
                   {planError && <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
                 </div>
               </div>
