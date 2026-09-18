@@ -242,7 +242,7 @@ export default function VideoPreviewSection({
   };
 
   // Accept clips that are ready_for_review OR approved (fallback clips count)
-  const playableClips = clips.filter((c) => c.approved || c.generation_status === 'ready_for_review');
+  const playableClips = clips.filter((c) => !c.fallback_generated && (c.approved || c.generation_status === 'ready_for_review'));
   const included      = plans.filter((p) => p.include_in_final_video !== false);
 
   // Can generate preview if any included scene has a clip ready

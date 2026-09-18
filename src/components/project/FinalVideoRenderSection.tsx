@@ -12,7 +12,7 @@ interface Props { project:Project; scenes:StoryboardScene[]; plans:SceneMotionPl
 export default function FinalVideoRenderSection({project,scenes,plans,clips,motionSettings,finalVideo,onFinalVideoUpdate,onRenderJobUpdate,onProjectUpdate}:Props){
   const [running,setRunning]=useState(false); const [error,setError]=useState<string|null>(null); const [url,setUrl]=useState(finalVideo?.video_url||null);
   const approvedScenes=scenes.filter(s=>s.approved);
-  const renderable=clips.filter(c=>c.approved);
+  const renderable=clips.filter(c=>c.approved && !c.fallback_generated);
   const renderableSceneNumbers=new Set(renderable.map(c=>c.scene_number));
   const exactCoverage=approvedScenes.length===scenes.length &&
     renderable.length===approvedScenes.length &&
