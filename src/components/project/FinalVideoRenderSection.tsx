@@ -11,11 +11,16 @@ interface Props { project:Project; scenes:StoryboardScene[]; plans:SceneMotionPl
 
 export default function FinalVideoRenderSection({project,scenes,plans,clips,motionSettings,finalVideo,onFinalVideoUpdate,onRenderJobUpdate,onProjectUpdate}:Props){
   const [running,setRunning]=useState(false); const [error,setError]=useState<string|null>(null); const [url,setUrl]=useState(finalVideo?.video_url||null);
-  const renderable=clips.filter(c=>c.approved||c.generation_status==='ready_for_review');
-  const blocked=!motionSettings?.approved||!scenes.length||renderable.length!==scenes.filter(s=>s.approved!==false).length;
+  const approvedScenes=scenes.filter(s=>s.approved);
+  const renderable=clips.filter(c=>c.approved);
+  const renderableSceneNumbers=new Set(renderable.map(c=>c.scene_number));
+  const exactCoverage=approvedScenes.length===scenes.length &&
+    renderable.length===approvedScenes.length &&
+    approvedScenes.every(s=>renderableSceneNumbers.has(s.scene_number));
+  const blocked=!motionSettings?.approved||!scenes.length||!exactCoverage;
 
   const render=async()=>{
-    if(blocked){setError('Arena assembly requires approved motion settings, an approved storyboard, and one validated motion clip for every storyboard scene.');return;}
+    if(blocked){setError('Arena assembly requires approved motion settings, every storyboard scene approved, and exactly one approved motion clip for every storyboard scene.');return;}
     setRunning(true);setError(null);
     let job:VideoRenderJob|null=null;
     try{
@@ -34,5 +39,5 @@ export default function FinalVideoRenderSection({project,scenes,plans,clips,moti
     }catch(e){const msg=e instanceof Error?e.message:'Arena assembly failed.';setError(msg);if(job)await supabase.from('video_render_jobs').update({status:'failed',error_message:msg}).eq('id',job.id);await supabase.from('projects').update({status:'Render Failed'}).eq('id',project.id);onProjectUpdate({status:'Render Failed'});toast.error(msg);}finally{setRunning(false);}
   };
 
-  return <div className="space-y-5"><div className="flex items-center gap-3"><Film className="w-4 h-4 text-emerald-400"/><div><p className="text-xs font-mono uppercase tracking-widest text-muted-foreground/60">Arena Final Assembly</p><p className="text-xs text-muted-foreground/50">Validated storyboard timeline → approved motion → Shotstack MP4.</p></div></div>{error&&<div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 flex gap-2 text-sm text-red-300"><AlertCircle className="w-4 h-4 shrink-0"/>{error}</div>}{url&&<div className="space-y-2"><video src={url} controls className="w-full rounded-xl bg-black"/><a href={url} target="_blank" rel="noreferrer" className="inline-flex"><Button size="sm"><Download className="w-3 h-3 mr-2"/>Open / Download MP4</Button></a></div>}<Button className="w-full h-11" onClick={render} disabled={running||blocked}>{running?<><Loader2 className="w-4 h-4 mr-2 animate-spin"/>Assembling with Shotstack…</>:url?<><RefreshCw className="w-4 h-4 mr-2"/>Re-assemble Final MP4</>:<><Film className="w-4 h-4 mr-2"/>Assemble Final MP4 with Arena</>}</Button>{blocked&&<p className="text-xs text-center text-muted-foreground/50">Approve every storyboard scene and motion clip before final assembly.</p>}{!blocked&&!url&&<p className="text-xs text-center text-emerald-400/70"><CheckCircle2 className="inline w-3 h-3 mr-1"/>All Arena assembly prerequisites are present.</p>}</div>;
+  return <div className="space-y-5"><div className="flex items-center gap-3"><Film className="w-4 h-4 text-emerald-400"/><div><p className="text-xs font-mono uppercase tracking-widest text-muted-foreground/60">Arena Final Assembly</p><p className="text-xs text-muted-foreground/50">Validated storyboard timeline → approved motion → Shotstack MP4.</p></div></div>{error&&<div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 flex gap-2 text-sm text-red-300"><AlertCircle className="w-4 h-4 shrink-0"/>{error}</div>}{url&&<div className="space-y-2"><video src={url} controls className="w-full rounded-xl bg-black"/><a href={url} target="_blank" rel="noreferrer" className="inline-flex"><Button size="sm"><Download className="w-3 h-3 mr-2"/>Open / Download MP4</Button></a></div>}<Button className="w-full h-11" onClick={render} disabled={running||blocked}>{running?<><Loader2 className="w-4 h-4 mr-2 animate-spin"/>Assembling with Shotstack…</>:url?<><RefreshCw className="w-4 h-4 mr-2"/>Re-assemble Final MP4</>:<><Film className="w-4 h-4 mr-2"/>Assemble Final MP4 with Arena</>}</Button>{blocked&&<p className="text-xs text-center text-muted-foreground/50">Approve every storyboard scene and exactly one motion clip per scene before final assembly.</p>}{!blocked&&!url&&<p className="text-xs text-center text-emerald-400/70"><CheckCircle2 className="inline w-3 h-3 mr-1"/>All Arena assembly prerequisites are present.</p>}</div>;
 }
