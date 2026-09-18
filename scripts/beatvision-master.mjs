@@ -69,12 +69,23 @@ if (arenaAvailable) {
   for (const file of arenaTests) check(`Arena gate ${file}`, exists(arenaFile(file)), 'reference gate available');
   check('Arena validated worker', exists(arenaFile('worker/src/arena-validated-entry.ts')), 'validated entrypoint available');
   check('Arena durable animation worker', exists(arenaFile('worker/src/animation-jobs.ts')), 'durable animation job implementation available');
-  warn('pipeline capability gap', 'BeatVision cloudflare-ai-worker is image-only; Arena full pipeline requires validated entry, animation jobs, and deterministic assembly before claiming parity.');
+  check('Arena storyboard quality gate', exists(arenaFile('worker/src/visual-beat-engine.ts')) && /normalizeVisualBeats/.test(text(arenaFile('worker/src/visual-beat-engine.ts'))), 'duration-aware visual beat normalization available');
 }
+
+const generateFunction = path.join(ROOT, 'supabase/functions/beatvision-generate/index.ts');
+const projectPage = path.join(ROOT, 'src/pages/ProjectResultsPage.tsx');
+const motionSection = path.join(ROOT, 'src/components/project/MotionClipSection.tsx');
+const renderSection = path.join(ROOT, 'src/components/project/FinalVideoRenderSection.tsx');
+
+check('Arena language bridge', exists(generateFunction) && /v1\/language\/generate/.test(text(generateFunction)), 'BeatVision language generation routes through Arena');
+check('legacy Gemini path removed', exists(generateFunction) && !/INTEGRATIONS_API_KEY|gemini-2\.5|appmedo/i.test(text(generateFunction)), 'no direct legacy Gemini provider path');
+check('Arena production UI', exists(projectPage) && /CreateMotionVideoSection/.test(text(projectPage)) && !/SegmentedVideoRenderer/.test(text(projectPage)), 'Phase 4 uses Arena-backed production UI');
+check('Arena motion execution', exists(motionSection) && /arenaAnimate|arenaAnimationJob/.test(text(motionSection)) && !/Retry with Fallback|buildFallbackClipData/i.test(text(motionSection)), 'production motion uses Arena jobs only');
+check('Arena final assembly', exists(renderSection) && /arenaAssemble/.test(text(renderSection)), 'final video assembly uses Arena');
+check('legacy segmented renderer removed', !exists(path.join(ROOT, 'src/components/project/SegmentedVideoRenderer.tsx')), 'no parallel browser fallback renderer');
 
 if (repair && arenaAvailable) {
   // Safe repair only: install deterministic audit gates and CI. No runtime provider code is copied.
-  // The Arena gates are reference-only until BeatVision implements their required runtime modules.
   warn('Arena gates not transplanted', 'Skipped incompatible Arena-only tests; the master runner audits capability boundaries instead.');
   const workflow = path.join(ROOT, ".github/workflows/beatvision-master.yml");
   check("master workflow", exists(workflow), "create .github/workflows/beatvision-master.yml from the repository template if absent");
