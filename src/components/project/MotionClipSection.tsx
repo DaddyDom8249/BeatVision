@@ -239,6 +239,9 @@ export default function MotionClipSection({
 
   // Persist only real Arena motion output. Canvas previews remain UI-only and never become production clips.
   const persistArenaClip = async (plan: SceneMotionPlan, clip: any): Promise<MotionClip> => {
+    if (String(clip?.generation_type || '') === 'CAMERA_MOTION_FALLBACK') {
+      throw new Error(`Arena returned a non-generative camera-motion fallback for Scene ${plan.scene_number}. Production BeatVision clips require Arena generative motion output.`);
+    }
     const url = clip?.video_url || clip?.url || null;
     if (!url) throw new Error(`Arena returned no motion video for Scene ${plan.scene_number}.`);
     const payload = {
