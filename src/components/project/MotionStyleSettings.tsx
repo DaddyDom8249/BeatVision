@@ -13,6 +13,7 @@ import {
   MOTION_STYLES, TRANSITION_STYLES, CAPTION_STYLES, VIDEO_FORMATS, VIDEO_QUALITIES,
 } from '@/types/types';
 import { supabase } from '@/db/supabase';
+import { sceneTimeline } from '@/lib/beatvision/timeline';
 import { toast } from 'sonner';
 
 interface Props {
@@ -56,7 +57,7 @@ function buildMotionPlanRecords(
         scene_number: s.scene_number,
         scene_title: s.scene_title ?? null,
         timestamp_range: s.timestamp_range ?? null,
-        duration: 4.0,
+        duration: sceneTimeline(s, 4).duration,
         motion_effect: defaultEffect,
         transition_in: ms.transition_style,
         transition_out: ms.transition_style,
