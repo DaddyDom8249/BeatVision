@@ -1,0 +1,20 @@
+-- Reconcile the live project status enum with the production UI/state machine.
+alter type public.project_status add value if not exists 'World Revealed';
+alter type public.project_status add value if not exists 'Generating World Assets';
+alter type public.project_status add value if not exists 'World Assets Approved';
+alter type public.project_status add value if not exists 'Generating Scene Images';
+alter type public.project_status add value if not exists 'Scene Images In Review';
+alter type public.project_status add value if not exists 'Scene Images Approved';
+alter type public.project_status add value if not exists 'Ready for Image Generation';
+alter type public.project_status add value if not exists 'Ready for Video Generation';
+alter type public.project_status add value if not exists 'Generating Motion';
+alter type public.project_status add value if not exists 'Preview Ready';
+alter type public.project_status add value if not exists 'Export Ready';
+alter type public.project_status add value if not exists 'Motion In Review';
+alter type public.project_status add value if not exists 'Motion Approved';
+alter type public.project_status add value if not exists 'Motion Settings Ready';
+alter type public.project_status add value if not exists 'Motion Plan Ready';
+alter type public.project_status add value if not exists 'Motion Clips In Review';
+alter type public.project_status add value if not exists 'Motion Clips Approved';
+alter type public.project_status add value if not exists 'Final Video Rendered';
+alter type public.project_status add value if not exists 'Final Render Ready';
