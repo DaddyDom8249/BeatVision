@@ -7,7 +7,7 @@ const ALLOWED_POST_PATHS = [
   '/v1/capabilities',
   '/v1/language/generate',
 ];
-function allowedOrigins(env: Record<string,string>){return String(env.BEATVISION_ALLOWED_ORIGINS||'').split(',').map(x=>x.trim()).filter(Boolean)}
+function allowedOrigins(env: Record<string,string>){const configured=String(env.BEATVISION_ALLOWED_ORIGINS||'').split(',').map(x=>x.trim()).filter(Boolean);const known=['https://beat-vision-theta.vercel.app','https://beat-vision-git-debug-project-trace-beat-vision.vercel.app'];return [...new Set([...configured,...known])]}
 function cors(request:Request,env:Record<string,string>){const origin=request.headers.get('Origin')||'';const allowed=allowedOrigins(env);const headers:Record<string,string>={'Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type, x-beatvision-request','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Vary':'Origin'};if(origin&&(!allowed.length||allowed.includes(origin)))headers['Access-Control-Allow-Origin']=origin;else if(!origin&&allowed[0])headers['Access-Control-Allow-Origin']=allowed[0];else if(!allowed.length)headers['Access-Control-Allow-Origin']='*';return headers}
 function json(request:Request,env:Record<string,string>,body:unknown,status=200){return new Response(JSON.stringify(body,null,2),{status,headers:{'Content-Type':'application/json',...cors(request,env)}})}
 function requestId(request:Request,supplied?:unknown){return String(supplied||request.headers.get('X-BeatVision-Request')||crypto.randomUUID())}
