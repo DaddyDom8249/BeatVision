@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
-import type { Project, VisualWorldReport, StoryboardScene, CharacterEnvironment, SceneVisualPrompt, ScenePreview, ProjectChangeLog, WorldStyleBible, CharacterSheet, EnvironmentSheet, SceneImage, SceneVideo, MotionClip, FinalVideo } from '@/types/types';
+import type { Project, VisualWorldReport, StoryboardScene, CharacterEnvironment, SceneVisualPrompt, ScenePreview, ProjectChangeLog, WorldStyleBible, CharacterSheet, EnvironmentSheet, SceneImage, SceneVideo, MotionClip, FinalVideo, MotionSettings, SceneMotionPlan, VideoRenderJob } from '@/types/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import Navbar from '@/components/layouts/Navbar';
@@ -20,7 +20,7 @@ import { reapproveSection, createChangeLogEntry } from '@/hooks/useReviewChanges
 import { ArrowLeft, Music2, Sparkles, Lock, Clapperboard, Loader2, ImageIcon, Eye, Download } from 'lucide-react';
 import FullPreviewModal from '@/components/project/FullPreviewModal';
 import ExportProjectPanel from '@/components/project/ExportProjectPanel';
-import SegmentedVideoRenderer from '@/components/project/SegmentedVideoRenderer';
+import CreateMotionVideoSection from '@/components/project/CreateMotionVideoSection';
 import { toast } from 'sonner';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -78,7 +78,10 @@ export default function ProjectResultsPage() {
   const [generatingCharacters, setGeneratingCharacters] = useState(false);
 
   // Phase 4 — Motion and Video Rendering
+  const [motionSettings, setMotionSettings] = useState<MotionSettings | null>(null);
+  const [motionPlans, setMotionPlans] = useState<SceneMotionPlan[]>([]);
   const [motionClips, setMotionClips] = useState<MotionClip[]>([]);
+  const [renderJob, setRenderJob] = useState<VideoRenderJob | null>(null);
   const [finalVideo, setFinalVideo] = useState<FinalVideo | null>(null);
 
   // Review panel interaction state
@@ -193,12 +196,18 @@ export default function ProjectResultsPage() {
       if (Array.isArray(imgRes.data)) setSceneImages(imgRes.data as SceneImage[]);
       if (Array.isArray(vidRes.data)) setSceneVideos(vidRes.data as SceneVideo[]);
 
-      // Load Phase 4 data
-      const [mcRes, fvRes] = await Promise.all([
+      // Load Phase 4 Arena pipeline state
+      const [msRes, mpRes, mcRes, rjRes, fvRes] = await Promise.all([
+        supabase.from('motion_settings').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('scene_motion_plans').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
         supabase.from('motion_clips').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
+        supabase.from('video_render_jobs').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('final_videos').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
       ]);
+      if (msRes.data) setMotionSettings(msRes.data as MotionSettings);
+      if (Array.isArray(mpRes.data)) setMotionPlans(mpRes.data as SceneMotionPlan[]);
       if (Array.isArray(mcRes.data)) setMotionClips(mcRes.data as MotionClip[]);
+      if (rjRes.data) setRenderJob(rjRes.data as VideoRenderJob);
       if (fvRes.data) setFinalVideo(fvRes.data as FinalVideo);
 
       // Load change logs
@@ -1141,36 +1150,30 @@ export default function ProjectResultsPage() {
             />
           )}
 
-          {/* Segmented Video Renderer — Phase 4 */}
+          {/* Arena Motion + Video Pipeline — Phase 4 */}
           {phase4Unlocked ? (
             <section className="section-unlock space-y-3">
-              <div className="flex items-center gap-3 mb-2">
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)' }}
-                >
-                  <Clapperboard className="w-4 h-4 text-violet-400" />
-                </div>
-                <div>
-                  <h2 className="font-bold text-lg text-foreground">Segmented Video Renderer</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Split song into segments · Render Browser Video (WebM) · Export Render Manifest · MP4 via server renderer
-                  </p>
-                </div>
-              </div>
-              <SegmentedVideoRenderer
+              <CreateMotionVideoSection
                 project={project}
                 scenes={scenes}
                 sceneImages={sceneImages}
+                motionSettings={motionSettings}
+                motionPlans={motionPlans}
+                motionClips={motionClips}
+                renderJob={renderJob}
                 finalVideo={finalVideo}
-                onProjectUpdate={(updated) => setProject(p => p ? { ...p, ...updated } : p)}
-                onFinalVideoUpdate={(fv) => setFinalVideo(fv)}
+                onProjectUpdate={(updated) => setProject((p) => p ? { ...p, ...updated } : p)}
+                onMotionSettingsSaved={(settings) => setMotionSettings(settings)}
+                onPlansUpdate={(plans) => setMotionPlans(plans)}
+                onClipsUpdate={(clips) => setMotionClips(clips)}
+                onRenderJobUpdate={(job) => setRenderJob(job)}
+                onFinalVideoUpdate={(video) => setFinalVideo(video)}
               />
             </section>
           ) : (
             <LockedSection
-              title="Segmented Video Renderer"
-              message="Approve all scene images to unlock the full-length video renderer."
+              title="Create Motion Video"
+              message="Approve all scene images to unlock the Arena motion and final video pipeline."
               icon={<Clapperboard className="w-5 h-5 text-muted-foreground/50" />}
             />
           )}
