@@ -13,6 +13,7 @@ import {
   MOTION_STYLES, TRANSITION_STYLES, CAPTION_STYLES, VIDEO_FORMATS, VIDEO_QUALITIES,
 } from '@/types/types';
 import { supabase } from '@/db/supabase';
+import { sceneTimeline } from '@/lib/beatvision/timeline';
 import { toast } from 'sonner';
 
 interface Props {
@@ -56,7 +57,7 @@ function buildMotionPlanRecords(
         scene_number: s.scene_number,
         scene_title: s.scene_title ?? null,
         timestamp_range: s.timestamp_range ?? null,
-        duration: 4.0,
+        duration: sceneTimeline(s, 4).duration,
         motion_effect: defaultEffect,
         transition_in: ms.transition_style,
         transition_out: ms.transition_style,
@@ -114,15 +115,38 @@ export default function MotionStyleSettings({ project, scenes, sceneImages, exis
         ms = data as MotionSettings;
       }
 
-      // Upsert scene motion plans — delete old then insert fresh
+      // Replacement-safe motion plan persistence: save every new plan first,
+      // then remove only stale plans after all replacements have succeeded.
       const plans = buildMotionPlanRecords(project.id, scenes, sceneImages, ms);
       if (plans.length > 0) {
-        await supabase.from('scene_motion_plans').delete().eq('project_id', project.id);
-        const { error: insertErr } = await supabase.from('scene_motion_plans').insert(plans);
-        if (insertErr) throw new Error(`Failed to create motion plans: ${insertErr.message}`);
+        const { data: oldPlans, error: oldPlansError } = await supabase
+          .from('scene_motion_plans')
+          .select('*')
+          .eq('project_id', project.id);
+        if (oldPlansError) throw oldPlansError;
+
+        const savedIds: string[] = [];
+        for (const plan of plans) {
+          const existingPlan = (oldPlans || []).find((p: SceneMotionPlan) => p.scene_number === plan.scene_number);
+          const result = existingPlan
+            ? await supabase.from('scene_motion_plans').update(plan).eq('id', existingPlan.id).select().maybeSingle()
+            : await supabase.from('scene_motion_plans').insert(plan).select().maybeSingle();
+          if (result.error || !result.data) {
+            throw result.error || new Error(`Failed to save motion plan for Scene ${plan.scene_number}.`);
+          }
+          savedIds.push(result.data.id);
+        }
+
+        const staleIds = (oldPlans || [])
+          .filter((p: SceneMotionPlan) => !savedIds.includes(p.id))
+          .map((p: SceneMotionPlan) => p.id);
+        if (staleIds.length) {
+          const { error: staleError } = await supabase.from('scene_motion_plans').delete().in('id', staleIds);
+          if (staleError) throw staleError;
+        }
       }
 
-      // Re-fetch the freshly created plans so React state gets the real IDs
+      // Re-fetch the current plans so React state gets the real IDs
       const { data: freshPlans, error: fetchErr } = await supabase
         .from('scene_motion_plans')
         .select('*')
