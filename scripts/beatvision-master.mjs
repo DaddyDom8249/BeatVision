@@ -70,6 +70,8 @@ if (arenaAvailable) {
   check('Arena validated worker', exists(arenaFile('worker/src/arena-validated-entry.ts')), 'validated entrypoint available');
   check('Arena durable animation worker', exists(arenaFile('worker/src/animation-jobs.ts')), 'durable animation job implementation available');
   check('Arena storyboard quality gate', exists(arenaFile('worker/src/visual-beat-engine.ts')) && /normalizeVisualBeats/.test(text(arenaFile('worker/src/visual-beat-engine.ts'))), 'duration-aware visual beat normalization available');
+  const arenaActive = ['worker/src/arena-entry.ts','worker/src/arena-validated-entry.ts','worker/src/animation-jobs.ts','worker/src/render-integrity.ts','worker/src/shotstack-gateway.ts','worker/src/video-fallback-gateway.ts'].filter(existsArena => exists(arenaFile(existsArena))).map(existsArena => text(arenaFile(existsArena))).join('\\n');
+  check('Arena generative-only motion', !/CAMERA_MOTION_FALLBACK|camera-motion fallback|allow_camera_motion_fallback/i.test(arenaActive), 'no camera-motion fallback in active Arena execution');
 }
 
 const generateFunction = path.join(ROOT, 'supabase/functions/beatvision-generate/index.ts');
@@ -79,6 +81,8 @@ const renderSection = path.join(ROOT, 'src/components/project/FinalVideoRenderSe
 
 check('Arena language bridge', exists(generateFunction) && /v1\/language\/generate/.test(text(generateFunction)), 'BeatVision language generation routes through Arena');
 check('legacy Gemini path removed', exists(generateFunction) && !/INTEGRATIONS_API_KEY|gemini-2\.5|appmedo/i.test(text(generateFunction)), 'no direct legacy Gemini provider path');
+check('Arena language authority explicit', exists(generateFunction) && /callArenaLanguage/.test(text(generateFunction)) && !/function callGemini/.test(text(generateFunction)), 'generation gateway names Arena as the sole language execution authority');
+check('Arena visual beat identity preserved', exists(generateFunction) && /beatId/.test(text(generateFunction)) && /startTime/.test(text(generateFunction)) && /endTime/.test(text(generateFunction)) && /reusePolicy/.test(text(generateFunction)), 'storyboard bridge preserves Arena beat identity, timing, continuity and reuse policy');
 check('Arena production UI', exists(projectPage) && /CreateMotionVideoSection/.test(text(projectPage)) && !/SegmentedVideoRenderer/.test(text(projectPage)), 'Phase 4 uses Arena-backed production UI');
 check('Arena motion execution', exists(motionSection) && /arenaAnimate|arenaAnimationJob/.test(text(motionSection)) && !/Retry with Fallback|buildFallbackClipData/i.test(text(motionSection)), 'production motion uses Arena jobs only');
 check('Arena final assembly', exists(renderSection) && /arenaAssemble/.test(text(renderSection)), 'final video assembly uses Arena');
