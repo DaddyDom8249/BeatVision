@@ -57,7 +57,7 @@ function json(
     status,
     headers: {
       "Content-Type": "application/json",
-      "X-BeatVision-Phase": status >= 500 ? phase : "completed",
+      "X-BeatVision-Phase": status >= 500 ? "error" : "completed",
       ...cors(request),
     },
   });
