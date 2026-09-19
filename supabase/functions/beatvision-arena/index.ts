@@ -24,7 +24,10 @@ function allowedOrigins(): string[] {
 function cors(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin") || "";
   const configured = allowedOrigins();
-  const productionOrigins = [\n    "https://daddydom8249.github.io",\n    "https://beat-vision-theta.vercel.app",\n  ];
+  const productionOrigins = [
+    "https://daddydom8249.github.io",
+    "https://beat-vision-theta.vercel.app",
+  ];
   const allowed = configured.length === 0
     ? true
     : configured.includes(origin) || productionOrigins.includes(origin);
