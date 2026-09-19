@@ -24,10 +24,10 @@ function allowedOrigins(): string[] {
 function cors(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin") || "";
   const configured = allowedOrigins();
-  const productionOrigin = "https://daddydom8249.github.io";
+  const productionOrigins = [\n    "https://daddydom8249.github.io",\n    "https://beat-vision-theta.vercel.app",\n  ];
   const allowed = configured.length === 0
     ? true
-    : configured.includes(origin) || origin === productionOrigin;
+    : configured.includes(origin) || productionOrigins.includes(origin);
 
   const headers: Record<string, string> = {
     "Access-Control-Allow-Headers":
