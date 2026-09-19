@@ -57,6 +57,7 @@ function json(
     status,
     headers: {
       "Content-Type": "application/json",
+      "X-BeatVision-Phase": status >= 500 ? phase : "completed",
       ...cors(request),
     },
   });
@@ -272,6 +273,7 @@ Deno.serve(async (request: Request) => {
     );
   }
 
+  let phase = "validated";
   try {
     let body: string | undefined;
 
@@ -295,7 +297,9 @@ Deno.serve(async (request: Request) => {
           ? (input.payload as Record<string, unknown>)
           : {};
 
+      phase = "project_access";
       await assertProjectAccess(request, payload.project_id);
+      phase = "project_access_ok";
 
       if (operation === "animationJob" && isJobPath) {
         body = JSON.stringify({
@@ -323,6 +327,9 @@ Deno.serve(async (request: Request) => {
     const target =
       `${arenaUrl}${path.startsWith("/") ? path : `/${path}`}`;
 
+    phase = "arena_request";
+    console.log(JSON.stringify({ event: "arena_bridge_request", request_id: id, operation, path, target_host: (() => { try { return new URL(target).host; } catch { return "invalid-url"; } })() }));
+
     const response = await fetch(target, {
       method: request.method,
       headers: {
@@ -334,7 +341,10 @@ Deno.serve(async (request: Request) => {
       body,
     });
 
+    phase = "arena_response";
     const text = await response.text();
+
+    console.log(JSON.stringify({ event: "arena_bridge_response", request_id: id, operation, path, upstream_status: response.status, upstream_ok: response.ok, response_bytes: text.length }));
 
     let data: unknown;
 
@@ -376,6 +386,7 @@ Deno.serve(async (request: Request) => {
             : "provider_error",
         provider: "beatvision-arena",
         request_id: id,
+        phase,
         error: message.slice(0, 500),
       },
       status,
