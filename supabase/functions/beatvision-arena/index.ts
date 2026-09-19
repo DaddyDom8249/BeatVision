@@ -24,6 +24,10 @@ function allowedOrigins(): string[] {
 function cors(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin") || "";
   const configured = allowedOrigins();
+  const productionOrigin = "https://daddydom8249.github.io";
+  const allowed = configured.length === 0
+    ? true
+    : configured.includes(origin) || origin === productionOrigin;
 
   const headers: Record<string, string> = {
     "Access-Control-Allow-Headers":
@@ -32,7 +36,7 @@ function cors(request: Request): Record<string, string> {
     "Vary": "Origin",
   };
 
-  if (origin && (configured.length === 0 || configured.includes(origin))) {
+  if (origin && allowed) {
     headers["Access-Control-Allow-Origin"] = origin;
   } else if (!origin) {
     headers["Access-Control-Allow-Origin"] = "*";
