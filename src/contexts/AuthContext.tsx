@@ -85,9 +85,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Primary: sign in with real email + password
   const signIn = async (email: string, password: string) => {
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-      return { error: new Error('Supabase is not connected. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.') };
-    }
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
@@ -99,9 +96,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Primary: sign up with real email + password; username stored in metadata and profile
   const signUp = async (email: string, password: string, username: string) => {
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-      return { error: new Error('Supabase is not connected. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.') };
-    }
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
