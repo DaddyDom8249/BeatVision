@@ -12,8 +12,28 @@ export async function arenaRequest(operation: string, payload: Record<string, un
     headers: { 'X-BeatVision-Request': requestId },
   });
   if (error) {
-    const detail = await error?.context?.text?.().catch(() => '');
-    throw new Error(detail || error.message || `Arena ${operation} failed.`);
+    let detail = '';
+    try {
+      const raw = await error?.context?.text?.();
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          detail = String(parsed?.error || parsed?.message || parsed?.details || parsed?.status || raw);
+          if (parsed?.request_id) detail += ' [request_id=' + String(parsed.request_id) + ']';
+        } catch {
+          detail = raw;
+        }
+      }
+    } catch {
+      // Supabase may expose a non-Response context for transport failures.
+    }
+    const message = String(error?.message || '');
+    if (/failed to fetch|network|fetch/i.test(message) && !detail) {
+      throw new Error(
+        'Arena ' + operation + ' could not reach the Edge Function. Check Supabase function deployment/CORS/authentication. ' + message,
+      );
+    }
+    throw new Error(detail || message || ('Arena ' + operation + ' failed.'));
   }
   if (!data) throw new Error(`Arena ${operation} returned no response.`);
   if (data.ok === false) throw new Error(data.error || `Arena ${operation} failed.`);
