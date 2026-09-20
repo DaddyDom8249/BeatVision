@@ -11,7 +11,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const ARENA = process.env.BEATVISION_ARENA_DIR || path.resolve(ROOT, '../BeatVision-arena');
+const ARENA = process.env.BEATVISION_ARENA_DIR || path.join(ROOT, 'worker');
 const args = new Set(process.argv.slice(2));
 const repair = args.has('--repair');
 const skipBuild = args.has('--skip-build');
@@ -36,7 +36,7 @@ function run(command, commandArgs, options = {}) {
   try { return execFileSync(command, commandArgs, { cwd: ROOT, encoding: 'utf8', stdio: options.quiet ? ['ignore', 'pipe', 'pipe'] : 'inherit' }); }
   catch (error) { if (!options.allowFailure) throw error; return null; }
 }
-function arenaFile(name) { return path.join(ARENA, name); }
+function arenaFile(name) { return path.join(ARENA, name.replace(/^worker\//, '')); }
 function copyArena(name) {
   const source = arenaFile(name);
   const target = path.join(ROOT, name);
