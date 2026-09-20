@@ -1,0 +1,35 @@
+name = "beatvision-provider-arena"
+main = "src/arena-validated-entry.ts"
+compatibility_date = "2026-09-09"
+
+[vars]
+ALLOWED_ORIGIN = "https://daddydom8249.github.io,https://beat-vision-theta.vercel.app"
+LANGUAGE_PROVIDER_MODEL = "openai"
+LANGUAGE_PROVIDER = "pollinations"
+LANGUAGE_PROVIDER_URL = "https://gen.pollinations.ai/v1/chat/completions"
+VIDEO_PROVIDER = "pixazo"
+PIXAZO_WORLD_IMAGE_MODEL = "flux-schnell"
+PIXAZO_SCENE_IMAGE_MODEL = "sdxl"
+PIXAZO_HERO_IMAGE_MODEL = "sdxl"
+
+[[durable_objects.bindings]]
+name = "ANIMATION_JOBS"
+class_name = "BeatVisionAnimationJob"
+
+[exports.BeatVisionAnimationJob]
+type = "durable-object"
+storage = "sqlite"
+
+[exports.BeatVisionPipelineJob]
+type = "durable-object"
+state = "deleted"
+
+# Free Pixazo models used by the active Arena creative path only.
+# Shotstack Sandbox remains the deterministic assembly layer.
+# Pollinations remains for Whisper/language/world-direction calls.
+# Secrets expected by the worker:
+# wrangler secret put GATEWAY_TOKEN
+# wrangler secret put LANGUAGE_PROVIDER_TOKEN
+# wrangler secret put AUDIO_PROVIDER_TOKEN
+# wrangler secret put PIXAZO_API_KEY
+# wrangler secret put SHOTSTACK_API_KEY
