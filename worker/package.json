@@ -1,0 +1,14 @@
+{
+  "name": "beatvision-provider-arena-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:storyboard": "node --experimental-strip-types --test src/storyboard-validator.test.ts",
+    "test:render-integrity": "node --experimental-strip-types --test src/render-integrity.test.ts",
+    "test:composition": "node --experimental-strip-types --test src/composition-model.test.ts",
+    "test:reuse": "node --experimental-strip-types --test src/visual-reuse-detector.test.ts",
+    "test:musical-structure": "node --experimental-strip-types --test src/musical-structure.test.ts",
+    "test:scene-splitting": "node --experimental-strip-types --test src/scene-splitting.test.ts",
+    "test": "npm run test:storyboard && npm run test:render-integrity && npm run test:composition && npm run test:reuse && npm run test:musical-structure && npm run test:scene-splitting"
+  }
+}
