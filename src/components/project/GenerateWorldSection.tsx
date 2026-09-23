@@ -330,7 +330,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
         if (result.error || !result.data) throw result.error || new Error('Failed to save scene preview.');
         savedRows.push(result.data as ScenePreview);
       }
-      const keepIds = new Set(toInsert.map((row) => row.scene_visual_prompt_id).filter(Boolean));
+      const keepIds = new Set(toInsert.map((row) => row.scene_visual_prompt_id).filter((id): id is string => Boolean(id)));
       const stale = scenePreviews.filter((p) => !keepIds.has(p.scene_visual_prompt_id)).map((p) => p.id);
       if (stale.length) {
         const { error: staleError } = await supabase.from('scene_previews').delete().in('id', stale);
