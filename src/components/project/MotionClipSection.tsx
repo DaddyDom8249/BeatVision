@@ -282,19 +282,34 @@ export default function MotionClipSection({
   };
 
   const waitForArenaJob = async (jobId: string, plan: SceneMotionPlan): Promise<MotionClip> => {
-    for (let attempt = 0; attempt < 40; attempt++) {
+    // Arena motion is a durable asynchronous job. Do not impose a client-side
+    // fixed attempt limit that can declare a healthy provider job "timed out".
+    // The Arena Durable Object remains authoritative until it reaches a
+    // terminal state, so keep polling the same job rather than submitting a
+    // duplicate provider request.
+    while (true) {
       const data = await arenaAnimationJob(jobId);
       const result = data?.result || data;
       if (Array.isArray(result?.clips) && result.clips.length) {
         const matching = result.clips.find((clip: any) => Number(clip?.scene) === plan.scene_number) || result.clips[0];
         return persistArenaClip(plan, matching);
       }
-      const status = String(result?.status || '');
-      if (status === 'failed') throw new Error(result?.error || `Arena motion job failed for Scene ${plan.scene_number}.`);
-      if (status === 'completed' || status === 'partial') throw new Error(`Arena motion job completed without a clip for Scene ${plan.scene_number}.`);
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      const status = String(result?.status || '').toLowerCase();
+      if (status === 'failed') {
+        throw new Error(result?.error || `Arena motion job failed for Scene ${plan.scene_number}.`);
+      }
+      if (status === 'completed' || status === 'partial') {
+        throw new Error(`Arena motion job completed without a clip for Scene ${plan.scene_number}.`);
+      }
+      if (status === 'not_found') {
+        throw new Error(`Arena motion job ${jobId} could not be found for Scene ${plan.scene_number}.`);
+      }
+
+      // queued, running, and waiting_provider_status are all non-terminal.
+      // Keep waiting for the existing durable job to finish.
+      await new Promise((resolve) => setTimeout(resolve, 5000));
     }
-    throw new Error(`Arena motion job timed out for Scene ${plan.scene_number}.`);
   };
 
   const generateClip = async (plan: SceneMotionPlan, regenerate = false): Promise<MotionClip | null> => {
