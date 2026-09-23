@@ -230,29 +230,47 @@ async function languageGenerate(r: Request, e: any, body: any, requestId: string
   const timer = setTimeout(() => controller.abort(), LANGUAGE_TIMEOUT_MS);
   const started = Date.now();
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': token, 'X-BeatVision-Request': requestId },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: [
-          'You are the BeatVision visual-world director.',
-          'Return ONLY valid JSON matching the requested fields.',
-          'No markdown, commentary, or prose outside the JSON object.',
-          'Preserve creative intent, continuity, and production usefulness.',
-          'Do not invent lyrics.',
-          '',
-          prompt
-        ].join('\n') }] }],
-        generationConfig: { responseMimeType: 'application/json' }
-      }),
-      signal: controller.signal
+    const requestBody = JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: [
+        'You are the BeatVision visual-world director.',
+        'Return ONLY valid JSON matching the requested fields.',
+        'No markdown, commentary, or prose outside the JSON object.',
+        'Preserve creative intent, continuity, and production usefulness.',
+        'Do not invent lyrics.',
+        '',
+        prompt
+      ].join('\n') }] }],
+      generationConfig: { responseMimeType: 'application/json' }
     });
-    const text = await response.text();
-    let data: any; try { data = JSON.parse(text); } catch { data = { raw: text.slice(0, 20000) }; }
-    const content = data?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text || '').join('') || '';
-    if (!response.ok || !content) {
-      const detail = String(data?.error?.message || data?.error || text).slice(0, 1200);
-      return json(r, e, { ok: false, contract_version: CONTRACT, capability: 'language', provider: 'gemini', model, status: 'provider_error', request_id: requestId, latency_ms: Date.now() - started, error: `Gemini ${response.status}: ${detail}` }, 502);
+
+    // Gemini can transiently return 503 during demand spikes. Retry only
+    // transient overload/unavailable responses, with bounded exponential backoff.
+    // Do not retry authentication, quota, invalid-request, or other provider errors.
+    const maxAttempts = 3;
+    let response: Response | null = null;
+    let text = '';
+    let data: any = null;
+    let content = '';
+    let lastStatus = 0;
+    let lastDetail = '';
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': token, 'X-BeatVision-Request': requestId },
+        body: requestBody,
+        signal: controller.signal
+      });
+      text = await response.text();
+      try { data = JSON.parse(text); } catch { data = { raw: text.slice(0, 20000) }; }
+      content = data?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text || '').join('') || '';
+      lastStatus = response.status;
+      lastDetail = String(data?.error?.message || data?.error || text).slice(0, 1200);
+      if (response.ok && content) break;
+      if (![429, 500, 502, 503, 504].includes(response.status) || attempt === maxAttempts) break;
+      await sleep(750 * Math.pow(2, attempt - 1));
+    }
+    if (!response || !response.ok || !content) {
+      return json(r, e, { ok: false, contract_version: CONTRACT, capability: 'language', provider: 'gemini', model, status: 'provider_error', request_id: requestId, latency_ms: Date.now() - started, error: `Gemini ${lastStatus}: ${lastDetail}`, attempts: maxAttempts }, 502);
     }
     const parsed = parseJson(content);
     if (String(payload?.mode || '') === 'storyboard') {
