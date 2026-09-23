@@ -87,6 +87,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
   };
 
   const baseContext = {
+    projectId: project.id,
     projectTitle: project.title,
     lyrics: project.lyrics || '',
     style: project.selected_style,
