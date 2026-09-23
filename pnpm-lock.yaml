@@ -238,7 +238,7 @@ importers:
         specifier: ~5.9.3
         version: 5.9.3
       vite:
-        specifier: npm:rolldown-vite@latest
+        specifier: npm:rolldown-vite@7.3.1
         version: rolldown-vite@7.3.1(@types/node@24.2.1)(esbuild@0.27.3)(jiti@1.21.7)(yaml@2.8.1)
       vite-plugin-svgr:
         specifier: ^4.5.0
