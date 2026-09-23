@@ -27,9 +27,9 @@ function warn(name, detail) {
   warnings.push({ name, detail });
   console.warn(`WARN ${name} — ${detail}`);
 }
-function run(command, commandArgs) {
+function run(command, commandArgs, options = {}) {
   try {
-    execFileSync(command, commandArgs, { cwd: ROOT, stdio: 'inherit' });
+    execFileSync(command, commandArgs, { cwd: options.cwd || ROOT, stdio: 'inherit' });
     return true;
   } catch {
     return false;
