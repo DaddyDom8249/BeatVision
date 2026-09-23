@@ -19,7 +19,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: node scripts/beatvision-master.mjs --skip-build
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: node scripts/beatvision-master.mjs
         env:
           BEATVISION_ARENA_DIR: ${{ github.workspace }}/worker
-      - run: pnpm run build

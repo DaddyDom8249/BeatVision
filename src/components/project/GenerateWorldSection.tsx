@@ -87,6 +87,7 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
   };
 
   const baseContext = {
+    projectId: project.id,
     projectTitle: project.title,
     lyrics: project.lyrics || '',
     style: project.selected_style,
@@ -329,8 +330,8 @@ export default function GenerateWorldSection({ project, worldReport, scenes, cha
         if (result.error || !result.data) throw result.error || new Error('Failed to save scene preview.');
         savedRows.push(result.data as ScenePreview);
       }
-      const keepIds = new Set(toInsert.map((row) => row.scene_visual_prompt_id).filter(Boolean));
-      const stale = scenePreviews.filter((p) => !keepIds.has(p.scene_visual_prompt_id)).map((p) => p.id);
+      const keepIds = new Set(toInsert.map((row) => row.scene_visual_prompt_id).filter((id): id is string => Boolean(id)));
+      const stale = scenePreviews.filter((p) => p.scene_visual_prompt_id && !keepIds.has(p.scene_visual_prompt_id)).map((p) => p.id);
       if (stale.length) {
         const { error: staleError } = await supabase.from('scene_previews').delete().in('id', stale);
         if (staleError) throw staleError;

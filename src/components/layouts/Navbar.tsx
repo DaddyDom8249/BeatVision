@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Music2, LogOut, LayoutDashboard, Plus, LogIn, Settings2 } from 'lucide-react';
+import { Music2, LogOut, LayoutDashboard, Plus, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Navbar() {
@@ -40,16 +40,6 @@ export default function Navbar() {
               >
                 <LayoutDashboard className="w-4 h-4" />
                 <span className="hidden md:inline ml-1.5">Dashboard</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground hover:text-foreground"
-                onClick={() => navigate('/settings/providers')}
-                title="Provider Settings"
-              >
-                <Settings2 className="w-4 h-4" />
-                <span className="hidden md:inline ml-1.5">Providers</span>
               </Button>
               <Button
                 size="sm"

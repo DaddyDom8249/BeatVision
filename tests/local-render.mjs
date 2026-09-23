@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { assembleTimeline, buildMasterTimeline } from '../cloudflare-ai-worker/src/pipeline-contract.ts';
+import { assembleTimeline, buildMasterTimeline } from '../worker/src/pipeline-contract.ts';
 
 test('local final render consumes persisted timeline and passes media metadata validation', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'beatvision-render-'));

@@ -1,3 +1,5 @@
+import { BeatVisionAuthError, requireAuthenticatedUser } from "../_shared/auth.ts";
+
 const CONTRACT = "1.1";
 
 const JOB_PATH = /^\/v1\/video\/animate\/jobs\/[A-Za-z0-9._:-]+$/;
@@ -27,9 +29,10 @@ function cors(request: Request): Record<string, string> {
   const productionOrigins = [
     "https://daddydom8249.github.io",
     "https://beat-vision-theta.vercel.app",
+    "http://localhost:5173",
   ];
   const allowed = configured.length === 0
-    ? true
+    ? productionOrigins.includes(origin)
     : configured.includes(origin) || productionOrigins.includes(origin);
 
   const headers: Record<string, string> = {
@@ -186,6 +189,18 @@ Deno.serve(async (request: Request) => {
       status: 204,
       headers: cors(request),
     });
+  }
+
+  try {
+    await requireAuthenticatedUser(request);
+  } catch (error) {
+    const status = error instanceof BeatVisionAuthError ? 401 : 500;
+    return json(request, { ok: false, error: error instanceof Error ? error.message : "Authentication failed." }, status);
+  }
+
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (contentLength > 2_000_000) {
+    return json(request, { ok: false, error: "Request body is too large." }, 413);
   }
 
   const arenaUrl = env("ARENA_GATEWAY_URL").replace(/\/$/, "");
