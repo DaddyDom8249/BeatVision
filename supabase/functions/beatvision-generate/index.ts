@@ -1,3 +1,5 @@
+import { assertProjectOwner, BeatVisionAuthError, requireAuthenticatedUser } from "../_shared/auth.ts";
+
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin") || "";
   const configured = String(Deno.env.get("BEATVISION_ALLOWED_ORIGINS") || "").split(",").map((value) => value.trim()).filter(Boolean);
