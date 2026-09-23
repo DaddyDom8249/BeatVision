@@ -4,9 +4,9 @@ compatibility_date = "2026-09-09"
 
 [vars]
 ALLOWED_ORIGIN = "https://daddydom8249.github.io,https://beat-vision-theta.vercel.app"
-LANGUAGE_PROVIDER_MODEL = "gemini-2.5-flash"
+LANGUAGE_PROVIDER_MODEL = "gemini-3.6-flash"
 LANGUAGE_PROVIDER = "gemini"
-LANGUAGE_PROVIDER_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+LANGUAGE_PROVIDER_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent"
 VIDEO_PROVIDER = "pixazo"
 PIXAZO_WORLD_IMAGE_MODEL = "flux-schnell"
 PIXAZO_SCENE_IMAGE_MODEL = "sdxl"
