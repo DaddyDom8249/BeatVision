@@ -26,5 +26,5 @@ export const routes: RouteConfig[] = [
   { name: 'Dashboard', path: '/dashboard', element: <Wrap><DashboardPage /></Wrap> },
   { name: 'Create Project', path: '/create', element: <Wrap><CreateProjectPage /></Wrap> },
   { name: 'Project Results', path: '/project/:id', element: <Wrap><ProjectResultsPage /></Wrap> },
-  { name: 'Provider Settings', path: '/settings/providers', element: <Wrap><ProviderSettingsPage /></Wrap>, public: true },
+  { name: 'Provider Settings', path: '/settings/providers', element: <Wrap><ProviderSettingsPage /></Wrap> },
 ];
