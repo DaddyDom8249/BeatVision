@@ -65,7 +65,7 @@ check('Arena production UI', exists(projectPage) && /Arena Provider Pipeline/.te
 check('Arena motion execution', exists(motionSection) && /arenaAnimate|arenaAnimationJob/.test(text(motionSection)) && !/Retry with Fallback|buildFallbackClipData/i.test(text(motionSection)), 'motion uses Arena jobs');
 check('Arena final assembly', exists(renderSection) && /arenaAssemble/.test(text(renderSection)), 'final assembly uses Arena');
 check('no hard-coded Supabase fallback', exists(path.join(ROOT, 'src/db/supabase.ts')) && !/https:\/\/mdofsinyofqbeapzfygu\.supabase\.co/.test(text(path.join(ROOT, 'src/db/supabase.ts'))), 'Supabase URL/key come from environment');
-check('provider settings route protected', exists(path.join(ROOT, 'src/routes.tsx')) && /path: '\/settings\/providers'/.test(text(path.join(ROOT, 'src/routes.tsx'))) && !/settings\/providers'.*public:\s*true/.test(text(path.join(ROOT, 'src/routes.tsx'))), 'provider settings is not public');
+check('obsolete provider settings route removed', exists(path.join(ROOT, 'src/routes.tsx')) && !/settings\/providers/.test(text(path.join(ROOT, 'src/routes.tsx'))), 'dead global provider settings route removed');
 
 const workerTests = [
   'src/pipeline-contract.test.ts',
