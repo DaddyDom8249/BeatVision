@@ -218,8 +218,8 @@ async function languageGenerate(r: Request, e: any, body: any, requestId: string
   if (body?.contract_version !== CONTRACT || body?.operation !== 'generate') return json(r, e, { ok: false, contract_version: CONTRACT, status: 'contract_mismatch', request_id: requestId, error: 'Expected BeatVision contract 1.1 language generate.' }, 400);
   const token = e.GEMINI_API_KEY || e.LANGUAGE_PROVIDER_TOKEN;
   const provider = String(e.LANGUAGE_PROVIDER || 'gemini').toLowerCase();
-  const url = String(e.LANGUAGE_PROVIDER_URL || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
-  const model = String(e.LANGUAGE_PROVIDER_MODEL || 'gemini-2.5-flash');
+  const url = String(e.LANGUAGE_PROVIDER_URL || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent');
+  const model = String(e.LANGUAGE_PROVIDER_MODEL || 'gemini-3.6-flash');
   if (provider !== 'gemini') return json(r, e, { ok: false, contract_version: CONTRACT, capability: 'language', provider, status: 'provider_misconfigured', request_id: requestId, error: 'BeatVision language authority is locked to Gemini. Configure LANGUAGE_PROVIDER=gemini.' }, 503);
   if (!token) return json(r, e, { ok: false, contract_version: CONTRACT, capability: 'language', provider: 'gemini', status: 'provider_unavailable', request_id: requestId, error: 'Gemini API key is not configured. Set GEMINI_API_KEY or LANGUAGE_PROVIDER_TOKEN in Arena.' }, 503);
   const payload = body?.payload || {};
