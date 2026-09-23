@@ -227,7 +227,7 @@ async function languageGenerate(r: Request, e: any, body: any, requestId: string
   for (const model of models) {
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), LANGUAGE_TIMEOUT_MS);
     try {
-      const response = await fetch(e.LANGUAGE_PROVIDER_URL || 'https://gen.pollinations.ai/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'X-BeatVision-Request': requestId }, body: JSON.stringify({ model, messages: [{ role: 'system', content: 'You are the BeatVision visual-world director. Return ONLY valid JSON. Preserve creative intent, continuity, and production usefulness. Do not invent lyrics.' }, { role: 'user', content: prompt }], temperature: 0.7 }), signal: controller.signal });
+      const response = await fetch(e.LANGUAGE_PROVIDER_URL || 'https://gen.pollinations.ai/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'X-BeatVision-Request': requestId }, body: JSON.stringify({ model, messages: [{ role: 'system', content: 'You are the BeatVision visual-world director. Return ONLY a valid JSON object matching the requested fields. No markdown, no commentary, no prose outside the JSON object. Preserve creative intent, continuity, and production usefulness. Do not invent lyrics.' }, { role: 'user', content: prompt }], response_format: { type: 'json_object' }, temperature: 0.7 }), signal: controller.signal });
       const text = await response.text(); let data: any; try { data = JSON.parse(text); } catch { data = { raw: text.slice(0, 20000) }; }
       const content = data?.choices?.[0]?.message?.content || '';
       if (response.ok && content) {
