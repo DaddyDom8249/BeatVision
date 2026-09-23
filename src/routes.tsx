@@ -6,7 +6,6 @@ const AuthPage = lazy(() => import('./pages/AuthPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CreateProjectPage = lazy(() => import('./pages/CreateProjectPage'));
 const ProjectResultsPage = lazy(() => import('./pages/ProjectResultsPage'));
-const ProviderSettingsPage = lazy(() => import('./pages/ProviderSettingsPage'));
 
 function Wrap({ children }: { children: ReactNode }) {
   return <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-background"><div className="text-muted-foreground text-sm">Loading...</div></div>}>{children}</Suspense>;
@@ -26,5 +25,4 @@ export const routes: RouteConfig[] = [
   { name: 'Dashboard', path: '/dashboard', element: <Wrap><DashboardPage /></Wrap> },
   { name: 'Create Project', path: '/create', element: <Wrap><CreateProjectPage /></Wrap> },
   { name: 'Project Results', path: '/project/:id', element: <Wrap><ProjectResultsPage /></Wrap> },
-  { name: 'Provider Settings', path: '/settings/providers', element: <Wrap><ProviderSettingsPage /></Wrap> },
 ];
