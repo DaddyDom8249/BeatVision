@@ -225,6 +225,12 @@ export default function MotionClipSection({
   const [expanded, setExpanded]              = useState<Record<string, boolean>>({});
   const [showBlockers, setShowBlockers]      = useState(false);
   const [clipErrors, setClipErrors]          = useState<Record<string, string>>({});
+  const resumeInFlightRef = useRef<Set<string>>(new Set());
+
+  // Browser tabs are not reliable job managers. Arena jobs are durable, so the
+  // UI gets a bounded observation window and resumes persisted jobs after reload.
+  const ARENA_CLIENT_POLL_MS = 5000;
+  const ARENA_CLIENT_MAX_WAIT_MS = 3 * 60 * 1000;
 
   const getClip = (plan: SceneMotionPlan) =>
     clips.find((c) => c.scene_motion_plan_id === plan.id || c.scene_number === plan.scene_number);
@@ -288,17 +294,20 @@ export default function MotionClipSection({
     return data as MotionClip;
   };
 
+  class ArenaJobPollingTimeoutError extends Error {}
+
   const waitForArenaJob = async (jobId: string, plan: SceneMotionPlan): Promise<MotionClip> => {
-    // Arena motion is a durable asynchronous job. Do not impose a client-side
-    // fixed attempt limit that can declare a healthy provider job "timed out".
-    // The Arena Durable Object remains authoritative until it reaches a
-    // terminal state, so keep polling the same job rather than submitting a
-    // duplicate provider request.
-    while (true) {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < ARENA_CLIENT_MAX_WAIT_MS) {
       const data = await arenaAnimationJob(jobId);
       const result = data?.result || data;
+
       if (Array.isArray(result?.clips) && result.clips.length) {
-        const matching = result.clips.find((clip: any) => Number(clip?.scene) === plan.scene_number) || result.clips[0];
+        const matching = result.clips.find((clip: any) => Number(clip?.scene) === plan.scene_number);
+        if (!matching) {
+          throw new Error(`Arena job ${jobId} returned clips, but none matched Scene ${plan.scene_number}.`);
+        }
         return persistArenaClip(plan, matching);
       }
 
@@ -313,11 +322,61 @@ export default function MotionClipSection({
         throw new Error(`Arena motion job ${jobId} could not be found for Scene ${plan.scene_number}.`);
       }
 
-      // queued, running, and waiting_provider_status are all non-terminal.
-      // Keep waiting for the existing durable job to finish.
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      // queued, running, and waiting_provider_status are non-terminal. Keep the
+      // durable job ID and let the persisted database row survive tab closure.
+      await new Promise((resolve) => setTimeout(resolve, ARENA_CLIENT_POLL_MS));
     }
+
+    throw new ArenaJobPollingTimeoutError(
+      `Arena job ${jobId} is still running for Scene ${plan.scene_number}. The job remains active and will resume automatically after reload.`
+    );
   };
+
+  const resumePersistedArenaJobs = useCallback(async () => {
+    for (const plan of plans) {
+      const clip = getClip(plan);
+      if (
+        clip?.generation_status !== 'generating' ||
+        !clip.provider_job_id ||
+        resumeInFlightRef.current.has(clip.provider_job_id)
+      ) continue;
+
+      const jobId = clip.provider_job_id;
+      resumeInFlightRef.current.add(jobId);
+
+      try {
+        const saved = await waitForArenaJob(jobId, plan);
+        onClipsUpdate(
+          [...clips.filter((c) => c.id !== clip.id), saved]
+        );
+      } catch (error) {
+        if (error instanceof ArenaJobPollingTimeoutError) {
+          setClipErrors((p) => ({ ...p, [plan.id]: error.message }));
+        } else {
+          const message = error instanceof Error ? error.message : String(error);
+          setClipErrors((p) => ({ ...p, [plan.id]: message }));
+          try {
+            await supabase.from('motion_clips').update({
+              generation_status: 'failed',
+              status: 'failed',
+              pending: false,
+              failed: true,
+              needs_review: true,
+              error_message: message.slice(0, 1000),
+              provider_job_id: null,
+              updated_at: new Date().toISOString(),
+            }).eq('id', clip.id);
+          } catch (persistError) {
+            console.error('Could not persist Arena resume failure', persistError);
+          }
+        }
+      }
+    }
+  }, [plans, clips, onClipsUpdate]);
+
+  useEffect(() => {
+    void resumePersistedArenaJobs();
+  }, [resumePersistedArenaJobs]);
 
   const persistPendingArenaJob = async (plan: SceneMotionPlan, jobId: string): Promise<MotionClip> => {
     const existing = getClip(plan);
@@ -363,6 +422,7 @@ export default function MotionClipSection({
       if (!img?.image_url) throw new Error(`Scene ${plan.scene_number} has no approved image for Arena motion.`);
       const existing = getClip(plan);
       if (!regenerate && existing?.generation_status === 'generating' && existing.provider_job_id) {
+        resumeInFlightRef.current.add(existing.provider_job_id);
         const saved = await waitForArenaJob(existing.provider_job_id, plan);
         onClipsUpdate([...clips.filter((c) => c.id !== existing.id), saved]);
         return saved;
@@ -387,7 +447,8 @@ export default function MotionClipSection({
       });
       const immediate = response?.result?.clips;
       if (Array.isArray(immediate) && immediate.length) {
-        const matching = immediate.find((clip: any) => Number(clip?.scene) === plan.scene_number) || immediate[0];
+        const matching = immediate.find((clip: any) => Number(clip?.scene) === plan.scene_number);
+        if (!matching) throw new Error(`Arena returned a motion clip, but none matched Scene ${plan.scene_number}.`);
         const saved = await persistArenaClip(plan, matching);
         onClipsUpdate([...clips.filter((c) => c.id !== existing?.id), saved]);
         toast.success(`Scene ${plan.scene_number} generated by Arena.`);
@@ -396,6 +457,7 @@ export default function MotionClipSection({
       const jobId = response?.job_id || response?.result?.job_id || response?.result?.animation_job_id;
       if (!jobId) throw new Error(`Arena returned neither a motion clip nor a durable job for Scene ${plan.scene_number}.`);
       await persistPendingArenaJob(plan, jobId);
+      resumeInFlightRef.current.add(jobId);
       const saved = await waitForArenaJob(jobId, plan);
       onClipsUpdate([...clips.filter((c) => c.id !== existing?.id), saved]);
       toast.success(`Scene ${plan.scene_number} generated by Arena.`);
