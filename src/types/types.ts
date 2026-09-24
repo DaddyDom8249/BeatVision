@@ -84,6 +84,7 @@ export interface VisualWorldReport {
   approved: boolean;
   needs_review: boolean;
   updated_after_approval: boolean;
+  error_message: string | null;
   last_approved_at: string | null;
   created_at: string;
   updated_at: string;
@@ -515,6 +516,7 @@ export interface MotionClip {
   scene_title: string | null;
   clip_url: string | null;
   preview_url: string | null;
+  provider_job_id: string | null;
   duration: number | null;
   motion_effect: string;
   transition_in: string;
