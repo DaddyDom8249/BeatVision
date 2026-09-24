@@ -1,4 +1,4 @@
-import { assertProjectOwner, BeatVisionAuthError, requireAuthenticatedUser } from "../_shared/auth.ts";
+import { assertProjectOwner, BeatVisionAuthError, requireAuthenticatedUser } from "./auth.ts";
 
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin") || "";
