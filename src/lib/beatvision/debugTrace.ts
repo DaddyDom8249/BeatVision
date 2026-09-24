@@ -22,6 +22,16 @@ const MAX_STRING = 4000;
 const MAX_RESPONSE_BODY = 8000;
 const keyFor = (projectId: string) => `beatvision-debug-trace:${projectId}`;
 const pausedProjects = new Set<string>();
+const DEBUG_TRACE_ENDPOINT = '/rest/v1/project_debug_trace_events';
+
+export function debugTraceShouldIgnoreRequest(input: string): boolean {
+  try {
+    const url = new URL(input, window.location.origin);
+    return url.pathname.endsWith(DEBUG_TRACE_ENDPOINT);
+  } catch {
+    return input.split(/[?#]/)[0].endsWith(DEBUG_TRACE_ENDPOINT);
+  }
+}
 export function debugTraceSetPaused(projectId: string, paused: boolean) {
   if (paused) pausedProjects.add(projectId);
   else pausedProjects.delete(projectId);
