@@ -22,6 +22,7 @@ import FullPreviewModal from '@/components/project/FullPreviewModal';
 import ExportProjectPanel from '@/components/project/ExportProjectPanel';
 import CreateMotionVideoSection from '@/components/project/CreateMotionVideoSection';
 import { toast } from 'sonner';
+import { loadProjectAggregate } from '@/lib/beatvision/projectAggregate';
 
 const STATUS_COLORS: Record<string, string> = {
   'Draft': 'bg-muted text-muted-foreground border-border',
@@ -112,29 +113,21 @@ export default function ProjectResultsPage() {
   const loadProject = async () => {
     setLoadingProject(true);
     try {
-      const { data: proj, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
-      if (error || !proj) throw error || new Error('Project not found');
-      setProject(proj);
+      if (!id) throw new Error('Project ID is required.');
 
-      // Load Visual World Report
-      const { data: reportData } = await supabase
-        .from('visual_world_reports')
-        .select('*')
-        .eq('project_id', id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      setWorldReport(reportData || null);
+      // Load the complete project aggregate through one RLS-scoped RPC.
+      // This prevents the page from creating a sequential/N+1 fetch storm.
+      const aggregate = await loadProjectAggregate(id);
+      if (!aggregate) throw new Error('Project not found');
 
-      // Repair unlock state:
-      // If the visual world report is approved but the project flag was not updated,
-      // unlock storyboard generation instead of trapping the user on a locked story step.
+      let proj = aggregate.project;
+      const reportData = aggregate.worldReport;
+      const scenesData = aggregate.scenes;
+      const charData = aggregate.charEnv;
+
+      // Repair unlock state without starting another full project read.
       if (reportData?.approved && !proj.world_approved) {
-        const { data: repairedProject } = await supabase
+        const { data: repairedProject, error: repairError } = await supabase
           .from('projects')
           .update({
             world_approved: true,
@@ -145,90 +138,45 @@ export default function ProjectResultsPage() {
           .select()
           .maybeSingle();
 
-        if (repairedProject) {
-          setProject(repairedProject as Project);
-        }
-
-        // Keep this load cycle moving too, not just the next page refresh.
-        proj.world_approved = true;
-        proj.status = 'World Approved';
+        if (repairError) throw repairError;
+        if (repairedProject) proj = repairedProject as Project;
       }
 
-      // Load Storyboard Scenes
-      const { data: scenesData } = await supabase
-        .from('storyboard_scenes')
-        .select('*')
-        .eq('project_id', id)
-        .order('scene_number', { ascending: true });
-      setScenes(Array.isArray(scenesData) ? scenesData : []);
+      setProject(proj);
+      setWorldReport(reportData);
+      setScenes(scenesData);
+      setCharEnv(charData);
+      setScenePrompts(aggregate.scenePrompts);
+      setScenePreviews(aggregate.scenePreviews);
+      setStyleBible(aggregate.styleBible);
+      setCharacterSheet(aggregate.characterSheet);
+      setEnvSheet(aggregate.envSheet);
+      setSceneImages(aggregate.sceneImages);
+      setSceneVideos(aggregate.sceneVideos);
+      setMotionSettings(aggregate.motionSettings);
+      setMotionPlans(aggregate.motionPlans);
+      setMotionClips(aggregate.motionClips);
+      setRenderJob(aggregate.renderJob);
+      setFinalVideo(aggregate.finalVideo);
+      setChangeLogs(aggregate.changeLogs);
 
-      // Load Character Environment
-      const { data: charData } = await supabase
-        .from('character_environments')
-        .select('*')
-        .eq('project_id', id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      setCharEnv(charData || null);
-
-      // Load scene visual prompts
-      const { data: promptsData } = await supabase
-        .from('scene_visual_prompts')
-        .select('*')
-        .eq('project_id', id)
-        .order('scene_number', { ascending: true });
-      setScenePrompts(Array.isArray(promptsData) ? promptsData : []);
-
-      // Load world assets + scene images + scene videos
-      const [sbRes, csRes, esRes, previewRes, imgRes, vidRes] = await Promise.all([
-        supabase.from('world_style_bibles').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-        supabase.from('character_sheets').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-        supabase.from('environment_sheets').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-        supabase.from('scene_previews').select('*').eq('project_id', id).order('created_at', { ascending: true }),
-        supabase.from('scene_images').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
-        supabase.from('scene_videos').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
-      ]);
-      if (sbRes.data) setStyleBible(sbRes.data as WorldStyleBible);
-      if (csRes.data) setCharacterSheet(csRes.data as CharacterSheet);
-      if (esRes.data) setEnvSheet(esRes.data as EnvironmentSheet);
-      if (Array.isArray(previewRes.data)) setScenePreviews(previewRes.data as ScenePreview[]);
-      if (Array.isArray(imgRes.data)) setSceneImages(imgRes.data as SceneImage[]);
-      if (Array.isArray(vidRes.data)) setSceneVideos(vidRes.data as SceneVideo[]);
-
-      // Load Phase 4 Arena pipeline state
-      const [msRes, mpRes, mcRes, rjRes, fvRes] = await Promise.all([
-        supabase.from('motion_settings').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-        supabase.from('scene_motion_plans').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
-        supabase.from('motion_clips').select('*').eq('project_id', id).order('scene_number', { ascending: true }),
-        supabase.from('video_render_jobs').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-        supabase.from('final_videos').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-      ]);
-      if (msRes.data) setMotionSettings(msRes.data as MotionSettings);
-      if (Array.isArray(mpRes.data)) setMotionPlans(mpRes.data as SceneMotionPlan[]);
-      if (Array.isArray(mcRes.data)) setMotionClips(mcRes.data as MotionClip[]);
-      if (rjRes.data) setRenderJob(rjRes.data as VideoRenderJob);
-      if (fvRes.data) setFinalVideo(fvRes.data as FinalVideo);
-
-      // Load change logs
-      await loadChangeLogs(proj.id);
-
-      // Auto-generate world if arriving from Create
+      // Auto-generate world if arriving from Create.
       if (searchParams.get('generate') === 'true' && !reportData) {
         setTimeout(() => triggerGenerateWorld(proj), 300);
       }
 
-      // Auto-generate storyboard if world approved but no scenes
-      if ((proj.world_approved || !!reportData?.approved) && !scenesData?.length) {
+      // Auto-generate storyboard if world approved but no scenes.
+      if ((proj.world_approved || !!reportData?.approved) && !scenesData.length) {
         setTimeout(() => triggerGenerateStoryboard(proj, reportData), 300);
       }
 
-      // Auto-generate characters if storyboard approved but no char env
+      // Auto-generate characters if storyboard approved but no char env.
       if (proj.storyboard_approved && !charData) {
         setTimeout(() => triggerGenerateCharacters(proj, reportData), 300);
       }
     } catch (err) {
-      toast.error('Failed to load project');
+      console.error('[BeatVision] Project aggregate load failed:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to load project');
       navigate('/dashboard');
     } finally {
       setLoadingProject(false);
