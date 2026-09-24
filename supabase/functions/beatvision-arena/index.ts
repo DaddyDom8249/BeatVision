@@ -3,6 +3,7 @@ import { BeatVisionAuthError, requireAuthenticatedUser } from "../_shared/auth.t
 const CONTRACT = "1.1";
 
 const JOB_PATH = /^\/v1\/video\/animate\/jobs\/[A-Za-z0-9._:-]+$/;
+const ASSEMBLY_STATUS_PATH = /^\/v1\/video\/assemble\/status\/[A-Za-z0-9-]+$/;
 
 const ALLOWED_POST_PATHS = [
   "/v1/image/scenes",
@@ -182,7 +183,7 @@ function validPath(path: string, method: string): boolean {
     );
   }
 
-  return ALLOWED_POST_PATHS.includes(path) || JOB_PATH.test(path);
+  return ALLOWED_POST_PATHS.includes(path) || JOB_PATH.test(path) || ASSEMBLY_STATUS_PATH.test(path);
 }
 
 Deno.serve(async (request: Request) => {

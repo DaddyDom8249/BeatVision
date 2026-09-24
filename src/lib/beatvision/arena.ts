@@ -94,6 +94,16 @@ export const arenaAnimate = (payload: Record<string, unknown>) => {
 export const arenaAssemble = (payload: Record<string, unknown>) =>
   arenaRequest('assemble', payload, '/v1/video/assemble');
 
+export const arenaAssemblyStatus = (renderId: string, projectId: string, targetDurationSeconds: number) =>
+  arenaRequest(
+    'assembleStatus',
+    {
+      project_id: projectId,
+      target_duration_seconds: targetDurationSeconds,
+    },
+    `/v1/video/assemble/status/${encodeURIComponent(renderId)}`,
+  );
+
 export const arenaAnimationJob = (jobId: string) =>
   arenaRequest('animationJob', {}, `/v1/video/animate/jobs/${encodeURIComponent(jobId)}`, jobId);
 
