@@ -209,9 +209,10 @@ async function runRequest(
     if (String(run.input_hash) !== inputHash) throw new Error("Generation request key was reused with different input.");
     if (run.status === "completed" && run.output_json !== null) return run.output_json;
     if (run.status === "running" || run.status === "pending") {
-      const startedAt = run.started_at ? Date.parse(String(run.started_at)) : 0;
+      const leaseTimestamp = run.started_at || run.created_at || run.updated_at;
+      const leaseAt = leaseTimestamp ? Date.parse(String(leaseTimestamp)) : Date.now();
       const staleAfterMs = 10 * 60 * 1000;
-      if (startedAt > 0 && Date.now() - startedAt < staleAfterMs) {
+      if (!Number.isFinite(leaseAt) || Date.now() - leaseAt < staleAfterMs) {
         throw new Error("This generation request is already running.");
       }
       const reclaim = await fetch(`${base}/rest/v1/generation_runs?id=eq.${encodeURIComponent(String(run.id))}`, {
