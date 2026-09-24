@@ -541,6 +541,7 @@ export interface VideoRenderJob {
   id: string;
   project_id: string;
   render_type: RenderType;
+  provider_render_id: string | null;
   status: RenderJobStatus;
   video_format: string | null;
   video_quality: string | null;
