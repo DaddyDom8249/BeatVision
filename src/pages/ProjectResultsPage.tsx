@@ -268,7 +268,7 @@ export default function ProjectResultsPage() {
         symbolic_objects: reportData.symbolic_objects || null,
         key_locations: reportData.key_locations || null,
         story_direction: reportData.story_direction || null,
-        creative_match_score: typeof reportData.creative_match_score === 'number' ? reportData.creative_match_score : 85,
+        creative_match_score: typeof reportData.creative_match_score === 'number' ? reportData.creative_match_score : null,
         approved: false,
         updated_at: new Date().toISOString(),
       };
