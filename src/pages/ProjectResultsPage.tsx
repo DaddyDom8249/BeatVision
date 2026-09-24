@@ -183,14 +183,14 @@ export default function ProjectResultsPage() {
     }
   };
 
-  const triggerGenerateWorld = async (proj: Project, seed = 1) => {
+  const resolveGenerationProjectId = (proj: Project): string => {\n    const projectId = String(id || proj.id || '').trim();\n    if (!projectId) throw new Error('Project ID is missing. Reload the project before generating.');\n    return projectId;\n  };\n\n  const triggerGenerateWorld = async (proj: Project, seed = 1) => {
     if (worldGenRef.current) return;
     worldGenRef.current = true;
     setGeneratingWorld(true);
     try {
       const res = await supabase.functions.invoke('beatvision-generate', {
         body: {
-          projectId: id || proj.id,
+          projectId: resolveGenerationProjectId(proj),
           action: 'generate_world_report',
           projectTitle: proj.title,
           lyrics: proj.lyrics || '',
