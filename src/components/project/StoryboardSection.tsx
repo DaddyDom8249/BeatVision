@@ -62,6 +62,7 @@ export default function StoryboardSection({ scenes, project, worldReport, genera
     try {
       const res = await supabase.functions.invoke('beatvision-generate', {
         body: {
+          projectId: project.id,
           action: 'refresh_scene',
           projectTitle: project.title,
           lyrics: project.lyrics || '',
