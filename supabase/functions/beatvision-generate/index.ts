@@ -1,11 +1,36 @@
 import { assertProjectOwner, BeatVisionAuthError, requireAuthenticatedUser } from "./auth.ts";
 
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return true;
+
+  const configured = String(Deno.env.get("BEATVISION_ALLOWED_ORIGINS") || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (configured.length > 0) return configured.includes(origin);
+
+  if (origin === "http://localhost:5173") return true;
+  if (origin === "https://daddydom8249.github.io") return true;
+  if (origin === "https://beat-vision-theta.vercel.app") return true;
+  if (origin === "https://beat-vision.vercel.app") return true;
+
+  try {
+    const url = new URL(origin);
+    return url.protocol === "https:"
+      && url.hostname.startsWith("beat-vision-")
+      && url.hostname.endsWith(".vercel.app");
+  } catch {
+    return false;
+  }
+}
+
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin") || "";
-  const configured = String(Deno.env.get("BEATVISION_ALLOWED_ORIGINS") || "").split(",").map((value) => value.trim()).filter(Boolean);
-  const allowed = configured.length ? configured : ["https://daddydom8249.github.io","https://beat-vision-theta.vercel.app","http://localhost:5173"];
+  const allowed = isAllowedOrigin(origin);
+
   return {
-    "Access-Control-Allow-Origin": origin && allowed.includes(origin) ? origin : (origin ? "" : "*"),
+    ...(allowed && origin ? { "Access-Control-Allow-Origin": origin } : {}),
     "Access-Control-Allow-Headers": "authorization, apikey, x-client-info, content-type, x-beatvision-request",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
