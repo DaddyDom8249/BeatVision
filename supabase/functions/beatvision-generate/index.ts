@@ -16,8 +16,10 @@ function corsHeaders(request: Request): Record<string, string> {
     "https://beat-vision-theta.vercel.app",
     "http://localhost:5173",
   ];
+  const isBeatVisionVercelPreview = /^https:\/\/beat-vision-[a-z0-9-]+-beat-vision\.vercel\.app$/i.test(origin);
+  const originAllowed = !origin || allowed.includes(origin) || isBeatVisionVercelPreview;
   return {
-    "Access-Control-Allow-Origin": origin && allowed.includes(origin) ? origin : (origin ? "" : "*"),
+    "Access-Control-Allow-Origin": origin && originAllowed ? origin : (origin ? "" : "*"),
     "Access-Control-Allow-Headers": "authorization, apikey, x-client-info, content-type, x-beatvision-request",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
