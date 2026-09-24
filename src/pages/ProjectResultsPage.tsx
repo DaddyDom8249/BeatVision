@@ -295,7 +295,7 @@ export default function ProjectResultsPage() {
       if (invalid) throw new Error('Arena returned an invalid storyboard. Nothing was written.');
 
       const { data: savedScenes, error: sErr } = await supabase.rpc('beatvision_replace_storyboard', {
-        p_project_id: proj.id,
+        p_project_id: resolveGenerationProjectId(proj),
         p_scenes: normalizedScenes,
       });
       if (sErr) throw sErr;
@@ -356,13 +356,23 @@ export default function ProjectResultsPage() {
   };
 
   const handleWorldApproved = () => {
-    setProject((p) => p ? { ...p, world_approved: true, status: 'World Approved' } : p);
-    setTimeout(() => triggerGenerateStoryboard(project!, worldReport), 300);
+    if (!project) {
+      toast.error('Project is not loaded. Reload the project before continuing.');
+      return;
+    }
+    const approvedProject = { ...project, world_approved: true, status: 'World Approved' as const };
+    setProject(approvedProject);
+    void triggerGenerateStoryboard(approvedProject, worldReport);
   };
 
   const handleStoryboardApproved = () => {
-    setProject((p) => p ? { ...p, storyboard_approved: true, status: 'Storyboard Approved' } : p);
-    setTimeout(() => triggerGenerateCharacters(project!, worldReport), 300);
+    if (!project) {
+      toast.error('Project is not loaded. Reload the project before continuing.');
+      return;
+    }
+    const approvedProject = { ...project, storyboard_approved: true, status: 'Storyboard Approved' as const };
+    setProject(approvedProject);
+    void triggerGenerateCharacters(approvedProject, worldReport);
   };
 
   const handleCharactersApproved = () => {
