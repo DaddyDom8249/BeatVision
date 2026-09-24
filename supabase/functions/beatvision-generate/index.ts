@@ -83,7 +83,6 @@ async function callGeminiFallback(
           text: 'You are BeatVision Intelligence operating as a creative planning engine. Return only valid JSON. Preserve supplied song facts and never invent execution results. This provider is a fallback, not the canonical provider authority.',
         }],
       },
-      metadata: { mode, duration_seconds: durationSeconds ?? null },
     }),
     signal: AbortSignal.timeout(120000),
   });
