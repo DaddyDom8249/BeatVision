@@ -54,7 +54,7 @@ async function callConfiguredPrimaryLanguage(
 ): Promise<LanguageProviderResult> {
   const base = env('BEATVISION_PRIMARY_LANGUAGE_URL').replace(/\/$/, '');
   const token = env('BEATVISION_PRIMARY_LANGUAGE_TOKEN');
-  if (!base) throw new Error('No primary language provider is configured.');
+  if (!base) throw new Error('Primary language provider is not configured.');
   const response = await fetch(base, {
     method: 'POST',
     headers: {
@@ -93,10 +93,10 @@ async function callGeminiFallback(
   const apiKey = env('GEMINI_API_KEY');
   if (!apiKey) throw new Error('Gemini fallback is not configured.');
   const model = env('GEMINI_FALLBACK_MODEL') || 'gemini-3.8-flash';
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
   const response = await fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
