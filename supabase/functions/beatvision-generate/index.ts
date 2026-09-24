@@ -297,6 +297,13 @@ function requiredFields(value: JsonObject, fields: string[], label: string): voi
   }
 }
 
+function missingFields(value: JsonObject, fields: string[]): string[] {
+  return fields.filter((field) => {
+    const v = value[field];
+    return v === null || v === undefined || String(v).trim() === "" || String(v).trim() === "—";
+  });
+}
+
 async function generate(body: JsonObject): Promise<unknown> {
   const action = nonEmpty(body.action, "action");
   const title = nonEmpty(body.projectTitle, "projectTitle");
@@ -309,10 +316,15 @@ async function generate(body: JsonObject): Promise<unknown> {
   if (Array.isArray(body.scenes) && body.scenes.length > MAX_SCENES) throw new Error("Too many scenes in one request.");
 
   if (action === "generate_world_report") {
-    const report = asObject(await callArenaLanguage(
-      `Analyze this song as BeatVision's visual-world director. Song: "${title}". Style: ${style}. Lyrics:\n${lyrics}\n${notes ? `Notes: ${notes}` : ""}\nSeed: ${seed}. Return ONLY JSON with song_summary,emotional_core,main_visual_world,color_palette,lighting_style,main_characters,symbolic_objects,key_locations,story_direction,creative_match_score.`
-    ), "Visual World Report");
-    requiredFields(report, ["song_summary","emotional_core","main_visual_world","color_palette","lighting_style","main_characters","symbolic_objects","key_locations","story_direction"], "Visual World Report");
+    const fields = ["song_summary","emotional_core","main_visual_world","color_palette","lighting_style","main_characters","symbolic_objects","key_locations","story_direction"];
+    const basePrompt = `Analyze this song as BeatVision's visual-world director. Song: "${title}". Style: ${style}. Lyrics:\n${lyrics}\n${notes ? `Notes: ${notes}` : ""}\nSeed: ${seed}. Return ONLY one valid JSON object. You MUST include every field exactly as spelled: song_summary, emotional_core, main_visual_world, color_palette, lighting_style, main_characters, symbolic_objects, key_locations, story_direction, creative_match_score. Every required field must contain meaningful non-empty content. Do not omit fields, rename fields, nest them under another object, or return markdown. Do not invent lyrics.`;
+    let report = asObject(await callArenaLanguage(basePrompt, "world_report"), "Visual World Report");
+    const missing = missingFields(report, fields);
+    if (missing.length) {
+      const repairPrompt = `Return ONLY one valid JSON object for BeatVision's Visual World Report. The previous response was missing these required fields: ${missing.join(", ")}. Preserve every valid field from the previous response and fill every missing field with meaningful content derived from the song. Required top-level fields exactly: song_summary, emotional_core, main_visual_world, color_palette, lighting_style, main_characters, symbolic_objects, key_locations, story_direction, creative_match_score. Song: "${title}". Style: ${style}. Lyrics:\n${lyrics}\n${notes ? `Notes: ${notes}` : ""}\nPrevious response:\n${JSON.stringify(report)}\nDo not return markdown, explanations, or nested wrappers. Do not invent lyrics.`;
+      report = asObject(await callArenaLanguage(repairPrompt, "world_report_repair"), "Visual World Report repair");
+    }
+    requiredFields(report, fields, "Visual World Report");
     report.creative_match_score = normalizeScore(report.creative_match_score);
     return report;
   }
