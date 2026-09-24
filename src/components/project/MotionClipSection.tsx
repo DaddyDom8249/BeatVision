@@ -276,7 +276,6 @@ export default function MotionClipSection({
       error_message: null,
       prompt_used: clip?.source || 'BeatVision Arena LTX motion',
       provider_job_id: null,
-      error_message: null,
       updated_at: new Date().toISOString(),
     };
     const existing = getClip(plan);
