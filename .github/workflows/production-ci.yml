@@ -1,0 +1,31 @@
+name: BeatVision production CI
+
+on:
+  push:
+    branches:
+      - main
+      - production-engineering-v1
+      - rebuild/**
+  pull_request:
+    branches:
+      - main
+      - production-engineering-v1
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm test:e2e:deterministic
+      - run: node --experimental-strip-types --test tests/generation-contract.mjs
