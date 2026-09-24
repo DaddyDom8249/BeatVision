@@ -14,6 +14,7 @@ import {
   debugTraceRequestBody,
   debugTraceResponseBody,
   debugTraceSetPaused,
+  debugTraceShouldIgnoreRequest,
   type DebugTraceEvent,
 } from '@/lib/beatvision/debugTrace';
 
@@ -160,6 +161,10 @@ export default function ProjectDebugTrace() {
         const extraHeaders = new Headers(init.headers);
         extraHeaders.forEach((value, key) => requestHeaders.set(key, value));
       }
+      if (debugTraceShouldIgnoreRequest(url)) {
+        return originalFetch(input, init);
+      }
+
       const traceId = crypto.randomUUID();
       const requestBody = init?.body ?? null;
       const requestContentType = requestHeaders.get('content-type');
