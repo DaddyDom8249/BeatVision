@@ -1,6 +1,6 @@
 import { assertProjectOwner, BeatVisionAuthError, requireAuthenticatedUser } from "../_shared/auth.ts";
 
-const CONTRACT = "2.0";
+const CONTRACT = "1.1";
 const MAX_BODY_BYTES = 2_000_000;
 const MAX_LYRICS = 200_000;
 const MAX_SCENES = 500;
