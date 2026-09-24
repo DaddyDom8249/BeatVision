@@ -1,5 +1,3 @@
-import { ARENA_PROVIDER_NAME } from './arena';
-
 export type ProviderStatus = 'available' | 'unavailable' | 'failed';
 
 export type ProviderResult<T> = {
@@ -65,12 +63,17 @@ export interface JobProvider {
   }): Promise<ProviderResult<{ jobId: string }>>;
 }
 
-export type PrimaryCreativeProvider = 'beatvision-arena';
+export type LanguageProviderSelection = 'automatic' | 'manual';
+export type LanguageProviderId = 'configured-primary' | 'gemini-fallback';
 
-export const PRIMARY_CREATIVE_PROVIDER: PrimaryCreativeProvider = 'beatvision-arena';
-export const PRIMARY_CREATIVE_PROVIDER_LABEL = ARENA_PROVIDER_NAME;
+export const GEMINI_FALLBACK_PROVIDER = 'gemini-fallback' as const;
+export const LANGUAGE_PROVIDER_SELECTION: LanguageProviderSelection = 'automatic';
 
-// Other provider implementations remain in the repository as optional integration seams.
+// Arena is an execution provider, not the BeatVision Intelligence authority.
+// Language reasoning is routed through the server-side provider registry.
+export const PRIMARY_CREATIVE_PROVIDER_LABEL = 'Configured Primary → Gemini Fallback';
+
+// Other provider implementations remain optional integration seams.
 // They are not selected by the default production path.
 export const OPTIONAL_PROVIDER_NAMES = [
   'custom-image-provider',
