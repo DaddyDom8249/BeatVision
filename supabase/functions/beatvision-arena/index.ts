@@ -31,9 +31,11 @@ function cors(request: Request): Record<string, string> {
     "https://beat-vision-theta.vercel.app",
     "http://localhost:5173",
   ];
+  const isBeatVisionVercelPreview =
+    /^https:\/\/beat-vision-[a-z0-9-]+-beat-vision\\.vercel\\.app$/i.test(origin);
   const allowed = configured.length === 0
-    ? productionOrigins.includes(origin)
-    : configured.includes(origin) || productionOrigins.includes(origin);
+    ? productionOrigins.includes(origin) || isBeatVisionVercelPreview
+    : configured.includes(origin) || productionOrigins.includes(origin) || isBeatVisionVercelPreview;
 
   const headers: Record<string, string> = {
     "Access-Control-Allow-Headers":
