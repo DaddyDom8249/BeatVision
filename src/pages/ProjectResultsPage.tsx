@@ -190,7 +190,7 @@ export default function ProjectResultsPage() {
     try {
       const res = await supabase.functions.invoke('beatvision-generate', {
         body: {
-          projectId: proj.id,
+          projectId: id || proj.id,
           action: 'generate_world_report',
           projectTitle: proj.title,
           lyrics: proj.lyrics || '',
@@ -249,7 +249,7 @@ export default function ProjectResultsPage() {
     try {
       const res = await supabase.functions.invoke('beatvision-generate', {
         body: {
-          projectId: proj.id,
+          projectId: id || proj.id,
           action: 'generate_storyboard',
           projectTitle: proj.title,
           lyrics: proj.lyrics || '',
@@ -309,7 +309,7 @@ export default function ProjectResultsPage() {
     try {
       const res = await supabase.functions.invoke('beatvision-generate', {
         body: {
-          projectId: proj.id,
+          projectId: id || proj.id,
           action: 'generate_characters',
           projectTitle: proj.title,
           lyrics: proj.lyrics || '',
