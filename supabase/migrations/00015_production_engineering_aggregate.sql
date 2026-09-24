@@ -8,7 +8,7 @@ alter table public.visual_world_reports
   add constraint visual_world_reports_creative_match_score_range
   check (
     creative_match_score is null
-    or (creative_match_score >= 0 and creative_match_score <= 100)
+    or (creative_match_score >= 0 and creative_match_score <= 1)
   );
 
 do $$
