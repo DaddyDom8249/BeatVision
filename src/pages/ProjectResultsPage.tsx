@@ -1105,7 +1105,7 @@ export default function ProjectResultsPage() {
                 </div>
               </div>
               <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-xs text-emerald-300/80">
-                Language: Pollinations · Images: Pixazo SDXL/Flux · Motion: Pixazo LTX · Assembly: Shotstack. Provider credentials remain server-side in Arena.
+                Intelligence: Configured Primary → Gemini fallback · Execution: Arena handles image, motion, and final assembly. Provider credentials remain server-side.
               </div>
             </section>
           )}
