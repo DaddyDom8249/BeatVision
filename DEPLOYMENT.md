@@ -161,6 +161,10 @@ supabase secrets set INTEGRATIONS_API_KEY=your-platform-key
 | Secret | Description |
 |---|---|
 | `INTEGRATIONS_API_KEY` | Platform LLM gateway key — injected into Edge Functions only |
+| `BEATVISION_PRIMARY_LANGUAGE_URL` | Optional server-side primary language provider endpoint. Leave unset to allow automatic fallback to Gemini. |
+| `BEATVISION_PRIMARY_LANGUAGE_TOKEN` | Optional server-side bearer token for the configured primary language provider. Never expose it to the browser. |
+| `GEMINI_API_KEY` | Server-side Gemini fallback credential. Never expose it to the browser. |
+| `GEMINI_FALLBACK_MODEL` | Optional Gemini fallback model ID. Current verified default: `gemini-3.8-flash`. |
 
 > ⚠️ **`INTEGRATIONS_API_KEY` must never be added as a Vercel env var or committed to Git.**  
 > Set it exclusively via: `supabase secrets set INTEGRATIONS_API_KEY=your-key`
