@@ -430,7 +430,7 @@ export default function MotionClipSection({
       const img = getImage(plan);
       if (!img?.image_url) throw new Error(`Scene ${plan.scene_number} has no approved image for Arena motion.`);
       const existing = getClip(plan);
-      if (!regenerate && existing?.generation_status === 'generating' && existing.provider_job_id) {
+      if (existing?.generation_status === 'generating' && existing.provider_job_id) {
         resumeInFlightRef.current.add(existing.provider_job_id);
         const saved = await waitForArenaJob(existing.provider_job_id, plan);
         onClipsUpdate([...clips.filter((c) => c.id !== existing.id), saved]);
