@@ -100,7 +100,6 @@ async function callGeminiFallback(
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.7,
         responseMimeType: 'application/json',
       },
       systemInstruction: {
