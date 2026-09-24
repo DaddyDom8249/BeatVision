@@ -229,10 +229,16 @@ export default function MotionClipSection({
   const getClip = (plan: SceneMotionPlan) =>
     clips.find((c) => c.scene_motion_plan_id === plan.id || c.scene_number === plan.scene_number);
 
-  const getImage = (plan: SceneMotionPlan) =>
-    sceneImages.find(
+  const getImage = (plan: SceneMotionPlan) => {
+    const matching = sceneImages.filter(
       (i) => (i.storyboard_scene_id === plan.storyboard_scene_id || i.scene_number === plan.scene_number) && i.approved
     );
+    return matching.find((i) => i.real_generated && !i.placeholder && !!i.image_url)
+      ?? matching.find((i) => i.manual_upload && !i.placeholder && !!i.image_url)
+      ?? matching.find((i) => !i.placeholder && !!i.image_url)
+      ?? matching.find((i) => !!i.image_url)
+      ?? null;
+  };
 
   const clearClipError = (planId: string) =>
     setClipErrors((prev) => { const n = { ...prev }; delete n[planId]; return n; });
@@ -248,7 +254,7 @@ export default function MotionClipSection({
       project_id: project.id,
       scene_motion_plan_id: plan.id,
       storyboard_scene_id: plan.storyboard_scene_id ?? null,
-      scene_image_id: plan.scene_image_id ?? getImage(plan)?.id ?? null,
+      scene_image_id: getImage(plan)?.id ?? plan.scene_image_id ?? null,
       scene_number: plan.scene_number,
       scene_title: plan.scene_title ?? null,
       clip_url: url,
