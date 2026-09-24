@@ -209,12 +209,26 @@ async function runRequest(
     if (String(run.input_hash) !== inputHash) throw new Error("Generation request key was reused with different input.");
     if (run.status === "completed" && run.output_json !== null) return run.output_json;
     if (run.status === "running" || run.status === "pending") {
-      throw new Error("This generation request is already running.");
+      const startedAt = run.started_at ? Date.parse(String(run.started_at)) : 0;
+      const staleAfterMs = 10 * 60 * 1000;
+      if (startedAt > 0 && Date.now() - startedAt < staleAfterMs) {
+        throw new Error("This generation request is already running.");
+      }
+      const reclaim = await fetch(`${base}/rest/v1/generation_runs?id=eq.${encodeURIComponent(String(run.id))}`, {
+        method: "PATCH", headers, body: JSON.stringify({
+          status: "pending",
+          error_code: "STALE_RUN_RECLAIMED",
+          error_message: "Previous generation attempt exceeded its execution lease.",
+          output_json: null,
+        }),
+      });
+      if (!reclaim.ok) throw new Error("Could not reclaim the stale generation request.");
+    } else {
+      const retry = await fetch(`${base}/rest/v1/generation_runs?id=eq.${encodeURIComponent(String(run.id))}`, {
+        method: "PATCH", headers, body: JSON.stringify({ status: "pending", error_code: null, error_message: null, output_json: null }),
+      });
+      if (!retry.ok) throw new Error("Could not retry the failed generation request.");
     }
-    const retry = await fetch(`${base}/rest/v1/generation_runs?id=eq.${encodeURIComponent(String(run.id))}`, {
-      method: "PATCH", headers, body: JSON.stringify({ status: "pending", error_code: null, error_message: null, output_json: null }),
-    });
-    if (!retry.ok) throw new Error("Could not retry the failed generation request.");
   } else {
     throw new Error(`Could not create generation run (${insert.status}).`);
   }
