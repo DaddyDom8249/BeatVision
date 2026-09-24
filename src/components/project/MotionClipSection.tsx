@@ -300,7 +300,16 @@ export default function MotionClipSection({
     const startedAt = Date.now();
 
     while (Date.now() - startedAt < ARENA_CLIENT_MAX_WAIT_MS) {
-      const data = await arenaAnimationJob(jobId);
+      let data: any;
+      try {
+        data = await arenaAnimationJob(jobId);
+      } catch (error) {
+        // A transient browser/network failure must not mark the durable Arena job
+        // failed. Keep the persisted job ID and retry until the observation window ends.
+        console.warn('Transient Arena job polling error; retrying', error);
+        await new Promise((resolve) => setTimeout(resolve, ARENA_CLIENT_POLL_MS));
+        continue;
+      }
       const result = data?.result || data;
 
       if (Array.isArray(result?.clips) && result.clips.length) {
