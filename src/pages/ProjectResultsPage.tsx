@@ -243,6 +243,7 @@ export default function ProjectResultsPage() {
       const res = await supabase.functions.invoke('beatvision-generate', {
         body: {
           action: 'generate_world_report',
+          projectId: proj.id,
           projectTitle: proj.title,
           lyrics: proj.lyrics || '',
           style: proj.selected_style,
@@ -301,6 +302,7 @@ export default function ProjectResultsPage() {
       const res = await supabase.functions.invoke('beatvision-generate', {
         body: {
           action: 'generate_storyboard',
+          projectId: proj.id,
           projectTitle: proj.title,
           lyrics: proj.lyrics || '',
           style: proj.selected_style,
@@ -360,6 +362,7 @@ export default function ProjectResultsPage() {
       const res = await supabase.functions.invoke('beatvision-generate', {
         body: {
           action: 'generate_characters',
+          projectId: proj.id,
           projectTitle: proj.title,
           lyrics: proj.lyrics || '',
           style: proj.selected_style,
@@ -399,13 +402,23 @@ export default function ProjectResultsPage() {
   };
 
   const handleWorldApproved = () => {
-    setProject((p) => p ? { ...p, world_approved: true, status: 'World Approved' } : p);
-    setTimeout(() => triggerGenerateStoryboard(project!, worldReport), 300);
+    if (!project) {
+      toast.error('Project is not loaded. Reload the project before continuing.');
+      return;
+    }
+    const approvedProject = { ...project, world_approved: true, status: 'World Approved' as const };
+    setProject(approvedProject);
+    void triggerGenerateStoryboard(approvedProject, worldReport);
   };
 
   const handleStoryboardApproved = () => {
-    setProject((p) => p ? { ...p, storyboard_approved: true, status: 'Storyboard Approved' } : p);
-    setTimeout(() => triggerGenerateCharacters(project!, worldReport), 300);
+    if (!project) {
+      toast.error('Project is not loaded. Reload the project before continuing.');
+      return;
+    }
+    const approvedProject = { ...project, storyboard_approved: true, status: 'Storyboard Approved' as const };
+    setProject(approvedProject);
+    void triggerGenerateCharacters(approvedProject, worldReport);
   };
 
   const handleCharactersApproved = () => {
