@@ -1,13 +1,13 @@
-import pixazo from './video-fallback-gateway';
-import { compileMusicalContext } from './musical-structure';
-import { splitLongBeats as splitLongBeatsWithMusic } from './scene-splitting';
-import { compileCharacterContinuity } from './character-continuity';
-import { compactAudio, normalizeVisualBeats, toStoryboard } from './visual-beat-engine';
-export { BeatVisionAnimationJob } from './animation-jobs';
+import pixazo from './video-fallback-gateway.ts';
+import { compileMusicalContext } from './musical-structure.ts';
+import { splitLongBeats as splitLongBeatsWithMusic } from './scene-splitting.ts';
+import { compileCharacterContinuity } from './character-continuity.ts';
+import { compactAudio, normalizeVisualBeats, toStoryboard } from './visual-beat-engine.ts';
+import { getShotstackRenderStatus } from './shotstack-gateway.ts';
+export { BeatVisionAnimationJob } from './animation-jobs.ts';
 
 const BASE = 'https://gateway.pixazo.ai';
 const CONTRACT = '1.1';
-const LANGUAGE_FALLBACK_MODEL = '';
 const LANGUAGE_TIMEOUT_MS = 60000;
 
 const cors = (r: Request, e: any) => {
@@ -201,7 +201,7 @@ async function resilientSceneImages(r: Request, e: any, body: any, requestId: st
   if (!scenes.length) return json(r, e, { ok: false, status: 'invalid_input', request_id: requestId, error: 'Storyboard contains no scenes.' }, 400);
   if (scenes.length > 1) return json(r, e, { ok: false, status: 'invalid_input', request_id: requestId, error: 'Scene image gateway expects one visual beat per request. Batch the beats at the client/orchestration layer so failures remain isolated.' }, 400);
   const started = Date.now(); const images: any[] = []; const models = new Set<string>();
-  try { for (let i = 0; i < scenes.length; i += 1) { const sceneNumber = Number(scenes[i]?.scene || i + 1); const generated = await generateSceneImage(key, scenePrompt(payload, scenes[i], i, scenes.length), sceneNumber); images.push({ scene: sceneNumber, beatId: scenes[i]?.beatId || null, status: 'generated', image_url: generated.image_url, model: generated.model }); models.add(generated.model); } return json(r, e, { ok: true, contract_version: CONTRACT, capability: 'image', provider: 'pixazo', model: Array.from(models).join('+'), request_id: requestId, latency_ms: Date.now() - started, result: { images, models_used: Array.from(models), scene_count: images.length, free_only: true } }); } catch (error) { return json(r, e, { ok: false, contract_version: CONTRACT, capability: 'image', provider: 'pixazo', status: 'provider_error', request_id: requestId, latency_ms: Date.now() - started, completed_scene_count: images.length, completed_scenes: images.map(image => image.scene), error: String(error instanceof Error ? error.message : error).slice(0, 2200) }, 502); }
+  try { for (let i = 0; i < scenes.length; i += 1) { const sceneNumber = Number(scenes[i]?.scene || i + 1); const generated = await generateSceneImage(key, scenePrompt(payload, scenes[i], i, scenes.length), sceneNumber); images.push({ scene: sceneNumber, beatId: scenes[i]?.beatId || null, status: 'generated', image_url: generated.image_url, model: generated.model }); models.add(generated.model); } return json(r, e, { ok: true, contract_version: CONTRACT, capability: 'image', provider: 'pixazo', model: Array.from(models).join('+'), request_id: requestId, latency_ms: Date.now() - started, result: { images, models_used: Array.from(models), scene_count: images.length, free_only: true } }); } catch (error) { const rawError = String(error instanceof Error ? error.message : error); const sanitized = key ? rawError.split(key).join('[REDACTED]') : rawError; return json(r, e, { ok: false, contract_version: CONTRACT, capability: 'image', provider: 'pixazo', status: 'provider_error', request_id: requestId, latency_ms: Date.now() - started, completed_scene_count: images.length, completed_scenes: images.map(image => image.scene), error: sanitized.slice(0, 2200) }, 502); }
 }
 
 async function storyboardWithRenderSafeBeats(r: Request, e: any, body: any) {
@@ -215,74 +215,209 @@ async function storyboardWithRenderSafeBeats(r: Request, e: any, body: any) {
 }
 
 async function languageGenerate(r: Request, e: any, body: any, requestId: string) {
-  if (body?.contract_version !== CONTRACT || body?.operation !== 'generate') return json(r, e, { ok: false, contract_version: CONTRACT, status: 'contract_mismatch', request_id: requestId, error: 'Expected BeatVision contract 1.1 language generate.' }, 400);
-  const token = e.GEMINI_API_KEY || e.LANGUAGE_PROVIDER_TOKEN;
-  const provider = String(e.LANGUAGE_PROVIDER || 'gemini').toLowerCase();
-  const url = String(e.LANGUAGE_PROVIDER_URL || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent');
-  const model = String(e.LANGUAGE_PROVIDER_MODEL || 'gemini-3.6-flash');
-  if (provider !== 'gemini') return json(r, e, { ok: false, contract_version: CONTRACT, capability: 'language', provider, status: 'provider_misconfigured', request_id: requestId, error: 'BeatVision language authority is locked to Gemini. Configure LANGUAGE_PROVIDER=gemini.' }, 503);
-  if (!token) return json(r, e, { ok: false, contract_version: CONTRACT, capability: 'language', provider: 'gemini', status: 'provider_unavailable', request_id: requestId, error: 'Gemini API key is not configured. Set GEMINI_API_KEY or LANGUAGE_PROVIDER_TOKEN in Arena.' }, 503);
+  if (body?.contract_version !== CONTRACT || body?.operation !== 'generate') {
+    return json(r, e, {
+      ok: false,
+      contract_version: CONTRACT,
+      status: 'contract_mismatch',
+      request_id: requestId,
+      error: 'Expected BeatVision contract 1.1 language generate.'
+    }, 400);
+  }
+
+  const token = String(e.EXTERNAL_LANGUAGE_PROVIDER_TOKEN || '').trim();
+  const url = String(e.EXTERNAL_LANGUAGE_PROVIDER_URL || '').trim();
+  const model = String(e.EXTERNAL_LANGUAGE_PROVIDER_MODEL || '').trim();
+  if (!token || !url || !model) {
+    return json(r, e, {
+      ok: false,
+      contract_version: CONTRACT,
+      capability: 'language',
+      status: 'provider_unavailable',
+      request_id: requestId,
+      error: 'No external language provider is configured. Configure EXTERNAL_LANGUAGE_PROVIDER_URL, EXTERNAL_LANGUAGE_PROVIDER_MODEL and EXTERNAL_LANGUAGE_PROVIDER_TOKEN.'
+    }, 503);
+  }
+
   const payload = body?.payload || {};
   const prompt = clip(payload?.prompt, 30000);
-  if (!prompt) return json(r, e, { ok: false, contract_version: CONTRACT, capability: 'language', provider: 'gemini', status: 'invalid_input', request_id: requestId, error: 'Language generation prompt is required.' }, 400);
+  if (!prompt) return json(r, e, {
+    ok: false,
+    contract_version: CONTRACT,
+    capability: 'language',
+    status: 'invalid_input',
+    request_id: requestId,
+    error: 'Language generation prompt is required.'
+  }, 400);
 
+  const started = Date.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), LANGUAGE_TIMEOUT_MS);
-  const started = Date.now();
   try {
-    const requestBody = JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: [
-        'You are the BeatVision visual-world director.',
-        'Return ONLY valid JSON matching the requested fields.',
-        'No markdown, commentary, or prose outside the JSON object.',
-        'Preserve creative intent, continuity, and production usefulness.',
-        'Do not invent lyrics.',
-        '',
-        prompt
-      ].join('\n') }] }],
-      generationConfig: { responseMimeType: 'application/json' }
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'X-BeatVision-Request': requestId
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are the BeatVision visual-world director. Return ONLY a valid JSON object. Never return prose, markdown, a single character, or a JSON string. Preserve creative intent, continuity, song timing, and production usefulness. Do not invent lyrics.'
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.4,
+        response_format: { type: 'json_object' }
+      }),
+      signal: controller.signal
     });
 
-    // Gemini can transiently return 503 during demand spikes. Retry only
-    // transient overload/unavailable responses, with bounded exponential backoff.
-    // Do not retry authentication, quota, invalid-request, or other provider errors.
-    const maxAttempts = 3;
-    let response: Response | null = null;
-    let text = '';
-    let data: any = null;
-    let content = '';
-    let lastStatus = 0;
-    let lastDetail = '';
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': token, 'X-BeatVision-Request': requestId },
-        body: requestBody,
-        signal: controller.signal
+    const text = await response.text();
+    let data: any;
+    try { data = JSON.parse(text); } catch { data = { raw: text.slice(0, 20000) }; }
+    const content = data?.choices?.[0]?.message?.content || '';
+
+    if (response.ok && content) {
+      const parsed = parseJson(content);
+      if (String(payload?.mode || '') === 'storyboard') {
+        const duration = Number(
+          payload?.duration_seconds ||
+          payload?.durationSeconds ||
+          compactAudio(payload?.audio_analysis || payload?.audioAnalysis || payload?.audio || payload?.analysis)?.duration_seconds ||
+          0
+        );
+        const normalized = normalizeVisualBeats(parsed, duration);
+        if (!normalized.errors.length) {
+          if (normalized.errors.some((x: string) => x === 'No visual beats were produced.')) {
+          const repairPrompt = [
+            'Repair the BeatVision storyboard request below.',
+            'Return ONLY one valid JSON object with exactly these top-level keys: sections, visual_beats, coverage_notes.',
+            'visual_beats MUST be a non-empty JSON array.',
+            'Every beat MUST have numeric startTime and endTime with endTime greater than startTime.',
+            'Use the supplied song duration when present. Cover the complete timeline from 0 to duration.',
+            'Do not return markdown, prose, null, or an empty array.',
+            'Do not invent lyrics. Instrumental intervals must be described as non-lyrical.',
+            'Song duration: ' + (duration > 0 ? String(duration) : 'not supplied') + '.',
+            'Original storyboard prompt:',
+            prompt
+          ].join('\\n');
+          try {
+            const repairResponse = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-BeatVision-Request': requestId
+              },
+              body: JSON.stringify({
+                model,
+                messages: [
+                  { role: 'system', content: 'You are repairing a BeatVision storyboard. Output ONLY valid JSON matching the requested structure.' },
+                  { role: 'user', content: repairPrompt }
+                ],
+                temperature: 0.2,
+                response_format: { type: 'json_object' }
+              }),
+              signal: AbortSignal.timeout(LANGUAGE_TIMEOUT_MS)
+            });
+            const repairText = await repairResponse.text();
+            let repairData: any;
+            try { repairData = JSON.parse(repairText); } catch { repairData = { raw: repairText.slice(0, 20000) }; }
+            const repairContent = repairData?.choices?.[0]?.message?.content || '';
+            if (repairResponse.ok && repairContent) {
+              const repaired = parseJson(repairContent);
+              const repairedNormalized = normalizeVisualBeats(repaired, duration);
+              if (!repairedNormalized.errors.length) {
+                return json(r, e, {
+                  ok: true,
+                  contract_version: CONTRACT,
+                  capability: 'language',
+                  provider: 'external',
+                  model,
+                  status: 'generated_repaired',
+                  latency_ms: Date.now() - started,
+                  request_id: requestId,
+                  result: toStoryboard(repairedNormalized),
+                  coverage: repairedNormalized.coverage
+                });
+              }
+            }
+          } catch {
+            // Preserve deterministic quality-gate failure if repair also fails.
+          }
+        }
+
+        return json(r, e, {
+            ok: true,
+            contract_version: CONTRACT,
+            capability: 'language',
+            provider: 'external',
+            model,
+            status: 'generated',
+            latency_ms: Date.now() - started,
+            request_id: requestId,
+            result: toStoryboard(normalized),
+            coverage: normalized.coverage
+          });
+        }
+        return json(r, e, {
+          ok: false,
+          contract_version: CONTRACT,
+          capability: 'language',
+          provider: 'external',
+          model,
+          status: 'visual_coverage_insufficient',
+          latency_ms: Date.now() - started,
+          request_id: requestId,
+          result: toStoryboard(normalized),
+          coverage: normalized.coverage,
+          errors: normalized.errors,
+          error: 'Storyboard failed the deterministic visual coverage/semantic quality gate.'
+        }, 422);
+      }
+
+      return json(r, e, {
+        ok: true,
+        contract_version: CONTRACT,
+        capability: 'language',
+        provider: 'external',
+        model,
+        status: 'generated',
+        latency_ms: Date.now() - started,
+        request_id: requestId,
+        result: parsed
       });
-      text = await response.text();
-      try { data = JSON.parse(text); } catch { data = { raw: text.slice(0, 20000) }; }
-      content = data?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text || '').join('') || '';
-      lastStatus = response.status;
-      lastDetail = String(data?.error?.message || data?.error || text).slice(0, 1200);
-      if (response.ok && content) break;
-      if (![429, 500, 502, 503, 504].includes(response.status) || attempt === maxAttempts) break;
-      await sleep(750 * Math.pow(2, attempt - 1));
     }
-    if (!response || !response.ok || !content) {
-      return json(r, e, { ok: false, contract_version: CONTRACT, capability: 'language', provider: 'gemini', model, status: 'provider_error', request_id: requestId, latency_ms: Date.now() - started, error: `Gemini ${lastStatus}: ${lastDetail}`, attempts: maxAttempts }, 502);
-    }
-    const parsed = parseJson(content);
-    if (String(payload?.mode || '') === 'storyboard') {
-      const duration = Number(payload?.duration_seconds || payload?.durationSeconds || compactAudio(payload?.audio_analysis || payload?.audioAnalysis || payload?.audio || payload?.analysis)?.duration_seconds || 0);
-      const normalized = normalizeVisualBeats(parsed, duration);
-      if (normalized.errors.length) return json(r, e, { ok: false, contract_version: CONTRACT, capability: 'language', provider: 'gemini', model, status: 'visual_coverage_insufficient', latency_ms: Date.now() - started, request_id: requestId, result: toStoryboard(normalized), coverage: normalized.coverage, errors: normalized.errors, error: 'Storyboard failed the deterministic visual coverage/semantic quality gate.' }, 422);
-      return json(r, e, { ok: true, contract_version: CONTRACT, capability: 'language', provider: 'gemini', model, status: 'generated', latency_ms: Date.now() - started, request_id: requestId, result: toStoryboard(normalized), coverage: normalized.coverage });
-    }
-    return json(r, e, { ok: true, contract_version: CONTRACT, capability: 'language', provider: 'gemini', model, status: 'generated', latency_ms: Date.now() - started, request_id: requestId, result: parsed });
+
+    const providerError = String(data?.error?.message || data?.error || text).slice(0, 1600);
+    return json(r, e, {
+      ok: false,
+      contract_version: CONTRACT,
+      capability: 'language',
+      provider: 'external',
+      model,
+      status: 'provider_error',
+      latency_ms: Date.now() - started,
+      request_id: requestId,
+      error: `External language provider ${response.status}: ${providerError}`
+    }, response.status >= 400 && response.status < 600 ? 502 : 502);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return json(r, e, { ok: false, contract_version: CONTRACT, capability: 'language', provider: 'gemini', model, status: 'provider_error', request_id: requestId, latency_ms: Date.now() - started, error: message.slice(0, 1200) }, 502);
+    const timed = error instanceof Error && error.name === 'AbortError';
+    return json(r, e, {
+      ok: false,
+      contract_version: CONTRACT,
+      capability: 'language',
+      provider: 'external',
+      model,
+      status: timed ? 'provider_timeout' : 'provider_error',
+      latency_ms: Date.now() - started,
+      request_id: requestId,
+      error: timed ? 'External language provider timed out.' : String(error instanceof Error ? error.message : error).slice(0, 1600)
+    }, timed ? 504 : 502);
   } finally {
     clearTimeout(timer);
   }
@@ -292,9 +427,45 @@ export default { async fetch(r: Request, e: any) {
   if (r.method === 'OPTIONS') { const origin = r.headers.get('Origin') || ''; const allowed = String(e.ALLOWED_ORIGIN || '').split(',').map((x: string) => x.trim()).filter(Boolean); if (!origin || !allowed.includes(origin)) return new Response(null, { status: 403, headers: cors(r, e) }); return new Response(null, { status: 204, headers: cors(r, e) }); }
   const url = new URL(r.url), path = url.pathname, requestId = r.headers.get('X-BeatVision-Request') || crypto.randomUUID();
   if (path === '/' || path === '/health') return pixazo.fetch(r, e);
+  if (path === '/v1/client/image/scene') {
+    if (r.method !== 'POST') return json(r, e, { ok: false, error: 'Method Not Allowed' }, 405);
+    let clientBody: any; try { clientBody = await r.json(); } catch { return json(r, e, { ok: false, error: 'Invalid JSON request body.', request_id: requestId }, 400); }
+    if (clientBody?.scene && !clientBody?.payload?.storyboard?.scenes) {
+      const sceneObj = {
+        ...clientBody.scene,
+        scene: Number(clientBody.scene.sceneNumber || clientBody.scene.scene || 1),
+        beatId: clientBody.scene.id || clientBody.scene.beatId || `scene-${clientBody.scene.sceneNumber || 1}`
+      };
+      clientBody = {
+        contract_version: clientBody.contract_version || CONTRACT,
+        operation: 'sceneImages',
+        payload: {
+          style: clientBody.style || clientBody.scene?.visualLanguage || 'Dark industrial realism, cinematic lighting, coherent recurring character and environment.',
+          world: clientBody.world || {
+            the_world: clientBody.scene?.environment?.name || '',
+            characters: clientBody.scene?.characters || [],
+            locations: clientBody.scene?.environment ? [clientBody.scene.environment] : []
+          },
+          storyboard: {
+            scenes: [sceneObj]
+          }
+        }
+      };
+    }
+    return resilientSceneImages(r, e, clientBody, requestId);
+  }
   if (!e.GATEWAY_TOKEN) return json(r, e, { ok: false, error: 'Gateway authentication is not configured.', request_id: requestId }, 503);
   if (r.headers.get('Authorization') !== `Bearer ${e.GATEWAY_TOKEN}`) return json(r, e, { ok: false, error: 'Unauthorized', request_id: requestId }, 401);
   let body: any; try { body = await r.clone().json(); } catch { return json(r, e, { ok: false, error: 'Invalid JSON request body.', request_id: requestId }, 400); }
+  const renderStatusMatch = path.match(/^\/v1\/video\/assemble\/status\/([A-Za-z0-9-]+)$/);
+  if (renderStatusMatch) {
+    if (r.method !== 'POST') return json(r, e, { ok: false, error: 'POST required', request_id: requestId }, 405);
+    const payload = body?.payload || {};
+    const renderId = renderStatusMatch[1];
+    const targetDuration = Number(payload?.target_duration_seconds || payload?.targetDurationSeconds || 0);
+    if (!(targetDuration > 0)) return json(r, e, { ok: false, error: 'target_duration_seconds is required.', request_id: requestId }, 400);
+    return getShotstackRenderStatus(r, e, renderId, targetDuration);
+  }
   if (path === '/v1/language/generate') return languageGenerate(r, e, body, requestId);
   if (body?.operation === 'sceneImages') return resilientSceneImages(r, e, body, requestId);
   if (body?.operation === 'storyboard') return storyboardWithRenderSafeBeats(r, e, body);
