@@ -195,6 +195,22 @@ function resultOf(data: any): any {
 
 function text(v: unknown): string { return String(v ?? "").trim(); }
 
+function parseClock(value: string): number {
+  const parts = value.trim().split(":").map(Number);
+  if (parts.some(n => !Number.isFinite(n))) return NaN;
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return parts[0] * 3600 + parts[1] * 60 + parts[2];
+}
+
+function rangeSeconds(value: unknown): { start: number; end: number } {
+  const m = String(value || "").match(/^\s*([0-9:.]+)\s*-\s*([0-9:.]+)\s*$/);
+  if (!m) throw new Error("Invalid storyboard timestamp range: " + String(value || ""));
+  const start = parseClock(m[1]), end = parseClock(m[2]);
+  if (!(Number.isFinite(start) && Number.isFinite(end) && end > start)) throw new Error("Invalid storyboard timestamp range: " + String(value || ""));
+  return { start, end };
+}
+
 async function stageWorld(token: string, project: Obj, uid: string): Promise<void> {
   const data = await invokeFunction(token, "beatvision-generate", {
     projectId: project.id, projectTitle: project.title, lyrics: project.lyrics || "",
