@@ -367,8 +367,9 @@ async function stageImage(token: string, project: Obj, uid: string, sceneNumber:
       },
       storyboard: { scenes: [{
         scene: Number(scene.scene_number), beatId: String(scene.id),
-        startTime: 0, endTime: Math.min(5.5, Math.max(2.5, Number(project.song_duration || 4))),
-        duration_seconds: Math.min(5.5, Math.max(2.5, Number(project.song_duration || 4))),
+        startTime: rangeSeconds(scene.timestamp_range).start,
+        endTime: rangeSeconds(scene.timestamp_range).end,
+        duration_seconds: Math.min(5.5, Math.max(2.5, rangeSeconds(scene.timestamp_range).end - rangeSeconds(scene.timestamp_range).start)),
         scene_title: scene.scene_title, visual_description: scene.visual_description,
         camera_direction: scene.camera_direction, mood: scene.mood, location: scene.location,
         lyric_moment: scene.lyric_moment, previousBeat: null, nextBeat: null,
