@@ -420,48 +420,16 @@ async function startRender(token: string, project: Obj): Promise<any> {
   const clips = await db(token, "motion_clips?select=id,scene_number,clip_url,duration,status,generation_status&project_id=eq." + encodeURIComponent(String(project.id)) + "&order=scene_number.asc");
   if (!clips.length) throw new Error("Render cannot start without motion clips.");
   const ss = await scenes(token, String(project.id));
-  const parseTime = (value: unknown): number => {
-    const m = String(value || "").match(/^(?:(\\d+):)?(\\d+(?:\\.\\d+)?)\\s*-\\s*(?:(\\d+):)?(\\d+(?:\\.\\d+)?)/);
-    if (!m) return NaN;
-    const toSec = (mm: string | undefined, sec: string | undefined) => Number(mm || 0) * 60 + Number(sec || 0);
-    return toSec(m[3], m[4]);
-  };
   const storyboardScenes = ss.map(s => {
-    const parts = String(s.timestamp_range || "").split("-");
-    const start = parseTime((parts[0] || "").trim() + " - " + (parts[0] || "").trim());
-    const end = parseTime((parts[1] || "").trim() + " - " + (parts[1] || "").trim());
-    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) throw new Error("Invalid storyboard timestamp for scene " + s.scene_number + ".");
-    return {
-      scene: Number(s.scene_number),
-      startTime: start,
-      endTime: end,
-      duration_seconds: end - start,
-      scene_title: s.scene_title,
-      visual_description: s.visual_description,
-      camera_direction: s.camera_direction,
-      mood: s.mood,
-      location: s.location,
-      lyric_moment: s.lyric_moment,
-    };
+    const range = rangeSeconds(s.timestamp_range);
+    return { scene: Number(s.scene_number), startTime: range.start, endTime: range.end, duration_seconds: range.end - range.start, scene_title: s.scene_title, visual_description: s.visual_description, camera_direction: s.camera_direction, mood: s.mood, location: s.location, lyric_moment: s.lyric_moment };
   });
-  const data = await arena(token, "/v1/video/assemble", "assemble", {
-    project_id: project.id, job_id: "render-" + project.id,
-    audio_url: project.song_file,
-    target_duration_seconds: Number(project.song_duration || 0),
+  return await arena(token, "/v1/video/assemble", "assemble", {
+    project_id: project.id, job_id: "render-" + project.id, audio_url: project.song_file, target_duration_seconds: Number(project.song_duration || 0),
     storyboard: { songDuration: Number(project.song_duration || 0), scenes: storyboardScenes },
-    motion: { clips: clips.map(c => ({
-      scene: Number(c.scene_number),
-      video_url: c.clip_url,
-      duration_seconds: Number(c.duration || 4),
-      provider: "pixazo",
-      model: "ltx-video",
-      generation_type: "GENERATIVE_VIDEO",
-      asset_id: "motion:" + String(c.id || c.scene_number),
-    })) },
+    motion: { clips: clips.map(c => ({ scene: Number(c.scene_number), video_url: c.clip_url, duration_seconds: Number(c.duration || 4), provider: "pixazo", model: "ltx-video", generation_type: "GENERATIVE_VIDEO", asset_id: "motion:" + String(c.id || c.scene_number) })) },
   });
-  return data;
 }
-
 async function renderStatus(token: string, renderId: string, duration: number): Promise<any> {
   return await arena(token, "/v1/video/assemble/status/" + encodeURIComponent(renderId), "assembleStatus", { target_duration_seconds: duration }, "POST");
 }
