@@ -397,7 +397,7 @@ async function startMotion(token: string, project: Obj): Promise<string> {
 }
 
 async function motionStatus(token: string, jobId: string): Promise<any> {
-  return await arena(token, "/v1/video/animate/jobs/" + encodeURIComponent(jobId), "animationJob", { job_id: jobId }, "GET");
+  return await arena(token, "/v1/video/animate/jobs/" + encodeURIComponent(jobId), "animationJob", { job_id: jobId }, "POST");
 }
 
 async function saveMotionClips(token: string, project: Obj, uid: string, data: any): Promise<void> {
