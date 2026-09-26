@@ -2,6 +2,9 @@ name = "beatvision-provider-arena"
 main = "src/arena-validated-entry.ts"
 compatibility_date = "2026-09-09"
 
+[ai]
+binding = "AI"
+
 [vars]
 ALLOWED_ORIGIN = "https://daddydom8249.github.io,https://beat-vision-theta.vercel.app"
 VIDEO_PROVIDER = "pixazo"
@@ -31,8 +34,5 @@ state = "deleted"
 # wrangler secret put PIXAZO_API_KEY
 # wrangler secret put SHOTSTACK_API_KEY
 
-# Optional external language/audio bindings. No third-party provider URL or model is bundled here.
-# EXTERNAL_LANGUAGE_PROVIDER_URL = "https://your-language-endpoint/v1/chat/completions"
-# EXTERNAL_LANGUAGE_PROVIDER_MODEL = "your-model"
-# EXTERNAL_AUDIO_PROVIDER_URL = "https://your-audio-endpoint/v1/audio/transcriptions"
-# EXTERNAL_AUDIO_PROVIDER_MODEL = "your-transcription-model"
+# Language generation uses the Workers AI binding above. No external language provider secret is required.
+# Audio analysis remains provider-neutral and is not required for the World Report path.
