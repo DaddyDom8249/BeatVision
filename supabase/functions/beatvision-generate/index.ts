@@ -1,4 +1,4 @@
-import { assertProjectOwner, BeatVisionAuthError, requireAuthenticatedUser } from "../_shared/auth.ts";
+import { assertProjectOwner, BeatVisionAuthError, requireAuthenticatedUser } from "./auth.ts";
 
 const CONTRACT = "1.1";
 const MAX_BODY_BYTES = 2_000_000;
