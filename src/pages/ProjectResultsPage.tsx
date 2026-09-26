@@ -294,11 +294,53 @@ export default function ProjectResultsPage() {
     }
   };
 
+  const getAudioDuration = (url: string): Promise<number> => new Promise((resolve, reject) => {
+    const audio = new Audio();
+    let settled = false;
+    const finish = (fn: (value: number | Error) => void, value: number | Error) => {
+      if (settled) return;
+      settled = true;
+      audio.removeAttribute('src');
+      audio.load();
+      fn(value);
+    };
+    const timer = window.setTimeout(() => finish(reject, new Error('Unable to read the uploaded song duration.')), 15000);
+    audio.preload = 'metadata';
+    audio.onloadedmetadata = () => {
+      window.clearTimeout(timer);
+      const duration = Number(audio.duration);
+      if (Number.isFinite(duration) && duration > 0) finish(resolve, duration);
+      else finish(reject, new Error('The uploaded song has no readable duration.'));
+    };
+    audio.onerror = () => {
+      window.clearTimeout(timer);
+      finish(reject, new Error('Unable to read the uploaded song duration.'));
+    };
+    audio.src = url;
+  });
+
   const triggerGenerateStoryboard = async (proj: Project, report: VisualWorldReport | null) => {
     if (storyGenRef.current) return;
     storyGenRef.current = true;
     setGeneratingStoryboard(true);
     try {
+      let duration = Number(proj.song_duration || 0);
+      if (!(duration > 0) && proj.song_file) {
+        duration = await getAudioDuration(proj.song_file);
+        const { data: savedProject, error: durationErr } = await supabase
+          .from('projects')
+          .update({ song_duration: duration, updated_at: new Date().toISOString() })
+          .eq('id', proj.id)
+          .select()
+          .maybeSingle();
+        if (durationErr) throw durationErr;
+        if (savedProject) setProject(savedProject as Project);
+        proj = { ...proj, song_duration: duration };
+      }
+      if (!(duration > 0)) {
+        throw new Error('Song duration is required for storyboard generation. Upload a readable audio file and try again.');
+      }
+
       const res = await supabase.functions.invoke('beatvision-generate', {
         body: {
           action: 'generate_storyboard',
@@ -308,7 +350,8 @@ export default function ProjectResultsPage() {
           style: proj.selected_style,
           notes: proj.optional_notes || '',
           worldReport: report || {},
-          songDurationSeconds: proj.song_duration || undefined,
+          songDurationSeconds: duration,
+          durationSeconds: duration,
         },
       });
       if (res.error) {
@@ -316,7 +359,6 @@ export default function ProjectResultsPage() {
         throw new Error(msg || 'Failed to generate storyboard');
       }
       const scenesData: Record<string, unknown>[] = res.data?.data || [];
-
       if (!Array.isArray(scenesData) || scenesData.length === 0) {
         throw new Error('Arena returned an empty storyboard.');
       }
@@ -332,11 +374,8 @@ export default function ProjectResultsPage() {
         lyric_moment: String(s.lyric_moment ?? ''),
         transition_style: String(s.transition_style ?? ''),
       }));
-
       const invalid = normalizedScenes.some((s, index) =>
-        s.scene_number !== index + 1 ||
-        !s.timestamp_range ||
-        !s.visual_description
+        s.scene_number !== index + 1 || !s.timestamp_range || !s.visual_description
       );
       if (invalid) throw new Error('Arena returned an invalid storyboard. Nothing was written.');
 
@@ -346,7 +385,9 @@ export default function ProjectResultsPage() {
       });
       if (sErr) throw sErr;
       setScenes(Array.isArray(savedScenes) ? savedScenes : []);
+      setProject(p => p ? { ...p, song_duration: duration } : p);
     } catch (err: unknown) {
+      console.error('[BeatVision] Storyboard generation failed:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to generate storyboard');
     } finally {
       setGeneratingStoryboard(false);

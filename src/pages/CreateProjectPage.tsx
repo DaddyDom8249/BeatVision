@@ -60,6 +60,33 @@ export default function CreateProjectPage() {
     try {
       let songFileUrl: string | null = null;
       let songFileName: string | null = null;
+      let songDuration: number | null = null;
+
+      // Read duration from the local file before upload so every new project
+      // persists the real song timeline required by storyboard generation.
+      if (audioFile) {
+        const objectUrl = URL.createObjectURL(audioFile);
+        try {
+          const audio = document.createElement('audio');
+          audio.preload = 'metadata';
+          songDuration = await new Promise<number>((resolve, reject) => {
+            const timer = window.setTimeout(() => reject(new Error('Unable to read the uploaded song duration.')), 10000);
+            audio.onloadedmetadata = () => {
+              window.clearTimeout(timer);
+              const duration = Number(audio.duration);
+              if (Number.isFinite(duration) && duration > 0) resolve(duration);
+              else reject(new Error('The uploaded song has no readable duration.'));
+            };
+            audio.onerror = () => {
+              window.clearTimeout(timer);
+              reject(new Error('Unable to read the uploaded song duration.'));
+            };
+            audio.src = objectUrl;
+          });
+        } finally {
+          URL.revokeObjectURL(objectUrl);
+        }
+      }
 
       // Upload audio to Supabase Storage
       if (audioFile) {
@@ -85,6 +112,7 @@ export default function CreateProjectPage() {
           lyrics: lyrics.trim(),
           selected_style: style,
           optional_notes: notes.trim() || null,
+          song_duration: songDuration,
           status: 'Draft',
         })
         .select()
