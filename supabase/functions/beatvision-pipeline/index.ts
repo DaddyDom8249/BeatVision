@@ -103,13 +103,22 @@ async function saveProject(token: string, projectId: string, patch: Obj): Promis
 }
 
 async function invokeFunction(token: string, slug: string, body: Obj): Promise<any> {
-  const r = await fetch(baseUrl() + "/functions/v1/" + slug, {
-    method: "POST",
+  const requestId = crypto.randomUUID();
+  const isGet = method === "GET";
+  const query = isGet
+    ? "?" + new URLSearchParams(Object.entries({
+        path: String(body.path || ""),
+        project_id: String(body.payload?.project_id || ""),
+        target_duration_seconds: String(body.payload?.target_duration_seconds || ""),
+      }).filter(([, v]) => v)).toString()
+    : "";
+  const r = await fetch(baseUrl() + "/functions/v1/" + slug + query, {
+    method,
     headers: {
       ...headers(token),
-      "X-BeatVision-Request": crypto.randomUUID(),
+      "X-BeatVision-Request": requestId,
     },
-    body: JSON.stringify(body),
+    ...(isGet ? {} : { body: JSON.stringify(body) }),
   });
   const text = await r.text();
   let data: any;
@@ -342,7 +351,7 @@ async function stageImage(token: string, project: Obj, uid: string, sceneNumber:
       },
       storyboard: { scenes: [{
         scene: Number(scene.scene_number), beatId: String(scene.id),
-        startTime: 0, endTime: Number(project.song_duration || 4),
+        startTime: 0, endTime: Math.min(5.5, Math.max(2.5, Number(project.song_duration || 4))),
         duration_seconds: Math.min(5.5, Math.max(2.5, Number(project.song_duration || 4))),
         scene_title: scene.scene_title, visual_description: scene.visual_description,
         camera_direction: scene.camera_direction, mood: scene.mood, location: scene.location,
@@ -408,14 +417,47 @@ async function saveMotionClips(token: string, project: Obj, uid: string, data: a
 }
 
 async function startRender(token: string, project: Obj): Promise<any> {
-  const clips = await db(token, "motion_clips?select=scene_number,clip_url,duration&project_id=eq." + encodeURIComponent(String(project.id)) + "&order=scene_number.asc");
+  const clips = await db(token, "motion_clips?select=id,scene_number,clip_url,duration,status,generation_status&project_id=eq." + encodeURIComponent(String(project.id)) + "&order=scene_number.asc");
   if (!clips.length) throw new Error("Render cannot start without motion clips.");
+  const ss = await scenes(token, String(project.id));
+  const parseTime = (value: unknown): number => {
+    const m = String(value || "").match(/^(?:(\\d+):)?(\\d+(?:\\.\\d+)?)\\s*-\\s*(?:(\\d+):)?(\\d+(?:\\.\\d+)?)/);
+    if (!m) return NaN;
+    const toSec = (mm: string | undefined, sec: string | undefined) => Number(mm || 0) * 60 + Number(sec || 0);
+    return toSec(m[3], m[4]);
+  };
+  const storyboardScenes = ss.map(s => {
+    const parts = String(s.timestamp_range || "").split("-");
+    const start = parseTime((parts[0] || "").trim() + " - " + (parts[0] || "").trim());
+    const end = parseTime((parts[1] || "").trim() + " - " + (parts[1] || "").trim());
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) throw new Error("Invalid storyboard timestamp for scene " + s.scene_number + ".");
+    return {
+      scene: Number(s.scene_number),
+      startTime: start,
+      endTime: end,
+      duration_seconds: end - start,
+      scene_title: s.scene_title,
+      visual_description: s.visual_description,
+      camera_direction: s.camera_direction,
+      mood: s.mood,
+      location: s.location,
+      lyric_moment: s.lyric_moment,
+    };
+  });
   const data = await arena(token, "/v1/video/assemble", "assemble", {
     project_id: project.id, job_id: "render-" + project.id,
     audio_url: project.song_file,
-    audio_file: project.song_file,
     target_duration_seconds: Number(project.song_duration || 0),
-    clips: clips.map(c => ({ scene: Number(c.scene_number), video_url:c.clip_url, duration_seconds:Number(c.duration || 4) })),
+    storyboard: { songDuration: Number(project.song_duration || 0), scenes: storyboardScenes },
+    motion: { clips: clips.map(c => ({
+      scene: Number(c.scene_number),
+      video_url: c.clip_url,
+      duration_seconds: Number(c.duration || 4),
+      provider: "pixazo",
+      model: "ltx-video",
+      generation_type: "GENERATIVE_VIDEO",
+      asset_id: "motion:" + String(c.id || c.scene_number),
+    })) },
   });
   return data;
 }
@@ -439,7 +481,7 @@ async function main(req: Request): Promise<Response> {
   let state = pipeline.state;
 
   if (body?.reset === true) {
-    state = { stage:"world_report", status:"idle", cursor:0, started_at:new Date().toISOString() };
+    state = { stage:"world_report", status:"idle", cursor:0, started_at:new Date().toISOString(), motion_job_id:null, render_id:null, error_code:null, error_message:null };
   }
 
   if (body?.duration_seconds && Number(body.duration_seconds) > 0 && !Number(project.song_duration || 0)) {
