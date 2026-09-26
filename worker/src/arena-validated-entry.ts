@@ -30,7 +30,7 @@ export default {
         configuration: {
           gateway_token: Boolean(token),
           pixazo_api_key: Boolean(String(env.PIXAZO_API_KEY || '').trim()),
-          language_provider_token: Boolean(String(env.LANGUAGE_PROVIDER_TOKEN || '').trim()),
+          workers_ai: Boolean(env.AI),
           shotstack_api_key: Boolean(String(env.SHOTSTACK_API_KEY || '').trim()),
         },
       });
