@@ -313,7 +313,7 @@ async function stagePrompts(token: string, project: Obj, uid: string): Promise<n
   for (let i=0;i<ss.length;i++) {
     const p = prompts[i] || {};
     const row = {
-      project_id: project.id, owner_id: uid, scene_number: Number(p.scene_number || ss[i].scene_number),
+      project_id: project.id, scene_number: Number(p.scene_number || ss[i].scene_number),
       scene_title: text(p.scene_title || ss[i].scene_title), timestamp_range: text(p.timestamp_range || ss[i].timestamp_range),
       main_image_prompt: text(p.main_image_prompt), camera_framing: text(p.camera_framing),
       lighting_direction: text(p.lighting_direction), character_placement: text(p.character_placement),
