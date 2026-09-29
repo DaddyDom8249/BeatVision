@@ -1,0 +1,11 @@
+name: BeatVision Master Audit
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * *"
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: test -d src && test -d supabase && test -d docs && test -d .github
