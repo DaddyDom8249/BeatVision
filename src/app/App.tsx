@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import CreateProjectPage from "../pages/CreateProjectPage";
 import SongPage from "../pages/SongPage";
+import WorldPage from "../pages/WorldPage";
 
 function currentPath() { return window.location.pathname; }
 
@@ -19,6 +20,9 @@ export default function App() {
   }
 
   if (path === "/projects/new") return <CreateProjectPage onNavigate={navigate} />;
+
+  const worldMatch = path.match(/^\/projects\/([^/]+)\/world\/?$/);
+  if (worldMatch) return <WorldPage projectId={worldMatch[1]} />;
 
   const match = path.match(/^\/projects\/([^/]+)\/song\/?$/);
   if (match) return <SongPage projectId={match[1]} />;
