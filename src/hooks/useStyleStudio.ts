@@ -198,6 +198,8 @@ export function useStyleStudio(projectId: string) {
 
   const saveCharacter = useCallback(async (id: string | null, input: { name: string; sheet: Record<string, string> }) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
+    if (!world?.id) throw new Error("Confirmed World Report not available.");
+    const worldReportId = world.id;
     setWorking(true); setError(null);
     try {
       const base = { name: input.name.trim(), sheet: input.sheet };
@@ -206,7 +208,7 @@ export function useStyleStudio(projectId: string) {
         : await supabase.from("characters").insert({
             ...base,
             project_id: projectId,
-            world_report_id: world?.id,
+            world_report_id: worldReportId,
             style_bible_id: styleBible.id,
           }).select(characterFields).single();
       if (result.error) throw result.error;
@@ -220,6 +222,8 @@ export function useStyleStudio(projectId: string) {
 
   const saveEnvironment = useCallback(async (id: string | null, input: { name: string; sheet: Record<string, string> }) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
+    if (!world?.id) throw new Error("Confirmed World Report not available.");
+    const worldReportId = world.id;
     setWorking(true); setError(null);
     try {
       const base = { name: input.name.trim(), sheet: input.sheet };
@@ -228,7 +232,7 @@ export function useStyleStudio(projectId: string) {
         : await supabase.from("environments").insert({
             ...base,
             project_id: projectId,
-            world_report_id: world?.id,
+            world_report_id: worldReportId,
             style_bible_id: styleBible.id,
           }).select(environmentFields).single();
       if (result.error) throw result.error;
