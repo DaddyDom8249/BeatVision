@@ -48,6 +48,19 @@ export default function StylePage({ projectId }: { projectId: string }) {
     );
   }
 
+  if (!styleBible) {
+    return (
+      <main>
+        <h1>Create Style Bible</h1>
+        <p>The Style Bible will be created from the confirmed World Report. Its world foundation is lineage data, not a disposable UI copy.</p>
+        <button disabled={working} onClick={() => void createStyleBible()}>
+          {working ? "Creating…" : "Create Style Bible from Confirmed World"}
+        </button>
+        {error && <p role="alert">{error}</p>}
+      </main>
+    );
+  }
+
   function saveStyle(event: FormEvent) {
     event.preventDefault();
     void saveStyleBible({
@@ -89,13 +102,14 @@ export default function StylePage({ projectId }: { projectId: string }) {
 
   return (
     <main>
+      {error && <p role="alert">{error}</p>}
       <h1>Style Bible</h1>
       <p>Bound to confirmed World Report: <code>{world?.id}</code></p>
 
       <section>
         <h2>World Foundation</h2>
         <p>The fields below are copied from the confirmed World Report and remain the source lineage for this stage.</p>
-        <pre>{JSON.stringify(styleBible?.world_basis, null, 2)}</pre>
+        <pre>{JSON.stringify(styleBible.world_basis, null, 2)}</pre>
         <form onSubmit={saveStyle}>
           <label>Visual rules, one per line
             <textarea rows={8} value={visualRules} onChange={(e) => setVisualRules(e.target.value)} />
