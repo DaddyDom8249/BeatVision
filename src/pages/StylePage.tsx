@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import CharacterEditor from "../components/style/CharacterEditor";
 import EnvironmentEditor from "../components/style/EnvironmentEditor";
 import { useStyleStudio } from "../hooks/useStyleStudio";
@@ -29,11 +29,12 @@ export default function StylePage({ projectId }: { projectId: string }) {
   const [newCharacter, setNewCharacter] = useState({ name: "", identity: "", appearance: "", wardrobe: "", behavior: "", continuity: "" });
   const [newEnvironment, setNewEnvironment] = useState({ name: "", purpose: "", layout: "", architecture: "", surfaces: "", lighting: "", atmosphere: "", continuity: "" });
 
-  const styleInitialised = useMemo(() => {
-    if (!styleBible) return false;
-    setVisualRules(""); setReferenceAssets(""); setContinuityRules("");
-    return true;
-  }, [styleBible?.id]);
+  useEffect(() => {
+    if (!styleBible) return;
+    setVisualRules(Array.isArray(styleBible.visual_rules) ? styleBible.visual_rules.join("\n") : "");
+    setReferenceAssets(Array.isArray(styleBible.reference_assets) ? styleBible.reference_assets.join("\n") : "");
+    setContinuityRules(Array.isArray(styleBible.continuity_rules) ? styleBible.continuity_rules.join("\n") : "");
+  }, [styleBible]);
 
   if (loading) return <main><p>Loading Style Studio…</p></main>;
 
@@ -53,18 +54,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
       visual_rules: visualRules.split("\n").map((value) => value.trim()).filter(Boolean),
       reference_assets: referenceAssets.split("\n").map((value) => value.trim()).filter(Boolean),
       continuity_rules: continuityRules.split("\n").map((value) => value.trim()).filter(Boolean),
-    }).then(() => {
-      setVisualRules("");
-      setReferenceAssets("");
-      setContinuityRules("");
     });
-  }
-
-  function updateStyleInputs() {
-    if (!styleBible) return;
-    setVisualRules(Array.isArray(styleBible.visual_rules) ? styleBible.visual_rules.join("\n") : "");
-    setReferenceAssets(Array.isArray(styleBible.reference_assets) ? styleBible.reference_assets.join("\n") : "");
-    setContinuityRules(Array.isArray(styleBible.continuity_rules) ? styleBible.continuity_rules.join("\n") : "");
   }
 
   function createCharacter(event: FormEvent) {
@@ -97,8 +87,6 @@ export default function StylePage({ projectId }: { projectId: string }) {
     }).then(() => setNewEnvironment({ name: "", purpose: "", layout: "", architecture: "", surfaces: "", lighting: "", atmosphere: "", continuity: "" }));
   }
 
-  if (!styleInitialised) return <main><p>Preparing Style Bible…</p></main>;
-
   return (
     <main>
       <h1>Style Bible</h1>
@@ -110,13 +98,13 @@ export default function StylePage({ projectId }: { projectId: string }) {
         <pre>{JSON.stringify(styleBible?.world_basis, null, 2)}</pre>
         <form onSubmit={saveStyle}>
           <label>Visual rules, one per line
-            <textarea rows={8} value={visualRules} onChange={(e) => setVisualRules(e.target.value)} onFocus={updateStyleInputs} />
+            <textarea rows={8} value={visualRules} onChange={(e) => setVisualRules(e.target.value)} />
           </label>
           <label>Reference assets, one URL/path per line
-            <textarea rows={8} value={referenceAssets} onChange={(e) => setReferenceAssets(e.target.value)} onFocus={updateStyleInputs} />
+            <textarea rows={8} value={referenceAssets} onChange={(e) => setReferenceAssets(e.target.value)} />
           </label>
           <label>Continuity rules, one per line
-            <textarea rows={8} value={continuityRules} onChange={(e) => setContinuityRules(e.target.value)} onFocus={updateStyleInputs} />
+            <textarea rows={8} value={continuityRules} onChange={(e) => setContinuityRules(e.target.value)} />
           </label>
           <button disabled={working}>{working ? "Saving…" : "Save Style Bible"}</button>
         </form>
