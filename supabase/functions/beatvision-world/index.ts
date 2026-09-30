@@ -11,8 +11,8 @@ Deno.serve(async req=>{
  const {data:u}=await userClient.auth.getUser(); if(!u.user)return json({error:{code:"UNAUTHORIZED",message:"Authentication required."}},401);
  const body=req.method==="GET"?{}:await req.json().catch(()=>({})); const projectId=body.projectId??new URL(req.url).searchParams.get("projectId");
  if(!projectId)return json({error:{code:"PROJECT_REQUIRED",message:"projectId is required."}},400);
- const {data:p}=await admin.from("projects").select("id,user_id,world_report_id,world_confirmed_at").eq("id",projectId).single();
- if(!p||p.user_id!==u.user.id)return json({error:{code:"NOT_FOUND",message:"Project not found."}},404);
+ const {data:p}=await admin.from("projects").select("id,owner_id,world_report_id,world_confirmed_at").eq("id",projectId).single();
+ if(!p||p.owner_id!==u.user.id)return json({error:{code:"NOT_FOUND",message:"Project not found."}},404);
  const {data:existing,error:readError}=await admin.from("world_reports").select("*").eq("project_id",projectId).maybeSingle();
  if(readError)return json({error:{code:"DB_READ_FAILED",message:readError.message}},500);
  if(req.method==="GET")return json({report:existing});
