@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import CreateProjectPage from "../pages/CreateProjectPage";
 import SongPage from "../pages/SongPage";
 import WorldPage from "../pages/WorldPage";
+import StylePage from "../pages/StylePage";
 
 function currentPath() { return window.location.pathname; }
 
@@ -23,6 +24,9 @@ export default function App() {
 
   const worldMatch = path.match(/^\/projects\/([^/]+)\/world\/?$/);
   if (worldMatch) return <WorldPage projectId={worldMatch[1]} />;
+
+  const styleMatch = path.match(/^\/projects\/([^/]+)\/style\/?$/);
+  if (styleMatch) return <StylePage projectId={styleMatch[1]} />;
 
   const match = path.match(/^\/projects\/([^/]+)\/song\/?$/);
   if (match) return <SongPage projectId={match[1]} />;
