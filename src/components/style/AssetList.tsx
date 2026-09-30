@@ -2,13 +2,13 @@ import type { CharacterAsset, EnvironmentAsset } from "../../types/style";
 
 type Asset = CharacterAsset | EnvironmentAsset;
 
-export default function AssetList({
+export default function AssetList<T extends Asset>({
   assets,
   onApprove,
   working,
 }: {
-  assets: Asset[];
-  onApprove: (asset: Asset) => void;
+  assets: T[];
+  onApprove: (asset: T) => void;
   working: boolean;
 }) {
   if (assets.length === 0) return <p>No assets yet. New assets are appended to the record history.</p>;
