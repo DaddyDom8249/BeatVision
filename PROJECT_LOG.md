@@ -61,5 +61,5 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Finding 2:** The analyzer persisted transcript data but SongPage did not render it.
 **Correction:** Added transcript rendering and `transcription_status` to the analysis type.
 **Production warning:** Current Vercel production deployment is READY but is built from an older commit than the current GitHub main branch; therefore production is not verified against the current analyzer code. No claim of end-to-end production verification is made.
-**External API contract:** Groq officially supports `whisper-large-v3-turbo` at `/openai/v1/audio/transcriptions`, accepts a URL or file, and supports verbose JSON with segment/word timestamps. citeturn0search0turn0search1
+**External API contract:** Groq officially supports `whisper-large-v3-turbo` at `/openai/v1/audio/transcriptions`, accepts a URL or file, and supports verbose JSON with segment/word timestamps.
 **Next verification:** Deploy current main to Vercel, run one real uploaded song through local DSP + Groq transcription, inspect persisted transcript/timestamps/BPM/key, then verify World Reveal consumes the resulting analysis.
