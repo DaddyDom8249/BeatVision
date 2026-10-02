@@ -6,6 +6,36 @@ import { useSong } from "../hooks/useSong";
 
 interface Props { projectId: string; }
 
+function readAudioDuration(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const element = document.createElement("audio");
+    const cleanup = () => {
+      URL.revokeObjectURL(url);
+      element.removeAttribute("src");
+      element.load();
+    };
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Could not read the audio duration."));
+    }, 10000);
+    element.preload = "metadata";
+    element.onloadedmetadata = () => {
+      window.clearTimeout(timeout);
+      const duration = element.duration;
+      cleanup();
+      if (Number.isFinite(duration) && duration > 0) resolve(duration);
+      else reject(new Error("The uploaded audio has no readable duration."));
+    };
+    element.onerror = () => {
+      window.clearTimeout(timeout);
+      cleanup();
+      reject(new Error("Could not read the uploaded audio metadata."));
+    };
+    element.src = url;
+  });
+}
+
 export default function SongPage({ projectId }: Props) {
   const { project, loading: projectLoading, error: projectError } = useProject(projectId);
   const { song, loading: songLoading, error: songError, reload } = useSong(projectId);
@@ -33,7 +63,15 @@ export default function SongPage({ projectId }: Props) {
     }
 
     let audioPath = song?.audio_path ?? null;
+    let songDuration = project.song_duration ?? null;
     if (audio) {
+      try {
+        songDuration = await readAudioDuration(audio);
+      } catch (durationError) {
+        setError(durationError instanceof Error ? durationError.message : "Could not read the audio duration.");
+        setSaving(false);
+        return;
+      }
       const extension = audio.name.includes(".") ? audio.name.split(".").pop() : "bin";
       audioPath = `${auth.user.id}/${projectId}/${crypto.randomUUID()}.${extension}`;
       const upload = await supabase.storage.from("audio").upload(audioPath, audio, {
@@ -55,7 +93,16 @@ export default function SongPage({ projectId }: Props) {
     if (result.error) {
       if (audioPath && audioPath !== song?.audio_path) await supabase.storage.from("audio").remove([audioPath]);
       setError(result.error.message);
-    } else await reload();
+    } else {
+      const projectUpdate = await supabase.from("projects")
+        .update({ song_duration: songDuration })
+        .eq("id", projectId);
+      if (projectUpdate.error) {
+        setError(projectUpdate.error.message);
+      } else {
+        await reload();
+      }
+    }
     setSaving(false);
   }
 
