@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import CharacterEditor from "../components/style/CharacterEditor";
 import EnvironmentEditor from "../components/style/EnvironmentEditor";
 import { useStyleStudio } from "../hooks/useStyleStudio";
