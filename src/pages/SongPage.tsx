@@ -63,9 +63,10 @@ export default function SongPage({ projectId }: Props) {
     }
     setError(null);
     setSaving(true);
+    let local: Awaited<ReturnType<typeof analyzeAudioLocally>> | null = null;
     try {
       await supabase.from("songs").update({ analysis_status: "analyzing" }).eq("id", song.id);
-      const local = await analyzeAudioLocally(song.audio_url);
+      local = await analyzeAudioLocally(song.audio_url);
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       if (!token) throw new Error("Authentication session unavailable.");
@@ -93,8 +94,7 @@ export default function SongPage({ projectId }: Props) {
       await reload();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Song analysis failed.";
-      const localExists = Boolean(song?.id);
-      if (localExists) {
+      if (local) {
         await supabase.from("songs").update({
           analysis_status: "completed",
           analysis: {
