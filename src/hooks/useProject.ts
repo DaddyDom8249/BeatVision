@@ -12,7 +12,7 @@ export function useProject(projectId?: string) {
     setLoading(true);
     setError(null);
     const { data, error } = await supabase.from("projects")
-      .select("id,user_id,title,status,created_at,updated_at")
+      .select("id,owner_id,title,status,created_at,updated_at")
       .eq("id", projectId).single();
     if (error) { setError(error.message); setProject(null); }
     else setProject(data as Project);
