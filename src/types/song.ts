@@ -45,6 +45,7 @@ export interface SongAnalysis {
   transcription_provider?: string;
   transcription_model?: string;
   transcription_method?: string;
+  transcription_status?: "completed" | "failed" | "unavailable";
   provider?: string;
   provider_track_id?: string;
   provider_models?: string[];
