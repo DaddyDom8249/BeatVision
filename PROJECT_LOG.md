@@ -36,7 +36,7 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 ## 2026-10-02 — 19:08 UTC
 **Task:** Replace heuristic-only song analysis with a real musical-analysis provider.
 **Result:** IMPLEMENTED; provider credential configuration remains pending.
-**Research:** Cyanite's current API exposes BPM, key, time signature, structural segmentation, genre, mood, movement, valence/arousal, instruments, vocals, and auto-description. The API is asynchronous and uses a server-side API key. citeturn0search0turn3search2
+**Research:** Cyanite's current API documentation states that it exposes BPM, key, time signature, structural segmentation, genre, mood, movement, valence/arousal, instruments, vocals, and auto-description. The API is asynchronous and uses a server-side API key.
 **Implementation:** Added the `beatvision-analyze-song` Supabase Edge Function. It authenticates the project owner, reads the private Supabase audio object, uploads it server-side to Cyanite, polls for completed model outputs, normalizes the musical analysis, and persists it in `songs.analysis`.
 **Frontend:** Song Analysis now invokes the provider-backed function and polls for completion. `useSong` now loads `analysis_status`, `analysis`, and `analyzed_at`. World Reveal now requires `analysis_method === "cyanite_music_intelligence"`.
 **Failure discovered:** CI runs #39 and #40 failed because the expanded SongAnalysis type made the legacy RMS/peak/silence summary fields optional.
