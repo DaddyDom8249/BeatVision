@@ -23,3 +23,12 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Result:** SUCCESS.
 **Verification:** CI run #32 (ID 37051298574) completed successfully against commit 3c105cd807131630f6f9afb17f53bc03c209b48c. The TypeScript/Vite production build and CI file checks passed.
 **Next:** Continue Song Analysis with genuine musical-structure analysis only; do not synthesize BPM/key/sections/emotion from the existing energy curve and label it as detected.
+
+## 2026-10-02 — 19:02 UTC
+**Task:** Add truthful first-pass song structure analysis.
+**Result:** SUCCESS.
+**Implementation:** Browser-side decoded audio now produces a denser energy curve plus signal-derived energy-region candidates using smoothing, change-point scoring, and minimum spacing. Results persist in `songs.analysis`.
+**Truthfulness constraint:** Candidates are labeled `energy_change_heuristic`; BeatVision does not call them musical sections, BPM, key, or emotional labels. No unsupported provider was invented.
+**Commits:** 759a5257a7567c2651dc1f4053b38e2480e56cc3 (analysis type model), baacff8c0c04bfe47bba3b6211a87ac92d8e2ede (analysis implementation).
+**Verification:** CI run #36 (ID 37051413474) completed successfully against the implementation commit.
+**Next:** Add a genuine musical-analysis provider/adapter if available, then use verified structure data in World Reveal. Do not fabricate musical metadata.
