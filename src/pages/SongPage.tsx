@@ -27,7 +27,7 @@ export default function SongPage({ projectId }: Props) {
   async function submit(event: FormEvent) {
     event.preventDefault(); setSaving(true); setError(null);
     const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user || !project || project.user_id !== auth.user.id) {
+    if (!auth.user || !project || project.owner_id !== auth.user.id) {
       setError("Project not found or access denied."); setSaving(false); return;
     }
 
@@ -62,18 +62,25 @@ export default function SongPage({ projectId }: Props) {
   if (projectError || songError) return <main><p role="alert">{projectError ?? songError}</p></main>;
   if (!project) return <main><p role="alert">Project not found.</p></main>;
 
-  return <main>
-    <h1>{project.title}</h1><h2>Song Intake</h2>
-    <form onSubmit={submit}>
-      <label>Song title <input required value={title} onChange={e => setTitle(e.target.value)} /></label>
-      <label>Artist <input required value={artist} onChange={e => setArtist(e.target.value)} /></label>
-      <label>Audio upload <input accept="audio/*" type="file" onChange={e => setAudio(e.target.files?.[0] ?? null)} /></label>
-      {song?.audio_url && <audio controls src={song.audio_url} />}
-      <label>Lyrics <textarea rows={10} value={lyrics} onChange={e => setLyrics(e.target.value)} /></label>
-      <label>Creative direction <textarea rows={6} value={creativeDirection} onChange={e => setCreativeDirection(e.target.value)} /></label>
-      <label>Notes <textarea rows={6} value={notes} onChange={e => setNotes(e.target.value)} /></label>
-      <button disabled={saving}>{saving ? "Saving…" : "Save Song Intake"}</button>
-    </form>
-    {error && <p role="alert">{error}</p>}
+  return <main className="app-shell">
+    <div className="dashboard">
+      <button className="brand" onClick={() => { window.location.href = "/"; }}>BEAT<span>VISION</span></button>
+      <section className="create-card">
+        <div className="eyebrow">01 / SONG</div>
+        <h1>Start with the song.</h1>
+        <p>The track is the source material. Add enough intent for BeatVision to reveal the world without taking authorship away from you.</p>
+        <form onSubmit={submit}>
+          <label>Song title <input required value={title} onChange={e => setTitle(e.target.value)} placeholder="Song title" /></label>
+          <label>Artist <input required value={artist} onChange={e => setArtist(e.target.value)} placeholder="Artist name" /></label>
+          <label>Audio upload <input accept="audio/*" type="file" onChange={e => setAudio(e.target.files?.[0] ?? null)} /></label>
+          {song?.audio_url && <audio controls src={song.audio_url} />}
+          <label>Lyrics <textarea rows={8} value={lyrics} onChange={e => setLyrics(e.target.value)} /></label>
+          <label>What are you trying to make people feel?<textarea rows={5} value={creativeDirection} onChange={e => setCreativeDirection(e.target.value)} placeholder="Not a prompt. Your intent." /></label>
+          <label>Notes<textarea rows={4} value={notes} onChange={e => setNotes(e.target.value)} /></label>
+          <button className="primary-button large" disabled={saving}>{saving ? "Saving…" : "Save song →"}</button>
+        </form>
+        {error && <p className="form-error" role="alert">{error}</p>}
+      </section>
+    </div>
   </main>;
 }
