@@ -39,6 +39,12 @@ export interface SongAnalysis {
   vocal_presence?: string | null;
   vocal_tags?: string[];
   description?: string | null;
+  transcript?: string | null;
+  transcript_segments?: Array<{ start?: number; end?: number; text?: string }>;
+  word_timestamps?: Array<{ start?: number; end?: number; word?: string }>;
+  transcription_provider?: string;
+  transcription_model?: string;
+  transcription_method?: string;
   provider?: string;
   provider_track_id?: string;
   provider_models?: string[];
