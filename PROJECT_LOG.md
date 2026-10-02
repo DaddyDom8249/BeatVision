@@ -50,3 +50,16 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Why:** This keeps uploaded audio processing local, requires no API key, has no recurring analysis bill, and avoids making BeatVision dependent on a third-party service. Open-source Essentia.js was evaluated as a stronger ready-made alternative, but its current upstream license is AGPL-3.0, so it was not hardwired into BeatVision without an explicit licensing decision.
 **Status:** Implementation committed across `src/lib/musicAnalysis.ts`, SongPage, WorldPage, and song types. Provider-specific Edge Function removed.
 **Next verification:** CI must pass, then run a real uploaded song through Analyze music locally and inspect BPM/key/section results before feeding those results into World Reveal.
+
+
+## 2026-10-02 — 19:42 UTC
+**Task:** Audit/debug current Groq analyzer integration and production state.
+**Result:** AUDIT COMPLETED; TWO CODE BUGS IDENTIFIED AND PATCHED.
+**Verified:** GitHub Actions runs #51, #52, and #53 all completed successfully. Supabase Edge Function `beatvision-analyze-song` is ACTIVE at version 3 with `verify_jwt=true`. Supabase security advisor reports two warnings unrelated to the Groq function: mutable search_path on `public.set_updated_at` and leaked-password protection disabled. Performance advisor reports five unindexed foreign keys, eight RLS init-plan warnings, one duplicate index on `projects`, and unused indexes; these are backlog items, not blockers for song analysis.
+**Finding 1:** SongPage treated a Groq transcription failure as a total song-analysis failure, discarding the successful local DSP result from the user's perspective.
+**Correction:** Preserve local analysis as `completed` and record transcription failure in `transcription_status` and `status_detail`. This keeps World Reveal usable when the free external transcription service is temporarily unavailable.
+**Finding 2:** The analyzer persisted transcript data but SongPage did not render it.
+**Correction:** Added transcript rendering and `transcription_status` to the analysis type.
+**Production warning:** Current Vercel production deployment is READY but is built from an older commit than the current GitHub main branch; therefore production is not verified against the current analyzer code. No claim of end-to-end production verification is made.
+**External API contract:** Groq officially supports `whisper-large-v3-turbo` at `/openai/v1/audio/transcriptions`, accepts a URL or file, and supports verbose JSON with segment/word timestamps. citeturn0search0turn0search1
+**Next verification:** Deploy current main to Vercel, run one real uploaded song through local DSP + Groq transcription, inspect persisted transcript/timestamps/BPM/key, then verify World Reveal consumes the resulting analysis.
