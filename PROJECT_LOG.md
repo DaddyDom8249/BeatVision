@@ -32,3 +32,14 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Commits:** 759a5257a7567c2651dc1f4053b38e2480e56cc3 (analysis type model), baacff8c0c04bfe47bba3b6211a87ac92d8e2ede (analysis implementation).
 **Verification:** CI run #36 (ID 37051413474) completed successfully against the implementation commit.
 **Next:** Add a genuine musical-analysis provider/adapter if available, then use verified structure data in World Reveal. Do not fabricate musical metadata.
+
+## 2026-10-02 — 19:08 UTC
+**Task:** Replace heuristic-only song analysis with a real musical-analysis provider.
+**Result:** IMPLEMENTED; provider credential configuration remains pending.
+**Research:** Cyanite's current API exposes BPM, key, time signature, structural segmentation, genre, mood, movement, valence/arousal, instruments, vocals, and auto-description. The API is asynchronous and uses a server-side API key. citeturn0search0turn3search2
+**Implementation:** Added the `beatvision-analyze-song` Supabase Edge Function. It authenticates the project owner, reads the private Supabase audio object, uploads it server-side to Cyanite, polls for completed model outputs, normalizes the musical analysis, and persists it in `songs.analysis`.
+**Frontend:** Song Analysis now invokes the provider-backed function and polls for completion. `useSong` now loads `analysis_status`, `analysis`, and `analyzed_at`. World Reveal now requires `analysis_method === "cyanite_music_intelligence"`.
+**Failure discovered:** CI runs #39 and #40 failed because the expanded SongAnalysis type made the legacy RMS/peak/silence summary fields optional.
+**Correction:** Current SongPage no longer relies on those legacy fields; CI run #41 passed on commit `4c81bf9ad7c573dba6b137c949db7341eca009bb`.
+**Deployment:** Edge Function `beatvision-analyze-song` is ACTIVE, version 1. It will return `CYANITE_NOT_CONFIGURED` until `CYANITE_API_KEY` is added as a Supabase Edge Function secret.
+**Next:** Configure the Cyanite credential, run one real song through Song → Analyze music, verify persisted BPM/key/segments/mood data, then feed verified analysis into World Reveal.
