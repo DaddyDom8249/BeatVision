@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import { supabase } from "../lib/supabase/client";
 import { useProject } from "../hooks/useProject";
 import { useSong } from "../hooks/useSong";
-import type { SongAnalysis } from "../types/song";
+import { analyzeAudioLocally } from "../lib/musicAnalysis";
 
 interface Props { projectId: string; }
 
@@ -57,45 +57,25 @@ export default function SongPage({ projectId }: Props) {
   }, [song]);
 
   async function analyzeAudio() {
-    if (!song?.audio_path) {
+    if (!song?.audio_url) {
       setError("Save an audio track before analyzing it.");
       return;
     }
-
     setError(null);
     setSaving(true);
-
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke("beatvision-analyze-song", {
-        body: { projectId, action: "start" },
-      });
-      if (invokeError) throw new Error(invokeError.message);
-      if (data?.error?.message) throw new Error(data.error.message);
-
-      const trackId = data?.provider_track_id;
-      if (!trackId) throw new Error("Musical analysis started without a provider track ID.");
-
-      const deadline = Date.now() + 120000;
-      while (Date.now() < deadline) {
-        await new Promise((resolve) => window.setTimeout(resolve, 3000));
-
-        const { data: statusData, error: statusError } = await supabase.functions.invoke("beatvision-analyze-song", {
-          body: { projectId, action: "status", trackId },
-        });
-        if (statusError) throw new Error(statusError.message);
-        if (statusData?.error?.message) throw new Error(statusData.error.message);
-
-        if (statusData?.status === "completed") {
-          await reload();
-          setSaving(false);
-          return;
-        }
-      }
-
-      throw new Error("Musical analysis is still processing. Return to this page and re-check the analysis status.");
+      await supabase.from("songs").update({ analysis_status: "analyzing" }).eq("id", song.id);
+      const analysis = await analyzeAudioLocally(song.audio_url);
+      const { error: analysisError } = await supabase.from("songs").update({
+        analysis_status: "completed",
+        analysis,
+        analyzed_at: new Date().toISOString()
+      }).eq("id", song.id);
+      if (analysisError) throw new Error(analysisError.message);
+      await reload();
     } catch (e) {
       await supabase.from("songs").update({ analysis_status: "failed" }).eq("id", song.id);
-      setError(e instanceof Error ? e.message : "Musical analysis failed.");
+      setError(e instanceof Error ? e.message : "Local musical analysis failed.");
     } finally {
       setSaving(false);
     }
@@ -167,7 +147,7 @@ export default function SongPage({ projectId }: Props) {
           <label>Song title <input required value={title} onChange={e => setTitle(e.target.value)} placeholder="Song title" /></label>
           <label>Artist <input required value={artist} onChange={e => setArtist(e.target.value)} placeholder="Artist name" /></label>
           <label>Audio upload <input accept="audio/*" type="file" onChange={e => setAudio(e.target.files?.[0] ?? null)} /></label>
-          {song?.audio_url && <><audio controls src={song.audio_url} /><button type="button" onClick={() => void analyzeAudio()} disabled={saving || song.analysis_status === "analyzing"}>{saving || song.analysis_status === "analyzing" ? "Analyzing music…" : song.analysis_status === "completed" ? "Re-analyze music" : "Analyze music"}</button></>}
+          {song?.audio_url && <><audio controls src={song.audio_url} /><button type="button" onClick={() => void analyzeAudio()} disabled={saving || song.analysis_status === "analyzing"}>{saving || song.analysis_status === "analyzing" ? "Analyzing music…" : song.analysis_status === "completed" ? "Re-analyze locally" : "Analyze music locally"}</button></>}
           <label>Lyrics <textarea rows={8} value={lyrics} onChange={e => setLyrics(e.target.value)} /></label>
           <label>What are you trying to make people feel?<textarea rows={5} value={creativeDirection} onChange={e => setCreativeDirection(e.target.value)} placeholder="Not a prompt. Your intent." /></label>
           <label>Notes<textarea rows={4} value={notes} onChange={e => setNotes(e.target.value)} /></label>
