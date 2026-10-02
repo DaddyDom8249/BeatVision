@@ -63,3 +63,23 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Production warning:** Current Vercel production deployment is READY but is built from an older commit than the current GitHub main branch; therefore production is not verified against the current analyzer code. No claim of end-to-end production verification is made.
 **External API contract:** Groq officially supports `whisper-large-v3-turbo` at `/openai/v1/audio/transcriptions`, accepts a URL or file, and supports verbose JSON with segment/word timestamps.
 **Next verification:** Deploy current main to Vercel, run one real uploaded song through local DSP + Groq transcription, inspect persisted transcript/timestamps/BPM/key, then verify World Reveal consumes the resulting analysis.
+
+
+## 2026-10-02 — 19:47 UTC
+**Task:** Continue BeatVision from the verified analyzer state by implementing World Reveal with a free-only provider.
+
+**Result:** WORLD COMPILER IMPLEMENTED AND DEPLOYED.
+
+**Verified:** GitHub main CI run #58 completed successfully on commit `0c537b01040360d9c889e3d02bfd2078c130cdad`. The `beatvision-world` Supabase Edge Function is ACTIVE at version 5 with JWT verification enabled.
+
+**Finding:** World Reveal was still a deliberate provider stub. It could only create an `unavailable` report and therefore could not progress a real project beyond Song Analysis.
+
+**Correction:** Replaced the stub with a Groq Chat Completions world compiler using `openai/gpt-oss-20b`. The function reads the persisted song analysis, lyrics, artist/creative direction, and notes, then produces the structured BeatVision world fields: mood, emotional arc, visual language, cinematography, environments, color/lighting, motifs, atmosphere, movement, continuity rules, and immutable continuity.
+
+**Free-only constraint:** No paid fallback was added. The implementation uses the current Groq free-plan allocation documented for `openai/gpt-oss-20b`. If the free allocation is exhausted or unavailable, World Reveal returns a controlled failure instead of silently switching providers.
+
+**Safety/quality guard:** Model output is requested as JSON and validated for all required top-level world fields before persistence. Malformed output is rejected rather than saved as a fake world report.
+
+**Verification limitation:** No authenticated real-user World Reveal invocation has been performed yet, so successful end-to-end model generation and persistence remain unverified. Supabase log-query verification was attempted but the available log query interface returned backend/schema errors; no claim of runtime success is made.
+
+**Next verification:** Run one authenticated project through Song Analysis → World Reveal, inspect the persisted `world_reports` row, confirm World Report renders, then add editable/lockable Vision Lock state before moving to scene direction.
