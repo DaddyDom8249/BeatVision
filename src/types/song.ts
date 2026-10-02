@@ -34,7 +34,7 @@ export interface SongAnalysis {
     emotion_profile?: string | null;
     emotion_changes?: string | null;
     segments?: unknown;
-  };
+  } | null;
   instruments?: string[];
   vocal_presence?: string | null;
   vocal_tags?: string[];
