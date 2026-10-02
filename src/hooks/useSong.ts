@@ -11,7 +11,7 @@ export function useSong(projectId?: string) {
     if (!projectId) return;
     setLoading(true); setError(null);
     const { data, error } = await supabase.from("songs")
-      .select("id,project_id,title,artist,audio_path,lyrics,creative_direction,notes,created_at,updated_at")
+      .select("id,project_id,title,artist,audio_path,lyrics,creative_direction,notes,analysis_status,analysis,analyzed_at,created_at,updated_at")
       .eq("project_id", projectId).maybeSingle();
     if (error) { setError(error.message); setSong(null); }
     else if (!data) setSong(null);
