@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import DashboardPage from "../pages/DashboardPage";
 import CreateProjectPage from "../pages/CreateProjectPage";
 import SongPage from "../pages/SongPage";
 import WorldPage from "../pages/WorldPage";
 import StylePage from "../pages/StylePage";
+import StudioPage from "../pages/StudioPage";
 
 function currentPath() { return window.location.pathname; }
 
@@ -20,7 +22,11 @@ export default function App() {
     setPath(next);
   }
 
+  if (path === "/") return <DashboardPage onNavigate={navigate} />;
   if (path === "/projects/new") return <CreateProjectPage onNavigate={navigate} />;
+
+  const studioMatch = path.match(/^\/projects\/([^/]+)\/studio\/?$/);
+  if (studioMatch) return <StudioPage projectId={studioMatch[1]} />;
 
   const worldMatch = path.match(/^\/projects\/([^/]+)\/world\/?$/);
   if (worldMatch) return <WorldPage projectId={worldMatch[1]} />;
@@ -28,14 +34,8 @@ export default function App() {
   const styleMatch = path.match(/^\/projects\/([^/]+)\/style\/?$/);
   if (styleMatch) return <StylePage projectId={styleMatch[1]} />;
 
-  const match = path.match(/^\/projects\/([^/]+)\/song\/?$/);
-  if (match) return <SongPage projectId={match[1]} />;
+  const songMatch = path.match(/^\/projects\/([^/]+)\/song\/?$/);
+  if (songMatch) return <SongPage projectId={songMatch[1]} />;
 
-  return <main>
-    <h1>BeatVision</h1>
-    <p>Every Song Has a World. BeatVision Reveals It.</p>
-    <a href="/projects/new" onClick={e => { e.preventDefault(); navigate("/projects/new"); }}>
-      Create Project
-    </a>
-  </main>;
+  return <DashboardPage onNavigate={navigate} />;
 }
