@@ -43,3 +43,10 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Correction:** Current SongPage no longer relies on those legacy fields; CI run #41 passed on commit `4c81bf9ad7c573dba6b137c949db7341eca009bb`.
 **Deployment:** Edge Function `beatvision-analyze-song` is ACTIVE, version 1. It will return `CYANITE_NOT_CONFIGURED` until `CYANITE_API_KEY` is added as a Supabase Edge Function secret.
 **Next:** Configure the Cyanite credential, run one real song through Song → Analyze music, verify persisted BPM/key/segments/mood data, then feed verified analysis into World Reveal.
+
+## 2026-10-02 — 19:10 UTC
+**Decision:** BeatVision must remain zero-cost. Paid API integrations are not acceptable as a required dependency.
+**Correction:** Removed the Cyanite Edge Function and all frontend calls to it. Song Analysis is now fully local in the browser using Web Audio decoding plus BeatVision-owned DSP: onset-energy structure candidates, autocorrelation BPM estimation, FFT/chroma-based key estimation, RMS/peak/silence metrics, and energy regions.
+**Why:** This keeps uploaded audio processing local, requires no API key, has no recurring analysis bill, and avoids making BeatVision dependent on a third-party service. Open-source Essentia.js was evaluated as a stronger ready-made alternative, but its current upstream license is AGPL-3.0, so it was not hardwired into BeatVision without an explicit licensing decision.
+**Status:** Implementation committed across `src/lib/musicAnalysis.ts`, SongPage, WorldPage, and song types. Provider-specific Edge Function removed.
+**Next verification:** CI must pass, then run a real uploaded song through Analyze music locally and inspect BPM/key/section results before feeding those results into World Reveal.
