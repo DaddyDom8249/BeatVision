@@ -77,11 +77,35 @@ export default function SongPage({ projectId }: Props) {
         body: JSON.stringify({ projectId })
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || "Groq song transcription failed.");
+      if (!response.ok) {
+        const message = result.error || "Groq song transcription failed.";
+        await supabase.from("songs").update({
+          analysis_status: "completed",
+          analysis: {
+            ...local,
+            transcription_status: "failed",
+            status_detail: message
+          },
+          analyzed_at: new Date().toISOString()
+        }).eq("id", song.id);
+        setError(`Local analysis completed, but transcription is unavailable: ${message}`);
+      }
       await reload();
     } catch (e) {
-      await supabase.from("songs").update({ analysis_status: "failed" }).eq("id", song.id);
-      setError(e instanceof Error ? e.message : "Local musical analysis failed.");
+      const message = e instanceof Error ? e.message : "Song analysis failed.";
+      const localExists = Boolean(song?.id);
+      if (localExists) {
+        await supabase.from("songs").update({
+          analysis_status: "completed",
+          analysis: {
+            ...local,
+            transcription_status: "failed",
+            status_detail: message
+          },
+          analyzed_at: new Date().toISOString()
+        }).eq("id", song.id);
+      }
+      setError(message);
     } finally {
       setSaving(false);
     }
@@ -159,7 +183,7 @@ export default function SongPage({ projectId }: Props) {
           <label>Notes<textarea rows={4} value={notes} onChange={e => setNotes(e.target.value)} /></label>
           <button className="primary-button large" disabled={saving}>{saving ? "Saving…" : "Save song →"}</button>
         </form>
-        {song?.analysis_status === "completed" && song.analysis && <section><h2>Musical analysis</h2><p>Duration {song.analysis.duration_seconds.toFixed(1)}s{song.analysis.bpm ? ` · BPM ${song.analysis.bpm}` : ""}{song.analysis.key ? ` · Key ${song.analysis.key}` : ""}{song.analysis.time_signature ? ` · Meter ${song.analysis.time_signature}` : ""}</p><p>{song.analysis.genre_tags?.join(", ") || "Genre unavailable"} · {song.analysis.mood_tags?.slice(0, 5).join(", ") || "Mood unavailable"}</p><p>{song.analysis.sections?.length ?? 0} structural segments · {song.analysis.instruments?.slice(0, 8).join(", ") || "Instrument data unavailable"}</p>{song.analysis.description && <p>{song.analysis.description}</p>}</section>}
+        {song?.analysis_status === "completed" && song.analysis && <section><h2>Musical analysis</h2><p>Duration {song.analysis.duration_seconds.toFixed(1)}s{song.analysis.bpm ? ` · BPM ${song.analysis.bpm}` : ""}{song.analysis.key ? ` · Key ${song.analysis.key}` : ""}{song.analysis.time_signature ? ` · Meter ${song.analysis.time_signature}` : ""}</p><p>{song.analysis.genre_tags?.join(", ") || "Genre unavailable"} · {song.analysis.mood_tags?.slice(0, 5).join(", ") || "Mood unavailable"}</p><p>{song.analysis.sections?.length ?? 0} structural segments · {song.analysis.instruments?.slice(0, 8).join(", ") || "Instrument data unavailable"}</p>{song.analysis.description && <p>{song.analysis.description}</p>}{song.analysis.transcript && <><h3>Transcript</h3><p>{song.analysis.transcript}</p></>}</section>}
         {error && <p className="form-error" role="alert">{error}</p>}
       </section>
     </div>
