@@ -65,13 +65,19 @@ export default function SongPage({ projectId }: Props) {
     setSaving(true);
     try {
       await supabase.from("songs").update({ analysis_status: "analyzing" }).eq("id", song.id);
-      const analysis = await analyzeAudioLocally(song.audio_url);
-      const { error: analysisError } = await supabase.from("songs").update({
-        analysis_status: "completed",
-        analysis,
-        analyzed_at: new Date().toISOString()
-      }).eq("id", song.id);
-      if (analysisError) throw new Error(analysisError.message);
+      const local = await analyzeAudioLocally(song.audio_url);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Authentication session unavailable.");
+      const localUpdate = await supabase.from("songs").update({ analysis_status: "analyzing", analysis: local }).eq("id", song.id);
+      if (localUpdate.error) throw new Error(localUpdate.error.message);
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/beatvision-analyze-song`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Groq song transcription failed.");
       await reload();
     } catch (e) {
       await supabase.from("songs").update({ analysis_status: "failed" }).eq("id", song.id);
@@ -147,7 +153,7 @@ export default function SongPage({ projectId }: Props) {
           <label>Song title <input required value={title} onChange={e => setTitle(e.target.value)} placeholder="Song title" /></label>
           <label>Artist <input required value={artist} onChange={e => setArtist(e.target.value)} placeholder="Artist name" /></label>
           <label>Audio upload <input accept="audio/*" type="file" onChange={e => setAudio(e.target.files?.[0] ?? null)} /></label>
-          {song?.audio_url && <><audio controls src={song.audio_url} /><button type="button" onClick={() => void analyzeAudio()} disabled={saving || song.analysis_status === "analyzing"}>{saving || song.analysis_status === "analyzing" ? "Analyzing music…" : song.analysis_status === "completed" ? "Re-analyze locally" : "Analyze music locally"}</button></>}
+          {song?.audio_url && <><audio controls src={song.audio_url} /><button type="button" onClick={() => void analyzeAudio()} disabled={saving || song.analysis_status === "analyzing"}>{saving || song.analysis_status === "analyzing" ? "Analyzing music…" : song.analysis_status === "completed" ? "Re-analyze" : "Analyze music"}</button></>}
           <label>Lyrics <textarea rows={8} value={lyrics} onChange={e => setLyrics(e.target.value)} /></label>
           <label>What are you trying to make people feel?<textarea rows={5} value={creativeDirection} onChange={e => setCreativeDirection(e.target.value)} placeholder="Not a prompt. Your intent." /></label>
           <label>Notes<textarea rows={4} value={notes} onChange={e => setNotes(e.target.value)} /></label>
