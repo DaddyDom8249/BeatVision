@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase/client";
 import { useProject } from "../hooks/useProject";
 import { useSong } from "../hooks/useSong";
 import { analyzeAudioLocally } from "../lib/musicAnalysis";
+import { formatFailure } from "../lib/errorDetails";
 
 interface Props { projectId: string; }
 
@@ -63,7 +64,7 @@ export default function SongPage({ projectId }: Props) {
           analysis: { ...local, transcription_status: "failed", status_detail: message },
           analyzed_at: new Date().toISOString()
         }).eq("id", song.id);
-        setError(`Local analysis completed, but transcription is unavailable: ${message}`);
+        setError(formatFailure("Song transcription", invokeError, { projectId, songId: song.id, localAnalysis: "completed" }) + " | Local analysis was saved successfully.");
       }
       void reload();
     } catch (e) {
@@ -75,7 +76,7 @@ export default function SongPage({ projectId }: Props) {
           analyzed_at: new Date().toISOString()
         }).eq("id", song.id);
       }
-      setError(message);
+      setError(formatFailure("Song analysis", e, { projectId, songId: song.id }));
     } finally { setSaving(false); }
   }
 
