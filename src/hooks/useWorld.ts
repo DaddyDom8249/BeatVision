@@ -18,8 +18,7 @@ export function useWorld(projectId: string) {
 
   useEffect(() => () => { mounted.current = false; }, []);
 
-  const request = useCallback(async (method: "GET" | "POST" | "PATCH", body?: unknown) => {
-    const version = ++requestVersion.current;
+  const request = useCallback(async (method: "GET" | "POST" | "PATCH", body: unknown | undefined, version: number) => {
     const { data: sessionData } = await supabase.auth.getSession();
     let session = sessionData.session;
     if (!session?.access_token) {
@@ -57,20 +56,20 @@ export function useWorld(projectId: string) {
   }, [projectId]);
 
   const load = useCallback(async () => {
+    const version = ++requestVersion.current;
     setLoading(true);
     setError(null);
     try {
-      const result = await request("GET");
+      const result = await request("GET", undefined, version);
       if (mounted.current && result.version === requestVersion.current) setReport(result.report);
     } catch (e) {
-      if (mounted.current) setError(formatFailure("Load World report", e, { projectId }));
+      if (mounted.current && version === requestVersion.current) setError(formatFailure("Load World report", e, { projectId }));
     } finally {
-      if (mounted.current) setLoading(false);
+      if (mounted.current && version === requestVersion.current) setLoading(false);
     }
   }, [projectId, request]);
 
   useEffect(() => {
-    requestVersion.current++;
     void load();
   }, [load]);
 
@@ -79,7 +78,8 @@ export function useWorld(projectId: string) {
     setGenerating(true);
     setError(null);
     try {
-      const result = await request("POST", { projectId });
+      const version = ++requestVersion.current;
+      const result = await request("POST", { projectId }, version);
       if (mounted.current && result.version === requestVersion.current) setReport(result.report);
     } catch (e) {
       if (mounted.current) setError(formatFailure("Reveal World", e, { projectId }));
@@ -93,7 +93,8 @@ export function useWorld(projectId: string) {
     setSaving(true);
     setError(null);
     try {
-      const result = await request("PATCH", { projectId, action: "save_edits", changes });
+      const version = ++requestVersion.current;
+      const result = await request("PATCH", { projectId, action: "save_edits", changes }, version);
       if (mounted.current && result.version === requestVersion.current) setReport(result.report);
     } catch (e) {
       const message = formatFailure("Save World changes", e, { projectId, action: "save_edits" });
@@ -109,7 +110,8 @@ export function useWorld(projectId: string) {
     setConfirming(true);
     setError(null);
     try {
-      const result = await request("PATCH", { projectId, action: "confirm" });
+      const version = ++requestVersion.current;
+      const result = await request("PATCH", { projectId, action: "confirm" }, version);
       if (mounted.current && result.version === requestVersion.current) setReport(result.report);
     } catch (e) {
       if (mounted.current) setError(formatFailure("Confirm World", e, { projectId, action: "confirm" }));
