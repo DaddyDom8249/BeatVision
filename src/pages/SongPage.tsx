@@ -79,7 +79,7 @@ export default function SongPage({ projectId }: Props) {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const message = result.error || "Groq song transcription failed.";
+        const message = result?.error || invokeError?.message || "Groq song transcription failed.";
         await supabase.from("songs").update({
           analysis_status: "completed",
           analysis: {
@@ -130,11 +130,11 @@ export default function SongPage({ projectId }: Props) {
       }
       const extension = audio.name.includes(".") ? audio.name.split(".").pop() : "bin";
       audioPath = `${auth.user.id}/${projectId}/${crypto.randomUUID()}.${extension}`;
-      const upload = await supabase.storage.from("audio").upload(audioPath, audio, {
+      const upload = await supabase.storage.from("songs").upload(audioPath, audio, {
         upsert: false, contentType: audio.type || undefined
       });
       if (upload.error) { setError(upload.error.message); setSaving(false); return; }
-      if (song?.audio_path) await supabase.storage.from("audio").remove([song.audio_path]);
+      if (song?.audio_path) await supabase.storage.from("songs").remove([song.audio_path]);
     }
 
     const payload = {
@@ -147,7 +147,7 @@ export default function SongPage({ projectId }: Props) {
       : await supabase.from("songs").insert(payload).select("id").single();
 
     if (result.error) {
-      if (audioPath && audioPath !== song?.audio_path) await supabase.storage.from("audio").remove([audioPath]);
+      if (audioPath && audioPath !== song?.audio_path) await supabase.storage.from("songs").remove([audioPath]);
       setError(result.error.message);
     } else {
       const projectUpdate = await supabase.from("projects")
