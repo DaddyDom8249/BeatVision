@@ -22,6 +22,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
     saveEnvironment,
     uploadAsset,
     approveAsset,
+    approveStyleBible,
   } = useStyleStudio(projectId);
 
   const [visualRules, setVisualRules] = useState("");
@@ -43,8 +44,8 @@ export default function StylePage({ projectId }: { projectId: string }) {
     return (
       <main>
         <h1>Style Bible Locked</h1>
-        <p>Phase 3 begins only after the Visual World Report is completed and explicitly confirmed.</p>
-        <a href={`/projects/${projectId}/world`}>Return to Visual World Report</a>
+        <p>The Style Bible is approved and immutable.</p>
+        <a href={`/projects/${projectId}/visual-plan`}>Continue to Visual Plan</a>
       </main>
     );
   }
@@ -123,6 +124,12 @@ export default function StylePage({ projectId }: { projectId: string }) {
           </label>
           <button disabled={working}>{working ? "Saving…" : "Save Style Bible"}</button>
         </form>
+        <button
+          disabled={working}
+          onClick={() => void approveStyleBible()}
+        >
+          {working ? "Locking…" : "Lock Style Bible"}
+        </button>
       </section>
 
       <section>
