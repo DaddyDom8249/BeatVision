@@ -14,6 +14,32 @@ SONG → ANALYSIS → WORLD → STYLE → VISION LOCK → SCENE DIRECTION → GE
 
 The agent's job is to make this workflow work in production. Prioritize fixing blockers and completing the core loop over adding unrelated features.
 
+## Autonomous repair authority
+
+When a failure is reproducible with the access and credentials already available to the agent, **repair it rather than merely reporting it**.
+
+The default behavior is:
+
+1. find the failure
+2. reproduce it
+3. trace the actual failing layer
+4. fix the root cause with the smallest safe change
+5. add regression coverage when practical
+6. test
+7. build
+8. deploy when authorized/appropriate
+9. verify the deployed behavior
+10. log the result
+11. continue to the next blocker
+
+Do not stop merely because an issue is in Supabase, Vercel, an Edge Function, storage, or another production-integrated layer. If the environment already provides authorized access, use it.
+
+Do not ask the human to manually fix an issue that the available environment can safely fix.
+
+If access is genuinely missing, report the exact missing permission/credential and continue fixing every other blocker that remains safely accessible.
+
+Never request, print, commit, or expose passwords, session tokens, service-role keys, or other secrets. Use credentials only through the environment's authorized secret/configuration mechanism.
+
 ## Hard constraints
 
 ### Zero cost
@@ -65,7 +91,6 @@ The current project ownership field is projects.owner_id. Do not assume user_id.
 ## Continuous repair loop
 
 For each blocker:
-
 1. inspect current state
 2. reproduce the failure when possible
 3. trace it to the actual failing layer
@@ -80,6 +105,26 @@ For each blocker:
 12. choose the next highest-priority blocker
 
 Do not repeatedly retry the same failed approach. Change the diagnostic hypothesis.
+
+## Production access rule
+
+Use only access already authorized and available in the Freebuff environment.
+
+When authorized access exists:
+- inspect production configuration needed to diagnose the issue
+- inspect relevant Supabase Edge Functions, database/storage state, and logs
+- inspect Vercel deployment/build state
+- perform authenticated browser/API checks when the environment has a valid test session
+- repair safe application/function/configuration defects
+- deploy and verify when the available credentials permit it
+
+Do not weaken security or bypass authentication merely to obtain test access.
+
+If production access is unavailable, distinguish:
+- **CODE-FIXABLE:** can be repaired in the repository now
+- **DEPLOY-FIXABLE:** can be deployed with existing access
+- **VERIFICATION-BLOCKED:** fix exists but authenticated/live verification is unavailable
+- **HUMAN-REQUIRED:** an actual permission, approval, or secret must be supplied by the owner
 
 ## Architecture
 
@@ -266,7 +311,7 @@ Stop and ask the human before:
 - changing the zero-cost requirement
 - changing BeatVision's core creative philosophy
 
-Safe bug fixes, tests, refactors, and ordinary implementation work may proceed autonomously.
+Safe bug fixes, tests, refactors, ordinary implementation work, and safe production repairs with existing authorization may proceed autonomously.
 
 ## Completion standard
 
