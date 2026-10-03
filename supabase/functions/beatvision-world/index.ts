@@ -44,7 +44,7 @@ function parseModelJson(raw: string) {
   try {
     return JSON.parse(trimmed);
   } catch {
-    const fenced = trimmed.match(/\`\`\`(?:json)?\\s*([\\s\\S]*?)\`\`\`/i);
+    const fenced = trimmed.match(/\`\`\`(?:json)?\s*([\s\S]*?)\s*\`\`\`/i);
     if (fenced) return JSON.parse(fenced[1]);
     throw new Error("World model returned invalid JSON.");
   }
@@ -208,31 +208,31 @@ Deno.serve(async (req) => {
     if (req.method === "GET") return json({ report: existing });
 
     if (req.method === "PATCH") {
+      if (!existing || existing.status !== "completed") {
+        return json({ error: { code: "WORLD_NOT_READY", message: "A completed world report must exist before editing or confirmation." } }, 409);
+      }
+
       if (body.action === "save_edits") {
-        if (!existing || existing.status !== "completed") {
-          return json({
-            error: {
-              code: "WORLD_NOT_READY",
-              message: "A completed world report must exist before its world can be edited.",
-            },
-          }, 409);
-        }
         if (existing.confirmed_at) {
-          return json({
-            error: {
-              code: "WORLD_LOCKED",
-              message: "This world is confirmed. Saving edits requires an explicit revision.",
-            },
-          }, 409);
+          return json({ error: { code: "WORLD_ALREADY_CONFIRMED", message: "Confirmed worlds are locked. Create an explicit revision before changing them." } }, 409);
         }
 
         const edits = readWorldEdits(body);
         const merged = mergeWorldForValidation(existing, edits);
         validateWorld(merged);
 
+        // Copy the edits before embedding them in raw_report so the object
+        // graph remains acyclic and JSON serialization cannot fail.
+        const update: Record<string, unknown> = { ...edits };
+        update.raw_report = {
+          ...(existing.raw_report && typeof existing.raw_report === "object" ? existing.raw_report : {}),
+          artist_edits: { ...edits },
+          edited_at: new Date().toISOString(),
+        };
+
         const { data: saved, error: saveError } = await admin
           .from("world_reports")
-          .update(edits)
+          .update(update)
           .eq("id", existing.id)
           .eq("project_id", projectId)
           .select("*")
@@ -260,11 +260,9 @@ Deno.serve(async (req) => {
       }
 
       if (body.action !== "confirm") {
-        return json({ error: { code: "INVALID_ACTION", message: "Only world confirmation and world edit saving are supported." } }, 400);
+        return json({ error: { code: "INVALID_ACTION", message: "Only world editing or confirmation is supported." } }, 400);
       }
-      if (!existing || existing.status !== "completed") {
-        return json({ error: { code: "WORLD_NOT_READY", message: "A completed world report must exist before confirmation." } }, 409);
-      }
+
       if (existing.confirmed_at) return json({ report: existing });
 
       const now = new Date().toISOString();
@@ -277,10 +275,12 @@ Deno.serve(async (req) => {
 
       if (error) throw new Error(error.message);
 
-      await admin
+      const { error: projectUpdateError } = await admin
         .from("projects")
         .update({ world_report_id: existing.id, world_confirmed_at: now })
         .eq("id", projectId);
+
+      if (projectUpdateError) throw new Error(projectUpdateError.message);
 
       return json({ report: confirmed });
     }

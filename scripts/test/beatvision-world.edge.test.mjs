@@ -209,7 +209,21 @@ test("save_edits accepts the exact payload WorldReport.tsx sends and returns 200
   assert.deepEqual(stored.motifs, ["rain", "neon"]);
   assert.equal(stored.cinematography, "cinematography — revised by the artist");
   // Untouched columns survive.
-  assert.deepEqual(stored.raw_report, { model: "openai/gpt-oss-20b" });
+  // Provenance is preserved and the edits are recorded on raw_report.
+  assert.equal(stored.raw_report.model, "openai/gpt-oss-20b");
+  assert.ok(stored.raw_report.edited_at, "edited_at provenance must be recorded");
+  assert.deepEqual(stored.raw_report.artist_edits.mood, { tone: "brooding" });
+  assert.equal(
+    stored.raw_report.artist_edits.cinematography,
+    "cinematography — revised by the artist"
+  );
+  // Regression: embedding the edits must not build a cyclic object graph.
+  // That is what made production respond 500 "Converting circular structure".
+  JSON.parse(JSON.stringify(stored.raw_report)); // must not throw
+  assert.ok(
+    !("raw_report" in stored.raw_report.artist_edits),
+    "artist_edits must not reference back to the report"
+  );
   assert.equal(stored.status, "completed");
   assert.equal(stored.confirmed_at, null);
 });
@@ -273,7 +287,7 @@ test("save_edits cannot silently mutate a confirmed world", async () => {
 
   assert.equal(response.status, 409);
   const body = await response.json();
-  assert.equal(body.error.code, "WORLD_LOCKED");
+  assert.equal(body.error.code, "WORLD_ALREADY_CONFIRMED");
   assert.equal(db.world_reports[0].mood.tone, "original");
 });
 

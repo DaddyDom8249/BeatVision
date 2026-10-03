@@ -43,6 +43,22 @@ Produce:
 - BLOCKED
 - highest-priority blocker
 
+### Required finding summary
+
+At the end of every audit, repair cycle, or blocked attempt, provide a concise **FINDINGS SUMMARY**.
+
+The summary must include:
+1. What was checked.
+2. What was actually found.
+3. What was fixed, if anything.
+4. What remains broken or unverified.
+5. The next highest-priority action.
+6. Any human action required.
+
+Do not only store findings in PROJECT_LOG.md. The findings summary must also be returned in the agent's response/output so the user can see it immediately.
+
+If multiple repair cycles occur in one run, provide a short findings summary after each major blocker and a final cumulative findings summary at the end.
+
 ## Phase 2 — Repair loop
 
 For the highest-priority blocker:
@@ -124,3 +140,5 @@ Then provide:
 3. attempted fixes
 4. why autonomous continuation is unsafe/impossible
 5. exact human action required
+
+Then provide the required **FINDINGS SUMMARY** described above.
