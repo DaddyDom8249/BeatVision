@@ -377,3 +377,14 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Scope:** Documentation/instructions only. No application code, Supabase data, or production configuration was changed by this setup.
 **Commits:** `2e11526eb764923b09b36a03492aa4bb86153488` (AGENTS.md); `f2491bbcaf8707a4d33f6df9100f1cdef994cf2b` (FREEBUFF_TASK.md).
 **Next:** Connect the BeatVision GitHub repository to Freebuff, run the audit task first, and review its findings before granting any production credentials.
+
+
+## 2026-10-03 — Production World edit circular-reference repair
+**Task:** Repair the authenticated production `save_edits` failure identified by the Freebuff audit/probe.
+**Result:** FIXED in the deployed Edge Function; authenticated browser round-trip remains unverified.
+**Finding:** Production `beatvision-world` v6 was the same deployed implementation that accepted `changes`, but its `save_edits` branch assigned `artist_edits: update` and then assigned that object to `update.raw_report`. This created a circular object graph: `raw_report → artist_edits → update → raw_report`. Response serialization then failed with `TypeError: Converting circular structure to JSON`.
+**Action:** Added the production-compatible `save_edits` branch to the repository, copied the edits into a separate `artistEdits` object before embedding them in `raw_report`, preserved the 11-field allowlist, kept confirmed worlds locked, and improved confirmation error handling. Also repaired the fenced-JSON parser regex in the same function.
+**Repository:** Commit `8e9b76fd0a51db430bfe9c1758b6d06d852ca15f`.
+**Production:** Deployed `beatvision-world` Edge Function v7 with `verify_jwt=true`; deployment SHA `c2f0b0ffb11183ef319b3020d0ba81fad1c5292c81cf79748598839ec52f9b37`.
+**Verification:** Retrieved the deployed function after deployment and confirmed the circular-reference fix is present. GitHub CI status for the commit was still pending at log time.
+**Remaining:** Perform a real authenticated World → Edit World → Save World Changes round-trip and confirm the edited JSON persists and renders after reload. Schema/migration drift remains a separate architecture task and is not being declared resolved by this repair.
