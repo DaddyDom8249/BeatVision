@@ -297,3 +297,12 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Findings:** Direct deep-link requests such as `/projects/new` initially returned Vercel 404 because the Vite SPA had no Vercel rewrite configuration. Added `vercel.json` with a catch-all rewrite to `/index.html` in commit `bfcc4987f09dc88bdd1fc6ccfaf5a27045a651ad`.
 **Verification:** Vercel deployment `dpl_8nULLyTzMmQQGLf4C8gqvrqwF6VH` reached READY. Production `/projects/new` returned the actual BeatVision New Project UI after cache refresh; `/projects/test/studio` also executed the React route rather than returning a platform 404. GitHub Production CI run #64 passed.
 **Constraint:** No test audio file or dedicated authentication credentials are available in the current conversation, and no browser-automation connector is exposed in this session. Therefore no authenticated project creation, upload, analysis, or World Reveal result is being claimed.
+
+
+## 2026-10-03 — 02:18 UTC
+**Task:** Fix the production project-creation flow that required authentication without exposing any sign-in UI.
+**Result:** FIXED and deployed.
+**Finding:** `CreateProjectPage` correctly enforced the Supabase authenticated-user/owner model, but the application had no authentication route or sign-in/sign-up controls. This made project creation fail with "Sign-in is required" while giving the user no way to satisfy the requirement.
+**Action:** Added `src/pages/AuthPage.tsx` with email/password sign-in and account creation; added `/auth` routing; exposed "Sign in or create an account" directly on the New Project page; unauthenticated project creation now routes to auth instead of only showing an error.
+**Verification:** Vercel production deployment `dpl_BHfE2KUtZSdZLw9ueekX7uHsfuk4` reached READY from commit `b53708046f8ffef59400ff45660efd14d48b2b5e`. GitHub Production CI run #70 was still in progress at log time; no CI success is claimed yet.
+**Next test:** Open production, use Sign in/Create account, then create a project. Do not claim authenticated project creation is verified until a real account successfully creates a row and reaches the Song page.
