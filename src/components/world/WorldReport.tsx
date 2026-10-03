@@ -132,6 +132,7 @@ export default function WorldReport({
   report,
   onConfirm,
   onSave,
+  onContinue,
 }: {
   report: WorldReportType;
   onConfirm: () => void;
