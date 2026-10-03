@@ -303,7 +303,7 @@ export function useStyleStudio(projectId: string) {
     try {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const root = kind === "character" ? "characters" : "environments";
-      const path = `${userId}/${projectId}/${root}/${parentId}/${crypto.randomUUID()}-${safeName"}`;
+      const path = `${userId}/${projectId}/${root}/${parentId}/${crypto.randomUUID()}-${safeName}`;
       const upload = await supabase.storage.from("visual-assets").upload(path, file, {
         upsert: false,
         contentType: file.type || undefined,
