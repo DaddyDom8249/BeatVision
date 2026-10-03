@@ -85,7 +85,7 @@ export default function SongPage({ projectId }: Props) {
         }).eq("id", song.id);
         setError(`Local analysis completed, but transcription is unavailable: ${message}`);
       }
-      await reload();
+      void reload();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Song analysis failed.";
       if (local) {
@@ -161,7 +161,7 @@ export default function SongPage({ projectId }: Props) {
       if (projectUpdate.error) {
         setError(projectUpdate.error.message);
       } else {
-        await reload();
+        void reload();
       }
     }
     setSaving(false);
