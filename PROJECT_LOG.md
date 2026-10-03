@@ -83,3 +83,194 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Verification limitation:** No authenticated real-user World Reveal invocation has been performed yet, so successful end-to-end model generation and persistence remain unverified. Supabase log-query verification was attempted but the available log query interface returned backend/schema errors; no claim of runtime success is made.
 
 **Next verification:** Run one authenticated project through Song Analysis → World Reveal, inspect the persisted `world_reports` row, confirm World Report renders, then add editable/lockable Vision Lock state before moving to scene direction.
+
+## 2026-10-02 — 19:15 UTC
+**Task:** Reconcile Arena with the new BeatVision-owned architecture and update project checklist.
+
+**Result:** ARENA BRIDGE IMPLEMENTED; PRODUCTION INTEGRATION AND CI VERIFICATION PENDING.
+
+**Completed in DaddyDom8249/BeatVision-arena:**
+- Added BeatVision bridge contract 2.0.
+- Added /v2/scene-image, /v2/animate, and /v2/assemble execution endpoints.
+- Made BeatVision the source of truth for analysis, World, Style, Vision Lock, scene direction, timing, and approvals.
+- Added Vision Lock validation and deterministic Vision Lock hashing to execution responses.
+- Added free-only image/video model allowlists and rejected paid/unknown model substitutions.
+- Disabled the stale SD3.5 reference-continuation path.
+- Added bridge regression tests and CI coverage.
+- Updated Arena documentation/provider contracts.
+
+**Verification:** Repository commits were created successfully. GitHub's current status surface returned no workflow runs/status records for the latest Arena commit, so the Arena test suite is **not marked passed**. No production Arena deployment verification has been claimed.
+
+# Current BeatVision Checklist
+
+## 0. Foundation
+- [x] GitHub repo connected
+- [x] Supabase project connected
+- [x] Vercel project identified
+- [x] Dashboard created
+- [x] Project creation flow
+- [x] Studio shell
+- [x] Song intake page
+- [x] World / Style / Studio routes
+- [x] Supabase ownership model aligned around owner_id
+- [x] Audio upload/storage flow
+- [x] Initial BeatVision visual system
+- [x] Production build passing in CI
+- [ ] Browser verification of current deployment
+- [ ] Fresh Vercel deployment verified against current GitHub main
+- [ ] Authenticated project-creation test
+- [ ] Song-upload test
+- [ ] Audio-playback test
+- [ ] Project ownership/RLS boundary test
+- [ ] Refresh/deep-link route test
+- [ ] Empty/error/loading-state test
+
+## 1. Song Analysis
+- [x] Persist analysis status
+- [x] Browser-side raw audio decoding
+- [x] RMS / peak / silence metrics
+- [x] Energy curve
+- [x] Signal-derived energy-region candidates
+- [x] Local BPM estimation
+- [x] Local key estimation
+- [x] Local structural candidates
+- [x] Optional Groq Whisper transcription path
+- [x] Transcript/timestamp persistence
+- [x] Transcript rendering
+- [x] Preserve local analysis if transcription fails
+- [ ] Run a real uploaded song through the complete analysis UI
+- [ ] Empirically verify BPM accuracy
+- [ ] Empirically verify key accuracy
+- [ ] Improve musical section detection beyond energy heuristics
+- [ ] Verify transcript/timestamp quality on the test song
+- [ ] Decide whether additional free local musical-analysis libraries are legally/technically acceptable
+
+## 2. World Reveal
+- [x] World compiler backend
+- [x] Required world fields
+- [x] Emotional arc
+- [x] Cinematography
+- [x] Environments
+- [x] Color / lighting
+- [x] Motifs
+- [x] Atmosphere
+- [x] Movement
+- [x] Continuity rules
+- [x] Immutable continuity
+- [x] Structured JSON validation
+- [x] Controlled failure when provider unavailable
+- [ ] Authenticated real Song → World Reveal test
+- [ ] Verify persisted world_reports row
+- [ ] Verify World Report renders in UI
+- [ ] Make world components editable
+- [ ] Make world components individually replaceable
+- [ ] Make world components approveable
+- [ ] Add world versioning
+
+## 3. Vision Lock
+- [ ] Define Vision Lock database model
+- [ ] Persist world_version
+- [ ] Persist style_version
+- [ ] Persist character versions
+- [ ] Persist reference assets
+- [ ] Persist approved world state
+- [ ] Support locked/unlocked component state
+- [ ] Support deliberate shot-specific overrides
+- [ ] Enforce immutable continuity server-side
+- [ ] Add Vision Lock UI
+- [ ] Add Vision Lock approval/revision flow
+
+## 4. Scene Direction
+- [ ] Scene purpose
+- [ ] Characters
+- [ ] Location
+- [ ] Action
+- [ ] Camera
+- [ ] Lens / framing
+- [ ] Movement
+- [ ] Lighting
+- [ ] Time / weather
+- [ ] Visual event
+- [ ] Duration
+- [ ] Song section
+- [ ] Lyrics / musical context
+- [ ] Compile Scene Direction into Arena bridge payload
+- [ ] Verify Vision Lock hash travels with generated assets
+
+## 5. Arena / Generation Integration
+- [x] Arena BeatVision bridge contract 2.0
+- [x] Arena requires locked BeatVision creative state
+- [x] Arena receives BeatVision-owned analysis/world/scene data
+- [x] Arena returns Vision Lock provenance/hash
+- [x] Free-only model allowlist
+- [x] Paid/unknown model rejection
+- [x] Remove stale SD3.5 continuation path
+- [x] Bridge regression tests added
+- [ ] Verify Arena CI actually executes and passes
+- [ ] Deploy updated Arena bridge
+- [ ] Configure BeatVision → Arena authentication
+- [ ] Wire BeatVision scene generation to /v2/scene-image
+- [ ] Wire BeatVision motion generation to /v2/animate
+- [ ] Wire BeatVision final assembly to /v2/assemble
+- [ ] Verify generated asset metadata/provenance persists in BeatVision
+- [ ] Verify no paid fallback exists in deployed execution path
+
+## 6. Approval / Continuity Loop
+- [ ] Generate candidate
+- [ ] Artist approves/rejects
+- [ ] Revisions preserve Vision Lock
+- [ ] Approved shot becomes immutable
+- [ ] Next shot inherits relevant locked state
+- [ ] Deliberate override creates a new explicit version
+- [ ] Verify character/environment/camera continuity across multiple shots
+
+## 7. Story / Timeline
+- [ ] Replace/retire Arena-dependent legacy storyboard authority
+- [ ] BeatVision owns master song timeline
+- [ ] Map song sections to scenes
+- [ ] Map musical timing to visual events
+- [ ] Scene ordering
+- [ ] Duration validation
+- [ ] Timeline UI
+- [ ] Preview playback
+
+## 8. Final Output
+- [ ] Assemble approved shots
+- [ ] Preserve master-song synchronization
+- [ ] Validate audio/video duration
+- [ ] Final render
+- [ ] Final download/export
+- [ ] Verify render provenance
+
+## 9. Legacy Architecture Cleanup
+- [ ] Remove/retire BeatVision dependence on old Arena storyboard function
+- [ ] Remove obsolete ARENA_GATEWAY_URL / ARENA_GATEWAY_TOKEN paths where no longer needed
+- [ ] Reconcile old Arena-dependent Supabase Edge Functions
+- [ ] Fix/replace legacy storyboard CORS configuration
+- [ ] Remove legacy Cyanite references/types
+- [ ] Remove unused provider-specific analysis fields
+- [ ] Confirm one authoritative analysis contract
+- [ ] Confirm one authoritative World contract
+- [ ] Confirm one authoritative timeline contract
+
+## 10. Deferred Until Core Loop Works
+- [ ] Sophisticated video editor
+- [ ] Large multi-model marketplace
+- [ ] Social publishing
+- [ ] Community features
+- [ ] Automatic beat-synced montage as the primary workflow
+- [ ] AI lyric generation
+- [ ] Team collaboration
+- [ ] Marketplace/community asset sharing
+
+## Current Critical Path
+
+1. Complete authenticated Song Analysis test.
+2. Complete authenticated World Reveal test.
+3. Implement Vision Lock persistence + UI.
+4. Build Scene Direction around the locked world.
+5. Wire Scene Direction → Arena bridge.
+6. Verify image → motion → assembly using only free execution paths.
+7. Build approval/continuity loop.
+8. Replace legacy storyboard authority.
+9. Complete final render/export.
