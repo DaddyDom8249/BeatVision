@@ -306,3 +306,12 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Action:** Added `src/pages/AuthPage.tsx` with email/password sign-in and account creation; added `/auth` routing; exposed "Sign in or create an account" directly on the New Project page; unauthenticated project creation now routes to auth instead of only showing an error.
 **Verification:** Vercel production deployment `dpl_BHfE2KUtZSdZLw9ueekX7uHsfuk4` reached READY from commit `b53708046f8ffef59400ff45660efd14d48b2b5e`. GitHub Production CI run #70 was still in progress at log time; no CI success is claimed yet.
 **Next test:** Open production, use Sign in/Create account, then create a project. Do not claim authenticated project creation is verified until a real account successfully creates a row and reaches the Song page.
+
+
+## 2026-10-03 — 02:24 UTC
+**Task:** Fix production song upload failure reported as `Bucket not found`.
+**Result:** FIXED at the storage/configuration layer.
+**Finding:** Supabase project contains bucket `songs` with authenticated ownership policies for upload/read/update/delete, but BeatVision frontend and `beatvision-analyze-song` Edge Function referenced a nonexistent bucket named `audio`.
+**Action:** Updated `SongPage.tsx` and `useSong.ts` to use `songs`; changed song transcription invocation to use the Supabase client function invocation; updated and redeployed `beatvision-analyze-song` as ACTIVE v4 using the `songs` bucket.
+**Verification:** Queried `storage.buckets` and confirmed the `songs` bucket exists. Confirmed its authenticated upload/read/delete policies already exist. Vercel/GitHub deployment for the frontend fix was triggered from commit `35e024d94c517544d33b3b41c69de90f008c36ad`; GitHub Production CI run #74 was still in progress at log time.
+**Remaining:** Real authenticated upload of the supplied MP3 still needs to be performed to claim end-to-end success.
