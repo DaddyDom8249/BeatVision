@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { supabase } from "../lib/supabase/client";
+import { formatFailure } from "../lib/errorDetails";
 
 interface Props { onNavigate: (path: string) => void; }
 
@@ -21,7 +22,7 @@ export default function CreateProjectPage({ onNavigate }: Props) {
     const { data, error } = await supabase.from("projects")
       .insert({ owner_id: auth.user.id, title: title.trim(), status: "Draft", stage: "song" })
       .select("id").single();
-    if (error) setError(error.message);
+    if (error) setError(formatFailure("Create project", error, { status: "Draft", stage: "song", title: title.trim() }));
     else onNavigate(`/projects/${data.id}/song`);
     setSaving(false);
   }
