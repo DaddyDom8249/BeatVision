@@ -107,9 +107,20 @@ export default function SongPage({ projectId }: Props) {
 
   async function submit(event: FormEvent) {
     event.preventDefault(); setSaving(true); setError(null);
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user || !project || project.owner_id !== auth.user.id) {
-      setError("Project not found or access denied."); setSaving(false); return;
+    let { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) {
+      const refreshed = await supabase.auth.refreshSession();
+      auth = refreshed.data;
+    }
+    if (!auth.user) {
+      setError("Your sign-in session is no longer active. Sign in again, then retry Save song.");
+      setSaving(false);
+      return;
+    }
+    if (!project || project.owner_id !== auth.user.id) {
+      setError("This project is not available to the signed-in account.");
+      setSaving(false);
+      return;
     }
 
     let audioPath = song?.audio_path ?? null;
