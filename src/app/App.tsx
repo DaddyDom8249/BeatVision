@@ -8,6 +8,7 @@ import StylePage from "../pages/StylePage";
 import StudioPage from "../pages/StudioPage";
 import VisualPlanPage from "../pages/VisualPlanPage";
 import SceneProductionPage from "../pages/SceneProductionPage";
+import ProductionWorkspacePage from "../pages/ProductionWorkspacePage";
 
 function currentPath() { return window.location.pathname; }
 
@@ -40,6 +41,9 @@ export default function App() {
 
   const sceneProductionMatch = path.match(/^\/projects\/([^/]+)\/scenes\/?$/);
   if (sceneProductionMatch) return <SceneProductionPage projectId={sceneProductionMatch[1]} />;
+
+  const productionMatch = path.match(/^\/projects\/([^/]+)\/production\/?$/);
+  if (productionMatch) return <ProductionWorkspacePage projectId={productionMatch[1]} />;
 
   const styleMatch = path.match(/^\/projects\/([^/]+)\/style\/?$/);
   if (styleMatch) return <StylePage projectId={styleMatch[1]} />;
