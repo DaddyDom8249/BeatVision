@@ -132,11 +132,13 @@ export default function WorldReport({
   report,
   onConfirm,
   onSave,
+  onCreateRevision,
   onContinue,
 }: {
   report: WorldReportType;
   onConfirm: () => void;
   onSave: (changes: Record<string, unknown>) => Promise<void>;
+  onCreateRevision: (changes: Record<string, unknown>) => Promise<void>;
   onContinue: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -161,7 +163,11 @@ export default function WorldReport({
           changes[key] = raw;
         }
       }
-      await onSave(changes);
+      if (confirmed) {
+        await onCreateRevision(changes);
+      } else {
+        await onSave(changes);
+      }
       setEditing(false);
     } finally {
       setSaving(false);
@@ -248,12 +254,24 @@ export default function WorldReport({
 
       <footer style={{ marginTop: 24 }}>
         {confirmed ? (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-            <p role="status" style={{ margin: 0, padding: 16, borderRadius: 12, border: "1px solid rgba(127,127,127,.25)", flex: "1 1 320px" }}>
-              World confirmed. Changes now require an explicit revision.
-            </p>
-            <button onClick={onContinue}>Continue to Style</button>
-          </div>
+          editing ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              <button disabled={saving} onClick={() => void saveEdits()}>
+                {saving ? "Creating Revision…" : "Save as New Revision"}
+              </button>
+              <button disabled={saving} onClick={() => setEditing(false)}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+              <p role="status" style={{ margin: 0, padding: 16, borderRadius: 12, border: "1px solid rgba(127,127,127,.25)", flex: "1 1 320px" }}>
+                World confirmed. Revision {report.revision_number} is immutable.
+              </p>
+              <button onClick={() => setEditing(true)}>Create Revision</button>
+              <button onClick={onContinue}>Continue to Style</button>
+            </div>
+          )
         ) : completed ? (
           editing ? (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
