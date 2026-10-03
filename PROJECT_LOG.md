@@ -289,3 +289,11 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Action:** Updated `src/lib/supabase/client.ts` in commit `bff36da52a30a60a171c81013fafed61f3a31336` to use the configured `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` when present, with the verified BeatVision Supabase project URL and public publishable key as safe build-time fallbacks.
 **Verification:** GitHub Production CI run #63 completed successfully. Vercel production deployment `dpl_DER8c5Tqa9hdCuy7bxMoHVdUDWRm` reached READY from commit `bff36da52a30a60a171c81013fafed61f3a31336`. The deployed bundle contains the expected Supabase URL and publishable key. A real browser render of `https://beat-vision-f8nn.vercel.app/` produced the BeatVision hero, Projects section, and primary action instead of a blank page.
 **Remaining:** Authenticated project creation, song upload/analysis, World Reveal, and deeper route/browser checks remain unverified.
+
+
+## 2026-10-03 — 02:12 UTC
+**Task:** Begin production end-to-end verification after fixing the Supabase startup failure.
+**Result:** PARTIAL — unauthenticated production rendering verified; authenticated song/World flow remains blocked by missing test credentials/audio.
+**Findings:** Direct deep-link requests such as `/projects/new` initially returned Vercel 404 because the Vite SPA had no Vercel rewrite configuration. Added `vercel.json` with a catch-all rewrite to `/index.html` in commit `bfcc4987f09dc88bdd1fc6ccfaf5a27045a651ad`.
+**Verification:** Vercel deployment `dpl_8nULLyTzMmQQGLf4C8gqvrqwF6VH` reached READY. Production `/projects/new` returned the actual BeatVision New Project UI after cache refresh; `/projects/test/studio` also executed the React route rather than returning a platform 404. GitHub Production CI run #64 passed.
+**Constraint:** No test audio file or dedicated authentication credentials are available in the current conversation, and no browser-automation connector is exposed in this session. Therefore no authenticated project creation, upload, analysis, or World Reveal result is being claimed.
