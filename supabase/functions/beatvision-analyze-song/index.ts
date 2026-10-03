@@ -12,16 +12,25 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: cors });
 }
 
+// Auth failures must surface as 401, not fall through to the generic 500.
+class AuthError extends Error {
+  status: number;
+  constructor(message: string, status = 401) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function getUser(req: Request) {
   const auth = req.headers.get("Authorization") || "";
   const token = auth.match(/^Bearer\s+(.+)$/i)?.[1];
-  if (!token) throw new Error("Authentication required.");
+  if (!token) throw new AuthError("Authentication required.");
   const response = await fetch(env("SUPABASE_URL") + "/auth/v1/user", {
     headers: { apikey: env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"), Authorization: "Bearer " + token },
   });
-  if (!response.ok) throw new Error("Invalid or expired authentication session.");
+  if (!response.ok) throw new AuthError("Invalid or expired authentication session.");
   const user = await response.json();
-  if (!user?.id) throw new Error("Authenticated user could not be established.");
+  if (!user?.id) throw new AuthError("Authenticated user could not be established.");
   return String(user.id);
 }
 
@@ -52,7 +61,9 @@ Deno.serve(async (req) => {
     const groqKey = env("GROQ_API_KEY");
     if (!groqKey) return json({ error: "GROQ_API_KEY is not configured." }, 503);
 
-    const signed = await admin.storage.from("audio").createSignedUrl(String(song.audio_path), 900);
+    // Production stores audio in the `songs` bucket (see SongPage/useSong);
+    // reading `audio` fails to resolve the signed URL and breaks transcription.
+    const signed = await admin.storage.from("songs").createSignedUrl(String(song.audio_path), 900);
     if (signed.error || !signed.data?.signedUrl) throw new Error(signed.error?.message || "Could not create a temporary audio URL.");
 
     const form = new FormData();
@@ -93,6 +104,9 @@ Deno.serve(async (req) => {
 
     return json({ status: "completed", analysis });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return json({ error: error.message, code: "UNAUTHENTICATED" }, error.status);
+    }
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
 });
