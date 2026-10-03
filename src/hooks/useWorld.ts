@@ -105,6 +105,23 @@ export function useWorld(projectId: string) {
     }
   }, [confirming, generating, projectId, request, saving]);
 
+  const createRevision = useCallback(async (changes: Record<string, unknown>) => {
+    if (saving || confirming || generating) return;
+    const version = ++requestVersion.current;
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await request("PATCH", { projectId, action: "create_revision", changes }, version);
+      if (mounted.current && result.version === requestVersion.current) setReport(result.report);
+    } catch (e) {
+      const message = formatFailure("Create World revision", e, { projectId, action: "create_revision" });
+      if (mounted.current && version === requestVersion.current) setError(message);
+      throw new Error(message);
+    } finally {
+      if (mounted.current && version === requestVersion.current) setSaving(false);
+    }
+  }, [confirming, generating, projectId, request, saving]);
+
   const confirmWorld = useCallback(async () => {
     if (confirming || saving || generating) return;
     const version = ++requestVersion.current;
@@ -122,6 +139,6 @@ export function useWorld(projectId: string) {
 
   return {
     report, loading, generating, saving, confirming, error,
-    revealWorld, saveWorld, confirmWorld, reload: load,
+    revealWorld, saveWorld, createRevision, confirmWorld, reload: load,
   };
 }
