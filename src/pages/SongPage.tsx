@@ -67,19 +67,13 @@ export default function SongPage({ projectId }: Props) {
     try {
       await supabase.from("songs").update({ analysis_status: "analyzing" }).eq("id", song.id);
       local = await analyzeAudioLocally(song.audio_url);
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error("Authentication session unavailable.");
       const localUpdate = await supabase.from("songs").update({ analysis_status: "analyzing", analysis: local }).eq("id", song.id);
       if (localUpdate.error) throw new Error(localUpdate.error.message);
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/beatvision-analyze-song`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId })
+      const { data: result, error: invokeError } = await supabase.functions.invoke("beatvision-analyze-song", {
+        body: { projectId }
       });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        const message = result?.error || invokeError?.message || "Groq song transcription failed.";
+      if (invokeError) {
+        const message = result?.error || invokeError.message || "Groq song transcription failed.";
         await supabase.from("songs").update({
           analysis_status: "completed",
           analysis: {
