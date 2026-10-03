@@ -18,7 +18,7 @@ export function useSong(projectId?: string) {
     else {
       let audio_url: string | null = null;
       if (data.audio_path) {
-        const signed = await supabase.storage.from("audio").createSignedUrl(data.audio_path, 3600);
+        const signed = await supabase.storage.from("songs").createSignedUrl(data.audio_path, 3600);
         audio_url = signed.data?.signedUrl ?? null;
       }
       setSong({ ...(data as Song), audio_url });
