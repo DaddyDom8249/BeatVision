@@ -44,7 +44,7 @@ function parseModelJson(raw: string) {
   try {
     return JSON.parse(trimmed);
   } catch {
-    const fenced = trimmed.match(/\`\`\`(?:json)?\\s*([\\s\\S]*?)\`\`\`/i);
+    const fenced = trimmed.match(/\`\`\`(?:json)?\s*([\s\S]*?)\s*\`\`\`/i);
     if (fenced) return JSON.parse(fenced[1]);
     throw new Error("World model returned invalid JSON.");
   }
@@ -111,12 +111,66 @@ Deno.serve(async (req) => {
     if (req.method === "GET") return json({ report: existing });
 
     if (req.method === "PATCH") {
-      if (body.action !== "confirm") {
-        return json({ error: { code: "INVALID_ACTION", message: "Only world confirmation is supported." } }, 400);
-      }
       if (!existing || existing.status !== "completed") {
-        return json({ error: { code: "WORLD_NOT_READY", message: "A completed world report must exist before confirmation." } }, 409);
+        return json({ error: { code: "WORLD_NOT_READY", message: "A completed world report must exist before editing or confirmation." } }, 409);
       }
+
+      if (body.action === "save_edits") {
+        if (existing.confirmed_at) {
+          return json({ error: { code: "WORLD_ALREADY_CONFIRMED", message: "Confirmed worlds are locked. Create an explicit revision before changing them." } }, 409);
+        }
+
+        const changes =
+          body.changes && typeof body.changes === "object" && !Array.isArray(body.changes)
+            ? body.changes
+            : {};
+        const allowed = [
+          "mood",
+          "emotional_arc",
+          "visual_language",
+          "cinematography",
+          "environments",
+          "color_lighting",
+          "motifs",
+          "atmosphere",
+          "movement",
+          "continuity_rules",
+          "immutable_continuity",
+        ];
+
+        const update: Record<string, unknown> = {};
+        for (const key of allowed) {
+          if (key in changes) update[key] = changes[key];
+        }
+
+        if (!Object.keys(update).length) {
+          return json({ error: { code: "NO_CHANGES", message: "No world changes were provided." } }, 400);
+        }
+
+        // Copy the edits before embedding them in raw_report so the object
+        // graph remains acyclic and JSON serialization cannot fail.
+        const artistEdits = { ...update };
+        update.raw_report = {
+          ...(existing.raw_report && typeof existing.raw_report === "object" ? existing.raw_report : {}),
+          artist_edits: artistEdits,
+          edited_at: new Date().toISOString(),
+        };
+
+        const { data: edited, error } = await admin
+          .from("world_reports")
+          .update(update)
+          .eq("id", existing.id)
+          .select("*")
+          .single();
+
+        if (error) throw new Error(error.message);
+        return json({ report: edited });
+      }
+
+      if (body.action !== "confirm") {
+        return json({ error: { code: "INVALID_ACTION", message: "Only world editing or confirmation is supported." } }, 400);
+      }
+
       if (existing.confirmed_at) return json({ report: existing });
 
       const now = new Date().toISOString();
@@ -129,10 +183,12 @@ Deno.serve(async (req) => {
 
       if (error) throw new Error(error.message);
 
-      await admin
+      const { error: projectUpdateError } = await admin
         .from("projects")
         .update({ world_report_id: existing.id, world_confirmed_at: now })
         .eq("id", projectId);
+
+      if (projectUpdateError) throw new Error(projectUpdateError.message);
 
       return json({ report: confirmed });
     }
