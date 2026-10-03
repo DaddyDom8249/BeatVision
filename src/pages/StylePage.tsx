@@ -4,6 +4,13 @@ import CharacterEditor from "../components/style/CharacterEditor";
 import EnvironmentEditor from "../components/style/EnvironmentEditor";
 import { useStyleStudio } from "../hooks/useStyleStudio";
 
+function StyleValue({ value }: { value: unknown }) {
+  if (Array.isArray(value)) return <div className="style-value-list">{value.length ? value.map((item, index) => <div className="style-value-item" key={index}><StyleValue value={item} /></div>) : <span className="style-muted">Not specified</span>}</div>;
+  if (value && typeof value === "object") return <div className="style-value-object">{Object.entries(value as Record<string, unknown>).map(([key, item]) => <div className="style-value-row" key={key}><span>{key.replace(/_/g, " ")}</span><StyleValue value={item} /></div>)}</div>;
+  if (value === null || value === undefined || value === "") return <span className="style-muted">Not specified</span>;
+  return <span>{String(value)}</span>;
+}
+
 export default function StylePage({ projectId }: { projectId: string }) {
   const {
     world,
@@ -38,27 +45,23 @@ export default function StylePage({ projectId }: { projectId: string }) {
     setContinuityRules(Array.isArray(styleBible.continuity_rules) ? styleBible.continuity_rules.join("\n") : "");
   }, [styleBible]);
 
-  if (loading) return <main><p>Loading Style Studio…</p></main>;
+  if (loading) return <main className="studio-main style-page"><div className="style-loading">Loading Style Studio…</div></main>;
 
   if (locked) {
     return (
-      <main>
-        <h1>Style Bible Locked</h1>
-        <p>The Style Bible is approved and immutable.</p>
-        <a href={`/projects/${projectId}/visual-plan`}>Continue to Visual Plan</a>
-      </main>
+      <main className="studio-main style-page"><header className="style-header"><div><span className="eyebrow">PHASE 3 / STYLE BIBLE</span><h1>Style Bible Locked</h1><p>The Style Bible is approved and immutable.</p></div><div className="style-lock-badge">LOCKED</div></header><section className="style-locked-panel"><div><span className="style-card-label">Creative source secured</span><h2>Ready for Visual Plan</h2><p>The confirmed World and approved Style Bible can now drive the scene-by-scene visual plan.</p></div><a className="primary-button" href={`/projects/${projectId}/visual-plan`}>Continue to Visual Plan <span>→</span></a></section></main>
     );
   }
 
   if (!styleBible) {
     return (
-      <main>
-        <h1>Create Style Bible</h1>
-        <p>The Style Bible will be created from the confirmed World Report. Its world foundation is lineage data, not a disposable UI copy.</p>
-        <button disabled={working} onClick={() => void createStyleBible()}>
+      <main className="studio-main style-page">
+        <header className="style-header"><div><span className="eyebrow">PHASE 3 / STYLE BIBLE</span><h1>Create Style Bible</h1>
+        <p>The Style Bible will be created from the confirmed World Report. Its world foundation is lineage data, not a disposable UI copy.</p></div></header><section className="style-empty-panel"><button disabled={working} onClick={() => void createStyleBible()}>
           {working ? "Creating…" : "Create Style Bible from Confirmed World"}
         </button>
-        {error && <p role="alert">{error}</p>}
+        {error && <p className="form-error" role="alert">{error}</p>}
+        </section>
       </main>
     );
   }
@@ -103,16 +106,14 @@ export default function StylePage({ projectId }: { projectId: string }) {
   }
 
   return (
-    <main>
-      {error && <p role="alert">{error}</p>}
-      <h1>Style Bible</h1>
-      <p>Bound to confirmed World Report: <code>{world?.id}</code></p>
+    <main className="studio-main style-page">
+      {error && <p className="form-error style-error" role="alert">{error}</p>}
+      <header className="style-header"><div><span className="eyebrow">PHASE 3 / STYLE BIBLE</span><h1>Style Bible</h1><p>Translate the confirmed World into repeatable visual rules, character continuity, environments, and reference language.</p></div><div className="style-status">DRAFT / WORLD BOUND</div></header>
 
-      <section>
-        <h2>World Foundation</h2>
-        <p>The fields below are copied from the confirmed World Report and remain the source lineage for this stage.</p>
-        <pre>{JSON.stringify(styleBible.world_basis, null, 2)}</pre>
-        <form onSubmit={saveStyle}>
+      <section className="style-section">
+        <div className="style-section-heading"><div><span className="panel-label">01 / SOURCE</span><h2>World Foundation</h2></div><span className="style-lineage">World: {world?.id ? `${world.id.slice(0, 8)}…` : "Unavailable"}</span></div>
+        <p className="style-section-copy">These fields come from the confirmed World Report. They are reference data for this stage, not an editable replacement for the World.</p><div className="style-foundation-grid">{Object.entries(styleBible.world_basis ?? {}).map(([key, value]) => <article className="style-foundation-card" key={key}><span className="style-card-label">{key.replace(/_/g, " ")}</span><StyleValue value={value} /></article>)}</div>
+        <form className="style-form" onSubmit={saveStyle}>
           <label>Visual rules, one per line
             <textarea rows={8} value={visualRules} onChange={(e) => setVisualRules(e.target.value)} />
           </label>
@@ -132,16 +133,16 @@ export default function StylePage({ projectId }: { projectId: string }) {
         </button>
       </section>
 
-      <section>
-        <h2>Characters</h2>
-        <form onSubmit={createCharacter}>
-          <h3>Add Character</h3>
-          <label>Name <input required value={newCharacter.name} onChange={(e) => setNewCharacter((s) => ({ ...s, name: e.target.value }))} /></label>
-          <label>Identity <textarea value={newCharacter.identity} onChange={(e) => setNewCharacter((s) => ({ ...s, identity: e.target.value }))} /></label>
-          <label>Appearance <textarea value={newCharacter.appearance} onChange={(e) => setNewCharacter((s) => ({ ...s, appearance: e.target.value }))} /></label>
-          <label>Wardrobe / props <textarea value={newCharacter.wardrobe} onChange={(e) => setNewCharacter((s) => ({ ...s, wardrobe: e.target.value }))} /></label>
-          <label>Behavior / movement <textarea value={newCharacter.behavior} onChange={(e) => setNewCharacter((s) => ({ ...s, behavior: e.target.value }))} /></label>
-          <label>Continuity / must-not-change <textarea value={newCharacter.continuity} onChange={(e) => setNewCharacter((s) => ({ ...s, continuity: e.target.value }))} /></label>
+      <section className="style-section">
+        <div className="style-section-heading"><div><span className="panel-label">02 / CAST</span><h2>Characters</h2></div><span className="style-count">{characters.length} {characters.length === 1 ? "character" : "characters"}</span></div>
+        <form className="style-create-card" onSubmit={createCharacter}>
+          <div className="style-create-heading"><span>New character</span><small>Define identity before adding reference assets.</small></div>
+          <label className="style-field"><span>Name</span><input required value={newCharacter.name} onChange={(e) => setNewCharacter((s) => ({ ...s, name: e.target.value }))} /></label>
+          <label className="style-field"><span>Identity</span><textarea value={newCharacter.identity} onChange={(e) => setNewCharacter((s) => ({ ...s, identity: e.target.value }))} /></label>
+          <label className="style-field"><span>Appearance</span><textarea value={newCharacter.appearance} onChange={(e) => setNewCharacter((s) => ({ ...s, appearance: e.target.value }))} /></label>
+          <label className="style-field"><span>Wardrobe / props</span><textarea value={newCharacter.wardrobe} onChange={(e) => setNewCharacter((s) => ({ ...s, wardrobe: e.target.value }))} /></label>
+          <label className="style-field"><span>Behavior / movement</span><textarea value={newCharacter.behavior} onChange={(e) => setNewCharacter((s) => ({ ...s, behavior: e.target.value }))} /></label>
+          <label className="style-field"><span>Continuity / must-not-change</span><textarea value={newCharacter.continuity} onChange={(e) => setNewCharacter((s) => ({ ...s, continuity: e.target.value }))} /></label>
           <button disabled={working}>{working ? "Creating…" : "Add Character"}</button>
         </form>
 
@@ -158,17 +159,17 @@ export default function StylePage({ projectId }: { projectId: string }) {
         ))}
       </section>
 
-      <section>
-        <h2>Environments</h2>
-        <form onSubmit={createEnvironment}>
-          <h3>Add Environment</h3>
+      <section className="style-section">
+        <div className="style-section-heading"><div><span className="panel-label">03 / WORLD SPACES</span><h2>Environments</h2></div><span className="style-count">{environments.length} {environments.length === 1 ? "environment" : "environments"}</span></div>
+        <form className="style-create-card" onSubmit={createEnvironment}>
+          <div className="style-create-heading"><span>New environment</span><small>Define the physical rules of the space.</small></div>
           <label>Name <input required value={newEnvironment.name} onChange={(e) => setNewEnvironment((s) => ({ ...s, name: e.target.value }))} /></label>
-          <label>Purpose / narrative role <textarea value={newEnvironment.purpose} onChange={(e) => setNewEnvironment((s) => ({ ...s, purpose: e.target.value }))} /></label>
-          <label>Layout / composition <textarea value={newEnvironment.layout} onChange={(e) => setNewEnvironment((s) => ({ ...s, layout: e.target.value }))} /></label>
-          <label>Architecture / structure <textarea value={newEnvironment.architecture} onChange={(e) => setNewEnvironment((s) => ({ ...s, architecture: e.target.value }))} /></label>
-          <label>Surfaces / props <textarea value={newEnvironment.surfaces} onChange={(e) => setNewEnvironment((s) => ({ ...s, surfaces: e.target.value }))} /></label>
-          <label>Lighting / color <textarea value={newEnvironment.lighting} onChange={(e) => setNewEnvironment((s) => ({ ...s, lighting: e.target.value }))} /></label>
-          <label>Atmosphere <textarea value={newEnvironment.atmosphere} onChange={(e) => setNewEnvironment((s) => ({ ...s, atmosphere: e.target.value }))} /></label>
+          <label className="style-field"><span>Purpose / narrative role</span><textarea value={newEnvironment.purpose} onChange={(e) => setNewEnvironment((s) => ({ ...s, purpose: e.target.value }))} /></label>
+          <label className="style-field"><span>Layout / composition</span><textarea value={newEnvironment.layout} onChange={(e) => setNewEnvironment((s) => ({ ...s, layout: e.target.value }))} /></label>
+          <label className="style-field"><span>Architecture / structure</span><textarea value={newEnvironment.architecture} onChange={(e) => setNewEnvironment((s) => ({ ...s, architecture: e.target.value }))} /></label>
+          <label className="style-field"><span>Surfaces / props</span><textarea value={newEnvironment.surfaces} onChange={(e) => setNewEnvironment((s) => ({ ...s, surfaces: e.target.value }))} /></label>
+          <label className="style-field"><span>Lighting / color</span><textarea value={newEnvironment.lighting} onChange={(e) => setNewEnvironment((s) => ({ ...s, lighting: e.target.value }))} /></label>
+          <label className="style-field"><span>Atmosphere</span><textarea value={newEnvironment.atmosphere} onChange={(e) => setNewEnvironment((s) => ({ ...s, atmosphere: e.target.value }))} /></label>
           <label>Continuity / must-not-change <textarea value={newEnvironment.continuity} onChange={(e) => setNewEnvironment((s) => ({ ...s, continuity: e.target.value }))} /></label>
           <button disabled={working}>{working ? "Creating…" : "Add Environment"}</button>
         </form>
