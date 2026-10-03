@@ -146,6 +146,11 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - [ ] Decide whether additional free local musical-analysis libraries are legally/technically acceptable
 
 ## 2. World Reveal
+- [ ] Character Bible / Character Sheet model and compiler
+- [ ] Environment Bible / Environment Sheet model and compiler
+- [ ] Approved reference-photo/reference-asset inheritance
+- [ ] Scene visual prompt pack compiler
+- [ ] Review Changes dependency tracking when world/style/character/environment changes
 - [x] World compiler backend
 - [x] Required world fields
 - [x] Emotional arc
@@ -181,6 +186,9 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - [ ] Add Vision Lock approval/revision flow
 
 ## 4. Scene Direction
+- [ ] Visual Beat Engine for song-grounded visual events
+- [ ] Musical context compiler: section, timing, energy, lyrics and verified analysis context
+- [ ] Beat-aware scene splitting without arbitrary fixed scene counts
 - [ ] Scene purpose
 - [ ] Characters
 - [ ] Location
@@ -198,6 +206,10 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - [ ] Verify Vision Lock hash travels with generated assets
 
 ## 5. Arena / Generation Integration
+- [ ] Provider adapter interface for submit/status/output lifecycle
+- [ ] Idempotency keys for generation requests
+- [ ] Durable generation-job lifecycle with bounded retries
+- [ ] Provider-honesty states: unavailable/fallback/live output must remain explicit
 - [x] Arena BeatVision bridge contract 2.0
 - [x] Arena requires locked BeatVision creative state
 - [x] Arena receives BeatVision-owned analysis/world/scene data
@@ -216,6 +228,11 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - [ ] Verify no paid fallback exists in deployed execution path
 
 ## 6. Approval / Continuity Loop
+- [ ] First-frame approval gate before motion generation
+- [ ] Scene-image version history without silent replacement
+- [ ] Compare scene-image versions
+- [ ] Consistency controls for locked creative components
+- [ ] Motion-readiness validation with actionable blockers
 - [ ] Generate candidate
 - [ ] Artist approves/rejects
 - [ ] Revisions preserve Vision Lock
@@ -225,6 +242,10 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - [ ] Verify character/environment/camera continuity across multiple shots
 
 ## 7. Story / Timeline
+- [ ] Stable scene IDs across revisions and retries
+- [ ] Beat-aware scene splitting
+- [ ] Visual reuse detector for accidental adjacent/redundant reuse
+- [ ] Timeline Guardian for gaps, overlaps and out-of-range scenes
 - [ ] Replace/retire Arena-dependent legacy storyboard authority
 - [ ] BeatVision owns master song timeline
 - [ ] Map song sections to scenes
@@ -235,6 +256,8 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - [ ] Preview playback
 
 ## 8. Final Output
+- [ ] Render coverage manifest / integrity validation
+- [ ] Full project preview before final export
 - [ ] Assemble approved shots
 - [ ] Preserve master-song synchronization
 - [ ] Validate audio/video duration
@@ -254,6 +277,7 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - [ ] Confirm one authoritative timeline contract
 
 ## 10. Deferred Until Core Loop Works
+- [ ] Optional Autopilot as an accelerator only after the artist-directed core loop is proven
 - [ ] Sophisticated video editor
 - [ ] Large multi-model marketplace
 - [ ] Social publishing
@@ -324,3 +348,12 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Action:** Changed `useSong` so only the initial load controls the page-level loading state; post-save/post-analysis refreshes keep the form mounted. Hardened analysis-duration rendering with numeric validation. Changes committed as `7f2b44f3fa52c4359868a207e45a38a033d0c694` and `22882f822dc97fc49d19b6a36ea4053ad70b67fd`.
 **Verification:** GitHub commit status is currently pending on Vercel. Production deployment `dpl_4V7qVbxQabAv8qcMmFrpZmEZyFd5` is queued; it is not yet claimed live.
 **Next test:** Once deployment reaches READY, retry Save song on the same project. If the page remains stable, click Analyze music separately. Capture the exact visible error if Save still fails.
+
+
+## 2026-10-03 — Reference architecture inventory
+**Task:** Audit uploaded BeatVision ZIPs and all known BeatVision repositories for reusable capabilities without importing anything automatically.
+**Result:** REFERENCE-ONLY AUDIT COMPLETED.
+**Constraint:** No ZIP contents were copied into BeatVision, no repository merge was performed, and no deployment was triggered by this audit.
+**Reusable capabilities added to checklist:** Character/Environment Bibles, reference-asset inheritance, scene prompt compilation, Review Changes dependency tracking, Visual Beat Engine, musical-context compilation, beat-aware scene splitting, provider adapters, idempotent generation, durable bounded-retry jobs, explicit provider-honesty states, first-frame approval gate, image version history/compare, consistency controls, motion-readiness validation, stable scene IDs, visual reuse detection, Timeline Guardian, render integrity/coverage validation, full preview, and optional future Autopilot.
+**Rejected as direct imports:** wholesale replacement of the current Vercel/Supabase architecture, provider-specific/paid paths, giant legacy project-results architecture, and automatic Autopilot control of creative decisions.
+**Next:** Continue the current Song → Analyze → World workflow and implement the explicit post-save next action.
