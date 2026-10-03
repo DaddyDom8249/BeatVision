@@ -1,7 +1,7 @@
 export type WorldReportStatus = "pending" | "completed" | "unavailable" | "failed";
 
 export interface WorldReport {
-  id: string; project_id: string; status: WorldReportStatus;
+  id: string; project_id: string; world_id: string; revision_number: number; status: WorldReportStatus;
   mood: unknown; emotional_arc: unknown; visual_language: unknown;
   cinematography: unknown; environments: unknown; color_lighting: unknown;
   motifs: unknown; atmosphere: unknown; movement: unknown;
