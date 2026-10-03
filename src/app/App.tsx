@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import DashboardPage from "../pages/DashboardPage";
+import AuthPage from "../pages/AuthPage";
 import CreateProjectPage from "../pages/CreateProjectPage";
 import SongPage from "../pages/SongPage";
 import WorldPage from "../pages/WorldPage";
@@ -23,6 +24,7 @@ export default function App() {
   }
 
   if (path === "/") return <DashboardPage onNavigate={navigate} />;
+  if (path === "/auth") return <AuthPage onNavigate={navigate} />;
   if (path === "/projects/new") return <CreateProjectPage onNavigate={navigate} />;
 
   const studioMatch = path.match(/^\/projects\/([^/]+)\/studio\/?$/);
