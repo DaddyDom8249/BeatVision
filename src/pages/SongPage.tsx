@@ -79,6 +79,10 @@ export default function SongPage({ projectId }: Props) {
     } finally { setSaving(false); }
   }
 
+  function continueToWorld() {
+    window.location.href = `/projects/${projectId}/world`;
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (saving) return;
@@ -152,7 +156,21 @@ export default function SongPage({ projectId }: Props) {
           <label>Notes<textarea rows={4} value={notes} onChange={e => { setNotes(e.target.value); setSaved(false); }} /></label>
           <button className="primary-button large" disabled={saving}>{saving ? "Saving…" : saved ? "Saved ✓" : "Save song →"}</button>
         </form>
-        {saved && <p role="status">Song saved successfully.</p>}
+        {saved && (
+          <section aria-label="Next step" className="create-card">
+            <p role="status"><strong>Song saved successfully.</strong></p>
+            {song?.analysis_status === "completed" ? (
+              <>
+                <p>Next step: reveal the visual world for this song.</p>
+                <button type="button" className="primary-button large" onClick={continueToWorld}>
+                  Continue to World →
+                </button>
+              </>
+            ) : (
+              <p>Next step: click <strong>Analyze music</strong> above. BeatVision will analyze the song before World Reveal.</p>
+            )}
+          </section>
+        )}
         {song?.analysis_status === "completed" && analysis && <section><h2>Musical analysis</h2><p>{hasValidAnalysisDuration ? `Duration ${durationSeconds.toFixed(1)}s` : "Duration unavailable"}{analysis.bpm ? ` · BPM ${analysis.bpm}` : ""}{analysis.key ? ` · Key ${analysis.key}` : ""}{analysis.time_signature ? ` · Meter ${analysis.time_signature}` : ""}</p><p>{analysis.genre_tags?.join(", ") || "Genre unavailable"} · {analysis.mood_tags?.slice(0, 5).join(", ") || "Mood unavailable"}</p><p>{analysis.sections?.length ?? 0} structural segments · {analysis.instruments?.slice(0, 8).join(", ") || "Instrument data unavailable"}</p>{analysis.description && <p>{analysis.description}</p>}{analysis.transcript && <><h3>Transcript</h3><p>{analysis.transcript}</p></>}</section>}
         {error && <p className="form-error" role="alert">{error}</p>}
       </section>
