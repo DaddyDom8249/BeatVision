@@ -42,21 +42,21 @@ export function useVisualPlan(projectId: string) {
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
-    const projectResult = await supabase.from("projects").select("world_report_id,song_id").eq("id", projectId).single();
+
+    const projectResult = await supabase.from("projects").select("world_report_id").eq("id", projectId).single();
     if (projectResult.error) { setError(projectResult.error.message); setLoading(false); return; }
 
     const worldId = projectResult.data.world_report_id as string | null;
-    const songId = projectResult.data.song_id as string | null;
-    if (!worldId || !songId) {
+    if (!worldId) {
       setWorld(null); setStyleBible(null); setSong(null); setPlan(null); setScenes([]);
-      setError("The project must have a current World Report and Song before Visual Plan can begin.");
+      setError("The project must have a current World Report before Visual Plan can begin.");
       setLoading(false); return;
     }
 
     const [worldResult, styleResult, songResult, planResult] = await Promise.all([
       supabase.from("world_reports").select("*").eq("id", worldId).eq("project_id", projectId).single(),
       supabase.from("style_bibles").select(styleFields).eq("project_id", projectId).eq("world_report_id", worldId).maybeSingle(),
-      supabase.from("songs").select("*").eq("id", songId).eq("project_id", projectId).single(),
+      supabase.from("songs").select("*").eq("project_id", projectId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("visual_plans").select(planFields).eq("project_id", projectId).maybeSingle(),
     ]);
 
@@ -65,7 +65,7 @@ export function useVisualPlan(projectId: string) {
 
     setWorld(worldResult.data as WorldReport);
     setStyleBible((styleResult.data ?? null) as StyleBible | null);
-    setSong(songResult.data as Song);
+    setSong((songResult.data ?? null) as Song | null);
     setPlan((planResult.data ?? null) as VisualPlan | null);
 
     if (planResult.data) {
