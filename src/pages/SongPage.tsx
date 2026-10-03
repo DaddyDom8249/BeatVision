@@ -171,6 +171,10 @@ export default function SongPage({ projectId }: Props) {
   if (projectError || songError) return <main><p role="alert">{projectError ?? songError}</p></main>;
   if (!project) return <main><p role="alert">Project not found.</p></main>;
 
+  const analysis = song?.analysis;
+  const durationSeconds = analysis ? Number(analysis.duration_seconds) : 0;
+  const hasValidAnalysisDuration = Number.isFinite(durationSeconds) && durationSeconds > 0;
+
   return <main className="app-shell">
     <div className="dashboard">
       <button className="brand" onClick={() => { window.location.href = "/"; }}>BEAT<span>VISION</span></button>
@@ -188,7 +192,7 @@ export default function SongPage({ projectId }: Props) {
           <label>Notes<textarea rows={4} value={notes} onChange={e => setNotes(e.target.value)} /></label>
           <button className="primary-button large" disabled={saving}>{saving ? "Saving…" : "Save song →"}</button>
         </form>
-        {song?.analysis_status === "completed" && song.analysis && <section><h2>Musical analysis</h2><p>Duration {song.analysis.duration_seconds.toFixed(1)}s{song.analysis.bpm ? ` · BPM ${song.analysis.bpm}` : ""}{song.analysis.key ? ` · Key ${song.analysis.key}` : ""}{song.analysis.time_signature ? ` · Meter ${song.analysis.time_signature}` : ""}</p><p>{song.analysis.genre_tags?.join(", ") || "Genre unavailable"} · {song.analysis.mood_tags?.slice(0, 5).join(", ") || "Mood unavailable"}</p><p>{song.analysis.sections?.length ?? 0} structural segments · {song.analysis.instruments?.slice(0, 8).join(", ") || "Instrument data unavailable"}</p>{song.analysis.description && <p>{song.analysis.description}</p>}{song.analysis.transcript && <><h3>Transcript</h3><p>{song.analysis.transcript}</p></>}</section>}
+        {song?.analysis_status === "completed" && analysis && <section><h2>Musical analysis</h2><p>{hasValidAnalysisDuration ? `Duration ${durationSeconds.toFixed(1)}s` : "Duration unavailable"}{analysis.bpm ? ` · BPM ${analysis.bpm}` : ""}{analysis.key ? ` · Key ${analysis.key}` : ""}{analysis.time_signature ? ` · Meter ${analysis.time_signature}` : ""}</p><p>{analysis.genre_tags?.join(", ") || "Genre unavailable"} · {analysis.mood_tags?.slice(0, 5).join(", ") || "Mood unavailable"}</p><p>{analysis.sections?.length ?? 0} structural segments · {analysis.instruments?.slice(0, 8).join(", ") || "Instrument data unavailable"}</p>{analysis.description && <p>{analysis.description}</p>}{analysis.transcript && <><h3>Transcript</h3><p>{analysis.transcript}</p></>}</section>}
         {error && <p className="form-error" role="alert">{error}</p>}
       </section>
     </div>
