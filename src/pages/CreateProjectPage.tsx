@@ -34,7 +34,7 @@ export default function CreateProjectPage({ onNavigate }: Props) {
           <div className="eyebrow">NEW PROJECT</div>
           <h1>Start with the song.</h1>
           <p>Give the project a working name. The song, not the prompt, becomes the source material for the visual world.</p>
-          <form onSubmit={submit}>
+          <div className="auth-prompt">\n            <span>Account required to save your project.</span>\n            <button type="button" className="auth-link" onClick={() => onNavigate("/auth?next=/projects/new")}>Sign in or create an account →</button>\n          </div>\n          <form onSubmit={submit}>
             <label>Project name<input autoFocus required maxLength={120} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Midnight" /></label>
             <button className="primary-button large" disabled={saving}>{saving ? "Creating…" : "Create project →"}</button>
           </form>
