@@ -4,6 +4,8 @@ import type { WorldReport } from "../types/world";
 
 const endpoint = () => `${import.meta.env.VITE_SUPABASE_URL || "https://mdofsinyofqbeapzfygu.supabase.co"}/functions/v1/beatvision-world`;
 
+const publishableKey = () => import.meta.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_x28OGL5xvygpE1ekq77Lqw_8Aa4Rioa";
+
 export function useWorld(projectId: string) {
   const [report,setReport]=useState<WorldReport|null>(null);
   const [loading,setLoading]=useState(true);
@@ -19,7 +21,7 @@ export function useWorld(projectId: string) {
     if(!data.session?.access_token) throw new Error("You must be signed in.");
 
     const url=method==="GET" ? `${endpoint()}?projectId=${encodeURIComponent(projectId)}` : endpoint();
-    const headers: Record<string,string> = {Authorization:`Bearer ${data.session.access_token}`,Accept:"application/json"};
+    const headers: Record<string,string> = {apikey:publishableKey(),Authorization:`Bearer ${data.session.access_token}`,Accept:"application/json"};
     if(body!==undefined) headers["Content-Type"]="application/json";
 
     let res: Response;
