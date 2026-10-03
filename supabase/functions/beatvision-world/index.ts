@@ -20,7 +20,7 @@ function adminClient() {
 async function getUser(req: Request) {
   const auth = req.headers.get("Authorization") || "";
   const token = auth.match(/^Bearer\s+(.+)$/i)?.[1];
-  if (!token) throw new Error("Authentication required.");
+  if (!token) throw new HttpError("UNAUTHENTICATED", 401, "Authentication required.");
 
   const response = await fetch(env("SUPABASE_URL") + "/auth/v1/user", {
     headers: {
@@ -29,9 +29,9 @@ async function getUser(req: Request) {
     },
   });
 
-  if (!response.ok) throw new Error("Invalid or expired authentication session.");
+  if (!response.ok) throw new HttpError("UNAUTHENTICATED", 401, "Invalid or expired authentication session.");
   const user = await response.json();
-  if (!user?.id) throw new Error("Authenticated user could not be established.");
+  if (!user?.id) throw new HttpError("UNAUTHENTICATED", 401, "Authenticated user could not be established.");
   return String(user.id);
 }
 
@@ -71,6 +71,103 @@ function validateWorld(value: any) {
     if (!(key in value)) throw new Error("World model omitted required field: " + key);
   }
   return value;
+}
+
+const WORLD_EDITABLE_FIELDS = [
+  "mood",
+  "emotional_arc",
+  "visual_language",
+  "cinematography",
+  "environments",
+  "color_lighting",
+  "motifs",
+  "atmosphere",
+  "movement",
+  "continuity_rules",
+  "immutable_continuity",
+] as const;
+
+const MAX_EDIT_FIELD_CHARS = 24000;
+
+class HttpError extends Error {
+  code: string;
+  status: number;
+  constructor(code: string, status: number, message: string) {
+    super(message);
+    this.code = code;
+    this.status = status;
+  }
+}
+
+// The artist edits world content only. Keys outside the editable world fields
+// (status, confirmed_at, project_id, provider metadata) are rejected outright
+// with 400 so an edit can never silently unlock, re-point, or mislabel a world,
+// and so a client cannot mistake a dropped field for a successful save.
+function readWorldEdits(body: any) {
+  const raw = body.world_json ?? body.changes ?? body.world;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new HttpError("WORLD_EDITS_INVALID", 400, "world_json must be an object containing the world fields to save.");
+  }
+
+  const editable = WORLD_EDITABLE_FIELDS as readonly string[];
+  const rejected = Object.keys(raw as Record<string, unknown>).filter((key) => !editable.includes(key));
+  if (rejected.length) {
+    throw new HttpError(
+      "WORLD_FIELDS_NOT_EDITABLE",
+      400,
+      "These fields cannot be edited: " + rejected.join(", ") + ". Only world content fields are accepted."
+    );
+  }
+
+  const edits: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    const normalised = value === undefined ? null : value;
+    let serialised: string | undefined;
+    try {
+      serialised = JSON.stringify(normalised);
+    } catch {
+      serialised = undefined;
+    }
+    if (serialised === undefined) {
+      throw new HttpError("WORLD_EDITS_INVALID", 400, "world_json." + key + " is not valid JSON.");
+    }
+    if (serialised.length > MAX_EDIT_FIELD_CHARS) {
+      throw new HttpError("WORLD_EDITS_TOO_LARGE", 413, "world_json." + key + " exceeds the " + MAX_EDIT_FIELD_CHARS + " character limit.");
+    }
+    edits[key] = normalised;
+  }
+
+  if (Object.keys(edits).length === 0) {
+    throw new HttpError("WORLD_EDITS_EMPTY", 400, "No editable world fields were provided.");
+  }
+
+  return edits;
+}
+
+// A saved world must remain a complete world: once the edit is applied every
+// required field has to hold a non-null value. This deliberately checks VALUES
+// rather than key presence — assigning `undefined` to a missing key still
+// creates the key, so a bare `in` test can never fail.
+function mergeWorldForValidation(existing: Record<string, any>, edits: Record<string, unknown>) {
+  const merged: Record<string, unknown> = {};
+  const missing: string[] = [];
+  for (const key of WORLD_EDITABLE_FIELDS) {
+    const value = key in edits ? edits[key] : existing[key];
+    if (value === null || value === undefined) {
+      missing.push(key);
+      continue;
+    }
+    merged[key] = value;
+  }
+  if (missing.length) {
+    throw new HttpError(
+      "WORLD_INCOMPLETE",
+      422,
+      "Cannot save: these world fields would remain empty: " + missing.join(", ") + ". Send a value for each of them in the same edit."
+    );
+  }
+  return merged;
 }
 
 Deno.serve(async (req) => {
@@ -120,51 +217,46 @@ Deno.serve(async (req) => {
           return json({ error: { code: "WORLD_ALREADY_CONFIRMED", message: "Confirmed worlds are locked. Create an explicit revision before changing them." } }, 409);
         }
 
-        const changes =
-          body.changes && typeof body.changes === "object" && !Array.isArray(body.changes)
-            ? body.changes
-            : {};
-        const allowed = [
-          "mood",
-          "emotional_arc",
-          "visual_language",
-          "cinematography",
-          "environments",
-          "color_lighting",
-          "motifs",
-          "atmosphere",
-          "movement",
-          "continuity_rules",
-          "immutable_continuity",
-        ];
-
-        const update: Record<string, unknown> = {};
-        for (const key of allowed) {
-          if (key in changes) update[key] = changes[key];
-        }
-
-        if (!Object.keys(update).length) {
-          return json({ error: { code: "NO_CHANGES", message: "No world changes were provided." } }, 400);
-        }
+        const edits = readWorldEdits(body);
+        const merged = mergeWorldForValidation(existing, edits);
+        validateWorld(merged);
 
         // Copy the edits before embedding them in raw_report so the object
         // graph remains acyclic and JSON serialization cannot fail.
-        const artistEdits = { ...update };
+        const update: Record<string, unknown> = { ...edits };
         update.raw_report = {
           ...(existing.raw_report && typeof existing.raw_report === "object" ? existing.raw_report : {}),
-          artist_edits: artistEdits,
+          artist_edits: { ...edits },
           edited_at: new Date().toISOString(),
         };
 
-        const { data: edited, error } = await admin
+        const { data: saved, error: saveError } = await admin
           .from("world_reports")
           .update(update)
           .eq("id", existing.id)
+          .eq("project_id", projectId)
           .select("*")
           .single();
 
-        if (error) throw new Error(error.message);
-        return json({ report: edited });
+        if (saveError) throw new Error(saveError.message);
+
+        const savedFields = Object.keys(edits);
+        console.log(
+          "beatvision-world save_edits applied",
+          JSON.stringify({
+            user_id: userId,
+            project_id: projectId,
+            world_report_id: existing.id,
+            saved_fields: savedFields,
+          })
+        );
+
+        return json({
+          report: saved,
+          action: "save_edits",
+          ok: true,
+          saved_fields: savedFields,
+        });
       }
 
       if (body.action !== "confirm") {
@@ -350,6 +442,9 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
 
     return json({ report: result.data });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return json({ error: { code: error.code, message: error.message } }, error.status);
+    }
     return json({
       error: {
         code: "WORLD_REQUEST_FAILED",
