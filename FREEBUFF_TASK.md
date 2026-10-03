@@ -43,7 +43,31 @@ Produce:
 - BLOCKED
 - highest-priority blocker
 
-### Required finding summary
+## Phase 2 — Repair every safely accessible blocker
+
+For each highest-priority blocker:
+
+1. reproduce it
+2. trace it to the actual failing layer
+3. identify root cause
+4. make the smallest safe fix
+5. add regression coverage when practical
+6. run relevant tests
+7. build
+8. deploy when the existing environment authorizes deployment
+9. verify the result
+10. update PROJECT_LOG.md
+11. continue to the next blocker
+
+**Do not merely report a reproducible, safely fixable error. Fix it.**
+
+If the failure is in repository code, Edge Functions, safe application configuration, or another layer for which the environment already has authorized access, make the repair yourself.
+
+If production access is available, use it for diagnosis and authenticated verification. Do not weaken auth/RLS or bypass authorization to get around a missing permission.
+
+If access is missing, classify the blocker precisely and continue with all other work that does not require it.
+
+### Required findings summary
 
 At the end of every audit, repair cycle, or blocked attempt, provide a concise **FINDINGS SUMMARY**.
 
@@ -59,25 +83,23 @@ Do not only store findings in PROJECT_LOG.md. The findings summary must also be 
 
 If multiple repair cycles occur in one run, provide a short findings summary after each major blocker and a final cumulative findings summary at the end.
 
-## Phase 2 — Repair loop
+## Production access and safety
 
-For the highest-priority blocker:
+Use only credentials/configuration already authorized and available in the Freebuff environment.
 
-1. reproduce it
-2. trace it to the actual failing layer
-3. identify root cause
-4. make the smallest safe fix
-5. add regression coverage when practical
-6. run relevant tests
-7. build
-8. deploy only when appropriate
-9. verify the result
-10. update PROJECT_LOG.md
-11. continue to the next blocker
+Never ask the human to paste a password, session token, service-role key, or other secret into chat.
 
-Do not stop after fixing one issue.
+Never:
+- expose credentials
+- weaken authentication
+- weaken RLS
+- bypass authorization
+- delete production data
+- perform destructive migrations
+- silently replace providers
+- silently mutate locked creative state
 
-Do not repeatedly retry an identical failed approach.
+If a genuine permission or owner approval is required, report the exact missing capability.
 
 ## Zero-cost rule
 
@@ -86,19 +108,6 @@ Use only local or verified free execution.
 Do not add paid or unknown-cost APIs, models, infrastructure, or fallbacks.
 
 If cost is uncertain, STOP that path and report BLOCKED.
-
-## Production safety
-
-Do not:
-- expose credentials
-- weaken authentication
-- weaken RLS
-- delete production data
-- perform destructive migrations
-- silently replace providers
-- silently mutate locked creative state
-
-If a production credential or human approval is required, stop and report exactly what is needed.
 
 ## Verification rule
 
@@ -126,9 +135,13 @@ The artist remains the final creative decision maker.
 
 ## Stop condition
 
-Continue until:
+Continue through the repair loop until:
 - the production core loop is verified, OR
 - a genuine human-required blocker prevents safe continuation.
+
+A missing optional convenience is not a stop condition.
+
+A code fix that cannot yet be browser-verified is not a reason to abandon other safely accessible repairs; mark verification UNVERIFIED and continue where possible.
 
 If blocked, report:
 
