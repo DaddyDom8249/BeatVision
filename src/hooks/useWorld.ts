@@ -82,9 +82,9 @@ export function useWorld(projectId: string) {
       const result = await request("POST", { projectId }, version);
       if (mounted.current && result.version === requestVersion.current) setReport(result.report);
     } catch (e) {
-      if (mounted.current) setError(formatFailure("Reveal World", e, { projectId }));
+      if (mounted.current && version === requestVersion.current) setError(formatFailure("Reveal World", e, { projectId }));
     } finally {
-      if (mounted.current) setGenerating(false);
+      if (mounted.current && version === requestVersion.current) setGenerating(false);
     }
   }, [confirming, generating, projectId, request, saving]);
 
@@ -98,10 +98,10 @@ export function useWorld(projectId: string) {
       if (mounted.current && result.version === requestVersion.current) setReport(result.report);
     } catch (e) {
       const message = formatFailure("Save World changes", e, { projectId, action: "save_edits" });
-      if (mounted.current) setError(message);
+      if (mounted.current && version === requestVersion.current) setError(message);
       throw new Error(message);
     } finally {
-      if (mounted.current) setSaving(false);
+      if (mounted.current && version === requestVersion.current) setSaving(false);
     }
   }, [confirming, generating, projectId, request, saving]);
 
@@ -114,9 +114,9 @@ export function useWorld(projectId: string) {
       const result = await request("PATCH", { projectId, action: "confirm" }, version);
       if (mounted.current && result.version === requestVersion.current) setReport(result.report);
     } catch (e) {
-      if (mounted.current) setError(formatFailure("Confirm World", e, { projectId, action: "confirm" }));
+      if (mounted.current && version === requestVersion.current) setError(formatFailure("Confirm World", e, { projectId, action: "confirm" }));
     } finally {
-      if (mounted.current) setConfirming(false);
+      if (mounted.current && version === requestVersion.current) setConfirming(false);
     }
   }, [confirming, generating, projectId, request, saving]);
 
