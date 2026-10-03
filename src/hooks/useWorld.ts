@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase/client";
 import type { WorldReport } from "../types/world";
 
-const endpoint = () => `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/beatvision-world`;
+const endpoint = () => `${import.meta.env.VITE_SUPABASE_URL || "https://mdofsinyofqbeapzfygu.supabase.co"}/functions/v1/beatvision-world`;
 
 export function useWorld(projectId: string) {
   const [report,setReport]=useState<WorldReport|null>(null);
