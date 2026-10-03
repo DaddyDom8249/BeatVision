@@ -459,3 +459,34 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Evidence this is not caused by the current diff:** PR #4's first commit `2ff606a` carries the identical pair — `[failure] beat-vision` alongside `[success] beat-vision-f8nn` — and PR #4 merged successfully after its later commit `f8080ee` showed only the `beat-vision-f8nn` success. Commits `d4b85f2`, `780fe4c`, `dd20d3a` and `7bf617f` on `main` carry only `beat-vision-f8nn` and all succeeded. So the red status belongs to project `beat-vision`, which is not the production project named in this log.
 **Logs unavailable:** the failure message points at `npx vercel inspect dpl_AcYCUnoHEchqWSJTF19xV7boPoW2 --logs`, but there is no Vercel CLI auth (`~/.vercel` absent), no `VERCEL_TOKEN` in the environment, and the deployment page is JS-only so its content cannot be fetched. Classification: **HUMAN-REQUIRED** for diagnosis if it persists.
 **Next:** push this log entry, then re-read the check. If the `Vercel` check is green, merge PR #5; if it is still red, stop and report BLOCKED rather than merge on a failing check.
+
+
+## 2026-10-03 — Production repair loop: migration drift reconciliation
+**Task:** Continue the repair loop from current main and reconcile the live Supabase state with repository migrations.
+
+**Result:** FIXED — production ownership/storage repair is now recorded in Supabase migration history.
+
+**Findings:**
+- Current Vercel production deployment dpl_9i943nZkerGY6axuUh4jx5PXVDJQ is READY and built from current main commit 61006d3fd0c98877e7049b345e99a46191ba56b7.
+- Live Supabase contains 21 projects and all 21 have non-null owner_id.
+- world_reports contains one completed Groq-generated report for project 82f319e6-443e-4ae4-bc0c-271662ade5f9, not yet confirmed.
+- Live songs storage objects are present, confirming the canonical bucket is being used.
+- The repository migration 20261003000000_phase3_production_ownership_storage_repair.sql was not present in Supabase migration history, creating deployment/schema drift even though the repair had previously been applied directly.
+- Supabase security advisor currently reports only two warnings: mutable search_path on public.set_updated_at and leaked-password protection disabled. These are security backlog items, not blockers for the current World flow.
+- Supabase function-log querying is currently returning backend errors, so no runtime-success claim is made from that log source.
+
+**Correction:** Applied the exact repository Phase 3 ownership/storage repair as Supabase migration phase3_production_ownership_storage_repair. The migration is idempotent for the bucket/policies and does not alter application rows.
+
+**Verification:** Supabase reported success: true for the migration application.
+
+**Remaining blockers:**
+1. Authenticated Song → World browser round-trip is still not verified.
+2. World edit/save/reload browser round-trip is still not verified.
+3. Vision Lock persistence/UI is not implemented.
+4. Scene Direction → Arena execution is not wired.
+5. Final image → motion → assembly path is not verified.
+6. Project log had lagged behind merged PR #5; this entry restores the current repair state.
+
+**Next highest-priority action:** Perform authenticated Song → World → Edit → Save → Confirm verification with a real user session; if that passes, implement Vision Lock persistence and UI.
+
+**Human action required:** None for the migration repair. An authenticated browser session is still required to claim the user-flow E2E verification.
