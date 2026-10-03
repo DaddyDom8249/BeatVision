@@ -136,6 +136,7 @@ export default function WorldReport({
   report: WorldReportType;
   onConfirm: () => void;
   onSave: (changes: Record<string, unknown>) => Promise<void>;
+  onContinue: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -246,9 +247,12 @@ export default function WorldReport({
 
       <footer style={{ marginTop: 24 }}>
         {confirmed ? (
-          <p role="status" style={{ margin: 0, padding: 16, borderRadius: 12, border: "1px solid rgba(127,127,127,.25)" }}>
-            World confirmed. Changes now require an explicit revision.
-          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+            <p role="status" style={{ margin: 0, padding: 16, borderRadius: 12, border: "1px solid rgba(127,127,127,.25)", flex: "1 1 320px" }}>
+              World confirmed. Changes now require an explicit revision.
+            </p>
+            <button onClick={onContinue}>Continue to Style</button>
+          </div>
         ) : completed ? (
           editing ? (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
