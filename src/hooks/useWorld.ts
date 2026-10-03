@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { supabase } from "../lib/supabase/client";
+import { supabase, supabasePublishableKey, supabaseUrl } from "../lib/supabase/client";
 import type { WorldReport } from "../types/world";
 import { formatFailure, formatHttpFailure } from "../lib/errorDetails";
 
-const endpoint = () => `${import.meta.env.VITE_SUPABASE_URL || "https://mdofsinyofqbeapzfygu.supabase.co"}/functions/v1/beatvision-world`;
-const publishableKey = () => import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+const endpoint = () => `${supabaseUrl}/functions/v1/beatvision-world`;
 
 export function useWorld(projectId: string) {
   const [report, setReport] = useState<WorldReport | null>(null);
@@ -28,7 +27,7 @@ export function useWorld(projectId: string) {
     if (!session?.access_token) throw new Error("You must be signed in.");
 
     const url = method === "GET" ? `${endpoint()}?projectId=${encodeURIComponent(projectId)}` : endpoint();
-    const key = publishableKey();
+    const key = supabasePublishableKey;
     if (!key) throw new Error("Supabase publishable key is not configured.");
     const headers: Record<string, string> = {
       apikey: key,
