@@ -102,9 +102,13 @@ export default function SceneProductionPage({ projectId }: { projectId: string }
         </article>
       ))}
 
-      <section>
-        <h2>Production boundary</h2>
-        <p>BeatVision now has a locked, lineage-safe production brief for every scene. Provider-specific image/video generation can be attached to these briefs without altering the approved creative source.</p>
+      <section className="production-handoff">
+        <div>
+          <span className="eyebrow">NEXT / PRODUCTION WORKSPACE</span>
+          <h2>Turn the locked scene briefs into production shots.</h2>
+          <p>Your approved Visual Plan is the creative source. Open the Production Workspace to move through the eight scenes and prepare each shot without changing the locked direction.</p>
+        </div>
+        <a className="primary-button" href={"/projects/" + projectId + "/production"}>Open Production Workspace →</a>
       </section>
     </main>
   );
