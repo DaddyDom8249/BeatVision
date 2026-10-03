@@ -75,10 +75,10 @@ export function useWorld(projectId: string) {
 
   const revealWorld = useCallback(async () => {
     if (generating || saving || confirming) return;
+    const version = ++requestVersion.current;
     setGenerating(true);
     setError(null);
     try {
-      const version = ++requestVersion.current;
       const result = await request("POST", { projectId }, version);
       if (mounted.current && result.version === requestVersion.current) setReport(result.report);
     } catch (e) {
@@ -90,10 +90,10 @@ export function useWorld(projectId: string) {
 
   const saveWorld = useCallback(async (changes: Record<string, unknown>) => {
     if (saving || confirming || generating) return;
+    const version = ++requestVersion.current;
     setSaving(true);
     setError(null);
     try {
-      const version = ++requestVersion.current;
       const result = await request("PATCH", { projectId, action: "save_edits", changes }, version);
       if (mounted.current && result.version === requestVersion.current) setReport(result.report);
     } catch (e) {
@@ -107,10 +107,10 @@ export function useWorld(projectId: string) {
 
   const confirmWorld = useCallback(async () => {
     if (confirming || saving || generating) return;
+    const version = ++requestVersion.current;
     setConfirming(true);
     setError(null);
     try {
-      const version = ++requestVersion.current;
       const result = await request("PATCH", { projectId, action: "confirm" }, version);
       if (mounted.current && result.version === requestVersion.current) setReport(result.report);
     } catch (e) {
