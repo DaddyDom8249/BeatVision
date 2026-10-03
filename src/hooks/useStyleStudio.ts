@@ -75,11 +75,35 @@ export function useStyleStudio(projectId: string) {
     setLoading(true);
     setError(null);
 
+    const projectResult = await supabase
+      .from("projects")
+      .select("world_report_id")
+      .eq("id", projectId)
+      .single();
+
+    if (projectResult.error) {
+      setError(projectResult.error.message);
+      setLoading(false);
+      return;
+    }
+
+    if (!projectResult.data.world_report_id) {
+      setWorld(null);
+      setStyleBible(null);
+      setCharacters([]);
+      setCharacterAssets([]);
+      setEnvironments([]);
+      setEnvironmentAssets([]);
+      setLoading(false);
+      return;
+    }
+
     const worldResult = await supabase
       .from("world_reports")
       .select("*")
+      .eq("id", projectResult.data.world_report_id)
       .eq("project_id", projectId)
-      .maybeSingle();
+      .single();
 
     if (worldResult.error) {
       setError(worldResult.error.message);
@@ -87,10 +111,10 @@ export function useStyleStudio(projectId: string) {
       return;
     }
 
-    const currentWorld = worldResult.data as WorldReport | null;
+    const currentWorld = worldResult.data as WorldReport;
     setWorld(currentWorld);
 
-    if (!currentWorld || currentWorld.status !== "completed" || !currentWorld.confirmed_at) {
+    if (currentWorld.status !== "completed" || !currentWorld.confirmed_at) {
       setStyleBible(null);
       setCharacters([]);
       setCharacterAssets([]);
@@ -181,12 +205,14 @@ export function useStyleStudio(projectId: string) {
 
   const saveStyleBible = useCallback(async (draft: Pick<StyleBible, "visual_rules" | "reference_assets" | "continuity_rules">) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
+    if (styleBible.status === "approved") throw new Error("The Style Bible is locked and cannot be edited.");
     setWorking(true); setError(null);
     try {
       const result = await supabase
         .from("style_bibles")
         .update(draft)
         .eq("id", styleBible.id)
+        .eq("status", "draft")
         .select(styleFields)
         .single();
       if (result.error) throw result.error;
@@ -196,8 +222,33 @@ export function useStyleStudio(projectId: string) {
     }
   }, [styleBible]);
 
+  const approveStyleBible = useCallback(async () => {
+    if (!styleBible) throw new Error("Create the Style Bible first.");
+    if (styleBible.status === "approved") return styleBible;
+    setWorking(true); setError(null);
+    try {
+      const result = await supabase
+        .from("style_bibles")
+        .update({ status: "approved", approved_at: new Date().toISOString() })
+        .eq("id", styleBible.id)
+        .eq("status", "draft")
+        .select(styleFields)
+        .single();
+      if (result.error) throw result.error;
+      setStyleBible(result.data as StyleBible);
+      return result.data as StyleBible;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Unable to lock Style Bible.";
+      setError(message);
+      throw e;
+    } finally {
+      setWorking(false);
+    }
+  }, [styleBible]);
+
   const saveCharacter = useCallback(async (id: string | null, input: { name: string; sheet: Record<string, string> }) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
+    if (styleBible.status === "approved") throw new Error("The Style Bible is locked and cannot be edited.");
     if (!world?.id) throw new Error("Confirmed World Report not available.");
     const worldReportId = world.id;
     setWorking(true); setError(null);
@@ -222,6 +273,7 @@ export function useStyleStudio(projectId: string) {
 
   const saveEnvironment = useCallback(async (id: string | null, input: { name: string; sheet: Record<string, string> }) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
+    if (styleBible.status === "approved") throw new Error("The Style Bible is locked and cannot be edited.");
     if (!world?.id) throw new Error("Confirmed World Report not available.");
     const worldReportId = world.id;
     setWorking(true); setError(null);
@@ -246,12 +298,12 @@ export function useStyleStudio(projectId: string) {
 
   const uploadAsset = useCallback(async (kind: "character" | "environment", parentId: string, file: File, label: string) => {
     const userId = await getUserId();
-    if (!styleBible || !world?.confirmed_at) throw new Error("Confirm the Visual World Report before adding assets.");
+    if (!styleBible || styleBible.status === "approved" || !world?.confirmed_at) throw new Error("The Style Bible must be editable before adding assets.");
     setWorking(true); setError(null);
     try {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const root = kind === "character" ? "characters" : "environments";
-      const path = `${userId}/${projectId}/${root}/${parentId}/${crypto.randomUUID()}-${safeName}`;
+      const path = `${userId}/${projectId}/${root}/${parentId}/${crypto.randomUUID()}-${safeName"}`;
       const upload = await supabase.storage.from("visual-assets").upload(path, file, {
         upsert: false,
         contentType: file.type || undefined,
@@ -279,6 +331,7 @@ export function useStyleStudio(projectId: string) {
   }, [projectId, styleBible, world, load]);
 
   const approveAsset = useCallback(async (kind: "character" | "environment", assetId: string) => {
+    if (!styleBible || styleBible.status === "approved") throw new Error("The Style Bible is locked.");
     setWorking(true); setError(null);
     try {
       const table = kind === "character" ? "character_assets" : "environment_assets";
@@ -292,7 +345,7 @@ export function useStyleStudio(projectId: string) {
       const message = e instanceof Error ? e.message : "Unable to approve asset.";
       setError(message); throw e;
     } finally { setWorking(false); }
-  }, [load]);
+  }, [load, styleBible]);
 
   return {
     world,
@@ -304,9 +357,10 @@ export function useStyleStudio(projectId: string) {
     loading,
     working,
     error,
-    locked: !world || world.status !== "completed" || !world.confirmed_at,
+    locked: styleBible?.status === "approved",
     createStyleBible,
     saveStyleBible,
+    approveStyleBible,
     saveCharacter,
     saveEnvironment,
     uploadAsset,
