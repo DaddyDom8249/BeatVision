@@ -357,3 +357,13 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Reusable capabilities added to checklist:** Character/Environment Bibles, reference-asset inheritance, scene prompt compilation, Review Changes dependency tracking, Visual Beat Engine, musical-context compilation, beat-aware scene splitting, provider adapters, idempotent generation, durable bounded-retry jobs, explicit provider-honesty states, first-frame approval gate, image version history/compare, consistency controls, motion-readiness validation, stable scene IDs, visual reuse detection, Timeline Guardian, render integrity/coverage validation, full preview, and optional future Autopilot.
 **Rejected as direct imports:** wholesale replacement of the current Vercel/Supabase architecture, provider-specific/paid paths, giant legacy project-results architecture, and automatic Autopilot control of creative decisions.
 **Next:** Continue the current Song → Analyze → World workflow and implement the explicit post-save next action.
+
+
+## 2026-10-03 — World Reveal edit/fetch repair
+- User reported: clicking “Yes, that's my world” produced “Cannot fetch”; World Report had no edit option.
+- Root cause confirmed in source: WorldReport was read-only and useWorld had no persisted edit operation; PATCH errors were surfaced too generically.
+- Fixed WorldReport with editable fields, Save World Changes, Cancel, and confirmation flow.
+- Hardened useWorld auth/request handling with session refresh, explicit response parsing, and clearer HTTP/network errors.
+- Added authenticated server-side PATCH action save_edits to beatvision-world v6; confirmed worlds remain locked.
+- Production Vercel deployment dpl_7F8yVLvpGKUjmFHQR6i81KDgHb9r is READY on commit 4b66942f39ef309acb171d87b75c67f0f14e6cd3.
+- Functional authenticated edit/save/confirm E2E remains to be tested in the browser.
