@@ -236,10 +236,11 @@ Deno.serve(async (req) => {
           .update(update)
           .eq("id", existing.id)
           .eq("project_id", projectId)
+          .is("confirmed_at", null)
           .select("*")
           .single();
 
-        if (saveError) throw new Error(saveError.message);
+        if (saveError) throw new HttpError("WORLD_SAVE_CONFLICT", 409, "World changed while this edit was being saved. Reload the World and retry.");
 
         const savedFields = Object.keys(edits);
         console.log(
@@ -271,10 +272,12 @@ Deno.serve(async (req) => {
         .from("world_reports")
         .update({ confirmed_at: now })
         .eq("id", existing.id)
+        .eq("project_id", projectId)
+        .is("confirmed_at", null)
         .select("*")
         .single();
 
-      if (error) throw new Error(error.message);
+      if (error) throw new HttpError("WORLD_CONFIRM_CONFLICT", 409, "World was already confirmed or changed concurrently. Reload the World.");
 
       const { error: projectUpdateError } = await admin
         .from("projects")
