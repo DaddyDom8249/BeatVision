@@ -367,3 +367,13 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - Added authenticated server-side PATCH action save_edits to beatvision-world v6; confirmed worlds remain locked.
 - Production Vercel deployment dpl_7F8yVLvpGKUjmFHQR6i81KDgHb9r is READY on commit 4b66942f39ef309acb171d87b75c67f0f14e6cd3.
 - Functional authenticated edit/save/confirm E2E remains to be tested in the browser.
+
+
+## 2026-10-03 — Freebuff agent setup
+**Task:** Prepare BeatVision for an external zero-cost coding-agent workflow using Freebuff.
+**Result:** SETUP COMPLETED.
+**Action:** Added repository-root `AGENTS.md` with BeatVision architecture, zero-cost, security, verification, continuity, and autonomous-repair rules. Added `FREEBUFF_TASK.md` containing the initial audit and continuous repair objective.
+**Safety:** The agent instructions explicitly prohibit paid/unknown-cost services, weakening authentication/RLS, destructive production changes, secret exposure, and unverified completion claims.
+**Scope:** Documentation/instructions only. No application code, Supabase data, or production configuration was changed by this setup.
+**Commits:** `2e11526eb764923b09b36a03492aa4bb86153488` (AGENTS.md); `f2491bbcaf8707a4d33f6df9100f1cdef994cf2b` (FREEBUFF_TASK.md).
+**Next:** Connect the BeatVision GitHub repository to Freebuff, run the audit task first, and review its findings before granting any production credentials.
