@@ -315,3 +315,12 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Action:** Updated `SongPage.tsx` and `useSong.ts` to use `songs`; changed song transcription invocation to use the Supabase client function invocation; updated and redeployed `beatvision-analyze-song` as ACTIVE v4 using the `songs` bucket.
 **Verification:** Queried `storage.buckets` and confirmed the `songs` bucket exists. Confirmed its authenticated upload/read/delete policies already exist. Vercel/GitHub deployment for the frontend fix was triggered from commit `35e024d94c517544d33b3b41c69de90f008c36ad`; GitHub Production CI run #74 was still in progress at log time.
 **Remaining:** Real authenticated upload of the supplied MP3 still needs to be performed to claim end-to-end success.
+
+
+## 2026-10-03 — 02:40 UTC
+**Task:** Investigate production Song page disappearing/glitching immediately after clicking `Save song`, before manual song analysis.
+**Result:** ROOT CAUSE HARDENING APPLIED; production deployment pending.
+**Finding:** The save path calls `reload()`, and the song hook previously set its global loading state on every reload, temporarily replacing the entire form with a loading screen. The Song page also called `toFixed()` directly on persisted `analysis.duration_seconds`; malformed or partial analysis data could throw during React render and leave the page blank. No Vercel runtime logs were present for the reported symptom, so a server-side exception is not established.
+**Action:** Changed `useSong` so only the initial load controls the page-level loading state; post-save/post-analysis refreshes keep the form mounted. Hardened analysis-duration rendering with numeric validation. Changes committed as `7f2b44f3fa52c4359868a207e45a38a033d0c694` and `22882f822dc97fc49d19b6a36ea4053ad70b67fd`.
+**Verification:** GitHub commit status is currently pending on Vercel. Production deployment `dpl_4V7qVbxQabAv8qcMmFrpZmEZyFd5` is queued; it is not yet claimed live.
+**Next test:** Once deployment reaches READY, retry Save song on the same project. If the page remains stable, click Analyze music separately. Capture the exact visible error if Save still fails.
