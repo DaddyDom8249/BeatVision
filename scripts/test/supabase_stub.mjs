@@ -1,6 +1,10 @@
 // In-memory stand-in for @supabase/supabase-js, sufficient for the chainable
 // query surface that supabase/functions/beatvision-world/index.ts uses.
 
+// Records every storage bucket the function asks for, so tests can assert
+// against production bucket names (e.g. `songs` rather than the stale `audio`).
+export const storageBucketCalls = [];
+
 export function createStubClientFactory(db) {
   return function createClient(url, key) {
     return {
@@ -70,8 +74,11 @@ export function createStubClientFactory(db) {
         return api;
       },
       storage: {
-        from: () => ({
-          createSignedUrl: async () => ({ data: { signedUrl: "https://example.invalid/signed" }, error: null }),
+        from: (bucket) => ({
+          createSignedUrl: async (path) => {
+            storageBucketCalls.push({ bucket, path });
+            return { data: { signedUrl: "https://example.invalid/signed" }, error: null };
+          },
         }),
       },
       auth: {},
