@@ -6,6 +6,7 @@ import SongPage from "../pages/SongPage";
 import WorldPage from "../pages/WorldPage";
 import StylePage from "../pages/StylePage";
 import StudioPage from "../pages/StudioPage";
+import VisualPlanPage from "../pages/VisualPlanPage";
 
 function currentPath() { return window.location.pathname; }
 
@@ -32,6 +33,9 @@ export default function App() {
 
   const worldMatch = path.match(/^\/projects\/([^/]+)\/world\/?$/);
   if (worldMatch) return <WorldPage projectId={worldMatch[1]} onNavigate={navigate} />;
+
+  const visualPlanMatch = path.match(/^\/projects\/([^/]+)\/visual-plan\/?$/);
+  if (visualPlanMatch) return <VisualPlanPage projectId={visualPlanMatch[1]} />;
 
   const styleMatch = path.match(/^\/projects\/([^/]+)\/style\/?$/);
   if (styleMatch) return <StylePage projectId={styleMatch[1]} />;
