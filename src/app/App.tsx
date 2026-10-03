@@ -31,7 +31,7 @@ export default function App() {
   if (studioMatch) return <StudioPage projectId={studioMatch[1]} />;
 
   const worldMatch = path.match(/^\/projects\/([^/]+)\/world\/?$/);
-  if (worldMatch) return <WorldPage projectId={worldMatch[1]} />;
+  if (worldMatch) return <WorldPage projectId={worldMatch[1]} onNavigate={navigate} />;
 
   const styleMatch = path.match(/^\/projects\/([^/]+)\/style\/?$/);
   if (styleMatch) return <StylePage projectId={styleMatch[1]} />;
