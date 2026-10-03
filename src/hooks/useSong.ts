@@ -9,13 +9,16 @@ export function useSong(projectId?: string) {
 
   const load = useCallback(async () => {
     if (!projectId) return;
-    setLoading(true); setError(null);
+    setError(null);
     const { data, error } = await supabase.from("songs")
       .select("id,project_id,title,artist,audio_path,lyrics,creative_direction,notes,analysis_status,analysis,analyzed_at,created_at,updated_at")
       .eq("project_id", projectId).maybeSingle();
-    if (error) { setError(error.message); setSong(null); }
-    else if (!data) setSong(null);
-    else {
+    if (error) {
+      setError(error.message);
+      setSong(null);
+    } else if (!data) {
+      setSong(null);
+    } else {
       let audio_url: string | null = null;
       if (data.audio_path) {
         const signed = await supabase.storage.from("songs").createSignedUrl(data.audio_path, 3600);
@@ -26,6 +29,10 @@ export function useSong(projectId?: string) {
     setLoading(false);
   }, [projectId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    setLoading(true);
+    void load();
+  }, [load]);
+
   return { song, loading, error, reload: load };
 }
