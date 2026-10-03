@@ -202,6 +202,8 @@ Deno.serve(async (req) => {
       .from("world_reports")
       .select("*")
       .eq("project_id", projectId)
+      .order("revision_number", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (readError) throw new Error(readError.message);
@@ -213,9 +215,78 @@ Deno.serve(async (req) => {
         return json({ error: { code: "WORLD_NOT_READY", message: "A completed world report must exist before editing or confirmation." } }, 409);
       }
 
+      if (body.action === "create_revision") {
+        if (!existing.confirmed_at) {
+          return json({ error: { code: "WORLD_REVISION_REQUIRES_CONFIRMED", message: "Create a revision only after the current World has been confirmed." } }, 409);
+        }
+
+        const edits = readWorldEdits(body);
+        const merged = mergeWorldForValidation(existing, edits);
+        validateWorld(merged);
+
+        const nextRevision = Number(existing.revision_number) + 1;
+        const revisionPayload: Record<string, unknown> = {
+          project_id: projectId,
+          world_id: existing.world_id,
+          revision_number: nextRevision,
+          status: "completed",
+          mood: merged.mood,
+          emotional_arc: merged.emotional_arc,
+          visual_language: merged.visual_language,
+          cinematography: merged.cinematography,
+          environments: merged.environments,
+          color_lighting: merged.color_lighting,
+          motifs: merged.motifs,
+          atmosphere: merged.atmosphere,
+          movement: merged.movement,
+          continuity_rules: merged.continuity_rules,
+          immutable_continuity: merged.immutable_continuity,
+          raw_report: {
+            ...(existing.raw_report && typeof existing.raw_report === "object" ? existing.raw_report : {}),
+            parent_world_report_id: existing.id,
+            parent_revision_number: existing.revision_number,
+            artist_edits: { ...edits },
+            revised_at: new Date().toISOString(),
+          },
+          provider: existing.provider,
+          provider_request_id: existing.provider_request_id,
+          error_code: null,
+          error_message: null,
+          confirmed_at: null,
+        };
+
+        const { data: revision, error: revisionError } = await admin
+          .from("world_reports")
+          .insert(revisionPayload)
+          .select("*")
+          .single();
+
+        if (revisionError) {
+          if (revisionError.code === "23505") {
+            throw new HttpError("WORLD_REVISION_CONFLICT", 409, "A newer World revision already exists. Reload the World and create the revision again.");
+          }
+          throw new Error(revisionError.message);
+        }
+
+        const { error: projectUpdateError } = await admin
+          .from("projects")
+          .update({ world_report_id: revision.id, world_confirmed_at: null })
+          .eq("id", projectId);
+
+        if (projectUpdateError) throw new Error(projectUpdateError.message);
+
+        return json({
+          report: revision,
+          action: "create_revision",
+          ok: true,
+          revision_number: nextRevision,
+          parent_world_report_id: existing.id,
+        });
+      }
+
       if (body.action === "save_edits") {
         if (existing.confirmed_at) {
-          return json({ error: { code: "WORLD_ALREADY_CONFIRMED", message: "Confirmed worlds are locked. Create an explicit revision before changing them." } }, 409);
+          return json({ error: { code: "WORLD_ALREADY_CONFIRMED", message: "Confirmed worlds are immutable. Use create_revision to make an explicit new revision." } }, 409);
         }
 
         const edits = readWorldEdits(body);
@@ -240,7 +311,12 @@ Deno.serve(async (req) => {
           .select("*")
           .single();
 
-        if (saveError) throw new HttpError("WORLD_SAVE_CONFLICT", 409, "World changed while this edit was being saved. Reload the World and retry.");
+        if (saveError) {
+          if (saveError.code === "55000") {
+            throw new HttpError("WORLD_ALREADY_CONFIRMED", 409, "Confirmed worlds are immutable. Use create_revision to make an explicit new revision.");
+          }
+          throw new HttpError("WORLD_SAVE_CONFLICT", 409, "World changed while this edit was being saved. Reload the World and retry.");
+        }
 
         const savedFields = Object.keys(edits);
         console.log(
@@ -289,7 +365,14 @@ Deno.serve(async (req) => {
       return json({ report: confirmed });
     }
 
-    if (existing?.confirmed_at) return json({ report: existing });
+    if (existing?.confirmed_at) {
+      return json({
+        error: {
+          code: "WORLD_ALREADY_CONFIRMED",
+          message: "This World revision is immutable. Create an explicit revision before regenerating or modifying it.",
+        },
+      }, 409);
+    }
 
     const groqKey = env("GROQ_API_KEY");
     if (!groqKey) {
@@ -439,8 +522,19 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
     };
 
     const result = existing
-      ? await admin.from("world_reports").update(payload).eq("id", existing.id).select("*").single()
-      : await admin.from("world_reports").insert({ project_id: projectId, ...payload }).select("*").single();
+      ? await admin
+          .from("world_reports")
+          .update(payload)
+          .eq("id", existing.id)
+          .eq("project_id", projectId)
+          .is("confirmed_at", null)
+          .select("*")
+          .single()
+      : await admin
+          .from("world_reports")
+          .insert({ project_id: projectId, world_id: crypto.randomUUID(), revision_number: 1, ...payload })
+          .select("*")
+          .single();
 
     if (result.error) throw new Error(result.error.message);
 
