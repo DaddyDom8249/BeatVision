@@ -116,7 +116,7 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - [x] Audio upload/storage flow
 - [x] Initial BeatVision visual system
 - [x] Production build passing in CI
-- [ ] Browser verification of current deployment
+- [x] Browser verification of current deployment
 - [ ] Fresh Vercel deployment verified against current GitHub main
 - [ ] Authenticated project-creation test
 - [ ] Song-upload test
@@ -278,7 +278,14 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 
 ## 2026-10-03 — 02:01 UTC
 **Task:** Trigger a fresh Vercel production deployment after the user connected Supabase directly to Vercel.
-**Result:** IN PROGRESS.
-**Verification before trigger:** Vercel project `beat-vision-f8nn` had one READY production deployment on commit `773b66c6164ad4ca20d9c1ec93a4f4a6dbbdab0c`; production HTML returned HTTP 200, but the user reports a black screen. No Vercel runtime errors were present for that deployment in the previous 24 hours.
-**Action:** Create a documentation-only commit on `main` so the connected Git → Vercel production deployment path is exercised without changing application behavior.
-**Next:** Confirm the new production deployment appears and reaches READY, then inspect the deployed page again.
+**Result:** SUCCESS, but the black screen persisted because the application bundle was still failing during Supabase client initialization.
+**Verification before trigger:** Vercel project `beat-vision-f8nn` had one READY production deployment on commit `773b66c6164ad4ca20d9c1ec93a4f4a6dbbdab0c`; production HTML returned HTTP 200, but the user reported a black screen. No Vercel server-side runtime errors were present.
+**Action:** Created a documentation-only commit on `main`, confirmed Git → Vercel production deployment, and inspected the fresh bundle.
+**Finding:** The deployed bundle contained Supabase's `supabaseUrl is required` failure path but contained neither the Supabase project URL nor any `VITE_SUPABASE_*` value. The React entry imports all page modules eagerly, so the Supabase client throws before React can mount; this explains the blank screen with no Vercel runtime error.
+
+## 2026-10-03 — 02:07 UTC
+**Task:** Repair the verified Vercel black-screen cause.
+**Result:** SUCCESS.
+**Action:** Updated `src/lib/supabase/client.ts` in commit `bff36da52a30a60a171c81013fafed61f3a31336` to use the configured `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` when present, with the verified BeatVision Supabase project URL and public publishable key as safe build-time fallbacks.
+**Verification:** GitHub Production CI run #63 completed successfully. Vercel production deployment `dpl_DER8c5Tqa9hdCuy7bxMoHVdUDWRm` reached READY from commit `bff36da52a30a60a171c81013fafed61f3a31336`. The deployed bundle contains the expected Supabase URL and publishable key. A real browser render of `https://beat-vision-f8nn.vercel.app/` produced the BeatVision hero, Projects section, and primary action instead of a blank page.
+**Remaining:** Authenticated project creation, song upload/analysis, World Reveal, and deeper route/browser checks remain unverified.
