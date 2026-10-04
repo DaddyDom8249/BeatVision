@@ -64,7 +64,7 @@ function bridgePayload(job: any) {
     },
     analysis: {
       ...analysis,
-      analysis_method: analysis.analysis_method || "browser_audio_decode",
+      analysis_method: analysis.analysis_method,
     },
     world: {
       ...world,
@@ -119,6 +119,9 @@ async function setFailed(db: any, id: string, message: string, detail?: unknown)
 }
 
 async function run(db: any, job: any) {
+  if (!["scene_image", "scene_motion"].includes(String(job.job_type))) {
+    throw new Error("GENERATION_JOB_TYPE_NOT_SUPPORTED: only scene_image and scene_motion are controller-backed.");
+  }
   if (job.status !== "queued") return job;
 
   const requestId = "beatvision:" + job.id;
