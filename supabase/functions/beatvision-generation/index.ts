@@ -24,7 +24,7 @@ async function authenticate(req: Request) {
 }
 
 function arenaBase() {
-  const value = env("ARENA_GATEWAY_URL").replace(/\\/$/, "");
+  const value = env("ARENA_GATEWAY_URL").replace(/\/$/, "");
   if (!value) throw new Error("Arena gateway is not configured.");
   return value;
 }
