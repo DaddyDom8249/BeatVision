@@ -1,3 +1,4 @@
+// Production deployment requires VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.
 import { createClient } from "@supabase/supabase-js";
 
 export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
