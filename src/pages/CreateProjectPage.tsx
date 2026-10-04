@@ -20,9 +20,9 @@ export default function CreateProjectPage({ onNavigate }: Props) {
       return;
     }
     const { data, error } = await supabase.from("projects")
-      .insert({ owner_id: auth.user.id, title: title.trim(), status: "draft", stage: "song" })
+      .insert({ owner_id: auth.user.id, title: title.trim(), status: "Draft", stage: "song" })
       .select("id").single();
-    if (error) setError(formatFailure("Create project", error, { status: "draft", stage: "song", title: title.trim() }));
+    if (error) setError(formatFailure("Create project", error, { status: "Draft", stage: "song", title: title.trim() }));
     else onNavigate(`/projects/${data.id}/song`);
     setSaving(false);
   }
