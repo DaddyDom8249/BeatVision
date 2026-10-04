@@ -510,3 +510,11 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Safety:** No production schema/data was changed in this correction cycle. No migration was applied. This follows Supabase migration-history rules: local migration files and remote schema_migrations must be reconciled before pushing schema changes.
 **Verification:** Live migration history was queried directly; live project column/type metadata was queried directly; the redundant PR migration was deleted from the branch. Runtime Song → World remains UNVERIFIED.
 **Next:** verify the branch against the live schema contract, then test the actual authenticated Song → World path against the ready preview before any merge.
+
+
+## 2026-10-04 — Production World CORS deployment verification
+**Task:** Close the live CORS defect without overwriting the deployed World implementation with the branch copy.
+**Result:** VERIFIED for CORS. Production beatvision-world was deployed as version 18 using the existing live function source with only the origin policy changed to wildcard. The deployed function remains custom-authenticated with verify_jwt=false.
+**Evidence:** Supabase returned ACTIVE version 18. Re-fetching the deployed source confirmed Access-Control-Allow-Origin: * and no legacy beat-vision-f8nn.vercel.app allowlist. A live OPTIONS request returned HTTP 200 with Access-Control-Allow-Origin: * and the required authorization/content-type allow-list.
+**Safety:** The production source was fetched first and preserved. No provider logic, database logic, world editing logic, or authentication logic was replaced. The production deployment was a surgical CORS-only change.
+**Remaining:** Authenticated Song → World browser round-trip remains UNVERIFIED. The repository PR still needs to land the same CORS change in canonical source. 
