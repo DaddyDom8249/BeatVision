@@ -500,3 +500,13 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Safety:** migration preserves existing owner data by renaming `user_id` to `owner_id` when necessary, fails rather than inventing owners if null owners exist, and rewrites affected RLS policies to the canonical owner field. No production data was deleted or overwritten.
 **Verification:** static source verification completed. Local `npm test`/`npm run build` execution is pending because this GitHub connector cannot execute the repository's Node toolchain. Production migration deployment and authenticated browser verification are NOT VERIFIED.
 **Next:** run the repository test/build suite and apply the migration to the linked Supabase environment through the normal migration pipeline before claiming the Song → World flow VERIFIED.
+
+
+## 2026-10-04 — PR #7 schema reconciliation retracted after live-history verification
+**Task:** Reconcile PR #7 against the actual production Supabase migration history before merge.
+**Result:** CORRECTED. The proposed 20261004100000_canonical_project_owner_and_analysis.sql was removed from the branch because production already contains the required ownership/schema shape through the recorded migration 20261004152740 (20261004120000_reconcile_projects_owner_id). Applying the PR migration would have been redundant and its broad policy-rebuild logic was not justified by fresh evidence.
+**Live evidence:** projects.owner_id, projects.stage, and projects.song_duration exist; projects.owner_id is populated for the live 27-row project set. songs analysis fields are present. Production projects.status is a PostgreSQL enum project_status, with canonical values beginning Draft, World Approved, and the later pipeline states, not the lowercase draft/active check assumed by the old Phase 1 migration.
+**Correction:** CreateProjectPage.tsx now sends status: Draft again, matching the live enum default. The earlier lowercase-status change was therefore reverted. The World CORS wildcard change remains in this branch.
+**Safety:** No production schema/data was changed in this correction cycle. No migration was applied. This follows Supabase migration-history rules: local migration files and remote schema_migrations must be reconciled before pushing schema changes.
+**Verification:** Live migration history was queried directly; live project column/type metadata was queried directly; the redundant PR migration was deleted from the branch. Runtime Song → World remains UNVERIFIED.
+**Next:** verify the branch against the live schema contract, then test the actual authenticated Song → World path against the ready preview before any merge.
