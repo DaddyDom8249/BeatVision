@@ -1,11 +1,25 @@
 export type VisualPlanStatus = "draft" | "approved";
 
+export interface VisionLock {
+  id: string;
+  project_id: string;
+  world_report_id: string;
+  style_bible_id: string;
+  song_id: string;
+  revision_number: number;
+  status: "locked";
+  snapshot: Record<string, unknown>;
+  locked_at: string;
+  created_at: string;
+}
+
 export interface VisualPlan {
   id: string;
   project_id: string;
   world_report_id: string;
   style_bible_id: string;
   song_id: string;
+  vision_lock_id: string | null;
   status: VisualPlanStatus;
   title: string;
   duration_seconds: number | null;
