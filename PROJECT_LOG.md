@@ -530,3 +530,13 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - **Safety decision:** do not reconstruct those historical migrations from the live schema. A future clean baseline may be generated from verified current schema state, but that would be a new migration/baseline, not a fabricated historical replacement.
 - **Production mutation:** none. This phase was read-only against production.
 - **Next blocker:** trace the actual canonical generation path and reconcile the new generation_jobs/BeatVision 2.0 controller with the currently deployed Arena 2.0 bridge and the legacy pipeline runtime.
+
+
+## 2026-10-04 — BeatVision 2.0 bridge trace
+
+- **Finding:** the restored `beatvision-generation` controller targets Arena 2.0 paths (`/v2/scene-image`, `/v2/animate`, `/v2/assemble`) and sends a 2.0 payload shape, while the restored Supabase `beatvision-arena` boundary only admitted the legacy 1.1 route set and contract validation.
+- **Root cause:** the newer controller and the Supabase Arena boundary were not actually connected. Simply restoring both production sources did not make them compatible.
+- **Correction applied on cleanup branch:** `beatvision-arena` now admits the three 2.0 bridge routes and proxies them to the deployed Arena bridge after authenticated project ownership verification, using the 2.0 contract header. The legacy 1.1 path remains intact.
+- **External evidence:** the BeatVision Arena repository's 2.0 bridge defines `/v2/scene-image`, `/v2/animate`, and `/v2/assemble`, and converts them internally to the legacy provider operations. Cloudflare Workers supports the request/response proxy pattern used here. citeturn3search1turn3search2
+- **Still unresolved:** the 2.0 controller does not yet persist generated image/video outputs into the canonical `scene_images`, `motion_clips`, and `final_videos` records. Production schema inspection confirms those durable tables exist, while `generation_jobs` provides the queued/submitted/processing/completed/failed lifecycle fields.
+- **Status:** bridge compatibility fix **IMPLEMENTED / UNVERIFIED** until CI and a real authenticated provider invocation pass. Durable output persistence remains **UNVERIFIED**.
