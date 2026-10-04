@@ -1,16 +1,18 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const cors = {
-  "Access-Control-Allow-Origin": "https://beat-vision-f8nn.vercel.app",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
-  "Content-Type": "application/json",
-};
+function corsFor(_req: Request) {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+    "Content-Type": "application/json",
+  };
+}
 
 const WORLD_MODEL = "openai/gpt-oss-20b";
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: cors });
+const json = (body: unknown, status = 200, req?: Request) =>
+  new Response(JSON.stringify(body), { status, headers: corsFor(req ?? new Request("https://beatvision.invalid")) });
 
 const env = (name: string) => String(Deno.env.get(name) || "").trim();
 
@@ -172,7 +174,7 @@ function mergeWorldForValidation(existing: Record<string, any>, edits: Record<st
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsFor(req) });
 
   try {
     const userId = await getUser(req);
@@ -312,9 +314,12 @@ Deno.serve(async (req) => {
           .single();
 
         if (saveError) {
-          if (saveError.code === "55000") {
+          if (saveError.code === "55000" || saveError.code === "PGRST116") {
             throw new HttpError("WORLD_ALREADY_CONFIRMED", 409, "Confirmed worlds are immutable. Use create_revision to make an explicit new revision.");
           }
+          throw new Error(saveError.message || "World save failed.");
+        }
+        if (!saved) {
           throw new HttpError("WORLD_SAVE_CONFLICT", 409, "World changed while this edit was being saved. Reload the World and retry.");
         }
 
@@ -410,9 +415,9 @@ Deno.serve(async (req) => {
       project_title: cleanText(project.title, 240),
       song_title: cleanText(song.title, 240),
       artist: cleanText(song.artist, 240),
-      creative_direction: cleanText(song.creative_direction, 3000),
-      notes: cleanText(song.notes, 3000),
-      lyrics: cleanText(song.lyrics, 9000),
+      creative_direction: cleanText(song.creative_direction, 700),
+      notes: cleanText(song.notes, 500),
+      lyrics: cleanText(song.lyrics, 1800),
       musical_analysis: {
         duration_seconds: analysis.duration_seconds ?? null,
         bpm: analysis.bpm ?? null,
@@ -420,15 +425,21 @@ Deno.serve(async (req) => {
         key: analysis.key ?? null,
         key_confidence: analysis.key_confidence ?? null,
         time_signature: analysis.time_signature ?? null,
-        energy_curve: analysis.energy_curve ?? [],
-        energy_regions: analysis.energy_region_candidates ?? [],
-        transcript: cleanText(analysis.transcript, 9000),
-        transcript_segments: analysis.transcript_segments ?? [],
+        energy_curve: Array.isArray(analysis.energy_curve) ? analysis.energy_curve.slice(0, 8) : [],
+        energy_regions: Array.isArray(analysis.energy_region_candidates) ? analysis.energy_region_candidates.slice(0, 4) : [],
+        transcript: cleanText(analysis.transcript, 500),
+        transcript_segments: [],
         vocal_presence: analysis.vocal_presence ?? null,
-        mood_tags: analysis.mood_tags ?? [],
-        genre_tags: analysis.genre_tags ?? [],
+        mood_tags: Array.isArray(analysis.mood_tags) ? analysis.mood_tags.slice(0, 6) : [],
+        genre_tags: Array.isArray(analysis.genre_tags) ? analysis.genre_tags.slice(0, 6) : [],
       },
     };
+
+    const sourceJson = JSON.stringify(source);
+    const estimatedPromptChars = sourceJson.length + 2200;
+    if (estimatedPromptChars > 12000) {
+      throw new HttpError("WORLD_INPUT_BUDGET_EXCEEDED", 422, "World source exceeded the deterministic input budget.");
+    }
 
     const system = `You are BeatVision's World Director. Build a durable visual world for an artist-directed music video.
 
@@ -455,13 +466,13 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
         model: WORLD_MODEL,
         temperature: 0.35,
         seed: 42,
-        max_completion_tokens: 2400,
+        max_completion_tokens: 1600,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: system },
           {
             role: "user",
-            content: "Create the BeatVision world from this source material:\n\n" + JSON.stringify(source),
+            content: "Create the BeatVision world from this source material:\n\n" + sourceJson,
           },
         ],
       }),
@@ -541,13 +552,13 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
     return json({ report: result.data });
   } catch (error) {
     if (error instanceof HttpError) {
-      return json({ error: { code: error.code, message: error.message } }, error.status);
+      return json({ error: { code: error.code, message: error.message } }, error.status, req);
     }
     return json({
       error: {
         code: "WORLD_REQUEST_FAILED",
         message: error instanceof Error ? error.message : String(error),
       },
-    }, 500);
+    }, 500, req);
   }
 })
