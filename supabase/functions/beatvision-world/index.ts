@@ -1,16 +1,28 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const cors = {
-  "Access-Control-Allow-Origin": "https://beat-vision-f8nn.vercel.app",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
-  "Content-Type": "application/json",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://beat-vision-f8nn.vercel.app",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]);
+const PRIMARY_ORIGIN = "https://beat-vision-f8nn.vercel.app";
+
+function corsFor(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : PRIMARY_ORIGIN;
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+    "Content-Type": "application/json",
+    "Vary": "Origin",
+  };
+}
 
 const WORLD_MODEL = "openai/gpt-oss-20b";
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: cors });
+const json = (body: unknown, status = 200, req?: Request) =>
+  new Response(JSON.stringify(body), { status, headers: corsFor(req ?? new Request("https://beatvision.invalid")) });
 
 const env = (name: string) => String(Deno.env.get(name) || "").trim();
 
@@ -172,7 +184,7 @@ function mergeWorldForValidation(existing: Record<string, any>, edits: Record<st
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsFor(req) });
 
   try {
     const userId = await getUser(req);
@@ -312,9 +324,12 @@ Deno.serve(async (req) => {
           .single();
 
         if (saveError) {
-          if (saveError.code === "55000") {
+          if (saveError.code === "55000" || saveError.code === "PGRST116") {
             throw new HttpError("WORLD_ALREADY_CONFIRMED", 409, "Confirmed worlds are immutable. Use create_revision to make an explicit new revision.");
           }
+          throw new Error(saveError.message || "World save failed.");
+        }
+        if (!saved) {
           throw new HttpError("WORLD_SAVE_CONFLICT", 409, "World changed while this edit was being saved. Reload the World and retry.");
         }
 
@@ -547,13 +562,13 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
     return json({ report: result.data });
   } catch (error) {
     if (error instanceof HttpError) {
-      return json({ error: { code: error.code, message: error.message } }, error.status);
+      return json({ error: { code: error.code, message: error.message } }, error.status, req);
     }
     return json({
       error: {
         code: "WORLD_REQUEST_FAILED",
         message: error instanceof Error ? error.message : String(error),
       },
-    }, 500);
+    }, 500, req);
   }
 })
