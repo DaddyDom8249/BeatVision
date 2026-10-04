@@ -526,3 +526,32 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - End-to-end World → Visual Plan → Production generation: NOT VERIFIED / NOT COMPLETE.
 - BeatVision 1 remains a development hardening branch, not a release-ready production pipeline.
 
+## 2026-10-04 — Vision Lock persistence foundation
+**Objective:** Implement the next highest-priority core-loop blocker: persistent, immutable Vision Lock state.
+
+**Investigation:** The repository contained no Vision Lock table, migration, or callable persistence function. The existing World, Style Bible, Character, Environment, and asset schemas were inspected directly in the live Supabase database before designing the migration.
+
+**Implementation:**
+- Added `supabase/migrations/20261004010000_vision_lock.sql`.
+- Added immutable `vision_locks` revisions with project/World/Style/Song lineage.
+- Added an atomic `create_vision_lock(project_id)` RPC that requires project ownership, confirmed World, approved Style Bible, and completed song analysis.
+- The lock snapshots the exact World, Style Bible, approved Characters/Character Assets, approved Environments/Environment Assets, and Song rows into immutable JSONB.
+- Added owner-scoped RLS with SELECT-only client access.
+- Added database immutability trigger so locked state cannot be updated or deleted.
+
+**Verification:**
+- Complete migration executed against live Supabase inside an explicit rollback transaction: **PASSED**.
+- Post-rollback check confirmed `public.vision_locks` does not exist and `create_vision_lock` was not left behind: **CONFIRMED no persistent production change**.
+- No paid or unknown-cost provider was introduced.
+- No auth/RLS bypass was introduced.
+
+**Honest status:**
+- Vision Lock schema/RPC implementation: **FIXED / DRY-RUN VERIFIED**.
+- Production migration application: **NOT APPLIED**.
+- Authenticated RPC behavior: **UNVERIFIED**.
+- Vision Lock UI: **NOT IMPLEMENTED**.
+- Scene Direction consuming Vision Lock: **NOT IMPLEMENTED**.
+- Generation consuming Vision Lock: **NOT VERIFIED**.
+
+**Next blocker:** connect the approved Visual Plan/Scene Direction layer to an immutable Vision Lock reference, then implement the provider-neutral generation lifecycle.
+
