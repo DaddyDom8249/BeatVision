@@ -6,6 +6,9 @@ const JOB_PATH = /^\/v1\/video\/animate\/jobs\/[A-Za-z0-9._:-]+$/;
 const ASSEMBLY_STATUS_PATH = /^\/v1\/video\/assemble\/status\/[A-Za-z0-9-]+$/;
 
 const ALLOWED_POST_PATHS = [
+  "/v2/scene-image",
+  "/v2/animate",
+  "/v2/assemble",
   "/v1/image/scenes",
   "/v1/video/animate",
   "/v1/video/assemble",
