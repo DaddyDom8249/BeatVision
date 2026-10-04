@@ -203,7 +203,12 @@ begin
       errcode = '55000',
       message = 'Approved Visual Plan scenes are immutable. Create a new Visual Plan revision instead.';
   end if;
-  return coalesce(new, old);
+
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+
+  return new;
 end;
 $$;
 
