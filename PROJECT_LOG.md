@@ -613,3 +613,34 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - Vercel deployment/build remains **NOT VERIFIED**.
 
 **Next critical path:** implement the server-side Generation Controller/Arena adapter so only queued jobs are claimed, provider submission is idempotent, provider status maps exactly to the four-state lifecycle, and provider secrets never reach the client.
+
+
+## 2026-10-04 — Generation Controller / Arena execution boundary
+**Task:** Connect the durable generation_jobs contract to the Arena execution layer without restoring the retired legacy generation functions.
+
+**Result:** IMPLEMENTED on beatvision-1; code committed, production function not deployed.
+
+**Architecture:**
+- Added supabase/functions/beatvision-generation/index.ts.
+- Controller authenticates the caller, verifies project ownership, reads the frozen Generation Job snapshot, and never accepts creative state from the client.
+- Only queued jobs are claimed. Claiming is conditional on the queued state, so concurrent requests cannot both submit the same job.
+- Controller uses deterministic beatvision:<job_id> request identity and the existing Generation Job idempotency key.
+- Provider secrets remain server-side.
+- Image execution targets Arena v2 /v2/scene-image with free Pixazo flux-schnell.
+- Motion execution targets Arena v2 /v2/animate with free Pixazo ltx-video.
+- Frozen Vision Lock, World, Style Bible, song analysis, and approved Scene Direction are forwarded as the Arena contract.
+- Terminal Arena responses map to completed or failed; asynchronous motion responses remain processing with the upstream job id captured for polling.
+- Current deployed Arena status polling is isolated behind the controller as a temporary v1 compatibility adapter. It does not expose provider-specific state to the product database.
+- assembly is deliberately not controller-backed yet; it cannot fall through to motion.
+
+**Verification status:**
+- Static source review: PASSED for queued-only claim, ownership check, server-side provider credentials, frozen-input consumption, free model selection, terminal-state mapping, and explicit unsupported assembly handling.
+- Arena bridge branch beatvision-1-execution: scene-list assembly contract fix landed; v2 status-bridge write was blocked by the repository safety layer and is NOT VERIFIED / NOT LANDED.
+- BeatVision controller commit: CONFIRMED on beatvision-1.
+- Production Edge Function deployment: NOT DEPLOYED.
+- Live Arena v2 endpoint execution: NOT VERIFIED.
+- Real Pixazo generation: NOT VERIFIED.
+- Motion polling: NOT VERIFIED.
+- Shotstack assembly: NOT VERIFIED.
+
+**Next gate:** deploy the controller only after the Arena v2 bridge is deployed and its live scene-image / motion / status contract is verified. Then perform one authenticated scene-image dry run before enabling motion or assembly.
