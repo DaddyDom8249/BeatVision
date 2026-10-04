@@ -19,10 +19,12 @@ export default function CreateProjectPage({ onNavigate }: Props) {
       setSaving(false);
       return;
     }
+    // status must match phase-1 check: ('draft', 'active') — not "Draft"
+    // stage is not a column in any migration; do not insert it
     const { data, error } = await supabase.from("projects")
-      .insert({ owner_id: auth.user.id, title: title.trim(), status: "Draft", stage: "song" })
+      .insert({ owner_id: auth.user.id, title: title.trim(), status: "draft" })
       .select("id").single();
-    if (error) setError(formatFailure("Create project", error, { status: "Draft", stage: "song", title: title.trim() }));
+    if (error) setError(formatFailure("Create project", error, { status: "draft", title: title.trim() }));
     else onNavigate(`/projects/${data.id}/song`);
     setSaving(false);
   }
