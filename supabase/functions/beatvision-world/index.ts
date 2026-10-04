@@ -410,9 +410,9 @@ Deno.serve(async (req) => {
       project_title: cleanText(project.title, 240),
       song_title: cleanText(song.title, 240),
       artist: cleanText(song.artist, 240),
-      creative_direction: cleanText(song.creative_direction, 900),
-      notes: cleanText(song.notes, 700),
-      lyrics: cleanText(song.lyrics, 2600),
+      creative_direction: cleanText(song.creative_direction, 700),
+      notes: cleanText(song.notes, 500),
+      lyrics: cleanText(song.lyrics, 1800),
       musical_analysis: {
         duration_seconds: analysis.duration_seconds ?? null,
         bpm: analysis.bpm ?? null,
@@ -420,15 +420,21 @@ Deno.serve(async (req) => {
         key: analysis.key ?? null,
         key_confidence: analysis.key_confidence ?? null,
         time_signature: analysis.time_signature ?? null,
-        energy_curve: Array.isArray(analysis.energy_curve) ? analysis.energy_curve.slice(0, 24) : [],
-        energy_regions: Array.isArray(analysis.energy_region_candidates) ? analysis.energy_region_candidates.slice(0, 12) : [],
-        transcript: cleanText(analysis.transcript, 1400),
-        transcript_segments: Array.isArray(analysis.transcript_segments) ? analysis.transcript_segments.slice(0, 20).map((segment: any) => ({ start: segment?.start ?? null, end: segment?.end ?? null, text: cleanText(segment?.text, 180) })) : [],
+        energy_curve: Array.isArray(analysis.energy_curve) ? analysis.energy_curve.slice(0, 12) : [],
+        energy_regions: Array.isArray(analysis.energy_region_candidates) ? analysis.energy_region_candidates.slice(0, 6) : [],
+        transcript: cleanText(analysis.transcript, 900),
+        transcript_segments: Array.isArray(analysis.transcript_segments) ? analysis.transcript_segments.slice(0, 8).map((segment: any) => ({ start: segment?.start ?? null, end: segment?.end ?? null, text: cleanText(segment?.text, 120) })) : [],
         vocal_presence: analysis.vocal_presence ?? null,
-        mood_tags: analysis.mood_tags ?? [],
-        genre_tags: analysis.genre_tags ?? [],
+        mood_tags: Array.isArray(analysis.mood_tags) ? analysis.mood_tags.slice(0, 6) : [],
+        genre_tags: Array.isArray(analysis.genre_tags) ? analysis.genre_tags.slice(0, 6) : [],
       },
     };
+
+    const sourceJson = JSON.stringify(source);
+    const estimatedPromptChars = sourceJson.length + 2200;
+    if (estimatedPromptChars > 12000) {
+      throw new HttpError("WORLD_INPUT_BUDGET_EXCEEDED", 422, "World source exceeded the deterministic input budget.");
+    }
 
     const system = `You are BeatVision's World Director. Build a durable visual world for an artist-directed music video.
 
@@ -455,13 +461,13 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
         model: WORLD_MODEL,
         temperature: 0.35,
         seed: 42,
-        max_completion_tokens: 1400,
+        max_completion_tokens: 1100,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: system },
           {
             role: "user",
-            content: "Create the BeatVision world from this source material:\n\n" + JSON.stringify(source),
+            content: "Create the BeatVision world from this source material:\n\n" + sourceJson,
           },
         ],
       }),
