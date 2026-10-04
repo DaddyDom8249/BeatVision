@@ -1,12 +1,14 @@
-# BeatVision-1 Dual-Agent Engineering Protocol
+# BeatVision Dual-Agent Engineering Protocol
 
 ## Purpose
 
-This repository is the shared engineering source of truth for a two-agent repair loop:
+`DaddyDom8249/BeatVision` is the single canonical application repository and shared engineering source of truth for the two-agent repair loop.
 
 - **ChatGPT**: lead implementation, architecture, debugging, integration, and release engineering.
 - **Grok**: independent senior reviewer, adversarial debugger, alternative diagnosis, and verification.
 - **Git + tests + runtime evidence**: authority over both agents.
+
+**IMPORTANT REPOSITORY RULE:** Do not create, adopt, or treat a separate `BeatVision-1` / `beatvision-1` application repository as the source of truth. All application implementation, fixes, tests, reviews, and merge work must target `DaddyDom8249/BeatVision`. Any external/controller copy is coordination-only and must not become a competing application source.
 
 The agents must never treat another agent's claim as proof.
 
@@ -93,6 +95,7 @@ Grok must classify the result as VERIFIED, FAILED, UNVERIFIED, or BLOCKED.
 Preferred branches:
 
 - `main`: release/source-of-truth branch
+- **Canonical repository:** `DaddyDom8249/BeatVision`
 - `agent/chatgpt-*`: ChatGPT work
 - `agent/grok-*`: Grok work
 - `agent/shared-*`: explicitly coordinated shared changes
