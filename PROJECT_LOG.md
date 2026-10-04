@@ -490,3 +490,31 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Next highest-priority action:** Perform authenticated Song → World → Edit → Save → Confirm verification with a real user session; if that passes, implement Vision Lock persistence and UI.
 
 **Human action required:** None for the migration repair. An authenticated browser session is still required to claim the user-flow E2E verification.
+
+
+## 2026-10-04 — Canonical repository purge and production-source reconciliation
+**Task:** Remove obsolete scaffolding from the canonical BeatVision repository and restore active production Edge Function implementations that were deployed but absent from source control.
+
+**Repository:** `cleanup/canonical-repository-purge`, based on main `2ee788f02efeee00426219a3f052505694fd4392`.
+
+**Purged:** committed skeleton ZIP, fake Studio page/route, four one-line generation/motion/video hooks, README-only placeholder Edge Function directories, README-only generation/motion/provider/scenes/storyboard/video scaffolds, empty .gitkeep scaffolding, and the one-line production-audit skeleton.
+
+**Restored from live Supabase and committed exactly:**
+- `beatvision-generation` v1
+- `beatvision-generate` v46
+- `beatvision-pipeline` v11
+- `beatvision-storyboard` v10
+- `beatvision-arena` v28 and `_shared/auth.ts`
+- `beatvision-world` v18
+
+**Source reconciliation:** Exact-content comparison between the live Supabase Edge Function source and the corresponding repository files returned **true for all six restored production functions/helpers**. `beatvision-analyze-song` was already exact.
+
+**Production schema finding:** Live Supabase migration history contains additional production migrations that are absent from the repository, including the production `generation_jobs`, Vision Lock, Arena rate-limit, motion/runtime, final-video, and earlier hardening migrations. These are **NOT deleted or guessed into existence**. Repository/schema reconciliation remains a separate blocker because reconstructing migration history from live schema without authoritative migration source would be unsafe.
+
+**Verification:** Cleanup branch is 12 commits ahead of main and 0 behind. Latest Vercel preview deployment `dpl_FyRXjNjGjFsx931phqsQ58hpMLEq` is **READY** and its build log shows `tsc -b && vite build` completed successfully with 93 modules transformed and 0 npm vulnerabilities reported.
+
+**Safety:** No production database mutation, production data deletion, authentication weakening, RLS change, provider credential change, or production Edge Function deployment was performed by this cleanup operation.
+
+**Status:** Repository purge **VERIFIED**. Production-source reconciliation **VERIFIED**. Migration-source reconciliation **BLOCKED/UNSAFE TO GUESS**. Full authenticated end-to-end product flow remains **UNVERIFIED**.
+
+**Next highest-priority action:** Reconstruct and reconcile the missing canonical migration history/schema from authoritative source evidence, then trace the restored generation controller through Arena → provider → durable asset → motion → assembly without inventing missing behavior.
