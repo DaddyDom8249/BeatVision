@@ -138,8 +138,13 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
               <p>{plan.status === "approved" ? "Visual Plan locked. Production must follow this approved direction." : "Draft. Edit the scene directions, then lock the plan."}</p>
               <p>Vision Lock: {plan.vision_lock_id ? "Bound" : "Missing"}</p>
             </div>
-            {plan.status === "draft" && (
-              <button className="primary-button" disabled={working || scenes.length === 0 || !plan.vision_lock_id} onClick={() => void approvePlan()}>
+            {plan.status === "draft" && scenes.length === 0 && visionLock && (
+              <button className="primary-button" disabled={working} onClick={() => void createPlan()}>
+                {working ? "Building…" : "Build Visual Plan from Song"}
+              </button>
+            )}
+            {plan.status === "draft" && scenes.length > 0 && (
+              <button className="primary-button" disabled={working || !plan.vision_lock_id} onClick={() => void approvePlan()}>
                 {working ? "Locking…" : "Lock Visual Plan"}
               </button>
             )}
