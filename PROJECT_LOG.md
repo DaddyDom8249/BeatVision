@@ -490,3 +490,13 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Next highest-priority action:** Perform authenticated Song → World → Edit → Save → Confirm verification with a real user session; if that passes, implement Vision Lock persistence and UI.
 
 **Human action required:** None for the migration repair. An authenticated browser session is still required to claim the user-flow E2E verification.
+
+
+## 2026-10-04 — Canonical ownership, project creation, and World CORS repair
+**Task:** Reconcile the repository's canonical project ownership/schema contract and fix two confirmed application defects before continuing the Song → World gate.
+**Result:** IMPLEMENTED on branch `agent/chatgpt-world-project-fixes`; runtime/production deployment remains UNVERIFIED.
+**Evidence:** `projects` Phase 1 used `user_id` while current application and later policies use `owner_id`; `CreateProjectPage.tsx` sent `status:"Draft"` against the lowercase `draft/active` constraint; `beatvision-world` hard-coded a single Vercel preview origin while the regression contract requires wildcard CORS.
+**Changes:** added an idempotent ownership/schema reconciliation migration; normalized project creation to `draft`; changed World CORS to `*`.
+**Safety:** migration preserves existing owner data by renaming `user_id` to `owner_id` when necessary, fails rather than inventing owners if null owners exist, and rewrites affected RLS policies to the canonical owner field. No production data was deleted or overwritten.
+**Verification:** static source verification completed. Local `npm test`/`npm run build` execution is pending because this GitHub connector cannot execute the repository's Node toolchain. Production migration deployment and authenticated browser verification are NOT VERIFIED.
+**Next:** run the repository test/build suite and apply the migration to the linked Supabase environment through the normal migration pipeline before claiming the Song → World flow VERIFIED.
