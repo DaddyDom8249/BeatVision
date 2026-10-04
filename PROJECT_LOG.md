@@ -555,3 +555,34 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 
 **Next blocker:** connect the approved Visual Plan/Scene Direction layer to an immutable Vision Lock reference, then implement the provider-neutral generation lifecycle.
 
+
+
+## 2026-10-04 — Vision Lock → Scene Direction binding
+**Task:** Connect the existing Visual Plan/Scene Direction contract to immutable Vision Lock state without creating a second scene-authority table.
+
+**Result:** IMPLEMENTED on `beatvision-1`; database change dry-run verified; production unchanged.
+
+**Architecture finding:** `visual_plan_scenes` already contains the canonical Scene Direction fields and timing contract. Creating a parallel Scene Direction table would create competing authority, so the existing table remains canonical.
+
+**Implementation:**
+- Added `vision_lock_id` to Visual Plans.
+- Added database FK and lineage validation so the lock must match the same project, World, Style Bible, and Song.
+- Scene inserts/updates now inherit and validate the exact parent Visual Plan Vision Lock.
+- Visual Plan approval now requires a valid Vision Lock.
+- Added a database check preventing approved plans from lacking a Vision Lock.
+- Added a compatibility backfill for the existing production approved Visual Plan before enforcing the new requirement.
+- Recreated approved-plan immutability after the one-time backfill.
+- Updated the Visual Plan hook/UI to load the latest Vision Lock, create it through the RPC, require it before Scene Direction, persist the lock ID, and display the locked revision.
+- Updated TypeScript types with the Vision Lock contract.
+
+**Production drift handled:** Live production currently contains **1 approved Visual Plan with 8 scenes**. Its World/Style/Song lineage is internally consistent. Project-level legacy approval booleans are stale/false despite the confirmed World and approved Style Bible, so the Vision Lock creation RPC now trusts the authoritative World confirmation timestamp plus World Report confirmation rather than the stale `projects.world_approved` flag.
+
+**Verification:**
+- Full Vision Lock + Visual Plan binding migration executed inside an explicit rollback transaction against live Supabase: **PASSED**.
+- Dry-run backfill produced exactly one lock candidate for the existing approved plan: **CONFIRMED**.
+- Post-rollback query confirmed `public.vision_locks` does not exist and `visual_plans.vision_lock_id` does not exist: **CONFIRMED production unchanged**.
+- GitHub branch remains `beatvision-1`, **13 commits ahead / 0 behind** main at verification.
+- Vercel status for the latest branch commit is **PENDING**; build/deployment success is therefore **NOT VERIFIED**.
+- Authenticated Vision Lock creation, real Scene Direction approval, Arena execution, image generation, motion, and final assembly remain **UNVERIFIED**.
+
+**Next critical path:** verify/apply the database migrations in the intended environment, then build the provider-neutral Generation Job lifecycle so Arena consumes only approved Vision Lock + approved Scene Direction.
