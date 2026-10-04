@@ -410,9 +410,9 @@ Deno.serve(async (req) => {
       project_title: cleanText(project.title, 240),
       song_title: cleanText(song.title, 240),
       artist: cleanText(song.artist, 240),
-      creative_direction: cleanText(song.creative_direction, 3000),
-      notes: cleanText(song.notes, 3000),
-      lyrics: cleanText(song.lyrics, 9000),
+      creative_direction: cleanText(song.creative_direction, 1600),
+      notes: cleanText(song.notes, 1600),
+      lyrics: cleanText(song.lyrics, 4200),
       musical_analysis: {
         duration_seconds: analysis.duration_seconds ?? null,
         bpm: analysis.bpm ?? null,
@@ -455,7 +455,7 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
         model: WORLD_MODEL,
         temperature: 0.35,
         seed: 42,
-        max_completion_tokens: 2400,
+        max_completion_tokens: 1800,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: system },
