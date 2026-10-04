@@ -1,6 +1,6 @@
 # Grok Handoff
 
-Status: NOT INITIALIZED
+Status: UPDATED: CANONICAL REPOSITORY CONFIRMED
 
 ## Required initialization
 
@@ -8,8 +8,8 @@ Grok should independently inspect the repository and this protocol.
 
 Required checks:
 
-1. Confirm repository and baseline branch.
-2. Confirm the current HEAD commit.
+1. Confirm repository and baseline branch. The canonical repository is **`DaddyDom8249/BeatVision`**.
+2. Confirm the current HEAD commit in `DaddyDom8249/BeatVision`.
 3. Read `AGENTS.md`.
 4. Read `.agents/PROTOCOL.md`.
 5. Review `.agents/STATE.md`.
@@ -53,6 +53,12 @@ Required checks:
 
 State exactly one next engineering action.
 
+## Canonical repository rule
+
+**All application work belongs in `DaddyDom8249/BeatVision`. Do not use a separate `BeatVision-1` / `beatvision-1` repository as the application source of truth.** Any `beatvision-1` controller/import copy is coordination-only. Do not scaffold a competing application, split fixes across repositories, or treat the controller copy as canonical.
+
+When creating Grok's working branch, branch it from the agreed baseline in `DaddyDom8249/BeatVision`. All review findings and proposed application changes must be traceable back to that repository.
+
 ## Rule
 
-This file is intentionally uninitialized until Grok independently completes the checks above.
+Grok must independently complete the checks above before making application changes.
