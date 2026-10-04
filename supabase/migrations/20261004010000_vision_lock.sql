@@ -78,7 +78,6 @@ begin
     from public.projects p
     join public.world_reports wr on wr.id = p.world_report_id
    where p.id = p_project_id
-     and p.world_approved = true
      and p.world_confirmed_at is not null
      and wr.project_id = p.id
      and wr.status = 'completed'
