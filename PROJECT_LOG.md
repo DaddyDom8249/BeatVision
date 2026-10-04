@@ -518,3 +518,15 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Status:** Repository purge **VERIFIED**. Production-source reconciliation **VERIFIED**. Migration-source reconciliation **BLOCKED/UNSAFE TO GUESS**. Full authenticated end-to-end product flow remains **UNVERIFIED**.
 
 **Next highest-priority action:** Reconstruct and reconcile the missing canonical migration history/schema from authoritative source evidence, then trace the restored generation controller through Arena → provider → durable asset → motion → assembly without inventing missing behavior.
+
+
+## 2026-10-04 — Production migration-source reconciliation
+
+- **Objective:** recover authoritative migration SQL before treating repository cleanup as complete.
+- **Evidence:** production Supabase migration history contains 49 applied migrations; canonical cleanup branch now contains 16 SQL migration files.
+- **Recovery:** seven later production migrations were recovered byte-for-byte from the `beatvision-1` coordination branch and restored to `cleanup/canonical-repository-purge`.
+- **Verification:** source and cleanup blob SHA values matched exactly for all seven recovered migrations.
+- **Blocked:** 37 older applied production migrations remain without authoritative SQL source in the current BeatVision branches. They include runtime-motion restoration, debug trace, RLS hardening, generation-run idempotency, final-video runtime reconciliation, Arena rate limiting, and the earlier song-trigger search-path repair.
+- **Safety decision:** do not reconstruct those historical migrations from the live schema. A future clean baseline may be generated from verified current schema state, but that would be a new migration/baseline, not a fabricated historical replacement.
+- **Production mutation:** none. This phase was read-only against production.
+- **Next blocker:** trace the actual canonical generation path and reconcile the new generation_jobs/BeatVision 2.0 controller with the currently deployed Arena 2.0 bridge and the legacy pipeline runtime.
