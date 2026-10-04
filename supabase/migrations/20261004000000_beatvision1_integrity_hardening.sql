@@ -383,7 +383,7 @@ begin
     execute function public.prevent_approved_visual_plan_scene_mutation();
 
     drop trigger if exists visual_plan_scenes_approved_immutable_delete on public.visual_plan_scenes;
-    create trigger visual_plan_scenes_approved_immutable_delete on public.visual_plan_scenes
+    create trigger visual_plan_scenes_approved_immutable_delete
     before delete on public.visual_plan_scenes
     for each row
     execute function public.prevent_approved_visual_plan_scene_mutation();
