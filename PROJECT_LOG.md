@@ -586,3 +586,30 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - Authenticated Vision Lock creation, real Scene Direction approval, Arena execution, image generation, motion, and final assembly remain **UNVERIFIED**.
 
 **Next critical path:** verify/apply the database migrations in the intended environment, then build the provider-neutral Generation Job lifecycle so Arena consumes only approved Vision Lock + approved Scene Direction.
+
+
+## 2026-10-04 — Provider-neutral Generation Job contract
+**Task:** Establish the durable production job boundary between approved Scene Direction and provider execution.
+
+**Result:** IMPLEMENTED on `beatvision-1`; full migration and state-machine dry-run verified; production unchanged.
+
+**Architecture:**
+- Added one canonical `generation_jobs` table rather than embedding provider state in Scene Direction.
+- Job states are exactly `queued → submitted → processing → completed/failed`.
+- Provider identity and provider job ID are optional while queued, required after submission/processing.
+- Completed and failed jobs are terminal and immutable.
+- Every job carries immutable lineage to Project → Vision Lock → Visual Plan, and scene jobs require an approved `visual_plan_scene`.
+- The job stores an input snapshot containing the approved Scene Direction, Visual Plan direction, Vision Lock revision, and Vision Lock snapshot. Providers therefore receive a frozen contract rather than live mutable UI state.
+- Added idempotency key uniqueness and `enqueue_scene_generation()` RPC so repeated requests for the same scene/type/lock return the existing job rather than duplicate provider work.
+- Added owner-scoped read RLS; clients cannot directly insert/update/delete generation jobs.
+
+**Verification:**
+- Full Vision Lock + Visual Plan binding + Generation Job migrations executed together inside an explicit rollback transaction against live Supabase: **PASSED**.
+- Backfill simulation preserved the existing approved Visual Plan and generated one Vision Lock candidate: **CONFIRMED**.
+- Generation state machine test successfully executed queued → submitted → processing → completed.
+- Attempted completed → queued transition was rejected with terminal-state protection: **CONFIRMED**.
+- Entire transaction rolled back: **production unchanged**.
+- Arena/provider execution, authenticated RPC path, real provider submission, polling, assets, motion, and Shotstack assembly remain **UNVERIFIED**.
+- Vercel deployment/build remains **NOT VERIFIED**.
+
+**Next critical path:** implement the server-side Generation Controller/Arena adapter so only queued jobs are claimed, provider submission is idempotent, provider status maps exactly to the four-state lifecycle, and provider secrets never reach the client.
