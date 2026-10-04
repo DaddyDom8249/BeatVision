@@ -107,10 +107,8 @@ export function useVisualPlan(projectId: string) {
     if (!styleBible || styleBible.status !== "approved" || !styleBible.approved_at) throw new Error("The Style Bible must be locked before creating a Visual Plan.");
     if (!song || song.analysis_status !== "completed" || !song.analysis) throw new Error("The song analysis must be completed before creating a Visual Plan.");
     if (!visionLock) throw new Error("Create the immutable Vision Lock before building Scene Direction.");
-    if (plan) throw new Error("A Visual Plan already exists for this project.");
 
     setWorking(true); setError(null);
-    let createdPlanId: string | null = null;
     try {
       const duration = Number(song.analysis.duration_seconds);
       if (!Number.isFinite(duration) || duration <= 0) throw new Error("Song analysis does not contain a valid duration.");
@@ -124,16 +122,6 @@ export function useVisualPlan(projectId: string) {
         continuity_rules: styleBible.continuity_rules ?? world.continuity_rules,
       };
 
-      const planResult = await supabase.from("visual_plans").insert({
-        project_id: projectId, world_report_id: world.id, style_bible_id: styleBible.id, song_id: song.id,
-        vision_lock_id: visionLock.id,
-        title: "Visual Plan", duration_seconds: duration,
-        creative_thesis: firstText(world.emotional_arc) || firstText(world.mood),
-        global_direction: globalDirection,
-      }).select(planFields).single();
-      if (planResult.error) throw planResult.error;
-      createdPlanId = planResult.data.id;
-
       const defaultLocation = firstText(world.environments) || firstText(world.atmosphere) || "World-defined environment";
       const defaultMood = firstText(world.mood) || "World-defined emotional state";
       const defaultCamera = firstText(styleBible.cinematography) || firstText(world.cinematography) || "Follow the locked cinematography rules.";
@@ -141,28 +129,56 @@ export function useVisualPlan(projectId: string) {
       const defaultContinuity = firstText(styleBible.continuity_rules) || firstText(world.continuity_rules) || "Preserve all locked World and Style continuity.";
 
       const rows = windows.map((window, index) => ({
-        visual_plan_id: planResult.data.id, project_id: projectId, world_report_id: world.id,
-        style_bible_id: styleBible.id, song_id: song.id, scene_number: index + 1,
-        section_index: window.section_index, start_time: window.start_time, end_time: window.end_time,
+        scene_number: index + 1,
+        section_index: window.section_index,
+        start_time: window.start_time,
+        end_time: window.end_time,
         title: `Section ${index + 1}`,
         visual_direction: "Translate this musical section into the confirmed World without introducing a new visual language.",
-        camera_direction: defaultCamera, movement_direction: defaultMovement, location: defaultLocation,
-        mood: defaultMood, lyric_moment: "",
+        camera_direction: defaultCamera,
+        movement_direction: defaultMovement,
+        location: defaultLocation,
+        mood: defaultMood,
+        lyric_moment: "",
         transition_style: index === 0 ? "Opening transition" : "Match the musical transition.",
         continuity_notes: defaultContinuity,
       }));
 
-      const sceneResult = await supabase.from("visual_plan_scenes").insert(rows).select(sceneFields);
+      // Creation is a single database transaction. This also repairs the
+      // known stranded draft-plan state (plan exists, zero scenes) instead
+      // of creating another duplicate or relying on client-side cleanup.
+      const result = await supabase.rpc("create_visual_plan", {
+        p_project_id: projectId,
+        p_vision_lock_id: visionLock.id,
+        p_duration_seconds: duration,
+        p_creative_thesis: firstText(world.emotional_arc) || firstText(world.mood),
+        p_global_direction: globalDirection,
+        p_scenes: rows,
+      });
+      if (result.error) throw result.error;
+
+      const planResult = await supabase
+        .from("visual_plans")
+        .select(planFields)
+        .eq("id", (result.data as VisualPlan).id)
+        .single();
+      if (planResult.error) throw planResult.error;
+
+      const sceneResult = await supabase
+        .from("visual_plan_scenes")
+        .select(sceneFields)
+        .eq("visual_plan_id", (result.data as VisualPlan).id)
+        .order("scene_number", { ascending: true });
       if (sceneResult.error) throw sceneResult.error;
+
       setPlan(planResult.data as VisualPlan);
       setScenes((sceneResult.data ?? []) as VisualPlanScene[]);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Unable to create Visual Plan.";
       setError(message);
-      if (createdPlanId) await supabase.from("visual_plans").delete().eq("id", createdPlanId);
       throw e;
     } finally { setWorking(false); }
-  }, [projectId, world, styleBible, song, visionLock, plan]);
+  }, [projectId, world, styleBible, song, visionLock]);
 
   const saveScene = useCallback(async (sceneId: string, changes: Partial<Pick<VisualPlanScene, "title" | "visual_direction" | "camera_direction" | "movement_direction" | "location" | "mood" | "lyric_moment" | "transition_style" | "continuity_notes">>) => {
     if (!plan || plan.status !== "draft") throw new Error("The Visual Plan is locked.");
