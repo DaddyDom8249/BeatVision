@@ -644,3 +644,49 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - Shotstack assembly: NOT VERIFIED.
 
 **Next gate:** deploy the controller only after the Arena v2 bridge is deployed and its live scene-image / motion / status contract is verified. Then perform one authenticated scene-image dry run before enabling motion or assembly.
+
+
+## 2026-10-04 — Production Generation Boundary Activation
+**Production changes:** APPLIED.
+
+**Database migrations applied successfully:**
+- 20261004000000_beatvision1_integrity_hardening
+- 20261004010000_vision_lock
+- 20261004020000_visual_plan_vision_lock_binding
+- 20261004030000_generation_jobs
+
+**Live database evidence after migration:**
+- vision_locks: 1
+- approved Visual Plans: 1
+- approved Scene Direction rows: 8
+- generation_jobs: 0 before first generation
+- Existing Vision Lock backfill preserved the existing approved plan.
+- Latest locked song analysis is completed and explicitly reports analysis_method=browser_audio_decode.
+
+**Arena live evidence:**
+- beatvision-provider-arena /health returned HTTP 200.
+- Bridge contract: 2.0.
+- Cost class: free.
+- Pixazo configured.
+- Free image models advertised: sdxl, flux-schnell, sdxl-turbo.
+- Free motion model advertised: ltx-video.
+- Shotstack Sandbox configured.
+- Unauthenticated /v2/scene-image returned HTTP 401 as required.
+
+**Controller deployment:**
+- supabase function beatvision-generation deployed successfully.
+- Version: 1.
+- Status: ACTIVE.
+- verify_jwt: true.
+- First deployment attempt failed at TypeScript parse time because of an over-escaped Arena URL regex. The exact line was corrected, and the second deployment succeeded.
+- No provider call was made during this failure; no generation job was created.
+
+**Not yet verified:**
+- Authenticated controller invocation against a real approved Scene Direction.
+- Real Pixazo FLUX/SDXL image generation through the new controller.
+- Real LTX motion generation through the new controller.
+- Provider polling from controller to terminal state.
+- Shotstack final assembly through Generation Jobs.
+- Vercel production deployment/build status.
+
+**Current release status:** DATABASE + ARENA CONTRACT + CONTROLLER DEPLOYED, but END-TO-END GENERATION IS NOT YET VERIFIED. Do not mark the product production-ready until one authenticated scene-image job completes through the entire chain with a persisted completed Generation Job output.
