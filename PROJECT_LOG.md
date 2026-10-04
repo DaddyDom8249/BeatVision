@@ -490,3 +490,39 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Next highest-priority action:** Perform authenticated Song → World → Edit → Save → Confirm verification with a real user session; if that passes, implement Vision Lock persistence and UI.
 
 **Human action required:** None for the migration repair. An authenticated browser session is still required to claim the user-flow E2E verification.
+
+## 2026-10-04 — BeatVision 1 integrity migration debug/fix pass
+**Task:** /debug /fix /triple-check /honest /notes on branch beatvision-1.
+
+**Root-cause findings:**
+- The first BeatVision 1 integrity migration draft would have regressed the existing World revision immutability trigger from UPDATE + DELETE to UPDATE only.
+- World revision backfill used revision_number = 1 for every missing row, which was unsafe if historical multiple rows existed for one project.
+- Visual Plan approval validated timing continuity but did not enforce scene numbers as an exact contiguous sequence 1..N.
+- Visual Plan scenes had foreign keys, but no database-level check that their project/World/Style/Song lineage matched the parent Visual Plan.
+- The first corrected migration draft contained a SQL trigger syntax error in the approved-scene DELETE trigger. A rollback-only execution against the live Supabase database caught this before any persistent schema change.
+
+**Fixes implemented on beatvision-1:**
+1. World revision backfill now preserves existing revision numbers and deterministically assigns only missing revisions after each project's current maximum.
+2. Added positive revision-number validation.
+3. Preserved explicit World revision lineage and confirmed-World DELETE immutability.
+4. Removed the obsolete one-World-per-project constraint while retaining unique (project_id, revision_number).
+5. Removed the redundant legacy world_reports_project_revision_uidx index when the new unique constraint is present.
+6. Added unique (world_id, revision_number) protection.
+7. Added Visual Plan scene parent-lineage validation.
+8. Added approval-time contiguous scene-number validation 1..N.
+9. Re-applies approval-time timecode, duration, range, and lineage checks.
+10. Restored separate approved-scene UPDATE and DELETE immutability triggers.
+
+**Verification evidence:**
+- Rollback-only execution of the complete migration against live Supabase returned no SQL errors and no result rows, with the transaction explicitly rolled back.
+- The live database was queried after the dry run; no persistent migration changes were intentionally made.
+- GitHub comparison: beatvision-1 is ahead 6 / behind 0 from main; only supabase/migrations/20261004000000_beatvision1_integrity_hardening.sql differs from the base.
+- Latest GitHub commit has a Vercel check currently PENDING, so deployment/build success is NOT VERIFIED at log time.
+
+**Honest status:**
+- Migration logic: FIXED AND DRY-RUN VERIFIED.
+- Live production migration: NOT APPLIED by this pass.
+- Full application tests: NOT RUN in this environment.
+- End-to-end World → Visual Plan → Production generation: NOT VERIFIED / NOT COMPLETE.
+- BeatVision 1 remains a development hardening branch, not a release-ready production pipeline.
+
