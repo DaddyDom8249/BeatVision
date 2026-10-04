@@ -22,8 +22,7 @@ alter table public.world_reports
 do $$
 begin
   if exists (
-    select 1
-    from pg_constraint
+    select 1 from pg_constraint
     where conrelid = 'public.world_reports'::regclass
       and conname = 'world_reports_project_unique'
   ) then
@@ -35,8 +34,7 @@ $$;
 do $$
 begin
   if not exists (
-    select 1
-    from pg_constraint
+    select 1 from pg_constraint
     where conrelid = 'public.world_reports'::regclass
       and conname = 'world_reports_project_revision_unique'
   ) then
@@ -70,13 +68,11 @@ before update on public.world_reports
 for each row
 execute function public.prevent_confirmed_world_mutation();
 
--- Visual Plan scene identity must be deterministic.
 do $$
 begin
   if to_regclass('public.visual_plan_scenes') is not null then
     if not exists (
-      select 1
-      from pg_constraint
+      select 1 from pg_constraint
       where conrelid = 'public.visual_plan_scenes'::regclass
         and conname = 'visual_plan_scenes_plan_scene_number_unique'
     ) then
@@ -86,17 +82,13 @@ begin
     end if;
 
     if not exists (
-      select 1
-      from pg_constraint
+      select 1 from pg_constraint
       where conrelid = 'public.visual_plan_scenes'::regclass
         and conname = 'visual_plan_scenes_time_window_valid'
     ) then
       alter table public.visual_plan_scenes
         add constraint visual_plan_scenes_time_window_valid
-        check (
-          start_time >= 0
-          and end_time > start_time
-        ) not valid;
+        check (start_time >= 0 and end_time > start_time) not valid;
     end if;
   end if;
 end
@@ -125,17 +117,13 @@ begin
   end if;
 
   plan_duration := new.duration_seconds;
-
   if plan_duration is null or plan_duration <= 0 then
     raise exception using
       errcode = '23514',
       message = 'Cannot approve Visual Plan: duration_seconds must be positive.';
   end if;
 
-  select
-    count(*),
-    min(start_time),
-    max(end_time)
+  select count(*), min(start_time), max(end_time)
   into scene_count, first_start, last_end
   from public.visual_plan_scenes
   where visual_plan_id = new.id;
@@ -161,17 +149,14 @@ begin
   select exists (
     select 1
     from (
-      select
-        start_time,
-        end_time,
-        lag(end_time) over (order by scene_number) as previous_end
+      select start_time, end_time,
+             lag(end_time) over (order by scene_number) as previous_end
       from public.visual_plan_scenes
       where visual_plan_id = new.id
     ) windows
     where previous_end is not null
       and abs(start_time - previous_end) > 0.001
-  )
-  into has_gap;
+  ) into has_gap;
 
   if has_gap then
     raise exception using
@@ -184,8 +169,7 @@ begin
     from public.visual_plan_scenes
     where visual_plan_id = new.id
       and (start_time < 0 or end_time <= start_time or end_time > plan_duration)
-  )
-  into has_invalid_window;
+  ) into has_invalid_window;
 
   if has_invalid_window then
     raise exception using
@@ -197,7 +181,8 @@ begin
 end;
 $$;
 
-if exists (select 1 from pg_proc where proname = 'validate_visual_plan_for_approval') then
+do $$
+begin
   if to_regclass('public.visual_plans') is not null then
     drop trigger if exists visual_plans_validate_approval on public.visual_plans;
     create trigger visual_plans_validate_approval
@@ -205,7 +190,8 @@ if exists (select 1 from pg_proc where proname = 'validate_visual_plan_for_appro
     for each row
     execute function public.validate_visual_plan_for_approval();
   end if;
-end if;
+end
+$$;
 
 create or replace function public.prevent_approved_visual_plan_scene_mutation()
 returns trigger
@@ -221,18 +207,22 @@ begin
 end;
 $$;
 
-if to_regclass('public.visual_plan_scenes') is not null then
-  drop trigger if exists visual_plan_scenes_approved_immutable_update on public.visual_plan_scenes;
-  create trigger visual_plan_scenes_approved_immutable_update
-  before update on public.visual_plan_scenes
-  for each row
-  execute function public.prevent_approved_visual_plan_scene_mutation();
+do $$
+begin
+  if to_regclass('public.visual_plan_scenes') is not null then
+    drop trigger if exists visual_plan_scenes_approved_immutable_update on public.visual_plan_scenes;
+    create trigger visual_plan_scenes_approved_immutable_update
+    before update on public.visual_plan_scenes
+    for each row
+    execute function public.prevent_approved_visual_plan_scene_mutation();
 
-  drop trigger if exists visual_plan_scenes_approved_immutable_delete on public.visual_plan_scenes;
-  create trigger visual_plan_scenes_approved_immutable_delete
-  before delete on public.visual_plan_scenes
-  for each row
-  execute function public.prevent_approved_visual_plan_scene_mutation();
-end if;
+    drop trigger if exists visual_plan_scenes_approved_immutable_delete on public.visual_plan_scenes;
+    create trigger visual_plan_scenes_approved_immutable_delete
+    before delete on public.visual_plan_scenes
+    for each row
+    execute function public.prevent_approved_visual_plan_scene_mutation();
+  end if;
+end
+$$;
 
 commit;
