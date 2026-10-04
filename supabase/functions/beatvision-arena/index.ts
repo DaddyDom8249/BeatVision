@@ -261,6 +261,44 @@ Deno.serve(async (request: Request) => {
   const operation = String(input.operation || "");
   const isJobPath = JOB_PATH.test(path);
 
+  // BeatVision 2.0 bridge requests are already validated by the canonical
+  // Arena bridge. This Edge Function remains the authenticated Supabase
+  // boundary and must proxy the v2 payload without forcing it through the
+  // legacy 1.1 operation contract.
+  if (path === "/v2/scene-image" || path === "/v2/animate" || path === "/v2/assemble") {
+    if (request.method !== "POST") {
+      return json(request, { ok: false, contract_version: "2.0", error: "POST required.", request_id: id }, 405);
+    }
+
+    const payload =
+      input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+        ? (input.payload as Record<string, unknown>)
+        : null;
+    const projectId = payload?.project && typeof payload.project === "object" && !Array.isArray(payload.project)
+      ? (payload.project as Record<string, unknown>).id
+      : null;
+
+    phase = "v2_project_access";
+    await assertProjectAccess(request, projectId, authenticatedUserId);
+
+    const target = arenaUrl + path;
+    phase = "v2_arena_request";
+    const response = await fetch(target, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + arenaToken,
+        "X-BeatVision-Contract": "2.0",
+        "X-BeatVision-Request": id,
+      },
+      body: JSON.stringify({ payload }),
+    });
+    return new Response(response.body, {
+      status: response.status,
+      headers: { ...Object.fromEntries(response.headers), ...cors(request) },
+    });
+  }
+
   if (request.method === "GET") {
     if (!validPath(path, request.method)) {
       return json(
