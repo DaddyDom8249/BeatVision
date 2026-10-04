@@ -24,6 +24,136 @@ $$;
 create index if not exists visual_plans_vision_lock_idx
   on public.visual_plans(vision_lock_id);
 
+
+-- Compatibility backfill: production already contains approved Visual Plans.
+-- Preserve those approved plans by creating an immutable lock from their exact
+-- World/Style/Song lineage before enforcing the new lock requirement.
+create temporary table _beatvision_vision_lock_backfill (
+  plan_id uuid primary key,
+  lock_id uuid not null
+) on commit drop;
+
+drop trigger if exists visual_plans_immutable on public.visual_plans;
+
+with candidates as (
+  select
+    vp.*,
+    row_number() over (
+      partition by vp.project_id
+      order by vp.created_at, vp.id
+    ) as rn
+  from public.visual_plans vp
+  where vp.status = 'approved'
+    and vp.vision_lock_id is null
+),
+numbered as (
+  select
+    c.*,
+    coalesce((
+      select max(vl.revision_number)
+      from public.vision_locks vl
+      where vl.project_id = c.project_id
+    ), 0) + c.rn as revision_number
+  from candidates c
+)
+insert into public.vision_locks (
+  project_id,
+  world_report_id,
+  style_bible_id,
+  song_id,
+  revision_number,
+  snapshot
+)
+select
+  n.project_id,
+  n.world_report_id,
+  n.style_bible_id,
+  n.song_id,
+  n.revision_number,
+  jsonb_build_object(
+    'schema_version', 1,
+    'migration_backfill', true,
+    'project', jsonb_build_object(
+      'id', p.id,
+      'title', p.title
+    ),
+    'song', to_jsonb(s),
+    'world', to_jsonb(wr),
+    'style_bible', to_jsonb(sb),
+    'characters', coalesce((
+      select jsonb_agg(to_jsonb(c) order by c.created_at, c.id)
+      from public.characters c
+      where c.project_id = n.project_id
+        and c.world_report_id = n.world_report_id
+        and c.style_bible_id = n.style_bible_id
+        and c.status = 'approved'
+    ), '[]'::jsonb),
+    'character_assets', coalesce((
+      select jsonb_agg(to_jsonb(ca) order by ca.created_at, ca.id)
+      from public.character_assets ca
+      join public.characters c on c.id = ca.character_id
+      where ca.project_id = n.project_id
+        and ca.world_report_id = n.world_report_id
+        and c.style_bible_id = n.style_bible_id
+        and ca.status = 'approved'
+    ), '[]'::jsonb),
+    'environments', coalesce((
+      select jsonb_agg(to_jsonb(e) order by e.created_at, e.id)
+      from public.environments e
+      where e.project_id = n.project_id
+        and e.world_report_id = n.world_report_id
+        and e.style_bible_id = n.style_bible_id
+        and e.status = 'approved'
+    ), '[]'::jsonb),
+    'environment_assets', coalesce((
+      select jsonb_agg(to_jsonb(ea) order by ea.created_at, ea.id)
+      from public.environment_assets ea
+      join public.environments e on e.id = ea.environment_id
+      where ea.project_id = n.project_id
+        and ea.world_report_id = n.world_report_id
+        and e.style_bible_id = n.style_bible_id
+        and ea.status = 'approved'
+    ), '[]'::jsonb)
+  )
+from numbered n
+join public.projects p on p.id = n.project_id
+join public.songs s on s.id = n.song_id
+join public.world_reports wr on wr.id = n.world_report_id
+join public.style_bibles sb on sb.id = n.style_bible_id
+returning id, project_id, revision_number;
+
+insert into _beatvision_vision_lock_backfill (plan_id, lock_id)
+select vp.id, vl.id
+from public.visual_plans vp
+join public.vision_locks vl
+  on vl.project_id = vp.project_id
+ and vl.world_report_id = vp.world_report_id
+ and vl.style_bible_id = vp.style_bible_id
+ and vl.song_id = vp.song_id
+where vp.status = 'approved'
+  and vp.vision_lock_id is null
+  and vl.revision_number = (
+    select max(vl2.revision_number)
+    from public.vision_locks vl2
+    where vl2.project_id = vp.project_id
+      and vl2.world_report_id = vp.world_report_id
+      and vl2.style_bible_id = vp.style_bible_id
+      and vl2.song_id = vp.song_id
+  );
+
+update public.visual_plans vp
+set vision_lock_id = b.lock_id
+from _beatvision_vision_lock_backfill b
+where vp.id = b.plan_id;
+
+create trigger visual_plans_immutable
+before update or delete on public.visual_plans
+for each row execute function public.prevent_approved_visual_plan_mutation();
+
+alter table public.visual_plans
+  add constraint visual_plans_vision_lock_required
+  check (status = 'draft' or vision_lock_id is not null);
+
 create or replace function public.require_visual_plan_vision_lock_lineage()
 returns trigger
 language plpgsql
