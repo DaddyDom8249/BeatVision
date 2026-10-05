@@ -36,6 +36,9 @@ test("motion clip persistence contract exists", () => {
   assert.ok(motionMigration.includes("generation_job_id uuid not null references public.generation_jobs"));
   assert.ok(motionMigration.includes("motion_clips_job_unique"));
   assert.ok(motionMigration.includes("MOTION_CLIP_LINEAGE_INVALID"));
+  assert.ok(motionMigration.includes("job_status not in ('processing', 'completed')"));
+  const sceneMigration = fs.readFileSync("supabase/migrations/20261005100000_scene_image_persistence.sql", "utf8");
+  assert.ok(sceneMigration.includes("job_status not in ('processing', 'completed')"));
   assert.ok(motionMigration.includes("revoke insert, update, delete on public.motion_clips from anon, authenticated"));
   assert.ok(controller.includes("extractMotionClip"));
   assert.ok(controller.includes('from("motion_clips")'));
