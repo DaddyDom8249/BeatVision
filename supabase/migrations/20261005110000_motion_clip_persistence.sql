@@ -62,7 +62,7 @@ begin
      or scene_plan_id <> new.visual_plan_id
      or job_scene_id <> new.scene_id
      or job_type <> 'scene_motion'
-     or job_status <> 'completed'
+     or job_status not in ('processing', 'completed')
      or (new.scene_image_id is not null and
          (image_project_id <> new.project_id or image_scene_id <> new.scene_id)) then
     raise exception 'MOTION_CLIP_LINEAGE_INVALID'
