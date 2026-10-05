@@ -12,6 +12,14 @@ function admin() {
   return createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"));
 }
 
+function userClient(token: string) {
+  return createClient(
+    env("SUPABASE_URL"),
+    env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"),
+    { global: { headers: { Authorization: token } } },
+  );
+}
+
 async function authenticate(req: Request) {
   const token = req.headers.get("Authorization") || "";
   if (!/^Bearer\\s+\\S+$/i.test(token)) throw new Error("Authentication required.");
@@ -220,27 +228,235 @@ async function poll(db: any, job: any) {
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST required." }, 405);
+
   try {
+    const authorization = req.headers.get("Authorization") || "";
     const uid = await authenticate(req);
     const body = await req.json().catch(() => ({}));
+    const action = String(body.action || "run");
+
+    if (action === "approve_and_enqueue") {
+      const projectId = String(body.projectId || body.project_id || "").trim();
+      const visualPlanId = String(body.visualPlanId || body.visual_plan_id || "").trim();
+
+      if (!projectId || !visualPlanId) {
+        return json({
+          success: false,
+          error: {
+            code: "INVALID_REQUEST_PAYLOAD",
+            stage: "validation",
+            message: "project_id and visual_plan_id are required.",
+          },
+        }, 400);
+      }
+
+      // Keep creative orchestration on a caller-scoped client. The worker's
+      // service-role client must remain isolated to run()/poll() lifecycle writes.
+      const supabaseUser = userClient(authorization);
+
+      // Defense in depth: prove the authenticated caller owns the project before
+      // invoking either creative RPC. The RPCs remain the authoritative database
+      // authorization boundary.
+      const projectCheck = await supabaseUser
+        .from("projects")
+        .select("id")
+        .eq("id", projectId)
+        .eq("owner_id", uid)
+        .maybeSingle();
+
+      if (projectCheck.error) throw new Error(projectCheck.error.message);
+      if (!projectCheck.data) {
+        return json({
+          success: false,
+          error: { code: "PROJECT_NOT_FOUND_OR_FORBIDDEN", stage: "authorization" },
+        }, 403);
+      }
+
+      // Fail closed if the plan is not attached to the authorized project.
+      const planCheck = await supabaseUser
+        .from("visual_plans")
+        .select("id")
+        .eq("id", visualPlanId)
+        .eq("project_id", projectId)
+        .maybeSingle();
+
+      if (planCheck.error) throw new Error(planCheck.error.message);
+      if (!planCheck.data) {
+        return json({
+          success: false,
+          error: { code: "VISUAL_PLAN_NOT_FOUND_OR_FORBIDDEN", stage: "authorization" },
+        }, 403);
+      }
+
+      // Phase 1: approve the creative state using the caller's auth.uid()
+      // context. This remains SECURITY INVOKER in the live database.
+      const approval = await supabaseUser.rpc("approve_visual_plan", {
+        p_plan_id: visualPlanId,
+      });
+
+      if (approval.error) {
+        return json({
+          success: false,
+          error: {
+            code: approval.error.code === "P0001"
+              ? "VISUAL_PLAN_NOT_FOUND_OR_FORBIDDEN"
+              : "APPROVAL_TRANSACTION_FAILED",
+            stage: "approval",
+            detail: approval.error.message,
+          },
+        }, 400);
+      }
+
+      // Phase 2: re-read committed state after the approval RPC. This is a
+      // separate committed database request, not a cross-request transaction.
+      const sceneFetch = await supabaseUser
+        .from("visual_plan_scenes")
+        .select("id")
+        .eq("visual_plan_id", visualPlanId)
+        .order("scene_number", { ascending: true });
+
+      if (sceneFetch.error || !sceneFetch.data) {
+        return json({
+          success: false,
+          error: {
+            code: "SCENE_ENUMERATION_FAILED",
+            stage: "orchestration",
+            detail: sceneFetch.error?.message,
+          },
+        }, 500);
+      }
+
+      if (sceneFetch.data.length === 0) {
+        return json({
+          success: false,
+          error: {
+            code: "NO_SCENES_TO_ENQUEUE",
+            stage: "orchestration",
+          },
+        }, 409);
+      }
+
+      // Phase 3: each enqueue is deterministic and idempotent. If a later
+      // scene fails, already-created jobs remain recoverable by retrying this
+      // same action.
+      const jobIds: string[] = [];
+
+      for (const scene of sceneFetch.data) {
+        const enqueue = await supabaseUser.rpc("enqueue_scene_generation", {
+          p_project_id: projectId,
+          p_scene_id: scene.id,
+          p_job_type: "scene_image",
+        });
+
+        if (enqueue.error) {
+          return json({
+            success: false,
+            status: "partial",
+            project_id: projectId,
+            visual_plan_id: visualPlanId,
+            jobs: jobIds,
+            error: {
+              code: "GENERATION_ENQUEUE_FAILED",
+              stage: "enqueue",
+              scene_id: scene.id,
+              detail: enqueue.error.message,
+            },
+          }, 502);
+        }
+
+        const jobRecord = Array.isArray(enqueue.data)
+          ? enqueue.data[0]
+          : enqueue.data;
+
+        if (!jobRecord?.id) {
+          return json({
+            success: false,
+            status: "partial",
+            project_id: projectId,
+            visual_plan_id: visualPlanId,
+            jobs: jobIds,
+            error: {
+              code: "GENERATION_ENQUEUE_INVALID_RESPONSE",
+              stage: "enqueue",
+              scene_id: scene.id,
+            },
+          }, 502);
+        }
+
+        jobIds.push(String(jobRecord.id));
+      }
+
+      return json({
+        success: true,
+        status: "synchronized",
+        project_id: projectId,
+        visual_plan_id: visualPlanId,
+        jobs: jobIds,
+      });
+    }
+
+    if (!["run", "poll"].includes(action)) {
+      return json({
+        error: {
+          code: "INVALID_ACTION",
+          message: "action must be run, poll, or approve_and_enqueue.",
+        },
+      }, 400);
+    }
+
     const projectId = String(body.projectId || body.project_id || "");
     const jobId = String(body.jobId || body.job_id || "");
-    const action = String(body.action || "run");
-    if (!projectId || !jobId) return json({ error: { code: "JOB_REQUIRED", message: "projectId and jobId are required." } }, 400);
-    if (!["run", "poll"].includes(action)) return json({ error: { code: "INVALID_ACTION", message: "action must be run or poll." } }, 400);
+    if (!projectId || !jobId) {
+      return json({
+        error: {
+          code: "JOB_REQUIRED",
+          message: "projectId and jobId are required.",
+        },
+      }, 400);
+    }
 
+    // Worker path deliberately uses the privileged client. Direct generation_jobs
+    // lifecycle writes are restricted from authenticated/anon and are not moved
+    // into the user-scoped orchestration client.
     const db = admin();
-    const project = await db.from("projects").select("id,owner_id").eq("id", projectId).maybeSingle();
+    const project = await db
+      .from("projects")
+      .select("id,owner_id")
+      .eq("id", projectId)
+      .maybeSingle();
+
     if (project.error) throw new Error(project.error.message);
-    if (!project.data || project.data.owner_id !== uid) return json({ error: { code: "NOT_FOUND", message: "Project not found." } }, 404);
+    if (!project.data || project.data.owner_id !== uid) {
+      return json({
+        error: { code: "NOT_FOUND", message: "Project not found." },
+      }, 404);
+    }
 
-    const job = await db.from("generation_jobs").select("*").eq("id", jobId).eq("project_id", projectId).maybeSingle();
+    const job = await db
+      .from("generation_jobs")
+      .select("*")
+      .eq("id", jobId)
+      .eq("project_id", projectId)
+      .maybeSingle();
+
     if (job.error) throw new Error(job.error.message);
-    if (!job.data) return json({ error: { code: "NOT_FOUND", message: "Generation job not found." } }, 404);
+    if (!job.data) {
+      return json({
+        error: { code: "NOT_FOUND", message: "Generation job not found." },
+      }, 404);
+    }
 
-    const result = action === "poll" ? await poll(db, job.data) : await run(db, job.data);
+    const result = action === "poll"
+      ? await poll(db, job.data)
+      : await run(db, job.data);
+
     return json({ job: result });
   } catch (error) {
-    return json({ error: { code: "GENERATION_CONTROLLER_FAILED", message: error instanceof Error ? error.message : String(error) } }, 500);
+    return json({
+      error: {
+        code: "GENERATION_CONTROLLER_FAILED",
+        message: error instanceof Error ? error.message : String(error),
+      },
+    }, 500);
   }
 });
