@@ -146,6 +146,52 @@ function extractSceneImage(result: any) {
   };
 }
 
+function extractMotionClip(result: any) {
+  const candidates = [
+    result?.result?.videos?.[0]?.video_url,
+    result?.result?.videos?.[0]?.url,
+    result?.result?.video_url,
+    result?.result?.url,
+    result?.video_url,
+    result?.url,
+  ];
+  const videoUrl = candidates.find((value: unknown) => typeof value === "string" && /^https?:\/\//i.test(value));
+  if (!videoUrl) throw new Error("Arena scene-motion completion contained no usable video URL.");
+  const video = result?.result?.videos?.[0] || result?.result || result;
+  return {
+    video_url: videoUrl,
+    provider: String(result?.provider || "pixazo"),
+    model: String(video?.model || result?.model || "ltx-video"),
+  };
+}
+
+async function persistMotionClip(db: any, job: any, arenaResponse: any) {
+  if (job.job_type !== "scene_motion") return;
+  const sceneId = String(job.visual_plan_scene_id || job.input_snapshot?.visual_plan_scene_id || "").trim();
+  const visualPlanId = String(job.visual_plan_id || job.input_snapshot?.visual_plan_id || "").trim();
+  if (!sceneId || !visualPlanId) throw new Error("Completed scene-motion job is missing frozen Scene/Visual Plan lineage.");
+  const media = extractMotionClip(arenaResponse);
+  const existing = await db.from("motion_clips")
+    .select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved")
+    .eq("generation_job_id", job.id)
+    .maybeSingle();
+  if (existing.error) throw new Error("Motion clip lookup failed: " + existing.error.message);
+  if (existing.data) return existing.data;
+  const inserted = await db.from("motion_clips").insert({
+    project_id: job.project_id,
+    visual_plan_id: visualPlanId,
+    scene_id: sceneId,
+    generation_job_id: job.id,
+    provider: media.provider,
+    model: media.model,
+    video_url: media.video_url,
+    status: "generated",
+    approved: false,
+  }).select("*").single();
+  if (inserted.error) throw new Error("Motion clip persistence failed: " + inserted.error.message);
+  return inserted.data;
+}
+
 async function persistSceneImage(db: any, job: any, arenaResponse: any) {
   if (job.job_type !== "scene_image") return;
 
@@ -222,6 +268,9 @@ async function run(db: any, job: any) {
       const sceneImage = job.job_type === "scene_image"
         ? await persistSceneImage(db, job, result.data)
         : null;
+      const motionClip = job.job_type === "scene_motion"
+        ? await persistMotionClip(db, job, result.data)
+        : null;
 
       const completion = await db.from("generation_jobs").update({
         status: "completed",
@@ -230,6 +279,7 @@ async function run(db: any, job: any) {
           arena_response: result.data,
           bridge_contract: "2.0",
           ...(sceneImage ? { scene_image_id: sceneImage.id } : {}),
+          ...(motionClip ? { motion_clip_id: motionClip.id } : {}),
         },
       }).eq("id", job.id).eq("status", "processing");
 
