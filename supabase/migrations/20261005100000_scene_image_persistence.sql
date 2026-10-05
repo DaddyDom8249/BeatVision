@@ -65,7 +65,7 @@ begin
      or job_project_id <> new.project_id
      or scene_plan_id <> new.visual_plan_id
      or job_scene_id <> new.scene_id
-     or job_status <> 'completed' then
+     or job_status not in ('processing', 'completed') then
     raise exception 'SCENE_IMAGE_LINEAGE_INVALID'
       using errcode = '23514',
             detail = 'Scene image must belong to the same project/Visual Plan/Scene as a completed Generation Job.';
