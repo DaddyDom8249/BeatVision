@@ -28,3 +28,18 @@ test("completed scene-image jobs persist the real Arena media URL before complet
   assert.match(controller, /persistSceneImage\(db, job, result\.data\)/);
   assert.match(controller, /scene_image_id: sceneImage\.id/);
 });
+
+
+test("motion clip persistence contract exists", () => {
+  const motionMigration = fs.readFileSync("supabase/migrations/20261005110000_motion_clip_persistence.sql", "utf8");
+  assert.ok(motionMigration.includes("public.motion_clips"));
+  assert.ok(motionMigration.includes("generation_job_id uuid not null references public.generation_jobs"));
+  assert.ok(motionMigration.includes("motion_clips_job_unique"));
+  assert.ok(motionMigration.includes("MOTION_CLIP_LINEAGE_INVALID"));
+  assert.ok(motionMigration.includes("revoke insert, update, delete on public.motion_clips from anon, authenticated"));
+  assert.ok(controller.includes("extractMotionClip"));
+  assert.ok(controller.includes('from("motion_clips")'));
+  assert.ok(controller.includes("video_url: media.video_url"));
+  assert.ok(controller.includes("persistMotionClip(db, job, result.data)"));
+  assert.ok(controller.includes("motion_clip_id: motionClip.id"));
+});
