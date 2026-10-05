@@ -5,6 +5,26 @@ import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
 
+type GenerationJob = {
+  id: string;
+  status: "queued" | "submitted" | "processing" | "completed" | "failed";
+  output?: {
+    arena_response?: {
+      result?: {
+        images?: Array<{ image_url?: string | null }>;
+        image_url?: string | null;
+      };
+    };
+  } | null;
+  error?: { message?: string } | null;
+};
+
+function generatedImageUrl(job: GenerationJob | null) {
+  return job?.output?.arena_response?.result?.images?.[0]?.image_url
+    ?? job?.output?.arena_response?.result?.image_url
+    ?? null;
+}
+
 function time(seconds: number) {
   const total = Math.max(0, Math.floor(seconds));
   return String(Math.floor(total / 60)).padStart(2, "0") + ":" + String(total % 60).padStart(2, "0");
@@ -32,6 +52,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [job, setJob] = useState<GenerationJob | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -61,6 +84,101 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
   const scene = scenes[selectedIndex] ?? null;
   const productionText = useMemo(() => scene ? prompt(scene) : "", [scene]);
+
+  useEffect(() => {
+    if (!scene) {
+      setJob(null);
+      return;
+    }
+
+    let active = true;
+    setGenerationError(null);
+
+    (async () => {
+      const result = await supabase
+        .from("generation_jobs")
+        .select("id,status,output,error")
+        .eq("project_id", projectId)
+        .eq("visual_plan_scene_id", scene.id)
+        .eq("job_type", "scene_image")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (active) {
+        if (result.error) setGenerationError(result.error.message);
+        setJob((result.data ?? null) as GenerationJob | null);
+      }
+    })();
+
+    return () => { active = false; };
+  }, [projectId, scene?.id]);
+
+  useEffect(() => {
+    if (!job || !["queued", "submitted", "processing"].includes(job.status)) return;
+
+    let active = true;
+    const timer = window.setInterval(async () => {
+      const result = await supabase
+        .from("generation_jobs")
+        .select("id,status,output,error")
+        .eq("id", job.id)
+        .maybeSingle();
+
+      if (!active || result.error || !result.data) return;
+      setJob(result.data as GenerationJob);
+
+      if (["completed", "failed"].includes(result.data.status)) {
+        window.clearInterval(timer);
+      }
+    }, 2500);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [job?.id, job?.status]);
+
+  async function generateSceneImage() {
+    if (!scene || !plan || generating) return;
+
+    setGenerating(true);
+    setGenerationError(null);
+
+    try {
+      const enqueue = await supabase.rpc("enqueue_scene_generation", {
+        p_project_id: projectId,
+        p_scene_id: scene.id,
+        p_job_type: "scene_image",
+      });
+
+      if (enqueue.error) throw new Error(enqueue.error.message);
+
+      const queued = (Array.isArray(enqueue.data) ? enqueue.data[0] : enqueue.data) as GenerationJob | null;
+      if (!queued?.id) throw new Error("Generation enqueue returned no job id.");
+
+      setJob(queued);
+
+      const run = await supabase.functions.invoke("beatvision-generation", {
+        body: {
+          action: "run",
+          projectId,
+          jobId: queued.id,
+        },
+      });
+
+      if (run.error) throw new Error(run.error.message);
+      if (run.data?.error) throw new Error(run.data.error.message || "Generation controller failed.");
+
+      setJob(run.data?.job as GenerationJob);
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : "Scene image generation failed.");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  const imageUrl = generatedImageUrl(job);
 
   async function copyBrief() {
     if (!productionText) return;
@@ -126,14 +244,25 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-actions">
             <button className="primary-button" onClick={() => void copyBrief()}>{copied ? "Copied" : "Copy Shot Brief"}</button>
+            <button className="primary-button" onClick={() => void generateSceneImage()} disabled={generating || job?.status === "processing"}>
+              {generating ? "Starting…" : job?.status === "processing" ? "Generating…" : "Generate Scene Image"}
+            </button>
             <button className="secondary-button" disabled={selectedIndex === 0} onClick={() => setSelectedIndex((value) => Math.max(0, value - 1))}>Previous Scene</button>
             <button className="secondary-button" disabled={selectedIndex === scenes.length - 1} onClick={() => setSelectedIndex((value) => Math.min(scenes.length - 1, value + 1))}>Next Scene</button>
           </div>
 
           <div className="production-provider-note">
-            <span className="panel-label">GENERATION</span>
-            <h3>Provider generation is the next integration point.</h3>
-            <p>This workspace is the approved creative source. Image/video generation should be connected here through an authenticated provider rather than using placeholder or fake generation controls.</p>
+            <span className="panel-label">GENERATION JOB</span>
+            <h3>{job ? job.status.toUpperCase() : "NOT STARTED"}</h3>
+            <p>Generation uses the authenticated BeatVision controller and the locked Scene Direction. No client-side provider secret or alternate provider path is used.</p>
+            {generationError && <p className="form-error" role="alert">{generationError}</p>}
+            {job?.error?.message && <p className="form-error" role="alert">{job.error.message}</p>}
+            {imageUrl && (
+              <div>
+                <img src={imageUrl} alt={`Generated preview for scene ${scene.scene_number}`} style={{ width: "100%", maxWidth: 900, borderRadius: 12, display: "block", marginTop: 16 }} />
+                <p>Preview returned by the Arena generation job. Durable asset persistence is still governed by the production asset pipeline.</p>
+              </div>
+            )}
           </div>
         </section>
       </section>
