@@ -21,14 +21,6 @@ create table if not exists public.scene_images (
 
   constraint scene_images_job_unique unique (generation_job_id),
   constraint scene_images_lineage_unique unique (scene_id, generation_job_id),
-  constraint scene_images_lineage_fk
-    foreign key (visual_plan_id, project_id)
-    references public.visual_plans(id, project_id)
-    on delete restrict,
-  constraint scene_images_scene_lineage_fk
-    foreign key (scene_id, project_id, visual_plan_id)
-    references public.visual_plan_scenes(id, project_id, visual_plan_id)
-    on delete restrict
 );
 
 create index if not exists scene_images_project_scene_idx
@@ -36,6 +28,57 @@ create index if not exists scene_images_project_scene_idx
 
 create index if not exists scene_images_project_status_idx
   on public.scene_images(project_id, status, created_at);
+
+create or replace function public.enforce_scene_image_lineage()
+returns trigger
+language plpgsql
+set search_path = public
+as $
+declare
+  plan_project_id uuid;
+  scene_project_id uuid;
+  scene_plan_id uuid;
+  job_project_id uuid;
+  job_scene_id uuid;
+  job_status text;
+begin
+  select vp.project_id
+    into plan_project_id
+    from public.visual_plans vp
+   where vp.id = new.visual_plan_id;
+
+  select s.project_id, s.visual_plan_id
+    into scene_project_id, scene_plan_id
+    from public.visual_plan_scenes s
+   where s.id = new.scene_id;
+
+  select gj.project_id, gj.visual_plan_scene_id, gj.status
+    into job_project_id, job_scene_id, job_status
+    from public.generation_jobs gj
+   where gj.id = new.generation_job_id;
+
+  if plan_project_id is null
+     or scene_project_id is null
+     or job_project_id is null
+     or plan_project_id <> new.project_id
+     or scene_project_id <> new.project_id
+     or job_project_id <> new.project_id
+     or scene_plan_id <> new.visual_plan_id
+     or job_scene_id <> new.scene_id
+     or job_status <> 'completed' then
+    raise exception 'SCENE_IMAGE_LINEAGE_INVALID'
+      using errcode = '23514',
+            detail = 'Scene image must belong to the same project/Visual Plan/Scene as a completed Generation Job.';
+  end if;
+
+  return new;
+end;
+$;
+
+drop trigger if exists scene_images_lineage on public.scene_images;
+create trigger scene_images_lineage
+before insert or update on public.scene_images
+for each row execute function public.enforce_scene_image_lineage;
 
 create or replace function public.set_scene_images_updated_at()
 returns trigger
