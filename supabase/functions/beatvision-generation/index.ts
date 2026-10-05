@@ -126,6 +126,59 @@ async function setFailed(db: any, id: string, message: string, detail?: unknown)
   }).eq("id", id).in("status", ["queued", "submitted", "processing"]);
 }
 
+function extractSceneImage(result: any) {
+  const candidates = [
+    result?.result?.images?.[0]?.image_url,
+    result?.result?.images?.[0]?.url,
+    result?.result?.image_url,
+    result?.result?.url,
+    result?.image_url,
+    result?.url,
+  ];
+  const imageUrl = candidates.find((value: unknown) => typeof value === "string" && /^https?:\/\//i.test(value));
+  if (!imageUrl) throw new Error("Arena scene-image completion contained no usable image URL.");
+
+  const image = result?.result?.images?.[0] || result?.result || result;
+  return {
+    image_url: imageUrl,
+    provider: String(result?.provider || "pixazo"),
+    model: String(image?.model || result?.model || "flux-schnell"),
+  };
+}
+
+async function persistSceneImage(db: any, job: any, arenaResponse: any) {
+  if (job.job_type !== "scene_image") return;
+
+  const sceneId = String(job.visual_plan_scene_id || job.input_snapshot?.visual_plan_scene_id || "").trim();
+  const visualPlanId = String(job.visual_plan_id || job.input_snapshot?.visual_plan_id || "").trim();
+  if (!sceneId || !visualPlanId) throw new Error("Completed scene-image job is missing frozen Scene/Visual Plan lineage.");
+
+  const media = extractSceneImage(arenaResponse);
+
+  const existing = await db.from("scene_images")
+    .select("id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,status,approved")
+    .eq("generation_job_id", job.id)
+    .maybeSingle();
+
+  if (existing.error) throw new Error("Scene image lookup failed: " + existing.error.message);
+  if (existing.data) return existing.data;
+
+  const inserted = await db.from("scene_images").insert({
+    project_id: job.project_id,
+    visual_plan_id: visualPlanId,
+    scene_id: sceneId,
+    generation_job_id: job.id,
+    provider: media.provider,
+    model: media.model,
+    image_url: media.image_url,
+    status: "generated",
+    approved: false,
+  }).select("*").single();
+
+  if (inserted.error) throw new Error("Scene image persistence failed: " + inserted.error.message);
+  return inserted.data;
+}
+
 async function run(db: any, job: any) {
   if (!["scene_image", "scene_motion"].includes(String(job.job_type))) {
     throw new Error("GENERATION_JOB_TYPE_NOT_SUPPORTED: only scene_image and scene_motion are controller-backed.");
@@ -166,10 +219,21 @@ async function run(db: any, job: any) {
     if (state === "failed") {
       await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena rejected generation."), result.data);
     } else if (state === "completed") {
-      await db.from("generation_jobs").update({
+      const sceneImage = job.job_type === "scene_image"
+        ? await persistSceneImage(db, job, result.data)
+        : null;
+
+      const completion = await db.from("generation_jobs").update({
         status: "completed",
-        output: { arena_request_id: requestId, arena_response: result.data, bridge_contract: "2.0" },
+        output: {
+          arena_request_id: requestId,
+          arena_response: result.data,
+          bridge_contract: "2.0",
+          ...(sceneImage ? { scene_image_id: sceneImage.id } : {}),
+        },
       }).eq("id", job.id).eq("status", "processing");
+
+      if (completion.error) throw new Error(completion.error.message);
     } else {
       const upstreamJobId = String(result.data?.job_id || result.data?.provider_job_id || result.data?.id || "").trim();
       await db.from("generation_jobs").update({
