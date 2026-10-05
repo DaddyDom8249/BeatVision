@@ -324,7 +324,13 @@ async function poll(db: any, job: any) {
     } else if (state === "completed") {
       await db.from("generation_jobs").update({
         status: "completed",
-        output: { ...(job.output || {}), arena_status_response: result.data },
+        output: {
+          ...(job.output || {}),
+          arena_status_response: result.data,
+          ...(job.job_type === "scene_motion"
+            ? { motion_clip_id: (await persistMotionClip(db, job, result.data)).id }
+            : {}),
+        },
       }).eq("id", job.id).eq("status", "processing");
     } else {
       await db.from("generation_jobs").update({
