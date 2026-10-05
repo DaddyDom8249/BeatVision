@@ -15,8 +15,8 @@ test("generation enqueue RPC is security-definer hardened", () => {
   );
   assert.match(
     migration,
-    /set search_path = public, pg_temp/i,
-    "SECURITY DEFINER function must use a hardened search_path"
+    /set\s+search_path\s*=\s*(?:''|public\s*,\s*pg_temp)/i,
+    "SECURITY DEFINER function must pin search_path to an empty path or explicit trusted schemas"
   );
 });
 
