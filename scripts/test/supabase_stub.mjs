@@ -12,13 +12,31 @@ export function createStubClientFactory(db) {
         let op = null;
         let payload = null;
         const filters = [];
+        const nullFilters = [];
+        let orderBy = null;
+        let orderAscending = true;
+        let limitCount = null;
 
-        const matches = (row) => filters.every(([col, val]) => row[col] === val);
+        const matches = (row) =>
+          filters.every(([col, val]) => row[col] === val) &&
+          nullFilters.every(([col, val]) => row[col] === val);
 
         async function resolve() {
           const rows = db[table] || [];
           if (op === "select") {
-            const found = rows.filter(matches);
+            let found = rows.filter(matches);
+            if (orderBy) {
+              found = [...found].sort((a, b) => {
+                const av = a[orderBy];
+                const bv = b[orderBy];
+                if (av === bv) return 0;
+                if (av === undefined || av === null) return 1;
+                if (bv === undefined || bv === null) return -1;
+                if (av < bv) return orderAscending ? -1 : 1;
+                return orderAscending ? 1 : -1;
+              });
+            }
+            if (limitCount !== null) found = found.slice(0, limitCount);
             return { data: found, error: null };
           }
           if (op === "insert") {
@@ -53,6 +71,19 @@ export function createStubClientFactory(db) {
           },
           eq(column, value) {
             filters.push([column, value]);
+            return api;
+          },
+          is(column, value) {
+            nullFilters.push([column, value]);
+            return api;
+          },
+          order(column, options = {}) {
+            orderBy = column;
+            orderAscending = options.ascending !== false;
+            return api;
+          },
+          limit(count) {
+            limitCount = count;
             return api;
           },
           async maybeSingle() {
