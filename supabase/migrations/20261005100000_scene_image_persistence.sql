@@ -20,7 +20,7 @@ create table if not exists public.scene_images (
   updated_at timestamptz not null default now(),
 
   constraint scene_images_job_unique unique (generation_job_id),
-  constraint scene_images_lineage_unique unique (scene_id, generation_job_id),
+  constraint scene_images_lineage_unique unique (scene_id, generation_job_id)
 );
 
 create index if not exists scene_images_project_scene_idx
@@ -33,7 +33,7 @@ create or replace function public.enforce_scene_image_lineage()
 returns trigger
 language plpgsql
 set search_path = public
-as $
+as $$
 declare
   plan_project_id uuid;
   scene_project_id uuid;
@@ -73,7 +73,7 @@ begin
 
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists scene_images_lineage on public.scene_images;
 create trigger scene_images_lineage
