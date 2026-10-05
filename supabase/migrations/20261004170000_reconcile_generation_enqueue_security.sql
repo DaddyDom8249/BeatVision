@@ -1,11 +1,13 @@
 -- Reconcile the production generation enqueue boundary.
 --
--- The enqueue RPC validates project/scene/Vision Lock ownership itself.
--- It must be able to insert generation_jobs without granting clients direct
--- table INSERT privileges. SECURITY DEFINER provides that narrow capability.
+-- This migration preserves the live enqueue business logic and snapshot
+-- contract while hardening the SECURITY DEFINER boundary. The database
+-- unique constraint on generation_jobs.idempotency_key remains the physical
+-- concurrency anchor; the exception handler converts a concurrent collision
+-- into an idempotent read of the winning job.
 --
--- Keep pg_temp last in search_path so writable temporary objects cannot mask
--- referenced objects inside the SECURITY DEFINER function.
+-- Production target constraint verified read-only:
+-- generation_jobs_idempotency_unique UNIQUE (idempotency_key).
 
 begin;
 
@@ -17,7 +19,7 @@ create or replace function public.enqueue_scene_generation(
 returns public.generation_jobs
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
 declare
   scene public.visual_plan_scenes;
@@ -88,42 +90,59 @@ begin
     return existing_job;
   end if;
 
-  insert into public.generation_jobs (
-    project_id,
-    vision_lock_id,
-    visual_plan_id,
-    visual_plan_scene_id,
-    job_type,
-    idempotency_key,
-    input_snapshot
-  )
-  values (
-    p_project_id,
-    lock.id,
-    plan.id,
-    scene.id,
-    p_job_type,
-    key,
-    jsonb_build_object(
-      'schema_version', 1,
-      'vision_lock_id', lock.id,
-      'vision_revision', lock.revision_number,
-      'visual_plan_id', plan.id,
-      'visual_plan_scene_id', scene.id,
-      'scene', to_jsonb(scene),
-      'plan', jsonb_build_object(
-        'id', plan.id,
-        'title', plan.title,
-        'duration_seconds', plan.duration_seconds,
-        'creative_thesis', plan.creative_thesis,
-        'global_direction', plan.global_direction
-      ),
-      'vision_snapshot', lock.snapshot
+  begin
+    insert into public.generation_jobs (
+      project_id,
+      vision_lock_id,
+      visual_plan_id,
+      visual_plan_scene_id,
+      job_type,
+      idempotency_key,
+      input_snapshot
     )
-  )
-  returning * into created_job;
+    values (
+      p_project_id,
+      lock.id,
+      plan.id,
+      scene.id,
+      p_job_type,
+      key,
+      jsonb_build_object(
+        'schema_version', 1,
+        'vision_lock_id', lock.id,
+        'vision_revision', lock.revision_number,
+        'visual_plan_id', plan.id,
+        'visual_plan_scene_id', scene.id,
+        'scene', to_jsonb(scene),
+        'plan', jsonb_build_object(
+          'id', plan.id,
+          'title', plan.title,
+          'duration_seconds', plan.duration_seconds,
+          'creative_thesis', plan.creative_thesis,
+          'global_direction', plan.global_direction
+        ),
+        'vision_snapshot', lock.snapshot
+      )
+    )
+    returning * into created_job;
 
-  return created_job;
+    return created_job;
+  exception
+    when unique_violation then
+      -- A concurrent caller may win the UNIQUE(idempotency_key) race.
+      -- Re-read the deterministic key. If no row exists, this was a
+      -- different unique violation and must not be silently swallowed.
+      select gj.*
+        into existing_job
+        from public.generation_jobs gj
+       where gj.idempotency_key = key;
+
+      if existing_job.id is null then
+        raise;
+      end if;
+
+      return existing_job;
+  end;
 end;
 $$;
 
