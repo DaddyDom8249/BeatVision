@@ -551,3 +551,15 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - No production migration applied.
 - Verification remaining: CI, migration dry-run/application verification, live post-migration catalog verification, and controlled authenticated enqueue test using an authorized disposable project/scene.
 - Reference: PostgreSQL CREATE FUNCTION security-definer guidance requires a trusted search_path and selective EXECUTE grants.
+
+
+## 2026-10-04 Step 1E — CI regression and test-harness reconciliation
+- Status: FIXED / VERIFICATION PENDING
+- Finding: after adding `npm test` to Production CI, run #186 failed 15/29 tests.
+- Root cause: the restored production-identical `beatvision-world` v18 uses `.order()`, `.limit()`, and `.is()` on the Supabase query builder; the repository test stub did not implement those methods. The resulting TypeErrors surfaced as false 500 assertions. The production function itself was not implicated by this failure.
+- Evidence: the four newly added generation-enqueue security regression tests all passed in the same failing run, and the earlier analyzer tests also passed. Failures clustered in World tests at operations using the missing stub methods.
+- Correction: extended `scripts/test/supabase_stub.mjs` with null filtering, ordering, and limiting support so the test harness matches the committed v18 query surface.
+- Security correction retained: the generation enqueue migration includes an explicit `projects.owner_id = auth.uid()` check because SECURITY DEFINER bypasses caller RLS.
+- Local verification limitation: sandbox cannot resolve github.com and has no `psql`, so local clone/database execution was unavailable.
+- CI verification: a new workflow run for the harness repair is required; current Vercel deployment for the exact branch head is pending/under verification.
+- Production mutation: none.
