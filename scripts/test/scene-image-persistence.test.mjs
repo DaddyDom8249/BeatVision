@@ -15,22 +15,22 @@ function assertExecutableSql(sql, label) {
   assert.doesNotMatch(
     sql,
     /unique\s*\([^)]+\),\s*\)/i,
-    \`\${label}: trailing comma before closing paren makes CREATE TABLE invalid PostgreSQL\`
+    `${label}: trailing comma before closing paren makes CREATE TABLE invalid PostgreSQL`
   );
   assert.doesNotMatch(
     sql,
     /,\s*\);/,
-    \`\${label}: trailing comma before ); makes SQL invalid\`
+    `${label}: trailing comma before ); makes SQL invalid`
   );
   assert.doesNotMatch(
     sql,
     /as\s+\$\s*\n/,
-    \`\${label}: single-$ function body opener is invalid; use $$ ... $$\`
+    `${label}: single-$ function body opener is invalid; use $$ ... $$`
   );
   assert.doesNotMatch(
     sql,
     /\n\$;\s*\n/,
-    \`\${label}: single-$ function body closer is invalid; use $$ ... $$\`
+    `${label}: single-$ function body closer is invalid; use $$ ... $$`
   );
 
   const fns = [
@@ -44,11 +44,11 @@ function assertExecutableSql(sql, label) {
     assert.equal(
       open,
       close,
-      \`\${label}: dollar-quote tags must match (open=\${open}, close=\${close})\`
+      `${label}: dollar-quote tags must match (open=${open}, close=${close})`
     );
     assert.ok(
       open.length >= 2,
-      \`\${label}: dollar-quote tag must be at least $$ (got \${open})\`
+      `${label}: dollar-quote tag must be at least $$ (got ${open})`
     );
   }
 }
@@ -105,9 +105,7 @@ test("motion clip persistence contract exists", () => {
   assert.ok(motionMigration.includes("motion_clips_job_unique"));
   assert.ok(motionMigration.includes("MOTION_CLIP_LINEAGE_INVALID"));
   assert.ok(
-    motionMigration.includes(
-      "job_status not in ('processing', 'completed')"
-    )
+    motionMigration.includes("job_status not in ('processing', 'completed')")
   );
   assert.ok(
     motionMigration.includes(
