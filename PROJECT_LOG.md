@@ -540,3 +540,14 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - **External evidence:** the BeatVision Arena repository's 2.0 bridge defines `/v2/scene-image`, `/v2/animate`, and `/v2/assemble`, and converts them internally to the legacy provider operations. Cloudflare Workers supports the request/response proxy pattern used here. citeturn3search1turn3search2
 - **Still unresolved:** the 2.0 controller does not yet persist generated image/video outputs into the canonical `scene_images`, `motion_clips`, and `final_videos` records. Production schema inspection confirms those durable tables exist, while `generation_jobs` provides the queued/submitted/processing/completed/failed lifecycle fields.
 - **Status:** bridge compatibility fix **IMPLEMENTED / UNVERIFIED** until CI and a real authenticated provider invocation pass. Durable output persistence remains **UNVERIFIED**.
+
+
+## 2026-10-04 Step 1E — Generation enqueue security reconciliation
+- Status: IMPLEMENTED / UNVERIFIED
+- Objective: repair the database execution boundary discovered during Step 1D without granting clients direct writes to generation_jobs.
+- Evidence: live production showed enqueue_scene_generation(uuid,uuid,text) was SECURITY INVOKER while authenticated lacked INSERT on generation_jobs; live function ACL also incorrectly retained anon EXECUTE.
+- Change: added supabase/migrations/20261004170000_reconcile_generation_enqueue_security.sql.
+- Security design: SECURITY DEFINER with fixed search_path public, pg_temp; PUBLIC and anon EXECUTE revoked; authenticated EXECUTE retained; authenticated/anon INSERT, UPDATE, DELETE on generation_jobs explicitly revoked.
+- No production migration applied.
+- Verification remaining: CI, migration dry-run/application verification, live post-migration catalog verification, and controlled authenticated enqueue test using an authorized disposable project/scene.
+- Reference: PostgreSQL CREATE FUNCTION security-definer guidance requires a trusted search_path and selective EXECUTE grants.
