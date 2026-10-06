@@ -23,19 +23,23 @@ export default function AuthPage({ onNavigate }: Props) {
     setError(null);
     setMessage(null);
 
-    const result = mode === "sign-in"
-      ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
-      : await supabase.auth.signUp({ email: email.trim(), password });
+    try {
+      const result = mode === "sign-in"
+        ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
+        : await supabase.auth.signUp({ email: email.trim(), password });
 
-    if (result.error) {
-      setError(result.error.message);
-    } else if (mode === "sign-up" && !result.data.session) {
-      setMessage("Account created. Check your email to confirm your account, then sign in.");
-    } else {
-      onNavigate(nextPath());
+      if (result.error) {
+        setError(result.error.message);
+      } else if (mode === "sign-up" && !result.data.session) {
+        setMessage("Account created. Check your email to confirm your account, then sign in.");
+      } else {
+        onNavigate(nextPath());
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Authentication failed.");
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
   }
 
   return (
