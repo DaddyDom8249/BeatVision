@@ -278,6 +278,7 @@ Deno.serve(async (req) => {
           revision_number: revision.revision_number,
           parent_world_report_id: existing.id,
         });
+      }
 
       if (body.action === "save_edits") {
         if (existing.confirmed_at) {

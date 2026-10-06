@@ -38,6 +38,8 @@ async function bootFunction({ authUserId = USER_ID, ownerId = USER_ID } = {}) {
         id: "song-1",
         project_id: PROJECT_ID,
         audio_path: `${USER_ID}/${PROJECT_ID}/track.mp3`,
+        audio_revision: AUDIO_REVISION,
+        analysis_audio_revision: null,
         analysis: null,
       },
     ],

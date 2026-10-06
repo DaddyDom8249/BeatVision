@@ -143,7 +143,6 @@ async function bootFunction({ worldOverrides = {}, authUserId = USER_ID } = {}) 
     },
   };
   const originalFactory = globalThis.__supabaseStubFactory;
-  db.__authUserId = authUserId;
   globalThis.__supabaseStubFactory = createStubClientFactory(db);
   // The handler resolves the caller's token with fetch() on every request, so
   // this stub must stay installed for the lifetime of the tests.
