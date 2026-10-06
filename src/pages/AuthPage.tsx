@@ -2,7 +2,12 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { supabase } from "../lib/supabase/client";
 
-interface Props { onNavigate: (path: string) => void; }\n\nfunction nextPath() {\n  const value = new URLSearchParams(window.location.search).get("next");\n  return value && value.startsWith("/") && !value.startsWith("//") ? value : "/projects/new";\n}
+interface Props { onNavigate: (path: string) => void; }
+
+function nextPath() {
+  const value = new URLSearchParams(window.location.search).get("next");
+  return value && value.startsWith("/") && !value.startsWith("//") ? value : "/projects/new";
+}
 
 export default function AuthPage({ onNavigate }: Props) {
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
