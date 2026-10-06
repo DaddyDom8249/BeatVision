@@ -174,7 +174,15 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             <button className="secondary-button" disabled={selectedIndex === scenes.length - 1} onClick={() => setSelectedIndex((value) => Math.min(scenes.length - 1, value + 1))}>Next Scene</button>
           </div>
 
-          <div className="production-provider-note">\n            <span className="panel-label">SCENE IMAGE</span>\n            {image?.image_url ? <img src={image.image_url} alt={scene.title} style={{ width: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 12 }} /> : <p>No real scene image exists yet. Generation is only enabled from the approved Scene Direction.</p>}\n            <div className="production-actions">\n              <button className="primary-button" disabled={generating} onClick={() => void generateImage()}>{generating ? "Generating…" : image ? "Regenerate Scene Image" : "Generate Scene Image"}</button>\n              {image?.status === "generated" && <button className="secondary-button" onClick={() => void approveImage()}>Approve Image</button>}\n              {image?.status === "approved" && <span className="style-lock-badge">IMAGE APPROVED</span>}\n            </div>\n          </div>\n\n          <div className="production-provider-note">
+          <div className="production-provider-note">
+            <span className="panel-label">SCENE IMAGE</span>
+            {image?.image_url ? <img src={image.image_url} alt={scene.title} style={{ width: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 12 }} /> : <p>No real scene image exists yet. Generation is only enabled from the approved Scene Direction.</p>}
+            <div className="production-actions">
+              <button className="primary-button" disabled={generating || Boolean(image)} onClick={() => void generateImage()}>{generating ? "Generating…" : image ? "Image Generated" : "Generate Scene Image"}</button>
+              {image?.status === "generated" && <button className="secondary-button" onClick={() => void approveImage()}>Approve Image</button>}
+              {image?.status === "approved" && <span className="style-lock-badge">IMAGE APPROVED</span>}
+            </div>
+          </div>\n\n          <div className="production-provider-note">
             <span className="panel-label">GENERATION</span>
             <h3>Provider generation is the next integration point.</h3>
             <p>This workspace is the approved creative source. Image/video generation should be connected here through an authenticated provider rather than using placeholder or fake generation controls.</p>
