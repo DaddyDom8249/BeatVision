@@ -58,18 +58,63 @@ begin
             detail = format('approved=%s total=%s', scene_approved, scene_total);
   end if;
 
-  select count(*)
-    into motion_approved
+  -- Assembly must have exactly one approved motion asset for every
+  -- approved scene. Counting rows alone is insufficient: duplicate approved
+  -- clips could otherwise satisfy the total while leaving a scene uncovered.
+  select count(*), count(distinct m.scene_id)
+    into motion_approved, scene_approved
     from public.motion_clip_assets m
    where m.project_id = p_project_id
      and m.visual_plan_id = plan.id
      and m.status = 'approved'
      and m.approved = true;
 
-  if motion_approved <> scene_total then
+  if motion_approved <> scene_total
+     or scene_approved <> scene_total
+     or exists (
+       select 1
+         from public.motion_clip_assets m
+        where m.project_id = p_project_id
+          and m.visual_plan_id = plan.id
+          and m.status = 'approved'
+          and m.approved = true
+          and not exists (
+            select 1
+              from public.visual_plan_scenes s
+             where s.id = m.scene_id
+               and s.project_id = p_project_id
+               and s.visual_plan_id = plan.id
+          )
+     )
+  then
     raise exception 'ASSEMBLY_MOTION_NOT_FULLY_APPROVED'
       using errcode = '55000',
-            detail = format('approved_motion=%s required=%s', motion_approved, scene_total);
+            detail = format('approved_motion=%s distinct_scenes=%s required=%s', motion_approved, scene_approved, scene_total);
+  end if;
+
+  -- A motion clip is not independently sufficient: its source image must
+  -- still be the approved image for the same locked scene lineage.
+  if exists (
+    select 1
+      from public.motion_clip_assets m
+      join public.visual_plan_scenes s on s.id = m.scene_id
+     where m.project_id = p_project_id
+       and m.visual_plan_id = plan.id
+       and m.status = 'approved'
+       and m.approved = true
+       and not exists (
+         select 1
+           from public.scene_image_assets i
+          where i.id = m.scene_image_id
+            and i.project_id = p_project_id
+            and i.visual_plan_id = plan.id
+            and i.scene_id = s.id
+            and i.status = 'approved'
+            and i.approved = true
+       )
+  ) then
+    raise exception 'ASSEMBLY_MOTION_SOURCE_IMAGE_INVALID'
+      using errcode = '55000';
   end if;
 
   key := concat('assembly:', plan.id::text, ':', lock.id::text);
