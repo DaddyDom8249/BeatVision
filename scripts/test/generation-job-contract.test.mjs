@@ -11,10 +11,10 @@ assert.match(
   /check\s*\(job_type\s+in\s*\('scene_image',\s*'scene_motion'\)\)/i,
   "canonical generation job constraint must allow only scene_image and scene_motion",
 );
-assert.match(
+assert.doesNotMatch(
   migration,
   /drop constraint if exists generation_jobs_job_type_check/i,
-  "migration must replace the existing job-type constraint non-destructively",
+  "canonical freeze is additive and preserves the legacy constraint",
 );
 assert.match(
   migration,
