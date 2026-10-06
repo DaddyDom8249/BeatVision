@@ -39,7 +39,7 @@ function modelFor(type: string) {
   return type === "scene_image" ? "flux-schnell" : type === "scene_motion" ? "ltx-video" : null;
 }
 
-function bridgePayload(job: any) {
+async function bridgePayload(db: any, job: any) {
   const snapshot = job.input_snapshot || {};
   const lock = snapshot.vision_snapshot || {};
   const song = lock.song || {};
@@ -49,6 +49,14 @@ function bridgePayload(job: any) {
   const scene = snapshot.scene;
 
   if (!scene) throw new Error("Frozen Scene Direction is missing.");
+
+  let images: { images: Array<{ image_url: string; scene_id: string; approved: boolean }> } | undefined;
+  if (job.job_type === "scene_motion") {
+    const imageResult = await db.from("scene_image_assets").select("id,image_url,scene_id,status,approved,created_at").eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("scene_id", job.visual_plan_scene_id).eq("approved", true).eq("status", "approved").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (imageResult.error) throw new Error("APPROVED_SCENE_IMAGE_LOOKUP_FAILED: " + imageResult.error.message);
+    if (!imageResult.data?.image_url || !/^https?:\/\//i.test(String(imageResult.data.image_url))) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion requires an approved real scene image.");
+    images = { images: [{ image_url: String(imageResult.data.image_url), scene_id: String(imageResult.data.scene_id), approved: true }] };
+  }
   const duration = Number(analysis.duration_seconds ?? snapshot.plan?.duration_seconds ?? 0);
   if (!Number.isFinite(duration) || duration <= 0) throw new Error("Frozen song duration is missing.");
 
@@ -77,6 +85,7 @@ function bridgePayload(job: any) {
       version: String(lock.id || job.vision_lock_id),
     },
     scene,
+    images,
     generation: {
       cost_class: "free",
       model: modelFor(job.job_type),
@@ -119,6 +128,11 @@ function extractImageUrl(data: any) {
   return candidates.find((value) => typeof value === "string" && /^https?:\/\//i.test(value.trim()))?.trim() || null;
 }
 
+function extractVideoUrl(data: any) {
+  const candidates = [data?.video_url,data?.videoUrl,data?.url,data?.result?.video_url,data?.result?.videoUrl,data?.result?.url,data?.result?.video?.url,data?.video?.url];
+  return candidates.find((value) => typeof value === "string" && /^https?:\/\//i.test(value.trim()))?.trim() || null;
+}
+
 async function persistSceneImage(db: any, job: any, responseData: any) {
   if (job.job_type !== "scene_image") return;
   const imageUrl = extractImageUrl(responseData);
@@ -136,6 +150,19 @@ async function persistSceneImage(db: any, job: any, responseData: any) {
     approved: false,
   }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,status,approved,created_at,updated_at").single();
   if (insert.error) throw new Error("SCENE_IMAGE_PERSIST_FAILED: " + insert.error.message);
+  return insert.data;
+}
+
+async function persistMotionClip(db: any, job: any, responseData: any) {
+  if (job.job_type !== "scene_motion") return;
+  const videoUrl = extractVideoUrl(responseData);
+  if (!videoUrl) throw new Error("ARENA_MOTION_OUTPUT_MISSING: Arena completed without a real video URL.");
+  if (!job.visual_plan_scene_id) throw new Error("ARENA_MOTION_SCENE_MISSING: scene_motion job has no approved scene.");
+  const imageResult = await db.from("scene_image_assets").select("id").eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("scene_id", job.visual_plan_scene_id).eq("approved", true).eq("status", "approved").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (imageResult.error) throw new Error("APPROVED_SCENE_IMAGE_LOOKUP_FAILED: " + imageResult.error.message);
+  if (!imageResult.data?.id) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion completed without an approved source image.");
+  const insert = await db.from("motion_clip_assets").upsert({ project_id: job.project_id, visual_plan_id: job.visual_plan_id, scene_id: job.visual_plan_scene_id, generation_job_id: job.id, scene_image_id: imageResult.data.id, provider: "arena", model: modelFor(job.job_type) || "unknown", video_url: videoUrl, status: "generated", approved: false }, { onConflict: "generation_job_id" }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").single();
+  if (insert.error) throw new Error("MOTION_CLIP_PERSIST_FAILED: " + insert.error.message);
   return insert.data;
 }
 
@@ -188,16 +215,17 @@ async function run(db: any, job: any) {
 
   try {
     const path = job.job_type === "scene_image" ? "/v2/scene-image" : "/v2/animate";
-    const result = await arena(path, "POST", bridgePayload(job), requestId);
+    const result = await arena(path, "POST", await bridgePayload(db, job), requestId);
     const state = terminalState(result.response, result.data);
 
     if (state === "failed") {
       await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena rejected generation."), result.data);
     } else if (state === "completed") {
-      const persisted = await persistSceneImage(db, job, result.data);
+      const persistedImage = await persistSceneImage(db, job, result.data);
+      const persistedMotion = await persistMotionClip(db, job, result.data);
       await db.from("generation_jobs").update({
         status: "completed",
-        output: { arena_request_id: requestId, arena_response: result.data, bridge_contract: "2.0", scene_image_asset: persisted || null },
+        output: { arena_request_id: requestId, arena_response: result.data, bridge_contract: "2.0", scene_image_asset: persistedImage || null, motion_clip_asset: persistedMotion || null },
       }).eq("id", job.id).eq("status", "processing");
     } else {
       const upstreamJobId = String(result.data?.job_id || result.data?.provider_job_id || result.data?.id || "").trim();
@@ -237,9 +265,10 @@ async function poll(db: any, job: any) {
     if (state === "failed") {
       await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena provider job failed."), result.data);
     } else if (state === "completed") {
+      const persistedMotion = await persistMotionClip(db, job, result.data);
       await db.from("generation_jobs").update({
         status: "completed",
-        output: { ...(job.output || {}), arena_status_response: result.data },
+        output: { ...(job.output || {}), arena_status_response: result.data, motion_clip_asset: persistedMotion || null },
       }).eq("id", job.id).eq("status", "processing");
     } else {
       await db.from("generation_jobs").update({
