@@ -48,7 +48,7 @@ begin
 end;
 $$;
 
-revoke all on function public.approve_scene_image_asset(uuid) from public;
+revoke execute on function public.approve_scene_image_asset(uuid) from public, anon;
 grant execute on function public.approve_scene_image_asset(uuid) to authenticated;
 
 create or replace function public.approve_motion_clip_asset(p_asset_id uuid)
@@ -103,5 +103,5 @@ begin
 end;
 $$;
 
-revoke all on function public.approve_motion_clip_asset(uuid) from public;
+revoke execute on function public.approve_motion_clip_asset(uuid) from public, anon;
 grant execute on function public.approve_motion_clip_asset(uuid) to authenticated;
