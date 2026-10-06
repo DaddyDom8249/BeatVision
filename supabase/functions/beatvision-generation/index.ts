@@ -312,7 +312,8 @@ async function poll(db: any, job: any) {
   if (!path) return job;
 
   try {
-    const result = await arena(path, "GET", null, "beatvision:" + job.id + ":poll");
+    const pollPayload = job.job_type === "assembly" ? { target_duration_seconds: Number(job.input_snapshot?.plan?.duration_seconds || 0) } : null;
+    const result = await arena(path, job.job_type === "assembly" ? "POST" : "GET", pollPayload, "beatvision:" + job.id + ":poll");
     const state = terminalState(result.response, result.data);
     if (state === "failed") {
       await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena provider job failed."), result.data);
