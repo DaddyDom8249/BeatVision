@@ -9,11 +9,20 @@ import StudioPage from "../pages/StudioPage";
 import VisualPlanPage from "../pages/VisualPlanPage";
 import SceneProductionPage from "../pages/SceneProductionPage";
 import ProductionWorkspacePage from "../pages/ProductionWorkspacePage";
+import { capturePageview, initAnalytics } from "../lib/analytics";
 
 function currentPath() { return window.location.pathname; }
 
 export default function App() {
   const [path, setPath] = useState(currentPath());
+
+  useEffect(() => {
+    initAnalytics();
+  }, []);
+
+  useEffect(() => {
+    capturePageview(path);
+  }, [path]);
 
   useEffect(() => {
     const onPopState = () => setPath(currentPath());
