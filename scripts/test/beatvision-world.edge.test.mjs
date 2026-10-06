@@ -362,7 +362,7 @@ test("invalid or expired session returns 401", async () => {
   assert.equal(response.status, 401);
   assert.equal((await response.json()).error.code, "UNAUTHENTICATED");
   // WorldPage uses raw fetch, so CORS must be present even on failures.
-  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "*");
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://beat-vision-f8nn.vercel.app");
   assert.equal(db.world_reports[0].mood.tone, "original");
 });
 
@@ -372,7 +372,7 @@ test("missing Authorization header returns 401", async () => {
 
   assert.equal(response.status, 401);
   assert.equal((await response.json()).error.code, "UNAUTHENTICATED");
-  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "*");
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://beat-vision-f8nn.vercel.app");
   assert.equal(db.world_reports[0].mood.tone, "original");
 });
 
@@ -393,7 +393,7 @@ test("OPTIONS preflight returns the CORS headers WorldPage's raw fetch needs", a
   const response = await request(handler, { method: "OPTIONS", token: null });
 
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "*");
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://beat-vision-f8nn.vercel.app");
   const allowed = (response.headers.get("Access-Control-Allow-Headers") || "").toLowerCase();
   assert.match(allowed, /authorization/);
   assert.match(allowed, /content-type/);

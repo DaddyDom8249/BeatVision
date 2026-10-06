@@ -12,13 +12,35 @@ export function createStubClientFactory(db) {
         let op = null;
         let payload = null;
         const filters = [];
+        let orderBy = null;
+        let orderAscending = true;
+        let limitCount = null;
 
         const matches = (row) => filters.every(([col, val]) => row[col] === val);
 
         async function resolve() {
           const rows = db[table] || [];
           if (op === "select") {
-            const found = rows.filter(matches);
+            let found = rows.filter(matches);
+
+            if (orderBy) {
+              found = [...found].sort((a, b) => {
+                const av = a[orderBy];
+                const bv = b[orderBy];
+
+                if (av === bv) return 0;
+                if (av == null) return 1;
+                if (bv == null) return -1;
+
+                const comparison = av < bv ? -1 : 1;
+                return orderAscending ? comparison : -comparison;
+              });
+            }
+
+            if (limitCount !== null) {
+              found = found.slice(0, limitCount);
+            }
+
             return { data: found, error: null };
           }
           if (op === "insert") {
@@ -53,6 +75,22 @@ export function createStubClientFactory(db) {
           },
           eq(column, value) {
             filters.push([column, value]);
+            return api;
+          },
+          is(column, value) {
+            if (value !== null) {
+              throw new Error("stub only supports .is(column, null)");
+            }
+            filters.push([column, null]);
+            return api;
+          },
+          order(column, options = {}) {
+            orderBy = column;
+            orderAscending = options.ascending !== false;
+            return api;
+          },
+          limit(count) {
+            limitCount = Number(count);
             return api;
           },
           async maybeSingle() {
