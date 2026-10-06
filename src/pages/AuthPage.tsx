@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { supabase } from "../lib/supabase/client";
+import { capture } from "../lib/analytics";
 
 interface Props { onNavigate: (path: string) => void; }
 
@@ -23,10 +24,12 @@ export default function AuthPage({ onNavigate }: Props) {
       : await supabase.auth.signUp({ email: email.trim(), password });
 
     if (result.error) {
+      capture("auth_failed", { mode });
       setError(result.error.message);
     } else if (mode === "sign-up" && !result.data.session) {
       setMessage("Account created. Check your email to confirm your account, then sign in.");
     } else {
+      capture(mode === "sign-in" ? "signed_in" : "signed_up");
       onNavigate("/projects/new");
     }
 
