@@ -78,7 +78,7 @@ test("scene image persistence contract exists and is owner-readable only", () =>
     /revoke insert, update, delete on public\.scene_image_assets from anon, authenticated/
   );
   assert.match(migration, /SCENE_IMAGE_ASSET_LINEAGE_INVALID/);
-  assert.match(migration, /job_status not in ('processing','completed')/);
+  assert.match(migration, /job_status\s+not\s+in\s*\('processing'\s*,\s*'completed'\)/);
 });
 
 test("completed scene-image jobs persist the real Arena media URL before completion", () => {
@@ -105,7 +105,7 @@ test("motion clip persistence contract exists", () => {
   assert.ok(motionMigration.includes("motion_clip_assets_job_unique"));
   assert.ok(motionMigration.includes("MOTION_CLIP_ASSET_LINEAGE_INVALID"));
   assert.ok(
-    motionMigration.includes("job_status not in ('processing','completed')")
+    /job_status\s+not\s+in\s*\('processing'\s*,\s*'completed'\)/.test(motionMigration)
   );
   assert.ok(
     motionMigration.includes(
