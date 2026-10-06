@@ -63,6 +63,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         setScenes((sceneResult.data ?? []) as VisualPlanScene[]);
         const finalResult = await supabase.from("final_videos").select("id,project_id,title,video_url,preview_video_url,audio_file,duration,format,quality,render_status,downloadable,segment_count,created_at,updated_at").eq("project_id", projectId).order("created_at", { ascending: false }).limit(1).maybeSingle();
         if (finalResult.error) { if (active) setError(finalResult.error.message); } else if (active) setFinalVideo(finalResult.data ?? null);
+        const assemblyResult = await supabase.from("generation_jobs").select("id,project_id,visual_plan_id,job_type,status,output,error,created_at,updated_at").eq("project_id", projectId).eq("visual_plan_id", planResult.data.id).eq("job_type", "assembly").order("created_at", { ascending: false }).limit(1).maybeSingle();
+        if (assemblyResult.error) { if (active) setError(assemblyResult.error.message); } else if (active) setAssemblyJob(assemblyResult.data ?? null);
         const firstScene = (sceneResult.data ?? [])[0];
         if (firstScene) {
           const imageResult = await supabase.from("scene_image_assets").select(imageFields).eq("scene_id", firstScene.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
