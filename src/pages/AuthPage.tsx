@@ -24,7 +24,7 @@ export default function AuthPage({ onNavigate }: Props) {
       : await supabase.auth.signUp({ email: email.trim(), password });
 
     if (result.error) {
-      capture("auth_failed", { mode, reason: result.error.message });
+      capture("auth_failed", { mode });
       setError(result.error.message);
     } else if (mode === "sign-up" && !result.data.session) {
       setMessage("Account created. Check your email to confirm your account, then sign in.");
