@@ -24,7 +24,7 @@ export default function CreateProjectPage({ onNavigate }: Props) {
       .insert({ owner_id: auth.user.id, title: title.trim(), status: "Draft", stage: "song" })
       .select("id").single();
     if (error) {
-      capture("project_creation_failed", { reason: error.message });
+      capture("project_creation_failed");
       setError(formatFailure("Create project", error, { status: "Draft", stage: "song", title: title.trim() }));
     } else {
       capture("project_created", { stage: "song" });
