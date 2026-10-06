@@ -103,6 +103,42 @@ async function arena(path: string, method: "GET" | "POST", payload: unknown, req
   return { response, data };
 }
 
+function extractImageUrl(data: any) {
+  const candidates = [
+    data?.image_url,
+    data?.imageUrl,
+    data?.result?.image_url,
+    data?.result?.imageUrl,
+    data?.result?.images?.[0]?.image_url,
+    data?.result?.images?.[0]?.imageUrl,
+    data?.images?.[0]?.image_url,
+    data?.images?.[0]?.imageUrl,
+    data?.result?.images?.[0]?.url,
+    data?.images?.[0]?.url,
+  ];
+  return candidates.find((value) => typeof value === "string" && /^https?:\\/\\//i.test(value.trim()))?.trim() || null;
+}
+
+async function persistSceneImage(db: any, job: any, responseData: any) {
+  if (job.job_type !== "scene_image") return;
+  const imageUrl = extractImageUrl(responseData);
+  if (!imageUrl) throw new Error("ARENA_IMAGE_OUTPUT_MISSING: Arena completed without a real image URL.");
+  if (!job.visual_plan_scene_id) throw new Error("ARENA_IMAGE_SCENE_MISSING: scene_image job has no approved scene.");
+  const insert = await db.from("scene_image_assets").insert({
+    project_id: job.project_id,
+    visual_plan_id: job.visual_plan_id,
+    scene_id: job.visual_plan_scene_id,
+    generation_job_id: job.id,
+    provider: "arena",
+    model: modelFor(job.job_type) || "unknown",
+    image_url: imageUrl,
+    status: "generated",
+    approved: false,
+  }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,status,approved,created_at,updated_at").single();
+  if (insert.error) throw new Error("SCENE_IMAGE_PERSIST_FAILED: " + insert.error.message);
+  return insert.data;
+}
+
 function terminalState(response: Response, data: any) {
   if (!response.ok) return "failed";
   const status = String(data?.status || data?.state || "").toLowerCase();
@@ -158,9 +194,10 @@ async function run(db: any, job: any) {
     if (state === "failed") {
       await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena rejected generation."), result.data);
     } else if (state === "completed") {
+      const persisted = await persistSceneImage(db, job, result.data);
       await db.from("generation_jobs").update({
         status: "completed",
-        output: { arena_request_id: requestId, arena_response: result.data, bridge_contract: "2.0" },
+        output: { arena_request_id: requestId, arena_response: result.data, bridge_contract: "2.0", scene_image_asset: persisted || null },
       }).eq("id", job.id).eq("status", "processing");
     } else {
       const upstreamJobId = String(result.data?.job_id || result.data?.provider_job_id || result.data?.id || "").trim();
