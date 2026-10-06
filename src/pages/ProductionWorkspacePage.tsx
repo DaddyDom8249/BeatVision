@@ -4,6 +4,7 @@ import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
+const imageFields = "id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,status,approved,created_at,updated_at";
 
 function time(seconds: number) {
   const total = Math.max(0, Math.floor(seconds));
@@ -32,6 +33,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [image, setImage] = useState<any>(null);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -53,6 +56,12 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       if (active) {
         setPlan(planResult.data as VisualPlan);
         setScenes((sceneResult.data ?? []) as VisualPlanScene[]);
+        const firstScene = (sceneResult.data ?? [])[0];
+        if (firstScene) {
+          const imageResult = await supabase.from("scene_image_assets").select(imageFields).eq("scene_id", firstScene.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+          if (imageResult.error) { if (active) setError(imageResult.error.message); }
+          else if (active) setImage(imageResult.data ?? null);
+        }
         setLoading(false);
       }
     })();
@@ -60,7 +69,42 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   }, [projectId]);
 
   const scene = scenes[selectedIndex] ?? null;
+
+  useEffect(() => {
+    let active = true;
+    if (!scene) { setImage(null); return () => { active = false; }; }
+    (async () => {
+      const result = await supabase.from("scene_image_assets").select(imageFields).eq("scene_id", scene.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (!active) return;
+      if (result.error) setError(result.error.message); else setImage(result.data ?? null);
+    })();
+    return () => { active = false; };
+  }, [scene?.id]);
   const productionText = useMemo(() => scene ? prompt(scene) : "", [scene]);
+
+  async function generateImage() {
+    if (!scene || !plan || plan.status !== "approved") return;
+    setGenerating(true); setError(null);
+    try {
+      const queued = await supabase.rpc("enqueue_scene_generation", { p_project_id: projectId, p_scene_id: scene.id, p_job_type: "scene_image" });
+      if (queued.error) throw queued.error;
+      const job = queued.data as { id: string };
+      const run = await supabase.functions.invoke("beatvision-generation", { body: { projectId, jobId: job.id, action: "run" } });
+      if (run.error) throw run.error;
+      const latest = await supabase.from("scene_image_assets").select(imageFields).eq("generation_job_id", job.id).maybeSingle();
+      if (latest.error) throw latest.error;
+      if (!latest.data) throw new Error("Generation completed without a persisted real image asset.");
+      setImage(latest.data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally { setGenerating(false); }
+  }
+
+  async function approveImage() {
+    if (!image || image.status !== "generated") return;
+    const result = await supabase.from("scene_image_assets").update({ status: "approved", approved: true }).eq("id", image.id).eq("status", "generated").select(imageFields).single();
+    if (result.error) setError(result.error.message); else setImage(result.data);
+  }
 
   async function copyBrief() {
     if (!productionText) return;
@@ -130,7 +174,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             <button className="secondary-button" disabled={selectedIndex === scenes.length - 1} onClick={() => setSelectedIndex((value) => Math.min(scenes.length - 1, value + 1))}>Next Scene</button>
           </div>
 
-          <div className="production-provider-note">
+          <div className="production-provider-note">\n            <span className="panel-label">SCENE IMAGE</span>\n            {image?.image_url ? <img src={image.image_url} alt={scene.title} style={{ width: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 12 }} /> : <p>No real scene image exists yet. Generation is only enabled from the approved Scene Direction.</p>}\n            <div className="production-actions">\n              <button className="primary-button" disabled={generating} onClick={() => void generateImage()}>{generating ? "Generating…" : image ? "Regenerate Scene Image" : "Generate Scene Image"}</button>\n              {image?.status === "generated" && <button className="secondary-button" onClick={() => void approveImage()}>Approve Image</button>}\n              {image?.status === "approved" && <span className="style-lock-badge">IMAGE APPROVED</span>}\n            </div>\n          </div>\n\n          <div className="production-provider-note">
             <span className="panel-label">GENERATION</span>
             <h3>Provider generation is the next integration point.</h3>
             <p>This workspace is the approved creative source. Image/video generation should be connected here through an authenticated provider rather than using placeholder or fake generation controls.</p>
