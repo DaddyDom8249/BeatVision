@@ -14,13 +14,23 @@ function admin() {
 
 async function authenticate(req: Request) {
   const token = req.headers.get("Authorization") || "";
-  if (!/^Bearer\s+\S+$/i.test(token)) throw new Error("Authentication required.");
+  if (!/^Bearer\s+\S+$/i.test(token)) throw new HttpError(401, "UNAUTHENTICATED", "Authentication required.");
   const client = createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"), {
     global: { headers: { Authorization: token } },
   });
   const { data, error } = await client.auth.getUser();
-  if (error || !data.user) throw new Error("Invalid or expired authentication session.");
+  if (error || !data.user) throw new HttpError(401, "UNAUTHENTICATED", "Invalid or expired authentication session.");
   return data.user.id;
+}
+
+class HttpError extends Error {
+  status: number;
+  code: string;
+  constructor(status: number, code: string, message: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
 }
 
 function arenaBase() {
@@ -351,6 +361,9 @@ Deno.serve(async (req) => {
     const result = action === "poll" ? await poll(db, job.data) : await run(db, job.data);
     return json({ job: result });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return json({ error: { code: error.code, message: error.message } }, error.status);
+    }
     return json({ error: { code: "GENERATION_CONTROLLER_FAILED", message: error instanceof Error ? error.message : String(error) } }, 500);
   }
 });
