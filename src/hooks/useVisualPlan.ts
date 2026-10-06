@@ -112,8 +112,7 @@ export function useVisualPlan(projectId: string) {
       const defaultContinuity = firstText(styleBible.continuity_rules) || firstText(world.continuity_rules) || "Preserve all locked World and Style continuity.";
 
       const rows = windows.map((window, index) => ({
-        visual_plan_id: planResult.data.id, project_id: projectId, world_report_id: world.id,
-        style_bible_id: styleBible.id, song_id: song.id, scene_number: index + 1,
+        scene_number: index + 1,
         section_index: window.section_index, start_time: window.start_time, end_time: window.end_time,
         title: `Section ${index + 1}`,
         visual_direction: "Translate this musical section into the confirmed World without introducing a new visual language.",
