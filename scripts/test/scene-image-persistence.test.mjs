@@ -105,7 +105,7 @@ test("motion clip persistence contract exists", () => {
   assert.ok(motionMigration.includes("motion_clip_assets_job_unique"));
   assert.ok(motionMigration.includes("MOTION_CLIP_ASSET_LINEAGE_INVALID"));
   assert.ok(
-    motionMigration.includes("job_status not in ('processing', 'completed')")
+    motionMigration.includes("job_status not in ('processing','completed')")
   );
   assert.ok(
     motionMigration.includes(
