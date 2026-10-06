@@ -23,6 +23,7 @@ const FUNCTION_PATH = fileURLToPath(
 const SUPABASE_URL = "https://stub.supabase.co";
 const USER_ID = "user-owner-1";
 const PROJECT_ID = "project-1";
+const AUDIO_REVISION = "audio-revision-1";
 const JSR_IMPORT = 'import "jsr:@supabase/functions-js/edge-runtime.d.ts";';
 const REMOTE_IMPORT = 'from "https://esm.sh/@supabase/supabase-js@2"';
 
