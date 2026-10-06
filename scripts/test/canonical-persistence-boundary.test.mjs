@@ -14,9 +14,9 @@ const motionMigration = fs.readFileSync(
   "utf8",
 );
 
-assert.match(controller, /from("scene_image_assets")/g);
-assert.match(controller, /from("motion_clip_assets")/g);
-assert.doesNotMatch(controller, /from("scene_images")|from("motion_clips")/);
+assert.match(controller, /from\("scene_image_assets"\)/);
+assert.match(controller, /from\("motion_clip_assets"\)/);
+assert.doesNotMatch(controller, /from\("scene_images"\)|from\("motion_clips"\)/);
 
 assert.match(imageMigration, /create table if not exists public\.scene_image_assets/);
 assert.match(motionMigration, /create table if not exists public\.motion_clip_assets/);
