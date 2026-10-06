@@ -180,13 +180,15 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
   async function approveMotion() {
     if (!motion || motion.status !== "generated" || !motion.video_url) return;
-    const result = await supabase.from("motion_clip_assets").update({ status: "approved", approved: true }).eq("id", motion.id).eq("status", "generated").select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").single();
+    setError(null);
+    const result = await supabase.rpc("approve_motion_clip_asset", { p_asset_id: motion.id });
     if (result.error) setError(result.error.message); else setMotion(result.data);
   }
 
   async function approveImage() {
-    if (!image || image.status !== "generated") return;
-    const result = await supabase.from("scene_image_assets").update({ status: "approved", approved: true }).eq("id", image.id).eq("status", "generated").select(imageFields).single();
+    if (!image || image.status !== "generated" || !image.image_url) return;
+    setError(null);
+    const result = await supabase.rpc("approve_scene_image_asset", { p_asset_id: image.id });
     if (result.error) setError(result.error.message); else setImage(result.data);
   }
 
