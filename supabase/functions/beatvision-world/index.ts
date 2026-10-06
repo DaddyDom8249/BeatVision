@@ -20,11 +20,15 @@ function adminClient() {
   return createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"));
 }
 
-async function getUser(req: Request) {
+function bearerToken(req: Request) {
   const auth = req.headers.get("Authorization") || "";
   const token = auth.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) throw new HttpError("UNAUTHENTICATED", 401, "Authentication required.");
+  return token;
+}
 
+async function getUser(req: Request) {
+  const token = bearerToken(req);
   const response = await fetch(env("SUPABASE_URL") + "/auth/v1/user", {
     headers: {
       apikey: env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"),
@@ -35,7 +39,29 @@ async function getUser(req: Request) {
   if (!response.ok) throw new HttpError("UNAUTHENTICATED", 401, "Invalid or expired authentication session.");
   const user = await response.json();
   if (!user?.id) throw new HttpError("UNAUTHENTICATED", 401, "Authenticated user could not be established.");
-  return String(user.id);
+  return { id: String(user.id), token };
+}
+
+function userClient(accessToken: string) {
+  return createClient(
+    env("SUPABASE_URL"),
+    env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"),
+    { global: { headers: { Authorization: "Bearer " + accessToken } } },
+  );
+}
+
+function rpcHttpError(action: string, error: any) {
+  if (error?.code === "42501") {
+    return new HttpError("NOT_FOUND", 404, "Project not found.");
+  }
+  if (error?.code === "PGRST202") {
+    return new Error("World atomic RPC is not deployed.");
+  }
+  return new HttpError(
+    "WORLD_" + action.toUpperCase() + "_FAILED",
+    409,
+    String(error?.message || "World database operation failed."),
+  );
 }
 
 function cleanText(value: unknown, max = 6000) {
@@ -177,7 +203,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsFor(req) });
 
   try {
-    const userId = await getUser(req);
+    const authUser = await getUser(req);
+    const userId = authUser.id;
+    const caller = userClient(authUser.token);
     const body = req.method === "GET" ? {} : await req.json().catch(() => ({}));
     const projectId =
       String(body.projectId || body.project_id || "") ||
@@ -226,65 +254,30 @@ Deno.serve(async (req) => {
         const merged = mergeWorldForValidation(existing, edits);
         validateWorld(merged);
 
-        const nextRevision = Number(existing.revision_number) + 1;
-        const revisionPayload: Record<string, unknown> = {
-          project_id: projectId,
-          world_id: existing.world_id,
-          revision_number: nextRevision,
-          status: "completed",
-          mood: merged.mood,
-          emotional_arc: merged.emotional_arc,
-          visual_language: merged.visual_language,
-          cinematography: merged.cinematography,
-          environments: merged.environments,
-          color_lighting: merged.color_lighting,
-          motifs: merged.motifs,
-          atmosphere: merged.atmosphere,
-          movement: merged.movement,
-          continuity_rules: merged.continuity_rules,
-          immutable_continuity: merged.immutable_continuity,
-          raw_report: {
-            ...(existing.raw_report && typeof existing.raw_report === "object" ? existing.raw_report : {}),
-            parent_world_report_id: existing.id,
-            parent_revision_number: existing.revision_number,
-            artist_edits: { ...edits },
-            revised_at: new Date().toISOString(),
+        const { data: revision, error: revisionError } = await caller.rpc(
+          "create_world_revision_atomic",
+          {
+            p_project_id: projectId,
+            p_world: merged,
+            p_artist_edits: edits,
           },
-          provider: existing.provider,
-          provider_request_id: existing.provider_request_id,
-          error_code: null,
-          error_message: null,
-          confirmed_at: null,
-        };
-
-        const { data: revision, error: revisionError } = await admin
-          .from("world_reports")
-          .insert(revisionPayload)
-          .select("*")
-          .single();
+        );
 
         if (revisionError) {
-          if (revisionError.code === "23505") {
-            throw new HttpError("WORLD_REVISION_CONFLICT", 409, "A newer World revision already exists. Reload the World and create the revision again.");
-          }
-          throw new Error(revisionError.message);
+          throw rpcHttpError("revision", revisionError);
         }
 
-        const { error: projectUpdateError } = await admin
-          .from("projects")
-          .update({ world_report_id: revision.id, world_confirmed_at: null })
-          .eq("id", projectId);
-
-        if (projectUpdateError) throw new Error(projectUpdateError.message);
+        if (!revision) {
+          throw new Error("World revision RPC returned no revision.");
+        }
 
         return json({
           report: revision,
           action: "create_revision",
           ok: true,
-          revision_number: nextRevision,
+          revision_number: revision.revision_number,
           parent_world_report_id: existing.id,
         });
-      }
 
       if (body.action === "save_edits") {
         if (existing.confirmed_at) {
@@ -348,24 +341,18 @@ Deno.serve(async (req) => {
 
       if (existing.confirmed_at) return json({ report: existing });
 
-      const now = new Date().toISOString();
-      const { data: confirmed, error } = await admin
-        .from("world_reports")
-        .update({ confirmed_at: now })
-        .eq("id", existing.id)
-        .eq("project_id", projectId)
-        .is("confirmed_at", null)
-        .select("*")
-        .single();
+      const { data: confirmed, error: confirmError } = await caller.rpc(
+        "confirm_world_atomic",
+        { p_project_id: projectId },
+      );
 
-      if (error) throw new HttpError("WORLD_CONFIRM_CONFLICT", 409, "World was already confirmed or changed concurrently. Reload the World.");
+      if (confirmError) {
+        throw rpcHttpError("confirm", confirmError);
+      }
 
-      const { error: projectUpdateError } = await admin
-        .from("projects")
-        .update({ world_report_id: existing.id, world_confirmed_at: now })
-        .eq("id", projectId);
-
-      if (projectUpdateError) throw new Error(projectUpdateError.message);
+      if (!confirmed) {
+        throw new Error("World confirmation RPC returned no report.");
+      }
 
       return json({ report: confirmed });
     }

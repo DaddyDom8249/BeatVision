@@ -429,3 +429,23 @@ test("the same edit can fill an empty field in one request", async () => {
   assert.equal(db.world_reports[0].atmosphere, "wet neon haze");
   assert.deepEqual(db.world_reports[0].mood, { tone: "warm" });
 });
+
+test("P0-B atomic transition contract: confirm and create_revision must delegate state changes to database RPCs", async () => {
+  const source = await readFile(FUNCTION_PATH, "utf8");
+  assert.match(source, /rpc\(\s*"confirm_world_atomic"/);
+  assert.match(source, /rpc\(\s*"create_world_revision_atomic"/);
+
+  const confirmStart = source.indexOf('if (body.action !== "confirm")');
+  const confirmEnd = source.indexOf('if (existing?.confirmed_at)', confirmStart);
+  assert.ok(confirmStart >= 0 && confirmEnd > confirmStart);
+  const confirmBlock = source.slice(confirmStart, confirmEnd);
+  assert.doesNotMatch(confirmBlock, /\.from\("world_reports"\)\.update/);
+  assert.doesNotMatch(confirmBlock, /\.from\("projects"\)\.update/);
+
+  const revisionStart = source.indexOf('if (body.action === "create_revision")');
+  const revisionEnd = source.indexOf('if (body.action === "save_edits")', revisionStart);
+  assert.ok(revisionStart >= 0 && revisionEnd > revisionStart);
+  const revisionBlock = source.slice(revisionStart, revisionEnd);
+  assert.doesNotMatch(revisionBlock, /\.from\("world_reports"\)\.insert/);
+  assert.doesNotMatch(revisionBlock, /\.from\("projects"\)\.update/);
+});
