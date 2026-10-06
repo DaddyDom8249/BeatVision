@@ -181,6 +181,16 @@ async function persistSceneImage(db: any, job: any, responseData: any) {
   return insert.data;
 }
 
+async function persistFinalVideo(db: any, job: any, responseData: any) {
+  if (job.job_type !== "assembly") return;
+  const videoUrl = extractVideoUrl(responseData);
+  if (!videoUrl) throw new Error("FINAL_VIDEO_OUTPUT_MISSING: Shotstack completed without a real video URL.");
+  const duration = Number(responseData?.result?.duration_seconds || responseData?.duration_seconds || job.input_snapshot?.plan?.duration_seconds || 0);
+  const finalInsert = await db.from("final_videos").insert({ project_id: job.project_id, title: String(job.input_snapshot?.plan?.title || "BeatVision Final Video"), video_url: videoUrl, preview_video_url: videoUrl, audio_file: String(job.input_snapshot?.audio_path || ""), duration: Number.isFinite(duration) && duration > 0 ? duration : null, format: "mp4", quality: "hd", render_status: "complete", downloadable: false, segment_count: Array.isArray(job.input_snapshot?.scenes) ? job.input_snapshot.scenes.length : null }).select("id,project_id,video_url,preview_video_url,duration,format,quality,render_status,downloadable,segment_count,created_at,updated_at").single();
+  if (finalInsert.error) throw new Error("FINAL_VIDEO_PERSIST_FAILED: " + finalInsert.error.message);
+  return finalInsert.data;
+}
+
 async function persistMotionClip(db: any, job: any, responseData: any) {
   if (job.job_type !== "scene_motion") return;
   const videoUrl = extractVideoUrl(responseData);
@@ -249,12 +259,14 @@ async function run(db: any, job: any) {
     if (state === "failed") {
       await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena rejected generation."), result.data);
     } else if (state === "completed") {
-      const persistedImage = await persistSceneImage(db, job, result.data);
-      const persistedMotion = await persistMotionClip(db, job, result.data);
-      await db.from("generation_jobs").update({
-        status: "completed",
-        output: { arena_request_id: requestId, arena_response: result.data, bridge_contract: "2.0", scene_image_asset: persistedImage || null, motion_clip_asset: persistedMotion || null },
-      }).eq("id", job.id).eq("status", "processing");
+      if (job.job_type === "assembly") {
+        const finalVideo = await persistFinalVideo(db, job, result.data);
+        await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: result.data, bridge_contract: "2.0", final_video: finalVideo } }).eq("id", job.id).eq("status", "processing");
+      } else {
+        const persistedImage = await persistSceneImage(db, job, result.data);
+        const persistedMotion = await persistMotionClip(db, job, result.data);
+        await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: result.data, bridge_contract: "2.0", scene_image_asset: persistedImage || null, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing");
+      }
     } else {
       const upstreamJobId = job.job_type === "assembly"
         ? String(extractRenderId(result.data) || "").trim()
@@ -299,12 +311,8 @@ async function poll(db: any, job: any) {
         const persistedMotion = await persistMotionClip(db, job, result.data);
         await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing");
       } else if (job.job_type === "assembly") {
-        const videoUrl = extractVideoUrl(result.data);
-        if (!videoUrl) throw new Error("FINAL_VIDEO_OUTPUT_MISSING: Shotstack completed without a real video URL.");
-        const duration = Number(result.data?.result?.duration_seconds || result.data?.duration_seconds || job.input_snapshot?.plan?.duration_seconds || 0);
-        const finalInsert = await db.from("final_videos").insert({ project_id: job.project_id, title: String(job.input_snapshot?.plan?.title || "BeatVision Final Video"), video_url: videoUrl, preview_video_url: videoUrl, audio_file: String(job.input_snapshot?.audio_path || ""), duration: Number.isFinite(duration) && duration > 0 ? duration : null, format: "mp4", quality: "hd", render_status: "complete", downloadable: false, segment_count: Array.isArray(job.input_snapshot?.scenes) ? job.input_snapshot.scenes.length : null }).select("id,project_id,video_url,preview_video_url,duration,format,quality,render_status,downloadable,segment_count,created_at,updated_at").single();
-        if (finalInsert.error) throw new Error("FINAL_VIDEO_PERSIST_FAILED: " + finalInsert.error.message);
-        await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, final_video: finalInsert.data } }).eq("id", job.id).eq("status", "processing");
+        const finalVideo = await persistFinalVideo(db, job, result.data);
+        await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, final_video: finalVideo } }).eq("id", job.id).eq("status", "processing");
       }
     } else {
       await db.from("generation_jobs").update({
