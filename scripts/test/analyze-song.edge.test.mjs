@@ -23,6 +23,7 @@ const FUNCTION_PATH = fileURLToPath(
 const SUPABASE_URL = "https://stub.supabase.co";
 const USER_ID = "user-owner-1";
 const PROJECT_ID = "project-1";
+const AUDIO_REVISION = "audio-revision-1";
 const JSR_IMPORT = 'import "jsr:@supabase/functions-js/edge-runtime.d.ts";';
 const REMOTE_IMPORT = 'from "https://esm.sh/@supabase/supabase-js@2"';
 
@@ -131,7 +132,7 @@ after(async () => {
 test("reads audio from the `songs` bucket production actually uses", async () => {
   storageBucketCalls.length = 0;
   const { handler } = await bootFunction();
-  const response = await call(handler, { projectId: PROJECT_ID });
+  const response = await call(handler, { projectId: PROJECT_ID, audioRevision: AUDIO_REVISION });
 
   assert.equal(response.status, 200);
   const body = await response.json();
@@ -151,7 +152,7 @@ test("reads audio from the `songs` bucket production actually uses", async () =>
 
 test("failed transcription still leaves local analysis intact and reports the error", async () => {
   const { handler } = await bootFunction();
-  const response = await call(handler, { projectId: PROJECT_ID });
+  const response = await call(handler, { projectId: PROJECT_ID, audioRevision: AUDIO_REVISION });
   const body = await response.json();
 
   assert.equal(response.status, 200);
@@ -169,7 +170,7 @@ test("missing Authorization header returns 401, not 500", async () => {
 
 test("rejected session returns 401, not 500", async () => {
   const { handler } = await bootFunction({ authUserId: null });
-  const response = await call(handler, { projectId: PROJECT_ID });
+  const response = await call(handler, { projectId: PROJECT_ID, audioRevision: AUDIO_REVISION });
 
   assert.equal(response.status, 401);
   assert.equal((await response.json()).code, "UNAUTHENTICATED");
@@ -179,7 +180,7 @@ test("another user's project is refused before any storage read", async () => {
   storageBucketCalls.length = 0;
   const { handler } = await bootFunction({ authUserId: "someone-else" });
 
-  const response = await call(handler, { projectId: PROJECT_ID });
+  const response = await call(handler, { projectId: PROJECT_ID, audioRevision: AUDIO_REVISION });
   assert.equal(response.status, 403);
   assert.equal(storageBucketCalls.length, 0, "no storage access for a non-owner");
 });
@@ -188,4 +189,15 @@ test("non-POST requests are rejected", async () => {
   const { handler } = await bootFunction();
   const response = await call(handler, { projectId: PROJECT_ID }, { method: "GET" });
   assert.equal(response.status, 405);
+});
+
+test("stale audio revisions are rejected before storage access", async () => {
+  storageBucketCalls.length = 0;
+  const { handler, db } = await bootFunction();
+  const response = await call(handler, { projectId: PROJECT_ID, audioRevision: "stale-revision" });
+
+  assert.equal(response.status, 409);
+  assert.match((await response.json()).error, /audio track changed/i);
+  assert.equal(storageBucketCalls.length, 0);
+  assert.equal(db.songs[0].analysis_audio_revision, null);
 });
