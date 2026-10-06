@@ -56,7 +56,7 @@ begin
   end if;
 
   if old.status = 'draft' and new.status = 'approved' then
-    if new.approved_at is not null and new.approved_at <> old.approved_at then
+    if new.approved_at is distinct from old.approved_at then
       raise exception 'APPROVED_AT_DATABASE_AUTHORITY'
         using errcode = '23514',
               detail = 'approved_at is assigned by the database at approval time.';
