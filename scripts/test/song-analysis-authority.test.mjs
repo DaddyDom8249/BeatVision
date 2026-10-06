@@ -29,7 +29,7 @@ test("song client carries and uses the current audio revision", () => {
   assert.match(songType, /audio_revision: string;/);
   assert.match(songType, /analysis_audio_revision: string \| null;/);
   assert.match(songPage, /const revision: string \| null = song\.audio_revision/);
-  assert.match(songPage, /\.eq\("audio_revision", revision\)/);
+  assert.match(songPage, /\.eq\("audio_revision",\s*revision\)/);
   assert.match(songPage, /analysis_audio_revision: revision/);
 });
 
