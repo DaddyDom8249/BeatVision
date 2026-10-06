@@ -100,14 +100,10 @@ export function useVisualPlan(projectId: string) {
         continuity_rules: styleBible.continuity_rules ?? world.continuity_rules,
       };
 
-      const planResult = await supabase.from("visual_plans").insert({
-        project_id: projectId, world_report_id: world.id, style_bible_id: styleBible.id, song_id: song.id,
-        title: "Visual Plan", duration_seconds: duration,
-        creative_thesis: firstText(world.emotional_arc) || firstText(world.mood),
-        global_direction: globalDirection,
-      }).select(planFields).single();
-      if (planResult.error) throw planResult.error;
-      createdPlanId = planResult.data.id;
+      const lockResult = await supabase.rpc("create_vision_lock", { p_project_id: projectId });
+      if (lockResult.error) throw lockResult.error;
+      const visionLock = lockResult.data as { id?: string } | null;
+      if (!visionLock?.id) throw new Error("Vision Lock creation returned no lock id.");
 
       const defaultLocation = firstText(world.environments) || firstText(world.atmosphere) || "World-defined environment";
       const defaultMood = firstText(world.mood) || "World-defined emotional state";
@@ -127,9 +123,23 @@ export function useVisualPlan(projectId: string) {
         continuity_notes: defaultContinuity,
       }));
 
-      const sceneResult = await supabase.from("visual_plan_scenes").insert(rows).select(sceneFields);
+      const atomicPlanResult = await supabase.rpc("create_visual_plan", {
+        p_project_id: projectId,
+        p_vision_lock_id: visionLock.id,
+        p_duration_seconds: duration,
+        p_creative_thesis: firstText(world.emotional_arc) || firstText(world.mood),
+        p_global_direction: globalDirection,
+        p_scenes: rows.map(({ visual_plan_id: _ignored, project_id: _project, world_report_id: _world, style_bible_id: _style, song_id: _song, ...scene }) => scene),
+      });
+      if (atomicPlanResult.error) throw atomicPlanResult.error;
+      const createdPlan = atomicPlanResult.data as VisualPlan | null;
+      if (!createdPlan?.id) throw new Error("Atomic Visual Plan creation returned no plan id.");
+      createdPlanId = createdPlan.id;
+
+      const sceneResult = await supabase.from("visual_plan_scenes").select(sceneFields)
+        .eq("visual_plan_id", createdPlan.id).order("scene_number", { ascending: true });
       if (sceneResult.error) throw sceneResult.error;
-      setPlan(planResult.data as VisualPlan);
+      setPlan(createdPlan);
       setScenes((sceneResult.data ?? []) as VisualPlanScene[]);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Unable to create Visual Plan.";
