@@ -12,7 +12,8 @@ test("P0-C creates a database-authoritative current World lineage guard", async 
   assert.match(sql, /v_project\.world_confirmed_at is null/);
   assert.match(sql, /world_reports wr/);
   assert.match(sql, /wr\.confirmed_at is not null/);
-  assert.match(sql, /_current_world_guard/);\n  assert.match(sql, /create trigger/);
+  assert.match(sql, /_current_world_guard/);
+  assert.match(sql, /create trigger/);
 });
 
 test("P0-C makes approval one-way and approved_at database-owned", async () => {
