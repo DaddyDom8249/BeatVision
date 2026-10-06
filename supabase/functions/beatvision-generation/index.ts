@@ -47,6 +47,32 @@ async function bridgePayload(db: any, job: any) {
   const style = lock.style_bible || {};
   const analysis = song.analysis && typeof song.analysis === "object" ? song.analysis : {};
   const scene = snapshot.scene;
+  const duration = Number(analysis.duration_seconds ?? snapshot.plan?.duration_seconds ?? 0);
+  if (!Number.isFinite(duration) || duration <= 0) throw new Error("Frozen song duration is missing.");
+
+  if (job.job_type === "assembly") {
+    const scenes = Array.isArray(snapshot.scenes) ? snapshot.scenes : [];
+    const motionClips = Array.isArray(snapshot.motion_clips) ? snapshot.motion_clips : [];
+    if (!scenes.length) throw new Error("ASSEMBLY_SCENES_MISSING: No approved master timeline scenes are frozen.");
+    if (motionClips.length !== scenes.length) throw new Error("ASSEMBLY_MOTION_COVERAGE_INVALID: Approved motion does not cover every scene.");
+    const audioPath = String(snapshot.audio_path || "").trim();
+    if (!audioPath) throw new Error("ASSEMBLY_AUDIO_MISSING: Frozen song audio path is missing.");
+    const signed = await db.storage.from("songs").createSignedUrl(audioPath, 3600);
+    if (signed.error || !signed.data?.signedUrl) throw new Error("ASSEMBLY_AUDIO_SIGNING_FAILED: " + (signed.error?.message || "No signed URL returned."));
+    return {
+      source: { application: "beatvision", contract: "2.0" },
+      project: { id: job.project_id },
+      song: { id: song.id, title: song.title, artist: song.artist, lyrics: song.lyrics, duration_seconds: duration },
+      analysis: { ...analysis, analysis_method: analysis.analysis_method },
+      world: { ...world, version: String(world.id || snapshot.world_report_id || "world") + ":r" + String(lock.revision_number || snapshot.vision_revision || 1) },
+      style: { ...style, version: String(style.id || lock.style_bible_id || "style") },
+      vision_lock: { ...lock, locked: true, version: String(lock.id || job.vision_lock_id) },
+      storyboard: { songDuration: duration, song_duration: duration, scenes: scenes.map((item: any) => ({ ...item, scene: Number(item.scene_number), startTime: Number(item.start_time), endTime: Number(item.end_time) })), visual_beats: scenes.map((item: any) => ({ ...item, scene: Number(item.scene_number), startTime: Number(item.start_time), endTime: Number(item.end_time) })) },
+      motion: { clips: motionClips },
+      audio_data: signed.data.signedUrl,
+      generation: { cost_class: "free", model: null, idempotency_key: job.idempotency_key, job_id: job.id },
+    };
+  }
 
   if (!scene) throw new Error("Frozen Scene Direction is missing.");
 
@@ -57,9 +83,6 @@ async function bridgePayload(db: any, job: any) {
     if (!imageResult.data?.image_url || !/^https?:\/\//i.test(String(imageResult.data.image_url))) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion requires an approved real scene image.");
     images = { images: [{ image_url: String(imageResult.data.image_url), scene_id: String(imageResult.data.scene_id), approved: true }] };
   }
-  const duration = Number(analysis.duration_seconds ?? snapshot.plan?.duration_seconds ?? 0);
-  if (!Number.isFinite(duration) || duration <= 0) throw new Error("Frozen song duration is missing.");
-
   return {
     source: { application: "beatvision", contract: "2.0" },
     project: { id: job.project_id },
@@ -128,6 +151,11 @@ function extractImageUrl(data: any) {
   return candidates.find((value) => typeof value === "string" && /^https?:\/\//i.test(value.trim()))?.trim() || null;
 }
 
+function extractRenderId(data: any) {
+  const candidates = [data?.render_id, data?.renderId, data?.result?.render_id, data?.result?.renderId, data?.response?.id];
+  return candidates.find((value) => typeof value === "string" && value.trim())?.trim() || null;
+}
+
 function extractVideoUrl(data: any) {
   const candidates = [data?.video_url,data?.videoUrl,data?.url,data?.result?.video_url,data?.result?.videoUrl,data?.result?.url,data?.result?.video?.url,data?.video?.url];
   return candidates.find((value) => typeof value === "string" && /^https?:\/\//i.test(value.trim()))?.trim() || null;
@@ -151,6 +179,16 @@ async function persistSceneImage(db: any, job: any, responseData: any) {
   }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,status,approved,created_at,updated_at").single();
   if (insert.error) throw new Error("SCENE_IMAGE_PERSIST_FAILED: " + insert.error.message);
   return insert.data;
+}
+
+async function persistFinalVideo(db: any, job: any, responseData: any) {
+  if (job.job_type !== "assembly") return;
+  const videoUrl = extractVideoUrl(responseData);
+  if (!videoUrl) throw new Error("FINAL_VIDEO_OUTPUT_MISSING: Shotstack completed without a real video URL.");
+  const duration = Number(responseData?.result?.duration_seconds || responseData?.duration_seconds || job.input_snapshot?.plan?.duration_seconds || 0);
+  const finalInsert = await db.from("final_videos").insert({ project_id: job.project_id, title: String(job.input_snapshot?.plan?.title || "BeatVision Final Video"), video_url: videoUrl, preview_video_url: videoUrl, audio_file: String(job.input_snapshot?.audio_path || ""), duration: Number.isFinite(duration) && duration > 0 ? duration : null, format: "mp4", quality: "hd", render_status: "complete", downloadable: false, segment_count: Array.isArray(job.input_snapshot?.scenes) ? job.input_snapshot.scenes.length : null }).select("id,project_id,video_url,preview_video_url,duration,format,quality,render_status,downloadable,segment_count,created_at,updated_at").single();
+  if (finalInsert.error) throw new Error("FINAL_VIDEO_PERSIST_FAILED: " + finalInsert.error.message);
+  return finalInsert.data;
 }
 
 async function persistMotionClip(db: any, job: any, responseData: any) {
@@ -182,8 +220,8 @@ async function setFailed(db: any, id: string, message: string, detail?: unknown)
 }
 
 async function run(db: any, job: any) {
-  if (!["scene_image", "scene_motion"].includes(String(job.job_type))) {
-    throw new Error("GENERATION_JOB_TYPE_NOT_SUPPORTED: only scene_image and scene_motion are controller-backed.");
+  if (!["scene_image", "scene_motion", "assembly"].includes(String(job.job_type))) {
+    throw new Error("GENERATION_JOB_TYPE_NOT_SUPPORTED: only scene_image, scene_motion, and assembly are controller-backed.");
   }
   if (job.status !== "queued") return job;
 
@@ -214,21 +252,25 @@ async function run(db: any, job: any) {
   job = processing.data;
 
   try {
-    const path = job.job_type === "scene_image" ? "/v2/scene-image" : "/v2/animate";
+    const path = job.job_type === "scene_image" ? "/v2/scene-image" : job.job_type === "scene_motion" ? "/v2/animate" : "/v2/assemble";
     const result = await arena(path, "POST", await bridgePayload(db, job), requestId);
     const state = terminalState(result.response, result.data);
 
     if (state === "failed") {
       await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena rejected generation."), result.data);
     } else if (state === "completed") {
-      const persistedImage = await persistSceneImage(db, job, result.data);
-      const persistedMotion = await persistMotionClip(db, job, result.data);
-      await db.from("generation_jobs").update({
-        status: "completed",
-        output: { arena_request_id: requestId, arena_response: result.data, bridge_contract: "2.0", scene_image_asset: persistedImage || null, motion_clip_asset: persistedMotion || null },
-      }).eq("id", job.id).eq("status", "processing");
+      if (job.job_type === "assembly") {
+        const finalVideo = await persistFinalVideo(db, job, result.data);
+        await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: result.data, bridge_contract: "2.0", final_video: finalVideo } }).eq("id", job.id).eq("status", "processing");
+      } else {
+        const persistedImage = await persistSceneImage(db, job, result.data);
+        const persistedMotion = await persistMotionClip(db, job, result.data);
+        await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: result.data, bridge_contract: "2.0", scene_image_asset: persistedImage || null, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing");
+      }
     } else {
-      const upstreamJobId = String(result.data?.job_id || result.data?.provider_job_id || result.data?.id || "").trim();
+      const upstreamJobId = job.job_type === "assembly"
+        ? String(extractRenderId(result.data) || "").trim()
+        : String(result.data?.job_id || result.data?.provider_job_id || result.data?.id || "").trim();
       await db.from("generation_jobs").update({
         output: {
           arena_request_id: requestId,
@@ -252,11 +294,11 @@ async function poll(db: any, job: any) {
   const upstream = String(job.output?.upstream_job_id || "").trim();
   if (!upstream) throw new Error("Arena reported processing without a provider job id.");
 
-  // Compatibility only: the deployed Arena currently exposes v1 status routes.
-  // This detail is isolated here and can be removed when v2 status routes land.
   const path = job.job_type === "scene_motion"
     ? "/v1/video/animate/jobs/" + encodeURIComponent(upstream)
-    : null;
+    : job.job_type === "assembly"
+      ? "/v1/video/assemble/status/" + encodeURIComponent(upstream)
+      : null;
   if (!path) return job;
 
   try {
@@ -265,11 +307,13 @@ async function poll(db: any, job: any) {
     if (state === "failed") {
       await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena provider job failed."), result.data);
     } else if (state === "completed") {
-      const persistedMotion = await persistMotionClip(db, job, result.data);
-      await db.from("generation_jobs").update({
-        status: "completed",
-        output: { ...(job.output || {}), arena_status_response: result.data, motion_clip_asset: persistedMotion || null },
-      }).eq("id", job.id).eq("status", "processing");
+      if (job.job_type === "scene_motion") {
+        const persistedMotion = await persistMotionClip(db, job, result.data);
+        await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing");
+      } else if (job.job_type === "assembly") {
+        const finalVideo = await persistFinalVideo(db, job, result.data);
+        await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, final_video: finalVideo } }).eq("id", job.id).eq("status", "processing");
+      }
     } else {
       await db.from("generation_jobs").update({
         output: { ...(job.output || {}), arena_status_response: result.data, last_polled_at: new Date().toISOString() },
