@@ -490,3 +490,41 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Next highest-priority action:** Perform authenticated Song → World → Edit → Save → Confirm verification with a real user session; if that passes, implement Vision Lock persistence and UI.
 
 **Human action required:** None for the migration repair. An authenticated browser session is still required to claim the user-flow E2E verification.
+
+
+## 2026-10-06 — Hacker-grade production/schema repair loop
+**Task:** Continue from the prior autonomous repair state and audit repository, Vercel, and live Supabase together.
+
+**Confirmed findings:**
+- The connected Supabase production project is ACTIVE_HEALTHY.
+- Live migration history is ahead of GitHub main, through `20261006105059`; several applied migrations are absent from the repository.
+- Live `projects` uses canonical `owner_id`; all 28 existing projects have a non-null owner.
+- Live `songs` uses the `songs` storage bucket and 10/11 songs have audio plus completed analysis.
+- Live `songs.lyrics` and `songs.creative_direction` were NOT NULL even though those inputs are optional in the application contract. This was a confirmed runtime/schema mismatch.
+- The `songs` bucket was PUBLIC even though the analyzer creates signed URLs and the application treats song audio as private. Supabase documents that public buckets bypass retrieval access control.
+- `public.set_updated_at` had a mutable search_path security warning.
+- Security advisor after repair retains only the intentional `create_vision_lock` SECURITY DEFINER warning and leaked-password-protection warning.
+
+**Repairs applied live, non-destructively:**
+1. Set `storage.buckets.songs.public=false`.
+2. Made `songs.lyrics` nullable.
+3. Made `songs.creative_direction` nullable.
+4. Set `public.set_updated_at` search_path to `public`.
+
+**Repository repairs on branch `audit/hacker-grade-20261006`:**
+- Added `supabase/migrations/20261006111000_source_of_truth_reconciliation.sql` with idempotent owner/storage/schema hardening.
+- Hardened `20261003000000_phase3_production_ownership_storage_repair.sql` so a fresh replay can bootstrap `projects.owner_id` from the legacy `user_id` baseline before owner-based policies are created.
+- Added a hacker-grade audit workflow.
+
+**Verification:**
+- The Phase 3 migration SQL was executed inside a transaction and rolled back successfully against production schema.
+- The reconciliation migration SQL was executed inside a transaction and rolled back successfully against production schema.
+- Vercel deployment `dpl_DDiBN1vifJFy2y1TuH8EkKjrJxPz` built commit `f2045a6c0f970bb392adc2def29e12bd7a7e6314` successfully and is READY.
+- Vercel build: `npm install` succeeded, `tsc -b && vite build` succeeded, 94 modules transformed, final JS 527.40 kB. Only the normal Vite chunk-size warning remains.
+- Deployment root and SPA routes `/auth`, `/projects/new`, `/projects/test/song`, `/projects/test/world`, `/projects/test/style`, `/projects/test/visual-plan`, and `/projects/test/scenes` all return HTTP 200 from the deployed branch.
+- GitHub Actions did not expose workflow runs for the audit branch, so GitHub CI itself is UNVERIFIED. Vercel production-build verification is confirmed.
+
+**Important remaining drift:**
+- Live Supabase contains newer migrations and schema/function state not represented on GitHub main. This is the largest source-of-truth risk and must be reconciled before declaring the repository fully reproducible.
+- A second Vercel project named `beat-vision` has repeated ERROR deployments; `beat-vision-f8nn` is the currently healthy project receiving the audit branch. The failing legacy project must not be treated as the production deployment without explicit evidence.
+- Authenticated browser E2E is still UNVERIFIED because this environment has no user session available for a real Song → Analyze → World → Save → Confirm round trip.

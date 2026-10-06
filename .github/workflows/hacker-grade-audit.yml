@@ -1,0 +1,60 @@
+name: BeatVision Hacker Grade Audit
+on:
+  push:
+    branches:
+      - audit/hacker-grade-20261006
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Repository integrity
+        run: |
+          set -euo pipefail
+          test -f package.json
+          test -f tsconfig.json
+          test -f index.html
+          test -f vite.config.ts
+          test -d src
+          test -d supabase
+          test -d supabase/functions
+          test -d supabase/migrations
+      - name: Install
+        run: npm install
+      - name: TypeScript/Vite production build
+        run: npm run build
+      - name: Existing test suite
+        run: npm test
+      - name: Secret scan
+        run: |
+          set -euo pipefail
+          if git grep -nE '(sk-[A-Za-z0-9_-]{20,}|AIzaSy[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,}|Bearer[[:space:]]+[A-Za-z0-9._-]{20,})' -- ':!package-lock.json' ':!PROJECT_LOG.md'; then
+            echo 'Potential hard-coded credential detected.'
+            exit 1
+          fi
+      - name: Architecture invariants
+        run: |
+          set -euo pipefail
+          test -f supabase/functions/beatvision-world/index.ts
+          test -f supabase/functions/beatvision-analyze-song/index.ts
+          test -f supabase/migrations/20260930000000_phase1_project_song.sql
+          test -f supabase/migrations/20260930010000_phase2_world.sql
+          test -f supabase/migrations/20260930020000_phase3_style_world_assets.sql
+          test -f supabase/migrations/20261003120000_phase4_visual_plan.sql
+          test -f supabase/migrations/20261003121500_visual_plan_atomic_approval.sql
+      - name: Report
+        if: always()
+        run: |
+          echo "HACKER GRADE AUDIT COMPLETE"
+          git rev-parse HEAD
+          git status --short
