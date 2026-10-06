@@ -119,7 +119,7 @@ export function createStubClientFactory(db) {
             .filter((row) => row.project_id === args.p_project_id)
             .sort((a, b) => Number(b.revision_number) - Number(a.revision_number))[0];
 
-          if (!project) {
+          if (!project || project.owner_id !== db.__authUserId) {
             return Promise.resolve({ data: null, error: { code: "42501", message: "WORLD_PROJECT_NOT_FOUND_OR_FORBIDDEN" } });
           }
           if (!report || report.status !== "completed") {
@@ -140,7 +140,7 @@ export function createStubClientFactory(db) {
             ? db.world_reports.find((row) => row.id === project.world_report_id && row.project_id === args.p_project_id)
             : null;
 
-          if (!project) {
+          if (!project || project.owner_id !== db.__authUserId) {
             return Promise.resolve({ data: null, error: { code: "42501", message: "WORLD_PROJECT_NOT_FOUND_OR_FORBIDDEN" } });
           }
           if (!current || !current.confirmed_at || !project.world_confirmed_at) {
