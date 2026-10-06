@@ -6,6 +6,7 @@ export interface VisualPlan {
   world_report_id: string;
   style_bible_id: string;
   song_id: string;
+  vision_lock_id: string | null;
   status: VisualPlanStatus;
   title: string;
   duration_seconds: number | null;
