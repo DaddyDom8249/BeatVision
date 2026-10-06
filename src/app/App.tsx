@@ -9,7 +9,8 @@ import StudioPage from "../pages/StudioPage";
 import VisualPlanPage from "../pages/VisualPlanPage";
 import SceneProductionPage from "../pages/SceneProductionPage";
 import ProductionWorkspacePage from "../pages/ProductionWorkspacePage";
-import { capturePageview, initAnalytics } from "../lib/analytics";
+import { capturePageview, identifyUser, initAnalytics } from "../lib/analytics";
+import { supabase } from "../lib/supabase/client";
 
 function currentPath() { return window.location.pathname; }
 
@@ -23,6 +24,21 @@ export default function App() {
   useEffect(() => {
     capturePageview(path);
   }, [path]);
+
+  useEffect(() => {
+    let active = true;
+    void supabase.auth.getUser().then(({ data }) => {
+      if (active) identifyUser(data.user?.id);
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      identifyUser(session?.user?.id);
+    });
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
 
   useEffect(() => {
     const onPopState = () => setPath(currentPath());
