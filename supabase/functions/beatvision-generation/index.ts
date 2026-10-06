@@ -171,13 +171,13 @@ async function persistMotionClip(db: any, job: any, arenaResponse: any) {
   const visualPlanId = String(job.visual_plan_id || job.input_snapshot?.visual_plan_id || "").trim();
   if (!sceneId || !visualPlanId) throw new Error("Completed scene-motion job is missing frozen Scene/Visual Plan lineage.");
   const media = extractMotionClip(arenaResponse);
-  const existing = await db.from("motion_clips")
+  const existing = await db.from("motion_clip_assets")
     .select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved")
     .eq("generation_job_id", job.id)
     .maybeSingle();
   if (existing.error) throw new Error("Motion clip lookup failed: " + existing.error.message);
   if (existing.data) return existing.data;
-  const inserted = await db.from("motion_clips").insert({
+  const inserted = await db.from("motion_clip_assets").insert({
     project_id: job.project_id,
     visual_plan_id: visualPlanId,
     scene_id: sceneId,
@@ -201,7 +201,7 @@ async function persistSceneImage(db: any, job: any, arenaResponse: any) {
 
   const media = extractSceneImage(arenaResponse);
 
-  const existing = await db.from("scene_images")
+  const existing = await db.from("scene_image_assets")
     .select("id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,status,approved")
     .eq("generation_job_id", job.id)
     .maybeSingle();
@@ -209,7 +209,7 @@ async function persistSceneImage(db: any, job: any, arenaResponse: any) {
   if (existing.error) throw new Error("Scene image lookup failed: " + existing.error.message);
   if (existing.data) return existing.data;
 
-  const inserted = await db.from("scene_images").insert({
+  const inserted = await db.from("scene_image_assets").insert({
     project_id: job.project_id,
     visual_plan_id: visualPlanId,
     scene_id: sceneId,
