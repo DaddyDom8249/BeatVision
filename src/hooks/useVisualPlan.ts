@@ -128,7 +128,7 @@ export function useVisualPlan(projectId: string) {
         p_duration_seconds: duration,
         p_creative_thesis: firstText(world.emotional_arc) || firstText(world.mood),
         p_global_direction: globalDirection,
-        p_scenes: rows.map(({ visual_plan_id: _ignored, project_id: _project, world_report_id: _world, style_bible_id: _style, song_id: _song, ...scene }) => scene),
+        p_scenes: rows,
       });
       if (atomicPlanResult.error) throw atomicPlanResult.error;
       const createdPlan = atomicPlanResult.data as VisualPlan | null;
