@@ -40,6 +40,9 @@ function adminClient() {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  let analysisSongId: string | null = null;
+  let analysisRevision: string | null = null;
+  let admin: ReturnType<typeof adminClient> | null = null;
   try {
     if (req.method !== "POST") return json({ error: "POST required." }, 405);
     const userId = await getUser(req);
@@ -49,7 +52,7 @@ Deno.serve(async (req) => {
     if (!projectId) return json({ error: "projectId is required." }, 400);
     if (!requestedAudioRevision) return json({ error: "audioRevision is required." }, 400);
 
-    const admin = adminClient();
+    admin = adminClient();
     const { data: project, error: projectError } = await admin.from("projects")
       .select("id,owner_id").eq("id", projectId).maybeSingle();
     if (projectError) throw new Error(projectError.message);
@@ -59,6 +62,8 @@ Deno.serve(async (req) => {
       .select("id,audio_path,audio_revision,analysis").eq("project_id", projectId).maybeSingle();
     if (songError) throw new Error(songError.message);
     if (!song?.audio_path) return json({ error: "Save an audio track before analyzing it." }, 400);
+    analysisSongId = String(song.id);
+    analysisRevision = String(song.audio_revision || requestedAudioRevision);
     if (!song.audio_revision || String(song.audio_revision) !== requestedAudioRevision) {
       return json({ error: "The audio track changed before transcription completed. Reload the song and analyze the current track." }, 409);
     }
@@ -113,6 +118,15 @@ Deno.serve(async (req) => {
     if (error instanceof AuthError) {
       return json({ error: error.message, code: "UNAUTHENTICATED" }, error.status);
     }
+
+    if (admin && analysisSongId && analysisRevision) {
+      await admin.from("songs").update({
+        analysis_status: "failed",
+        analysis_audio_revision: analysisRevision,
+        analyzed_at: null
+      }).eq("id", analysisSongId).eq("audio_revision", analysisRevision);
+    }
+
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
 });
