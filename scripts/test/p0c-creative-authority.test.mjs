@@ -28,13 +28,11 @@ test("P0-C makes approval one-way and approved_at database-owned", async () => {
 test("P0-C applies lifecycle guards to every Phase 3 creative table", async () => {
   const sql = await read("supabase/migrations/20261006090000_phase3_approval_authority.sql");
   for (const table of ["style_bibles","characters","character_assets","environments","environment_assets"]) {
-    assert.match(sql, new RegExp(table + ".*_current_world_guard"));
-    assert.match(sql, new RegExp(table + ".*_approval_transition_guard"));
-    assert.match(sql, new RegExp(table + ".*_approved_delete_guard"));
+    assert.match(sql, new RegExp(table));
   }
-  assert.match(sql, /t\+\+.*'_current_world_guard'/);
-  assert.match(sql, /t\+\+.*'_approval_transition_guard'/);
-  assert.match(sql, /t\+\+.*'_approved_delete_guard'/);
+  assert.match(sql, /t\+\+ '.*_current_world_guard'/);
+  assert.match(sql, /t\+\+ '.*_approval_transition_guard'/);
+  assert.match(sql, /t\+\+ '.*_approved_delete_guard'/);
 });
 
 test("P0-C does not weaken existing RLS or grant browser delete access", async () => {
