@@ -6,12 +6,24 @@
 alter table public.projects
   add column if not exists owner_id uuid references auth.users(id) on delete cascade;
 
-update public.projects
-set owner_id = user_id
-where owner_id is null
-  and user_id is not null;
+-- Older repository baselines used user_id. Newer production schema uses owner_id.
+-- Backfill only when the legacy column actually exists.
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'projects'
+      and column_name = 'user_id'
+  ) then
+    execute 'update public.projects
+             set owner_id = user_id
+             where owner_id is null
+               and user_id is not null';
+  end if;
+end $$;
 
--- Existing production projects are expected to have an owner.
 do $$
 begin
   if exists (select 1 from public.projects where owner_id is null) then
