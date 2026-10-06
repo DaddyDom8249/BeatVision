@@ -227,7 +227,20 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
               {image?.status === "generated" && <button className="secondary-button" onClick={() => void approveImage()}>Approve Image</button>}
               {image?.status === "approved" && <span className="style-lock-badge">IMAGE APPROVED</span>}
             </div>
-          </div>\n\n          <div className="production-provider-note">
+          </div>
+
+          <div className="production-provider-note">
+            <span className="panel-label">MOTION</span>
+            {motion?.video_url ? <video src={motion.video_url} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
+            <div className="production-actions">
+              {!motion && <button className="primary-button" disabled={motionGenerating || image?.status !== "approved"} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
+              {motion?.status === "processing" && <button className="secondary-button" disabled={motionGenerating} onClick={() => void checkMotionStatus()}>{motionGenerating ? "Checking…" : "Check Motion Status"}</button>}
+              {motion?.status === "generated" && <button className="secondary-button" onClick={() => void approveMotion()}>Approve Motion</button>}
+              {motion?.status === "approved" && <span className="style-lock-badge">MOTION APPROVED</span>}
+            </div>
+          </div>
+
+          <div className="production-provider-note">
             <span className="panel-label">GENERATION</span>
             <h3>Provider generation is the next integration point.</h3>
             <p>This workspace is the approved creative source. Image/video generation should be connected here through an authenticated provider rather than using placeholder or fake generation controls.</p>
