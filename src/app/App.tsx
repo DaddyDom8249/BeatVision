@@ -26,7 +26,7 @@ export default function App() {
   }
 
   if (path === "/") return <DashboardPage onNavigate={navigate} />;
-  if (path === "/auth") return <AuthPage onNavigate={navigate} />;
+  if (path === "/auth" || path === "/login") return <AuthPage onNavigate={navigate} />;
   if (path === "/projects/new") return <CreateProjectPage onNavigate={navigate} />;
 
   const worldMatch = path.match(/^\/projects\/([^/]+)\/world\/?$/);
