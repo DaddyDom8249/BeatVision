@@ -45,7 +45,9 @@ Deno.serve(async (req) => {
     const userId = await getUser(req);
     const body = await req.json().catch(() => ({}));
     const projectId = String(body.projectId || body.project_id || "");
+    const requestedAudioRevision = String(body.audioRevision || body.audio_revision || "");
     if (!projectId) return json({ error: "projectId is required." }, 400);
+    if (!requestedAudioRevision) return json({ error: "audioRevision is required." }, 400);
 
     const admin = adminClient();
     const { data: project, error: projectError } = await admin.from("projects")
@@ -54,9 +56,12 @@ Deno.serve(async (req) => {
     if (!project || project.owner_id !== userId) return json({ error: "Project not found or access denied." }, 403);
 
     const { data: song, error: songError } = await admin.from("songs")
-      .select("id,audio_path,analysis").eq("project_id", projectId).maybeSingle();
+      .select("id,audio_path,audio_revision,analysis").eq("project_id", projectId).maybeSingle();
     if (songError) throw new Error(songError.message);
     if (!song?.audio_path) return json({ error: "Save an audio track before analyzing it." }, 400);
+    if (!song.audio_revision || String(song.audio_revision) !== requestedAudioRevision) {
+      return json({ error: "The audio track changed before transcription completed. Reload the song and analyze the current track." }, 409);
+    }
 
     const groqKey = env("GROQ_API_KEY");
     if (!groqKey) return json({ error: "GROQ_API_KEY is not configured." }, 503);
@@ -98,11 +103,12 @@ Deno.serve(async (req) => {
     const { error: updateError } = await admin.from("songs").update({
       analysis_status: "completed",
       analysis,
+      analysis_audio_revision: requestedAudioRevision,
       analyzed_at: new Date().toISOString(),
-    }).eq("id", String(song.id));
+    }).eq("id", String(song.id)).eq("audio_revision", requestedAudioRevision);
     if (updateError) throw new Error(updateError.message);
 
-    return json({ status: "completed", analysis });
+    return json({ status: "completed", analysis, audioRevision: requestedAudioRevision });
   } catch (error) {
     if (error instanceof AuthError) {
       return json({ error: error.message, code: "UNAUTHENTICATED" }, error.status);
