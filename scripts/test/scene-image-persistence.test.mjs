@@ -78,7 +78,7 @@ test("scene image persistence contract exists and is owner-readable only", () =>
     /revoke insert, update, delete on public\.scene_image_assets from anon, authenticated/
   );
   assert.match(migration, /SCENE_IMAGE_ASSET_LINEAGE_INVALID/);
-  assert.match(migration, /job_status not in \('processing', 'completed'\)/);
+  assert.match(migration, /job_status not in ('processing','completed')/);
 });
 
 test("completed scene-image jobs persist the real Arena media URL before completion", () => {
