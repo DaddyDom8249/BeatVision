@@ -30,9 +30,11 @@ test("P0-C applies lifecycle guards to every Phase 3 creative table", async () =
   for (const table of ["style_bibles","characters","character_assets","environments","environment_assets"]) {
     assert.match(sql, new RegExp(table));
   }
-  assert.match(sql, /t\|\| '.*_current_world_guard'/);
-  assert.match(sql, /t\|\| '.*_approval_transition_guard'/);
-  assert.match(sql, /t\|\| '.*_approved_delete_guard'/);
+  assert.match(sql, /foreach t in array array\[/);
+  assert.match(sql, /execute format\(/);
+  assert.match(sql, /_current_world_guard/);
+  assert.match(sql, /_approval_transition_guard/);
+  assert.match(sql, /_approved_delete_guard/);
 });
 
 test("P0-C does not weaken existing RLS or grant browser delete access", async () => {
