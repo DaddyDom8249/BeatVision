@@ -35,6 +35,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [copied, setCopied] = useState(false);
   const [image, setImage] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
+  const [motion, setMotion] = useState<any>(null);
+  const [motionGenerating, setMotionGenerating] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -72,11 +74,14 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
   useEffect(() => {
     let active = true;
-    if (!scene) { setImage(null); return () => { active = false; }; }
+    if (!scene) { setImage(null); setMotion(null); return () => { active = false; }; }
     (async () => {
       const result = await supabase.from("scene_image_assets").select(imageFields).eq("scene_id", scene.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (!active) return;
       if (result.error) setError(result.error.message); else setImage(result.data ?? null);
+      const motionResult = await supabase.from("motion_clip_assets").select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").eq("scene_id", scene.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (!active) return;
+      if (motionResult.error) setError(motionResult.error.message); else setMotion(motionResult.data ?? null);
     })();
     return () => { active = false; };
   }, [scene?.id]);
@@ -98,6 +103,46 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally { setGenerating(false); }
+  }
+
+  async function generateMotion() {
+    if (!scene || !plan || plan.status !== "approved" || !image || image.status !== "approved") return;
+    setMotionGenerating(true); setError(null);
+    try {
+      const queued = await supabase.rpc("enqueue_scene_generation", { p_project_id: projectId, p_scene_id: scene.id, p_job_type: "scene_motion" });
+      if (queued.error) throw queued.error;
+      const job = queued.data as { id: string };
+      const run = await supabase.functions.invoke("beatvision-generation", { body: { projectId, jobId: job.id, action: "run" } });
+      if (run.error) throw run.error;
+      const result = run.data?.job;
+      const asset = await supabase.from("motion_clip_assets").select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").eq("generation_job_id", job.id).maybeSingle();
+      if (asset.error) throw asset.error;
+      if (asset.data) setMotion(asset.data);
+      else if (result?.status === "processing") setError("Motion is processing in Arena. No completed clip exists yet; use Check Motion Status when the provider finishes.");
+      else throw new Error("Motion generation completed without a persisted real video asset.");
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setMotionGenerating(false); }
+  }
+
+  async function checkMotionStatus() {
+    if (!motion?.generation_job_id) return;
+    setMotionGenerating(true); setError(null);
+    try {
+      const run = await supabase.functions.invoke("beatvision-generation", { body: { projectId, jobId: motion.generation_job_id, action: "poll" } });
+      if (run.error) throw run.error;
+      const asset = await supabase.from("motion_clip_assets").select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").eq("generation_job_id", motion.generation_job_id).maybeSingle();
+      if (asset.error) throw asset.error;
+      if (asset.data) setMotion(asset.data);
+      else if (run.data?.job?.status === "failed") throw new Error(run.data?.job?.error?.message || "Motion generation failed.");
+      else setError("Motion is still processing. No completed clip exists yet.");
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setMotionGenerating(false); }
+  }
+
+  async function approveMotion() {
+    if (!motion || motion.status !== "generated" || !motion.video_url) return;
+    const result = await supabase.from("motion_clip_assets").update({ status: "approved", approved: true }).eq("id", motion.id).eq("status", "generated").select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").single();
+    if (result.error) setError(result.error.message); else setMotion(result.data);
   }
 
   async function approveImage() {
