@@ -11,7 +11,9 @@ export function initAnalytics() {
     api_host: POSTHOG_HOST,
     capture_pageview: false,
     capture_pageleave: true,
-    autocapture: true,
+    // BeatVision handles sensitive creative inputs (lyrics, prompts, titles, etc.).
+    // Keep analytics event-driven rather than capturing arbitrary UI text/input.
+    autocapture: false,
     persistence: "localStorage",
   });
   initialized = true;
