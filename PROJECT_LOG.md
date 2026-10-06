@@ -528,3 +528,17 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 - Live Supabase contains newer migrations and schema/function state not represented on GitHub main. This is the largest source-of-truth risk and must be reconciled before declaring the repository fully reproducible.
 - A second Vercel project named `beat-vision` has repeated ERROR deployments; `beat-vision-f8nn` is the currently healthy project receiving the audit branch. The failing legacy project must not be treated as the production deployment without explicit evidence.
 - Authenticated browser E2E is still UNVERIFIED because this environment has no user session available for a real Song → Analyze → World → Save → Confirm round trip.
+
+
+## 2026-10-06 — Generation controller auth regression
+**Task:** Continue hacker-grade audit into the live generation controller after production schema hardening.
+
+**Confirmed defect:** Live Supabase Edge Function `beatvision-generation` v1 contained a double-escaped bearer-token regex: `/^Bearer\\\\s+\\\\S+$/i`. In the deployed JavaScript this matches literal backslash sequences instead of normal whitespace/non-whitespace, so valid `Authorization: Bearer <token>` headers can be rejected before the controller reaches the job/project checks.
+
+**Repair:** Deployed `beatvision-generation` v2 with the corrected regex `/^Bearer\\s+\\S+$/i`, retaining `verify_jwt=true` and all existing project-owner authorization checks.
+
+**Verification:** Retrieved the deployed function after deployment. Version=2, verify_jwt=true, corrected regex present, bad double-escaped regex absent.
+
+**Repository repair:** Added the corrected deployed controller source at `supabase/functions/beatvision-generation/index.ts` and a regression test at `scripts/test/generation-auth.edge.test.mjs`.
+
+**Remaining:** Authenticated live generation execution is still UNVERIFIED because no authenticated test session is available. The controller also depends on Arena gateway configuration and the free generation provider path, which must be tested with a real locked project/job.
