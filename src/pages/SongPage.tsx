@@ -49,34 +49,111 @@ export default function SongPage({ projectId }: Props) {
 
   async function analyzeAudio() {
     if (!song?.audio_url) { setError("Save an audio track before analyzing it."); return; }
+    const revision: string | null = song.audio_revision;
+    if (!revision) { setError("The song is missing its audio revision. Reload the song and try again."); return; }
+
     setError(null); setSaved(false); setSaving(true);
     let local: Awaited<ReturnType<typeof analyzeAudioLocally>> | null = null;
     try {
-      await supabase.from("songs").update({ analysis_status: "analyzing" }).eq("id", song.id);
+      const current = await supabase.from("songs")
+        .select("audio_revision")
+        .eq("id", song.id)
+        .maybeSingle();
+      if (current.error) throw new Error(current.error.message);
+      if (!current.data || current.data.audio_revision !== revision) {
+        void reload();
+        throw new Error("The audio track changed before analysis started. Reload the song and analyze the current track.");
+      }
+
+      const analyzing = await supabase.from("songs")
+        .update({ analysis_status: "analyzing" })
+        .eq("id", song.id)
+        .eq("audio_revision", revision)
+        .select("id")
+        .maybeSingle();
+      if (analyzing.error) throw new Error(analyzing.error.message);
+      if (!analyzing.data) {
+        void reload();
+        throw new Error("The audio track changed before analysis started. Reload the song and analyze the current track.");
+      }
+
       local = await analyzeAudioLocally(song.audio_url);
-      const localUpdate = await supabase.from("songs").update({ analysis_status: "analyzing", analysis: local }).eq("id", song.id);
+
+      const localUpdate = await supabase.from("songs")
+        .update({ analysis_status: "analyzing", analysis: local })
+        .eq("id", song.id)
+        .eq("audio_revision", revision)
+        .select("id")
+        .maybeSingle();
       if (localUpdate.error) throw new Error(localUpdate.error.message);
-      const { data: result, error: invokeError } = await supabase.functions.invoke("beatvision-analyze-song", { body: { projectId } });
+      if (!localUpdate.data) {
+        void reload();
+        throw new Error("The audio track changed during analysis. Reload the song and analyze the current track.");
+      }
+
+      const { data: result, error: invokeError } = await supabase.functions.invoke(
+        "beatvision-analyze-song",
+        { body: { projectId, audioRevision: revision } },
+      );
+
       if (invokeError) {
         const message = result?.error || invokeError.message || "Groq song transcription failed.";
-        await supabase.from("songs").update({
-          analysis_status: "completed",
-          analysis: { ...local, transcription_status: "failed", status_detail: message },
-          analyzed_at: new Date().toISOString()
-        }).eq("id", song.id);
-        setError(formatFailure("Song transcription", invokeError, { projectId, songId: song.id, localAnalysis: "completed" }) + " | Local analysis was saved successfully.");
+        const localFailure = await supabase.from("songs")
+          .update({
+            analysis_status: "completed",
+            analysis: { ...local, transcription_status: "failed", status_detail: message },
+            analysis_audio_revision: revision,
+            analyzed_at: new Date().toISOString(),
+          })
+          .eq("id", song.id)
+          .eq("audio_revision", revision)
+          .select("id")
+          .maybeSingle();
+
+        if (localFailure.error) throw new Error(localFailure.error.message);
+        if (!localFailure.data) {
+          void reload();
+          throw new Error("The audio track changed while transcription was running. Reload the song and analyze the current track.");
+        }
+
+        setError(
+          formatFailure("Song transcription", invokeError, {
+            projectId,
+            songId: song.id,
+            audioRevision: revision,
+            localAnalysis: "completed",
+          }) + " | Local analysis was saved successfully.",
+        );
+      } else {
+        const completed = await supabase.from("songs")
+          .update({ analysis_audio_revision: revision })
+          .eq("id", song.id)
+          .eq("audio_revision", revision)
+          .select("id")
+          .maybeSingle();
+
+        if (completed.error) throw new Error(completed.error.message);
+        if (!completed.data) {
+          void reload();
+          throw new Error("The audio track changed while transcription was completing. Reload the song and analyze the current track.");
+        }
       }
+
       void reload();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Song analysis failed.";
-      if (local) {
-        await supabase.from("songs").update({
-          analysis_status: "completed",
-          analysis: { ...local, transcription_status: "failed", status_detail: message },
-          analyzed_at: new Date().toISOString()
-        }).eq("id", song.id);
+      if (local && revision) {
+        await supabase.from("songs")
+          .update({
+            analysis_status: "completed",
+            analysis: { ...local, transcription_status: "failed", status_detail: message },
+            analysis_audio_revision: revision,
+            analyzed_at: new Date().toISOString(),
+          })
+          .eq("id", song.id)
+          .eq("audio_revision", revision);
       }
-      setError(formatFailure("Song analysis", e, { projectId, songId: song.id }));
+      setError(formatFailure("Song analysis", e, { projectId, songId: song.id, audioRevision: revision }));
     } finally { setSaving(false); }
   }
 
@@ -160,7 +237,7 @@ export default function SongPage({ projectId }: Props) {
         {saved && (
           <section aria-label="Next step" className="create-card">
             <p role="status"><strong>Song saved successfully.</strong></p>
-            {song?.analysis_status === "completed" ? (
+            {song?.analysis_status === "completed" && song.analysis_audio_revision === song.audio_revision ? (
               <>
                 <p>Next step: reveal the visual world for this song.</p>
                 <button type="button" className="primary-button large" onClick={continueToWorld}>
@@ -172,7 +249,7 @@ export default function SongPage({ projectId }: Props) {
             )}
           </section>
         )}
-        {song?.analysis_status === "completed" && analysis && <section><h2>Musical analysis</h2><p>{hasValidAnalysisDuration ? `Duration ${durationSeconds.toFixed(1)}s` : "Duration unavailable"}{analysis.bpm ? ` · BPM ${analysis.bpm}` : ""}{analysis.key ? ` · Key ${analysis.key}` : ""}{analysis.time_signature ? ` · Meter ${analysis.time_signature}` : ""}</p><p>{analysis.genre_tags?.join(", ") || "Genre unavailable"} · {analysis.mood_tags?.slice(0, 5).join(", ") || "Mood unavailable"}</p><p>{analysis.sections?.length ?? 0} structural segments · {analysis.instruments?.slice(0, 8).join(", ") || "Instrument data unavailable"}</p>{analysis.description && <p>{analysis.description}</p>}{analysis.transcript && <><h3>Transcript</h3><p>{analysis.transcript}</p></>}</section>}
+        {song?.analysis_status === "completed" && song.analysis_audio_revision === song.audio_revision && analysis && <section><h2>Musical analysis</h2><p>{hasValidAnalysisDuration ? `Duration ${durationSeconds.toFixed(1)}s` : "Duration unavailable"}{analysis.bpm ? ` · BPM ${analysis.bpm}` : ""}{analysis.key ? ` · Key ${analysis.key}` : ""}{analysis.time_signature ? ` · Meter ${analysis.time_signature}` : ""}</p><p>{analysis.genre_tags?.join(", ") || "Genre unavailable"} · {analysis.mood_tags?.slice(0, 5).join(", ") || "Mood unavailable"}</p><p>{analysis.sections?.length ?? 0} structural segments · {analysis.instruments?.slice(0, 8).join(", ") || "Instrument data unavailable"}</p>{analysis.description && <p>{analysis.description}</p>}{analysis.transcript && <><h3>Transcript</h3><p>{analysis.transcript}</p></>}</section>}
         {error && <p className="form-error" role="alert">{error}</p>}
       </section>
     </div>

@@ -28,7 +28,7 @@ export default function DashboardPage({ onNavigate }: Props) {
     <div className="app-shell">
       <header className="topbar">
         <button className="brand" onClick={() => onNavigate("/")}>BEAT<span>VISION</span></button>
-        <div className="topbar-right"><span className="status-dot" /> Creative Studio</div>
+        <div className="topbar-right"><span className="status-dot" /> Creative Studio <button className="auth-link" onClick={() => onNavigate("/login")}>Sign in →</button></div>
       </header>
 
       <main className="dashboard">
@@ -36,7 +36,7 @@ export default function DashboardPage({ onNavigate }: Props) {
           <div className="eyebrow">THE CREATIVE ENGINE FOR MUSIC VISUALS</div>
           <h1>Every song has a world.<br /><em>Reveal it.</em></h1>
           <p>BeatVision turns an artist's intent into a visual world they can direct, lock, refine, and bring to life.</p>
-          <button className="primary-button large" onClick={() => onNavigate("/projects/new")}>Start with a song <span>→</span></button>
+          <div className="hero-actions"><button className="primary-button large" onClick={() => onNavigate("/projects/new")}>Start with a song <span>→</span></button><button className="secondary-button large" onClick={() => onNavigate("/login")}>Sign in</button></div>
         </section>
 
         <section className="principles">

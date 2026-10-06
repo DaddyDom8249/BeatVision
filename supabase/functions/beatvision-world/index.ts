@@ -1,16 +1,18 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const cors = {
-  "Access-Control-Allow-Origin": "https://beat-vision-f8nn.vercel.app",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
-  "Content-Type": "application/json",
-};
+function corsFor(_req: Request) {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+    "Content-Type": "application/json",
+  };
+}
 
 const WORLD_MODEL = "openai/gpt-oss-20b";
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: cors });
+const json = (body: unknown, status = 200, req?: Request) =>
+  new Response(JSON.stringify(body), { status, headers: corsFor(req ?? new Request("https://beatvision.invalid")) });
 
 const env = (name: string) => String(Deno.env.get(name) || "").trim();
 
@@ -18,11 +20,15 @@ function adminClient() {
   return createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"));
 }
 
-async function getUser(req: Request) {
+function bearerToken(req: Request) {
   const auth = req.headers.get("Authorization") || "";
   const token = auth.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) throw new HttpError("UNAUTHENTICATED", 401, "Authentication required.");
+  return token;
+}
 
+async function getUser(req: Request) {
+  const token = bearerToken(req);
   const response = await fetch(env("SUPABASE_URL") + "/auth/v1/user", {
     headers: {
       apikey: env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"),
@@ -33,7 +39,29 @@ async function getUser(req: Request) {
   if (!response.ok) throw new HttpError("UNAUTHENTICATED", 401, "Invalid or expired authentication session.");
   const user = await response.json();
   if (!user?.id) throw new HttpError("UNAUTHENTICATED", 401, "Authenticated user could not be established.");
-  return String(user.id);
+  return { id: String(user.id), token };
+}
+
+function userClient(accessToken: string) {
+  return createClient(
+    env("SUPABASE_URL"),
+    env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"),
+    { global: { headers: { Authorization: "Bearer " + accessToken } } },
+  );
+}
+
+function rpcHttpError(action: string, error: any) {
+  if (error?.code === "42501") {
+    return new HttpError("NOT_FOUND", 404, "Project not found.");
+  }
+  if (error?.code === "PGRST202") {
+    return new Error("World atomic RPC is not deployed.");
+  }
+  return new HttpError(
+    "WORLD_" + action.toUpperCase() + "_FAILED",
+    409,
+    String(error?.message || "World database operation failed."),
+  );
 }
 
 function cleanText(value: unknown, max = 6000) {
@@ -172,10 +200,12 @@ function mergeWorldForValidation(existing: Record<string, any>, edits: Record<st
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsFor(req) });
 
   try {
-    const userId = await getUser(req);
+    const authUser = await getUser(req);
+    const userId = authUser.id;
+    const caller = userClient(authUser.token);
     const body = req.method === "GET" ? {} : await req.json().catch(() => ({}));
     const projectId =
       String(body.projectId || body.project_id || "") ||
@@ -224,62 +254,28 @@ Deno.serve(async (req) => {
         const merged = mergeWorldForValidation(existing, edits);
         validateWorld(merged);
 
-        const nextRevision = Number(existing.revision_number) + 1;
-        const revisionPayload: Record<string, unknown> = {
-          project_id: projectId,
-          world_id: existing.world_id,
-          revision_number: nextRevision,
-          status: "completed",
-          mood: merged.mood,
-          emotional_arc: merged.emotional_arc,
-          visual_language: merged.visual_language,
-          cinematography: merged.cinematography,
-          environments: merged.environments,
-          color_lighting: merged.color_lighting,
-          motifs: merged.motifs,
-          atmosphere: merged.atmosphere,
-          movement: merged.movement,
-          continuity_rules: merged.continuity_rules,
-          immutable_continuity: merged.immutable_continuity,
-          raw_report: {
-            ...(existing.raw_report && typeof existing.raw_report === "object" ? existing.raw_report : {}),
-            parent_world_report_id: existing.id,
-            parent_revision_number: existing.revision_number,
-            artist_edits: { ...edits },
-            revised_at: new Date().toISOString(),
+        const { data: revision, error: revisionError } = await caller.rpc(
+          "create_world_revision_atomic",
+          {
+            p_project_id: projectId,
+            p_world: merged,
+            p_artist_edits: edits,
           },
-          provider: existing.provider,
-          provider_request_id: existing.provider_request_id,
-          error_code: null,
-          error_message: null,
-          confirmed_at: null,
-        };
-
-        const { data: revision, error: revisionError } = await admin
-          .from("world_reports")
-          .insert(revisionPayload)
-          .select("*")
-          .single();
+        );
 
         if (revisionError) {
-          if (revisionError.code === "23505") {
-            throw new HttpError("WORLD_REVISION_CONFLICT", 409, "A newer World revision already exists. Reload the World and create the revision again.");
-          }
-          throw new Error(revisionError.message);
+          throw rpcHttpError("revision", revisionError);
         }
 
-        const { error: projectUpdateError } = await admin
-          .from("projects")
-          .update({ world_report_id: revision.id, world_confirmed_at: null })
-          .eq("id", projectId);
-
-        if (projectUpdateError) throw new Error(projectUpdateError.message);
+        if (!revision) {
+          throw new Error("World revision RPC returned no revision.");
+        }
 
         return json({
           report: revision,
           action: "create_revision",
           ok: true,
-          revision_number: nextRevision,
+          revision_number: revision.revision_number,
           parent_world_report_id: existing.id,
         });
       }
@@ -312,9 +308,12 @@ Deno.serve(async (req) => {
           .single();
 
         if (saveError) {
-          if (saveError.code === "55000") {
+          if (saveError.code === "55000" || saveError.code === "PGRST116") {
             throw new HttpError("WORLD_ALREADY_CONFIRMED", 409, "Confirmed worlds are immutable. Use create_revision to make an explicit new revision.");
           }
+          throw new Error(saveError.message || "World save failed.");
+        }
+        if (!saved) {
           throw new HttpError("WORLD_SAVE_CONFLICT", 409, "World changed while this edit was being saved. Reload the World and retry.");
         }
 
@@ -343,24 +342,18 @@ Deno.serve(async (req) => {
 
       if (existing.confirmed_at) return json({ report: existing });
 
-      const now = new Date().toISOString();
-      const { data: confirmed, error } = await admin
-        .from("world_reports")
-        .update({ confirmed_at: now })
-        .eq("id", existing.id)
-        .eq("project_id", projectId)
-        .is("confirmed_at", null)
-        .select("*")
-        .single();
+      const { data: confirmed, error: confirmError } = await caller.rpc(
+        "confirm_world_atomic",
+        { p_project_id: projectId },
+      );
 
-      if (error) throw new HttpError("WORLD_CONFIRM_CONFLICT", 409, "World was already confirmed or changed concurrently. Reload the World.");
+      if (confirmError) {
+        throw rpcHttpError("confirm", confirmError);
+      }
 
-      const { error: projectUpdateError } = await admin
-        .from("projects")
-        .update({ world_report_id: existing.id, world_confirmed_at: now })
-        .eq("id", projectId);
-
-      if (projectUpdateError) throw new Error(projectUpdateError.message);
+      if (!confirmed) {
+        throw new Error("World confirmation RPC returned no report.");
+      }
 
       return json({ report: confirmed });
     }
@@ -410,9 +403,9 @@ Deno.serve(async (req) => {
       project_title: cleanText(project.title, 240),
       song_title: cleanText(song.title, 240),
       artist: cleanText(song.artist, 240),
-      creative_direction: cleanText(song.creative_direction, 3000),
-      notes: cleanText(song.notes, 3000),
-      lyrics: cleanText(song.lyrics, 9000),
+      creative_direction: cleanText(song.creative_direction, 700),
+      notes: cleanText(song.notes, 500),
+      lyrics: cleanText(song.lyrics, 1800),
       musical_analysis: {
         duration_seconds: analysis.duration_seconds ?? null,
         bpm: analysis.bpm ?? null,
@@ -420,15 +413,21 @@ Deno.serve(async (req) => {
         key: analysis.key ?? null,
         key_confidence: analysis.key_confidence ?? null,
         time_signature: analysis.time_signature ?? null,
-        energy_curve: analysis.energy_curve ?? [],
-        energy_regions: analysis.energy_region_candidates ?? [],
-        transcript: cleanText(analysis.transcript, 9000),
-        transcript_segments: analysis.transcript_segments ?? [],
+        energy_curve: Array.isArray(analysis.energy_curve) ? analysis.energy_curve.slice(0, 8) : [],
+        energy_regions: Array.isArray(analysis.energy_region_candidates) ? analysis.energy_region_candidates.slice(0, 4) : [],
+        transcript: cleanText(analysis.transcript, 500),
+        transcript_segments: [],
         vocal_presence: analysis.vocal_presence ?? null,
-        mood_tags: analysis.mood_tags ?? [],
-        genre_tags: analysis.genre_tags ?? [],
+        mood_tags: Array.isArray(analysis.mood_tags) ? analysis.mood_tags.slice(0, 6) : [],
+        genre_tags: Array.isArray(analysis.genre_tags) ? analysis.genre_tags.slice(0, 6) : [],
       },
     };
+
+    const sourceJson = JSON.stringify(source);
+    const estimatedPromptChars = sourceJson.length + 2200;
+    if (estimatedPromptChars > 12000) {
+      throw new HttpError("WORLD_INPUT_BUDGET_EXCEEDED", 422, "World source exceeded the deterministic input budget.");
+    }
 
     const system = `You are BeatVision's World Director. Build a durable visual world for an artist-directed music video.
 
@@ -455,13 +454,13 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
         model: WORLD_MODEL,
         temperature: 0.35,
         seed: 42,
-        max_completion_tokens: 2400,
+        max_completion_tokens: 1600,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: system },
           {
             role: "user",
-            content: "Create the BeatVision world from this source material:\n\n" + JSON.stringify(source),
+            content: "Create the BeatVision world from this source material:\n\n" + sourceJson,
           },
         ],
       }),
@@ -541,13 +540,13 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
     return json({ report: result.data });
   } catch (error) {
     if (error instanceof HttpError) {
-      return json({ error: { code: error.code, message: error.message } }, error.status);
+      return json({ error: { code: error.code, message: error.message } }, error.status, req);
     }
     return json({
       error: {
         code: "WORLD_REQUEST_FAILED",
         message: error instanceof Error ? error.message : String(error),
       },
-    }, 500);
+    }, 500, req);
   }
 })

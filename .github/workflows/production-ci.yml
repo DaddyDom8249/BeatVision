@@ -13,5 +13,6 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - run: npm test
       - run: npm run build
       - run: test -f README.md && test -d src && test -d supabase

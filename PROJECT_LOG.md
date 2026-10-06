@@ -490,3 +490,76 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Next highest-priority action:** Perform authenticated Song → World → Edit → Save → Confirm verification with a real user session; if that passes, implement Vision Lock persistence and UI.
 
 **Human action required:** None for the migration repair. An authenticated browser session is still required to claim the user-flow E2E verification.
+
+
+## 2026-10-04 — Canonical repository purge and production-source reconciliation
+**Task:** Remove obsolete scaffolding from the canonical BeatVision repository and restore active production Edge Function implementations that were deployed but absent from source control.
+
+**Repository:** `cleanup/canonical-repository-purge`, based on main `2ee788f02efeee00426219a3f052505694fd4392`.
+
+**Purged:** committed skeleton ZIP, fake Studio page/route, four one-line generation/motion/video hooks, README-only placeholder Edge Function directories, README-only generation/motion/provider/scenes/storyboard/video scaffolds, empty .gitkeep scaffolding, and the one-line production-audit skeleton.
+
+**Restored from live Supabase and committed exactly:**
+- `beatvision-generation` v1
+- `beatvision-generate` v46
+- `beatvision-pipeline` v11
+- `beatvision-storyboard` v10
+- `beatvision-arena` v28 and `_shared/auth.ts`
+- `beatvision-world` v18
+
+**Source reconciliation:** Exact-content comparison between the live Supabase Edge Function source and the corresponding repository files returned **true for all six restored production functions/helpers**. `beatvision-analyze-song` was already exact.
+
+**Production schema finding:** Live Supabase migration history contains additional production migrations that are absent from the repository, including the production `generation_jobs`, Vision Lock, Arena rate-limit, motion/runtime, final-video, and earlier hardening migrations. These are **NOT deleted or guessed into existence**. Repository/schema reconciliation remains a separate blocker because reconstructing migration history from live schema without authoritative migration source would be unsafe.
+
+**Verification:** Cleanup branch is 12 commits ahead of main and 0 behind. Latest Vercel preview deployment `dpl_FyRXjNjGjFsx931phqsQ58hpMLEq` is **READY** and its build log shows `tsc -b && vite build` completed successfully with 93 modules transformed and 0 npm vulnerabilities reported.
+
+**Safety:** No production database mutation, production data deletion, authentication weakening, RLS change, provider credential change, or production Edge Function deployment was performed by this cleanup operation.
+
+**Status:** Repository purge **VERIFIED**. Production-source reconciliation **VERIFIED**. Migration-source reconciliation **BLOCKED/UNSAFE TO GUESS**. Full authenticated end-to-end product flow remains **UNVERIFIED**.
+
+**Next highest-priority action:** Reconstruct and reconcile the missing canonical migration history/schema from authoritative source evidence, then trace the restored generation controller through Arena → provider → durable asset → motion → assembly without inventing missing behavior.
+
+
+## 2026-10-04 — Production migration-source reconciliation
+
+- **Objective:** recover authoritative migration SQL before treating repository cleanup as complete.
+- **Evidence:** production Supabase migration history contains 49 applied migrations; canonical cleanup branch now contains 16 SQL migration files.
+- **Recovery:** seven later production migrations were recovered byte-for-byte from the `beatvision-1` coordination branch and restored to `cleanup/canonical-repository-purge`.
+- **Verification:** source and cleanup blob SHA values matched exactly for all seven recovered migrations.
+- **Blocked:** 37 older applied production migrations remain without authoritative SQL source in the current BeatVision branches. They include runtime-motion restoration, debug trace, RLS hardening, generation-run idempotency, final-video runtime reconciliation, Arena rate limiting, and the earlier song-trigger search-path repair.
+- **Safety decision:** do not reconstruct those historical migrations from the live schema. A future clean baseline may be generated from verified current schema state, but that would be a new migration/baseline, not a fabricated historical replacement.
+- **Production mutation:** none. This phase was read-only against production.
+- **Next blocker:** trace the actual canonical generation path and reconcile the new generation_jobs/BeatVision 2.0 controller with the currently deployed Arena 2.0 bridge and the legacy pipeline runtime.
+
+
+## 2026-10-04 — BeatVision 2.0 bridge trace
+
+- **Finding:** the restored `beatvision-generation` controller targets Arena 2.0 paths (`/v2/scene-image`, `/v2/animate`, `/v2/assemble`) and sends a 2.0 payload shape, while the restored Supabase `beatvision-arena` boundary only admitted the legacy 1.1 route set and contract validation.
+- **Root cause:** the newer controller and the Supabase Arena boundary were not actually connected. Simply restoring both production sources did not make them compatible.
+- **Correction applied on cleanup branch:** `beatvision-arena` now admits the three 2.0 bridge routes and proxies them to the deployed Arena bridge after authenticated project ownership verification, using the 2.0 contract header. The legacy 1.1 path remains intact.
+- **External evidence:** the BeatVision Arena repository's 2.0 bridge defines `/v2/scene-image`, `/v2/animate`, and `/v2/assemble`, and converts them internally to the legacy provider operations. Cloudflare Workers supports the request/response proxy pattern used here. citeturn3search1turn3search2
+- **Still unresolved:** the 2.0 controller does not yet persist generated image/video outputs into the canonical `scene_images`, `motion_clips`, and `final_videos` records. Production schema inspection confirms those durable tables exist, while `generation_jobs` provides the queued/submitted/processing/completed/failed lifecycle fields.
+- **Status:** bridge compatibility fix **IMPLEMENTED / UNVERIFIED** until CI and a real authenticated provider invocation pass. Durable output persistence remains **UNVERIFIED**.
+
+
+## 2026-10-04 Step 1E — Generation enqueue security reconciliation
+- Status: IMPLEMENTED / UNVERIFIED
+- Objective: repair the database execution boundary discovered during Step 1D without granting clients direct writes to generation_jobs.
+- Evidence: live production showed enqueue_scene_generation(uuid,uuid,text) was SECURITY INVOKER while authenticated lacked INSERT on generation_jobs; live function ACL also incorrectly retained anon EXECUTE.
+- Change: added supabase/migrations/20261004170000_reconcile_generation_enqueue_security.sql.
+- Security design: SECURITY DEFINER with fixed search_path public, pg_temp; PUBLIC and anon EXECUTE revoked; authenticated EXECUTE retained; authenticated/anon INSERT, UPDATE, DELETE on generation_jobs explicitly revoked.
+- No production migration applied.
+- Verification remaining: CI, migration dry-run/application verification, live post-migration catalog verification, and controlled authenticated enqueue test using an authorized disposable project/scene.
+- Reference: PostgreSQL CREATE FUNCTION security-definer guidance requires a trusted search_path and selective EXECUTE grants.
+
+
+## 2026-10-04 Step 1E — CI regression and test-harness reconciliation
+- Status: FIXED / VERIFICATION PENDING
+- Finding: after adding `npm test` to Production CI, run #186 failed 15/29 tests.
+- Root cause: the restored production-identical `beatvision-world` v18 uses `.order()`, `.limit()`, and `.is()` on the Supabase query builder; the repository test stub did not implement those methods. The resulting TypeErrors surfaced as false 500 assertions. The production function itself was not implicated by this failure.
+- Evidence: the four newly added generation-enqueue security regression tests all passed in the same failing run, and the earlier analyzer tests also passed. Failures clustered in World tests at operations using the missing stub methods.
+- Correction: extended `scripts/test/supabase_stub.mjs` with null filtering, ordering, and limiting support so the test harness matches the committed v18 query surface.
+- Security correction retained: the generation enqueue migration includes an explicit `projects.owner_id = auth.uid()` check because SECURITY DEFINER bypasses caller RLS.
+- Local verification limitation: sandbox cannot resolve github.com and has no `psql`, so local clone/database execution was unavailable.
+- CI verification: a new workflow run for the harness repair is required; current Vercel deployment for the exact branch head is pending/under verification.
+- Production mutation: none.
