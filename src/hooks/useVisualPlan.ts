@@ -5,7 +5,7 @@ import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 import type { WorldReport } from "../types/world";
 import type { Song, SongAnalysis } from "../types/song";
 
-const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
+const planFields = "id,project_id,world_report_id,style_bible_id,song_id,vision_lock_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const styleFields = "id,project_id,world_report_id,status,world_basis,visual_language,cinematography,color_lighting,atmosphere,movement,continuity_rules,visual_rules,reference_assets,approved_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
 
@@ -35,6 +35,7 @@ export function useVisualPlan(projectId: string) {
   const [styleBible, setStyleBible] = useState<StyleBible | null>(null);
   const [song, setSong] = useState<Song | null>(null);
   const [plan, setPlan] = useState<VisualPlan | null>(null);
+  const [visionLock, setVisionLock] = useState<Record<string, unknown> | null>(null);
   const [scenes, setScenes] = useState<VisualPlanScene[]>([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
@@ -53,20 +54,22 @@ export function useVisualPlan(projectId: string) {
       setLoading(false); return;
     }
 
-    const [worldResult, styleResult, songResult, planResult] = await Promise.all([
+    const [worldResult, styleResult, songResult, planResult, lockResult] = await Promise.all([
       supabase.from("world_reports").select("*").eq("id", worldId).eq("project_id", projectId).single(),
       supabase.from("style_bibles").select(styleFields).eq("project_id", projectId).eq("world_report_id", worldId).maybeSingle(),
       supabase.from("songs").select("*").eq("project_id", projectId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("visual_plans").select(planFields).eq("project_id", projectId).maybeSingle(),
+      supabase.from("vision_locks").select("id,project_id,world_report_id,style_bible_id,song_id,revision_number,status,snapshot,locked_at,created_at").eq("project_id", projectId).order("revision_number", { ascending: false }).limit(1).maybeSingle(),
     ]);
 
-    const firstError = worldResult.error ?? styleResult.error ?? songResult.error ?? planResult.error;
+    const firstError = worldResult.error ?? styleResult.error ?? songResult.error ?? planResult.error ?? lockResult.error;
     if (firstError) { setError(firstError.message); setLoading(false); return; }
 
     setWorld(worldResult.data as WorldReport);
     setStyleBible((styleResult.data ?? null) as StyleBible | null);
     setSong((songResult.data ?? null) as Song | null);
     setPlan((planResult.data ?? null) as VisualPlan | null);
+    setVisionLock((lockResult.data ?? null) as Record<string, unknown> | null);
 
     if (planResult.data) {
       const sceneResult = await supabase.from("visual_plan_scenes").select(sceneFields).eq("visual_plan_id", planResult.data.id).order("scene_number", { ascending: true });
@@ -84,10 +87,17 @@ export function useVisualPlan(projectId: string) {
     if (!styleBible || styleBible.status !== "approved" || !styleBible.approved_at) throw new Error("The Style Bible must be locked before creating a Visual Plan.");
     if (!song || song.analysis_status !== "completed" || !song.analysis) throw new Error("The song analysis must be completed before creating a Visual Plan.");
     if (plan) throw new Error("A Visual Plan already exists for this project.");
+    let lock = visionLock;
 
     setWorking(true); setError(null);
     let createdPlanId: string | null = null;
     try {
+      if (!lock) {
+        const lockResult = await supabase.rpc("create_vision_lock", { p_project_id: projectId });
+        if (lockResult.error) throw lockResult.error;
+        lock = lockResult.data as Record<string, unknown>;
+        setVisionLock(lock);
+      }
       const duration = Number(song.analysis.duration_seconds);
       if (!Number.isFinite(duration) || duration <= 0) throw new Error("Song analysis does not contain a valid duration.");
       const windows = sectionWindows(song.analysis, duration);
@@ -101,7 +111,7 @@ export function useVisualPlan(projectId: string) {
       };
 
       const planResult = await supabase.from("visual_plans").insert({
-        project_id: projectId, world_report_id: world.id, style_bible_id: styleBible.id, song_id: song.id,
+        project_id: projectId, world_report_id: world.id, style_bible_id: styleBible.id, song_id: song.id, vision_lock_id: String(lock.id),
         title: "Visual Plan", duration_seconds: duration,
         creative_thesis: firstText(world.emotional_arc) || firstText(world.mood),
         global_direction: globalDirection,
@@ -137,7 +147,7 @@ export function useVisualPlan(projectId: string) {
       if (createdPlanId) await supabase.from("visual_plans").delete().eq("id", createdPlanId);
       throw e;
     } finally { setWorking(false); }
-  }, [projectId, world, styleBible, song, plan]);
+  }, [projectId, world, styleBible, song, plan, visionLock]);
 
   const saveScene = useCallback(async (sceneId: string, changes: Partial<Pick<VisualPlanScene, "title" | "visual_direction" | "camera_direction" | "movement_direction" | "location" | "mood" | "lyric_moment" | "transition_style" | "continuity_notes">>) => {
     if (!plan || plan.status !== "draft") throw new Error("The Visual Plan is locked.");
@@ -167,5 +177,5 @@ export function useVisualPlan(projectId: string) {
     } finally { setWorking(false); }
   }, [plan, scenes.length]);
 
-  return { world, styleBible, song, plan, scenes, loading, working, error, createPlan, saveScene, approvePlan, reload: load };
+  return { world, styleBible, song, visionLock, plan, scenes, loading, working, error, createPlan, saveScene, approvePlan, reload: load };
 }
