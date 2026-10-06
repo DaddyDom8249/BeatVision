@@ -22,7 +22,7 @@ function userClient(token: string) {
 
 async function authenticate(req: Request) {
   const token = req.headers.get("Authorization") || "";
-  if (!/^Bearer\\s+\\S+$/i.test(token)) throw new Error("Authentication required.");
+  if (!/^Bearer\s+\S+$/i.test(token)) throw new Error("Authentication required.");
   const client = createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"), {
     global: { headers: { Authorization: token } },
   });
