@@ -116,7 +116,7 @@ function extractImageUrl(data: any) {
     data?.result?.images?.[0]?.url,
     data?.images?.[0]?.url,
   ];
-  return candidates.find((value) => typeof value === "string" && /^https?:\\/\\//i.test(value.trim()))?.trim() || null;
+  return candidates.find((value) => typeof value === "string" && /^https?:\/\//i.test(value.trim()))?.trim() || null;
 }
 
 async function persistSceneImage(db: any, job: any, responseData: any) {
