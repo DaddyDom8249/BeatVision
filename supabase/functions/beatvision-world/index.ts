@@ -604,48 +604,84 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
 
     async function callGroq(): Promise<ProviderResult> {
       const model = WORLD_MODEL;
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: "Bearer " + groqKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          temperature: 0.35,
-          seed: 42,
-          max_completion_tokens: 1000,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: "system", content: system },
-            {
-              role: "user",
-              content: "Create the BeatVision world from this source material:\n\n" +
-                JSON.stringify(source),
-            },
-          ],
-        }),
-      });
+      const sourceText = "Create the BeatVision world from this source material:\n\n" +
+        JSON.stringify(source);
 
-      const raw = await response.text();
-      let data: any;
-      try { data = raw ? JSON.parse(raw) : null; } catch { data = { raw }; }
+      async function requestGroq(userContent: string) {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer " + groqKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            temperature: 0.25,
+            max_completion_tokens: 1400,
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: system },
+              { role: "user", content: userContent },
+            ],
+          }),
+        });
 
-      if (!response.ok) {
-        const message = String(data?.error?.message || data?.message || raw).slice(0, 800);
-        throw new Error("Groq failed (" + response.status + "): " + message);
+        const raw = await response.text();
+        let data: any;
+        try { data = raw ? JSON.parse(raw) : null; } catch { data = { raw }; }
+
+        if (!response.ok) {
+          const message = String(data?.error?.message || data?.message || raw).slice(0, 800);
+          throw new Error("Groq failed (" + response.status + "): " + message);
+        }
+
+        const content = data?.choices?.[0]?.message?.content;
+        if (typeof content !== "string" || !content.trim()) {
+          throw new Error("Groq returned no content.");
+        }
+
+        return { data, content };
       }
 
-      const content = data?.choices?.[0]?.message?.content;
-      if (typeof content !== "string" || !content.trim()) {
-        throw new Error("Groq returned no content.");
+      const first = await requestGroq(sourceText);
+      let firstWorld: any;
+      try {
+        firstWorld = validateWorld(parseModelJson(first.content));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const missing = WORLD_EDITABLE_FIELDS.filter((key) => !firstWorld || !(key in firstWorld));
+        const repairPrompt =
+          "The previous World response was incomplete. Repair it now. Return ONLY a JSON object containing all 11 required top-level keys, " +
+          "including every key listed below. Keep each value concise structured JSON. Do not omit any key.\n\n" +
+          "Missing keys detected: " + missing.join(", ") + "\n\n" +
+          sourceText;
+        const repair = await requestGroq(repairPrompt);
+        const repaired = parseModelJson(repair.content);
+        if (firstWorld && typeof firstWorld === "object" && !Array.isArray(firstWorld)) {
+          repaired && typeof repaired === "object" && !Array.isArray(repaired)
+            ? firstWorld = { ...firstWorld, ...repaired }
+            : firstWorld = repaired;
+        } else {
+          firstWorld = repaired;
+        }
+        try {
+          firstWorld = validateWorld(firstWorld);
+        } catch {
+          throw new Error(message);
+        }
+        return {
+          provider: "groq",
+          model,
+          requestId: repair.data?.id ?? first.data?.id ?? null,
+          world: firstWorld,
+        };
       }
 
       return {
         provider: "groq",
         model,
-        requestId: data?.id ?? null,
-        world: validateWorld(parseModelJson(content)),
+        requestId: first.data?.id ?? null,
+        world: firstWorld,
       };
     }
 
