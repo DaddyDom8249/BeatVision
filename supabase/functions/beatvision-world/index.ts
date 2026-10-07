@@ -685,13 +685,6 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
         requestId: first.data?.id ?? null,
         world: firstWorld,
       };
-
-      return {
-        provider: "groq",
-        model,
-        requestId: first.data?.id ?? null,
-        world: firstWorld,
-      };
     }
 
     const providers: Array<[string, () => Promise<ProviderResult>]> = [];
