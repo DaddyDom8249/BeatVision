@@ -24,13 +24,6 @@ async function authenticate(req: Request) {
   const token = req.headers.get("Authorization") || "";
   if (!/^Bearer\s+\S+$/i.test(token)) throw new HttpError(401, "UNAUTHENTICATED", "Authentication required.");
 
-  // The production scheduler uses the server-only Supabase service-role key.
-  // It is never exposed to the browser and is accepted only for system queue
-  // work; normal requests still require a real authenticated user session.
-  const bearer = token.replace(/^Bearer\s+/i, "").trim();
-  const serviceRole = env("SUPABASE_SERVICE_ROLE_KEY");
-  if (serviceRole && bearer === serviceRole) return { kind: "system" as const, userId: null };
-
   const client = createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"), {
     global: { headers: { Authorization: token } },
   });
