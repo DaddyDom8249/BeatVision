@@ -567,7 +567,7 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
           model,
           temperature: 0.35,
           max_tokens: 1000,
-          response_format: { type: "json_schema", json_schema: WORLD_JSON_SCHEMA },
+          response_format: { type: "json_object" },
           messages: [
             { role: "system", content: system },
             {
@@ -615,7 +615,7 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
           temperature: 0.35,
           seed: 42,
           max_completion_tokens: 1000,
-          response_format: { type: "json_object" },
+          response_format: { type: "json_schema", json_schema: WORLD_JSON_SCHEMA },
           messages: [
             { role: "system", content: system },
             {
