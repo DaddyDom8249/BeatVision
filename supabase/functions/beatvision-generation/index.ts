@@ -97,10 +97,17 @@ async function bridgePayload(db: any, job: any) {
 
   let images: { images: Array<{ image_url: string; scene_id: string; approved: boolean }> } | undefined;
   if (job.job_type === "scene_motion") {
-    const imageResult = await db.from("scene_image_assets").select("id,image_url,scene_id,status,approved,created_at").eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("scene_id", job.visual_plan_scene_id).eq("approved", true).eq("status", "approved").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const imageResult = await db.from("scene_image_assets").select("id,image_url,storage_path,scene_id,status,approved,created_at").eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("scene_id", job.visual_plan_scene_id).eq("approved", true).eq("status", "approved").order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (imageResult.error) throw new Error("APPROVED_SCENE_IMAGE_LOOKUP_FAILED: " + imageResult.error.message);
-    if (!imageResult.data?.image_url || !/^https?:\/\//i.test(String(imageResult.data.image_url))) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion requires an approved real scene image.");
-    images = { images: [{ image_url: String(imageResult.data.image_url), scene_id: String(imageResult.data.scene_id), approved: true }] };
+    if (!imageResult.data) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion requires an approved real scene image.");
+    let motionImageUrl = String(imageResult.data.image_url || "").trim();
+    if (imageResult.data.storage_path) {
+      const signed = await db.storage.from("visual-assets").createSignedUrl(String(imageResult.data.storage_path), 3600);
+      if (signed.error || !signed.data?.signedUrl) throw new Error("APPROVED_SCENE_IMAGE_SIGNING_FAILED: " + (signed.error?.message || "No signed URL returned."));
+      motionImageUrl = String(signed.data.signedUrl);
+    }
+    if (!/^https?:\/\//i.test(motionImageUrl)) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion requires an approved real scene image.");
+    images = { images: [{ image_url: motionImageUrl, scene_id: String(imageResult.data.scene_id), approved: true }] };
   }
   return {
     source: { application: "beatvision", contract: "2.0" },
@@ -154,6 +161,20 @@ async function arena(path: string, method: "GET" | "POST", payload: unknown, req
   return { response, data };
 }
 
+function extractImageBase64(data: any) {
+  const candidates = [
+    data?.image_base64,
+    data?.image,
+    data?.result?.image_base64,
+    data?.result?.image,
+    data?.result?.images?.[0]?.image_base64,
+    data?.result?.images?.[0]?.image,
+    data?.images?.[0]?.image_base64,
+    data?.images?.[0]?.image,
+  ];
+  return candidates.find((value) => typeof value === "string" && value.trim())?.trim() || null;
+}
+
 function extractImageUrl(data: any) {
   const candidates = [
     data?.image_url,
@@ -183,19 +204,48 @@ function extractVideoUrl(data: any) {
 async function persistSceneImage(db: any, job: any, responseData: any) {
   if (job.job_type !== "scene_image") return;
   const imageUrl = extractImageUrl(responseData);
-  if (!imageUrl) throw new Error("ARENA_IMAGE_OUTPUT_MISSING: Arena completed without a real image URL.");
+  const imageBase64 = extractImageBase64(responseData);
+  if (!imageUrl && !imageBase64) throw new Error("ARENA_IMAGE_OUTPUT_MISSING: Arena completed without a real image URL or image data.");
   if (!job.visual_plan_scene_id) throw new Error("ARENA_IMAGE_SCENE_MISSING: scene_image job has no approved scene.");
+
+  let persistedUrl = imageUrl;
+  let storagePath: string | null = null;
+
+  if (!persistedUrl && imageBase64) {
+    const encoded = imageBase64.includes(",") ? imageBase64.slice(imageBase64.indexOf(",") + 1) : imageBase64;
+    let binary: Uint8Array;
+    try {
+      const raw = atob(encoded);
+      binary = Uint8Array.from(raw, (char) => char.charCodeAt(0));
+    } catch {
+      throw new Error("SCENE_IMAGE_BASE64_INVALID: Arena returned invalid base64 image data.");
+    }
+
+    storagePath = `${job.project_id}/scene-images/${job.visual_plan_id}/${job.visual_plan_scene_id}/${job.id}.jpg`;
+    const upload = await db.storage.from("visual-assets").upload(storagePath, binary, {
+      contentType: "image/jpeg",
+      cacheControl: "31536000",
+      upsert: false,
+    });
+    if (upload.error) throw new Error("SCENE_IMAGE_STORAGE_UPLOAD_FAILED: " + upload.error.message);
+
+    const signed = await db.storage.from("visual-assets").createSignedUrl(storagePath, 3600);
+    if (signed.error || !signed.data?.signedUrl) throw new Error("SCENE_IMAGE_SIGNING_FAILED: " + (signed.error?.message || "No signed URL returned."));
+    persistedUrl = String(signed.data.signedUrl);
+  }
+
   const insert = await db.from("scene_image_assets").insert({
     project_id: job.project_id,
     visual_plan_id: job.visual_plan_id,
     scene_id: job.visual_plan_scene_id,
     generation_job_id: job.id,
-    provider: "arena",
-    model: modelFor(job.job_type) || "unknown",
-    image_url: imageUrl,
+    provider: String(responseData?.provider || "arena"),
+    model: String(responseData?.model || modelFor(job.job_type) || "unknown"),
+    image_url: persistedUrl,
+    storage_path: storagePath,
     status: "generated",
     approved: false,
-  }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,status,approved,created_at,updated_at").single();
+  }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,storage_path,status,approved,created_at,updated_at").single();
   if (insert.error) throw new Error("SCENE_IMAGE_PERSIST_FAILED: " + insert.error.message);
   return insert.data;
 }
