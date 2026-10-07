@@ -56,7 +56,7 @@ export default function SongPage({ projectId }: Props) {
       local = await analyzeAudioLocally(song.audio_url);
       const localUpdate = await supabase.from("songs").update({ analysis_status: "analyzing", analysis: local }).eq("id", song.id);
       if (localUpdate.error) throw new Error(localUpdate.error.message);
-      const { data: result, error: invokeError } = await supabase.functions.invoke("beatvision-analyze-song", { body: { projectId } });
+      const { data: result, error: invokeError } = await supabase.functions.invoke("beatvision-analyze-song", { body: { projectId, audioRevision: song.audio_revision } });
       if (invokeError) {
         const message = result?.error || invokeError.message || "Groq song transcription failed.";
         await supabase.from("songs").update({
