@@ -646,36 +646,44 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
       const first = await requestGroq(sourceText);
       let firstWorld: any;
       try {
-        firstWorld = validateWorld(parseModelJson(first.content));
+        firstWorld = parseModelJson(first.content);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        const missing = WORLD_EDITABLE_FIELDS.filter((key) => !firstWorld || !(key in firstWorld));
-        const repairPrompt =
-          "The previous World response was incomplete. Repair it now. Return ONLY a JSON object containing all 11 required top-level keys, " +
-          "including every key listed below. Keep each value concise structured JSON. Do not omit any key.\n\n" +
-          "Missing keys detected: " + missing.join(", ") + "\n\n" +
-          sourceText;
-        const repair = await requestGroq(repairPrompt);
-        const repaired = parseModelJson(repair.content);
-        if (firstWorld && typeof firstWorld === "object" && !Array.isArray(firstWorld)) {
-          repaired && typeof repaired === "object" && !Array.isArray(repaired)
-            ? firstWorld = { ...firstWorld, ...repaired }
-            : firstWorld = repaired;
-        } else {
-          firstWorld = repaired;
-        }
-        try {
-          firstWorld = validateWorld(firstWorld);
-        } catch {
-          throw new Error(message);
-        }
-        return {
-          provider: "groq",
-          model,
-          requestId: repair.data?.id ?? first.data?.id ?? null,
-          world: firstWorld,
-        };
+        throw error;
       }
+
+      const missing = WORLD_EDITABLE_FIELDS.filter(
+        (key) =>
+          !firstWorld ||
+          typeof firstWorld !== "object" ||
+          Array.isArray(firstWorld) ||
+          !(key in firstWorld)
+      );
+
+      if (missing.length) {
+        const repairResponse = await requestGroq(
+          "Return ONLY a JSON object containing these missing BeatVision World fields: " +
+          missing.join(", ") +
+          ". Each value must be concise (one short sentence or a tiny array/object). " +
+          "Do not return any other fields. Use the source material below for context.\n\n" +
+          sourceText
+        );
+        const repaired = parseModelJson(repairResponse.content);
+        if (!repaired || typeof repaired !== "object" || Array.isArray(repaired)) {
+          throw new Error("Groq repair returned an invalid object.");
+        }
+        for (const key of missing) {
+          if (key in repaired) firstWorld[key] = repaired[key];
+        }
+      }
+
+      firstWorld = validateWorld(firstWorld);
+
+      return {
+        provider: "groq",
+        model,
+        requestId: first.data?.id ?? null,
+        world: firstWorld,
+      };
 
       return {
         provider: "groq",
