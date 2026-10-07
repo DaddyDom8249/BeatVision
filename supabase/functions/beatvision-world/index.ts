@@ -421,14 +421,14 @@ Deno.serve(async (req) => {
     // cannot push an otherwise valid generation over the organization limit.
     const compactArray = (value: unknown, maxItems: number) =>
       Array.isArray(value) ? value.slice(0, maxItems) : [];
-    const lyrics = cleanText(song.lyrics, 6000);
-    const transcript = cleanText(analysis.transcript, 5000);
+    const lyrics = cleanText(song.lyrics, 2500);
+    const transcript = cleanText(analysis.transcript, 1500);
     const source = {
       project_title: cleanText(project.title, 240),
       song_title: cleanText(song.title, 240),
       artist: cleanText(song.artist, 240),
-      creative_direction: cleanText(song.creative_direction, 1800),
-      notes: cleanText(song.notes, 1200),
+      creative_direction: cleanText(song.creative_direction, 900),
+      notes: cleanText(song.notes, 500),
       lyrics,
       musical_analysis: {
         duration_seconds: analysis.duration_seconds ?? null,
@@ -437,14 +437,14 @@ Deno.serve(async (req) => {
         key: analysis.key ?? null,
         key_confidence: analysis.key_confidence ?? null,
         time_signature: analysis.time_signature ?? null,
-        energy_curve: compactArray(analysis.energy_curve, 24),
-        energy_regions: compactArray(analysis.energy_region_candidates, 12),
+        energy_curve: compactArray(analysis.energy_curve, 12),
+        energy_regions: compactArray(analysis.energy_region_candidates, 6),
         transcript,
         // Segment-level timing is not needed to define the World and can be
         // extremely large. Preserve the transcript only for semantic context.
         vocal_presence: analysis.vocal_presence ?? null,
-        mood_tags: compactArray(analysis.mood_tags, 12),
-        genre_tags: compactArray(analysis.genre_tags, 12),
+        mood_tags: compactArray(analysis.mood_tags, 8),
+        genre_tags: compactArray(analysis.genre_tags, 8),
       },
     };
 
