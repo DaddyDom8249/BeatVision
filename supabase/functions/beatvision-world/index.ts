@@ -384,14 +384,17 @@ Deno.serve(async (req) => {
       }, 409);
     }
 
+    const geminiKey = env("GEMINI_API_KEY");
+    const openRouterKey = env("OPENROUTER_API_KEY");
     const groqKey = env("GROQ_API_KEY");
-    if (!groqKey) {
+
+    if (!geminiKey && !openRouterKey && !groqKey) {
       return json(req, {
         report: {
           ...(existing || {}),
           status: "unavailable",
           error_code: "WORLD_PROVIDER_UNAVAILABLE",
-          error_message: "GROQ_API_KEY is not configured.",
+          error_message: "No World language provider is configured.",
         },
       }, 503);
     }
@@ -469,40 +472,193 @@ The immutable_continuity field is especially important: identify the few visual 
 
 Avoid unsupported claims about genre, instruments, or musical facts. If analysis does not provide something, leave it null or state that it is artist-directed.`;
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + groqKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: WORLD_MODEL,
-        temperature: 0.35,
-        seed: 42,
-        max_completion_tokens: 1000,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: system },
-          {
-            role: "user",
-            content: "Create the BeatVision world from this source material:\n\n" + JSON.stringify(source),
-          },
-        ],
-      }),
-    });
+    type ProviderResult = {
+      provider: string;
+      model: string;
+      requestId: string | null;
+      world: any;
+    };
 
-    const raw = await response.text();
-    let data: any;
-    try { data = raw ? JSON.parse(raw) : null; } catch { data = { raw }; }
+    async function callGemini(): Promise<ProviderResult> {
+      const model = "gemini-2.5-flash-lite";
+      const response = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+          model +
+          ":generateContent?key=" +
+          encodeURIComponent(geminiKey),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: system }] },
+            contents: [{
+              role: "user",
+              parts: [{
+                text: "Create the BeatVision world from this source material:\n\n" +
+                  JSON.stringify(source),
+              }],
+            }],
+            generationConfig: {
+              temperature: 0.35,
+              responseMimeType: "application/json",
+              maxOutputTokens: 1000,
+            },
+          }),
+        }
+      );
 
-    if (!response.ok) {
-      const message = String(data?.error?.message || data?.message || raw).slice(0, 800);
+      const raw = await response.text();
+      let data: any;
+      try { data = raw ? JSON.parse(raw) : null; } catch { data = { raw }; }
+
+      if (!response.ok) {
+        const message = String(data?.error?.message || data?.message || raw).slice(0, 800);
+        throw new Error("Gemini failed (" + response.status + "): " + message);
+      }
+
+      const content = data?.candidates?.[0]?.content?.parts
+        ?.map((part: any) => part?.text || "")
+        .join("")
+        .trim();
+
+      if (!content) throw new Error("Gemini returned no content.");
+      return {
+        provider: "gemini",
+        model,
+        requestId: data?.responseId ?? null,
+        world: validateWorld(parseModelJson(content)),
+      };
+    }
+
+    async function callOpenRouter(): Promise<ProviderResult> {
+      const model = "openrouter/free";
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + openRouterKey,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://beat-vision-beat-vision.vercel.app",
+          "X-Title": "BeatVision",
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.35,
+          max_tokens: 1000,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: system },
+            {
+              role: "user",
+              content: "Create the BeatVision world from this source material:\n\n" +
+                JSON.stringify(source),
+            },
+          ],
+          provider: { require_parameters: true },
+        }),
+      });
+
+      const raw = await response.text();
+      let data: any;
+      try { data = raw ? JSON.parse(raw) : null; } catch { data = { raw }; }
+
+      if (!response.ok) {
+        const message = String(data?.error?.message || data?.message || raw).slice(0, 800);
+        throw new Error("OpenRouter failed (" + response.status + "): " + message);
+      }
+
+      const content = data?.choices?.[0]?.message?.content;
+      if (typeof content !== "string" || !content.trim()) {
+        throw new Error("OpenRouter returned no content.");
+      }
+
+      return {
+        provider: "openrouter",
+        model,
+        requestId: data?.id ?? null,
+        world: validateWorld(parseModelJson(content)),
+      };
+    }
+
+    async function callGroq(): Promise<ProviderResult> {
+      const model = WORLD_MODEL;
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + groqKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.35,
+          seed: 42,
+          max_completion_tokens: 1000,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: system },
+            {
+              role: "user",
+              content: "Create the BeatVision world from this source material:\n\n" +
+                JSON.stringify(source),
+            },
+          ],
+        }),
+      });
+
+      const raw = await response.text();
+      let data: any;
+      try { data = raw ? JSON.parse(raw) : null; } catch { data = { raw }; }
+
+      if (!response.ok) {
+        const message = String(data?.error?.message || data?.message || raw).slice(0, 800);
+        throw new Error("Groq failed (" + response.status + "): " + message);
+      }
+
+      const content = data?.choices?.[0]?.message?.content;
+      if (typeof content !== "string" || !content.trim()) {
+        throw new Error("Groq returned no content.");
+      }
+
+      return {
+        provider: "groq",
+        model,
+        requestId: data?.id ?? null,
+        world: validateWorld(parseModelJson(content)),
+      };
+    }
+
+    const providers: Array<[string, () => Promise<ProviderResult>]> = [];
+    if (geminiKey) providers.push(["gemini", callGemini]);
+    if (openRouterKey) providers.push(["openrouter", callOpenRouter]);
+    if (groqKey) providers.push(["groq", callGroq]);
+
+    let generated: ProviderResult | null = null;
+    const providerErrors: string[] = [];
+
+    for (const [name, call] of providers) {
+      try {
+        generated = await call();
+        console.log("beatvision-world provider success", JSON.stringify({
+          provider: generated.provider,
+          model: generated.model,
+        }));
+        break;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        providerErrors.push(name + ": " + message.slice(0, 800));
+        console.error("beatvision-world provider failed", JSON.stringify({
+          provider: name,
+          message: message.slice(0, 800),
+        }));
+      }
+    }
+
+    if (!generated) {
       const payload = {
         status: "failed",
-        provider: "groq",
-        provider_request_id: data?.id ?? null,
+        provider: providers.map(([name]) => name).join(" -> "),
+        provider_request_id: null,
         error_code: "WORLD_MODEL_FAILED",
-        error_message: "Groq world generation failed (" + response.status + "): " + message,
+        error_message: providerErrors.join(" | ").slice(0, 2400),
       };
       const result = existing
         ? await admin.from("world_reports").update(payload).eq("id", existing.id).select("*").single()
@@ -511,10 +667,7 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
       return json(req, { report: result.data }, 503);
     }
 
-    const content = data?.choices?.[0]?.message?.content;
-    if (typeof content !== "string") throw new Error("Groq world generation returned no content.");
-
-    const world = validateWorld(parseModelJson(content));
+    const world = generated.world;
     const payload = {
       status: "completed",
       mood: world.mood,
@@ -529,7 +682,7 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
       continuity_rules: world.continuity_rules,
       immutable_continuity: world.immutable_continuity,
       raw_report: {
-        model: WORLD_MODEL,
+        model: generated.model,
         generated_at: new Date().toISOString(),
         input_summary: {
           song_title: source.song_title,
@@ -539,8 +692,8 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
         },
         model_output: world,
       },
-      provider: "groq",
-      provider_request_id: data?.id ?? null,
+      provider: generated.provider,
+      provider_request_id: generated.requestId,
       error_code: null,
       error_message: null,
     };
