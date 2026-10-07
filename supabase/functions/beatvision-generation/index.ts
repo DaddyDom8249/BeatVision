@@ -15,12 +15,20 @@ function admin() {
 async function authenticate(req: Request) {
   const token = req.headers.get("Authorization") || "";
   if (!/^Bearer\s+\S+$/i.test(token)) throw new HttpError(401, "UNAUTHENTICATED", "Authentication required.");
+
+  // The production scheduler uses the server-only Supabase service-role key.
+  // It is never exposed to the browser and is accepted only for system queue
+  // work; normal requests still require a real authenticated user session.
+  const bearer = token.replace(/^Bearer\s+/i, "").trim();
+  const serviceRole = env("SUPABASE_SERVICE_ROLE_KEY");
+  if (serviceRole && bearer === serviceRole) return { kind: "system" as const, userId: null };
+
   const client = createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"), {
     global: { headers: { Authorization: token } },
   });
   const { data, error } = await client.auth.getUser();
   if (error || !data.user) throw new HttpError(401, "UNAUTHENTICATED", "Invalid or expired authentication session.");
-  return data.user.id;
+  return { kind: "user" as const, userId: data.user.id };
 }
 
 class HttpError extends Error {
@@ -366,7 +374,7 @@ Deno.serve(async (req) => {
     const db = admin();
     const project = await db.from("projects").select("id,owner_id").eq("id", projectId).maybeSingle();
     if (project.error) throw new Error(project.error.message);
-    if (!project.data || project.data.owner_id !== uid) return json({ error: { code: "NOT_FOUND", message: "Project not found." } }, 404);
+    if (!project.data || (uid.kind !== "system" && project.data.owner_id !== uid.userId)) return json({ error: { code: "NOT_FOUND", message: "Project not found." } }, 404);
 
     const job = await db.from("generation_jobs").select("*").eq("id", jobId).eq("project_id", projectId).maybeSingle();
     if (job.error) throw new Error(job.error.message);
