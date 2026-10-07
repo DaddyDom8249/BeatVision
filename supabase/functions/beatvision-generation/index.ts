@@ -16,9 +16,9 @@ async function authenticate(req: Request) {
   const queueSecret = String(req.headers.get("X-BeatVision-Queue-Secret") || "").trim();
   if (queueSecret) {
     const db = admin();
-    const config = await db.schema("private").from("beatvision_generation_scheduler_config").select("queue_secret").maybeSingle();
+    const config = await db.rpc("get_generation_scheduler_secret");
     if (config.error) throw new HttpError(500, "SCHEDULER_CONFIG_FAILED", config.error.message);
-    if (config.data?.queue_secret && queueSecret === config.data.queue_secret) return { kind: "system" as const, userId: null };
+    if (config.data && queueSecret === String(config.data)) return { kind: "system" as const, userId: null };
   }
 
   const token = req.headers.get("Authorization") || "";
