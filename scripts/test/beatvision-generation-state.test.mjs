@@ -31,3 +31,16 @@ test("generation controller does not treat unknown provider status as completed"
   );
   assert.match(block[0], /return "processing";/);
 });
+
+test("generation controller treats a synchronous Arena scene-image URL as completed", () => {
+  const block = source.match(/function terminalState[\s\S]*?\n}\n\nasync function setFailed/);
+  assert.ok(block, "terminalState implementation must remain present");
+  assert.match(
+    block[0],
+    /jobType === "scene_image" && extractImageUrl\(data\).*return "completed";/s,
+  );
+  assert.match(
+    source,
+    /terminalState\(result\.response, result\.data, job\.job_type\)/,
+  );
+});
