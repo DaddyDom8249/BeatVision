@@ -473,7 +473,7 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
         model: WORLD_MODEL,
         temperature: 0.35,
         seed: 42,
-        max_completion_tokens: 2400,
+        max_completion_tokens: 1600,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: system },
