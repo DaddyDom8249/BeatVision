@@ -419,16 +419,22 @@ Deno.serve(async (req) => {
     // Groq enforces a TPM ceiling on the full request (input + requested output).
     // Keep the World prompt deliberately bounded so large lyrics/transcripts/analysis
     // cannot push an otherwise valid generation over the organization limit.
-    const compactArray = (value: unknown, maxItems: number) =>
-      Array.isArray(value) ? value.slice(0, maxItems) : [];
-    const lyrics = cleanText(song.lyrics, 2500);
-    const transcript = cleanText(analysis.transcript, 1500);
+    const compactArray = (value: unknown, maxItems: number, itemMax = 240) =>
+      Array.isArray(value)
+        ? value.slice(0, maxItems).map((item) => {
+            if (typeof item === "string") return cleanText(item, itemMax);
+            try { return JSON.parse(cleanText(JSON.stringify(item), itemMax)); }
+            catch { return cleanText(String(item), itemMax); }
+          })
+        : [];
+    const lyrics = cleanText(song.lyrics, 1200);
+    const transcript = cleanText(analysis.transcript, 800);
     const source = {
       project_title: cleanText(project.title, 240),
       song_title: cleanText(song.title, 240),
       artist: cleanText(song.artist, 240),
-      creative_direction: cleanText(song.creative_direction, 900),
-      notes: cleanText(song.notes, 500),
+      creative_direction: cleanText(song.creative_direction, 500),
+      notes: cleanText(song.notes, 300),
       lyrics,
       musical_analysis: {
         duration_seconds: analysis.duration_seconds ?? null,
@@ -437,14 +443,14 @@ Deno.serve(async (req) => {
         key: analysis.key ?? null,
         key_confidence: analysis.key_confidence ?? null,
         time_signature: analysis.time_signature ?? null,
-        energy_curve: compactArray(analysis.energy_curve, 12),
-        energy_regions: compactArray(analysis.energy_region_candidates, 6),
+        energy_curve: compactArray(analysis.energy_curve, 8, 120),
+        energy_regions: compactArray(analysis.energy_region_candidates, 4, 180),
         transcript,
         // Segment-level timing is not needed to define the World and can be
         // extremely large. Preserve the transcript only for semantic context.
         vocal_presence: analysis.vocal_presence ?? null,
-        mood_tags: compactArray(analysis.mood_tags, 8),
-        genre_tags: compactArray(analysis.genre_tags, 8),
+        mood_tags: compactArray(analysis.mood_tags, 6, 100),
+        genre_tags: compactArray(analysis.genre_tags, 6, 100),
       },
     };
 
@@ -473,7 +479,7 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
         model: WORLD_MODEL,
         temperature: 0.35,
         seed: 42,
-        max_completion_tokens: 1600,
+        max_completion_tokens: 1000,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: system },
