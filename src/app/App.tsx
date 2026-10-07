@@ -5,7 +5,6 @@ import CreateProjectPage from "../pages/CreateProjectPage";
 import SongPage from "../pages/SongPage";
 import WorldPage from "../pages/WorldPage";
 import StylePage from "../pages/StylePage";
-import StudioPage from "../pages/StudioPage";
 import VisualPlanPage from "../pages/VisualPlanPage";
 import SceneProductionPage from "../pages/SceneProductionPage";
 import ProductionWorkspacePage from "../pages/ProductionWorkspacePage";
@@ -54,9 +53,6 @@ export default function App() {
   if (path === "/") return <DashboardPage onNavigate={navigate} />;
   if (path === "/auth") return <AuthPage onNavigate={navigate} />;
   if (path === "/projects/new") return <CreateProjectPage onNavigate={navigate} />;
-
-  const studioMatch = path.match(/^\/projects\/([^/]+)\/studio\/?$/);
-  if (studioMatch) return <StudioPage projectId={studioMatch[1]} />;
 
   const worldMatch = path.match(/^\/projects\/([^/]+)\/world\/?$/);
   if (worldMatch) return <WorldPage projectId={worldMatch[1]} onNavigate={navigate} />;
