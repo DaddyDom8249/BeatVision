@@ -27,6 +27,8 @@ export default function StylePage({ projectId }: { projectId: string }) {
     saveStyleBible,
     saveCharacter,
     saveEnvironment,
+    approveCharacter,
+    approveEnvironment,
     uploadAsset,
     approveAsset,
     approveStyleBible,
@@ -173,6 +175,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
             onSave={(id, input) => saveCharacter(id, input)}
             onUpload={(file, label) => uploadAsset("character", character.id, file, label)}
             onApproveAsset={(asset) => approveAsset("character", asset.id)}
+            onApprove={(character) => approveCharacter(character.id)}
           />
         ))}
       </section>
@@ -201,6 +204,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
             onSave={(id, input) => saveEnvironment(id, input)}
             onUpload={(file, label) => uploadAsset("environment", environment.id, file, label)}
             onApproveAsset={(asset) => approveAsset("environment", asset.id)}
+            onApprove={(environment) => approveEnvironment(environment.id)}
           />
         ))}
       </section>
