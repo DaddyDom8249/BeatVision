@@ -51,6 +51,7 @@ export default function SongPage({ projectId }: Props) {
     if (!song?.audio_url) { setError("Save an audio track before analyzing it."); return; }
     setError(null); setSaved(false); setSaving(true);
     let local: Awaited<ReturnType<typeof analyzeAudioLocally>> | null = null;
+    let localFailure: Error | null = null;
     try {
       const markAnalyzing = await supabase
         .from("songs")
@@ -58,13 +59,19 @@ export default function SongPage({ projectId }: Props) {
         .eq("id", song.id);
       if (markAnalyzing.error) throw new Error(markAnalyzing.error.message);
 
-      local = await analyzeAudioLocally(song.audio_url);
-
-      const localUpdate = await supabase
-        .from("songs")
-        .update({ analysis_status: "analyzing", analysis: local })
-        .eq("id", song.id);
-      if (localUpdate.error) throw new Error(localUpdate.error.message);
+      // Browser DSP is valuable, but it must not be the single point of failure.
+      // The server transcription path can still complete analysis on mobile
+      // browsers that cannot decode the uploaded MP3 reliably.
+      try {
+        local = await analyzeAudioLocally(song.audio_url);
+        const localUpdate = await supabase
+          .from("songs")
+          .update({ analysis_status: "analyzing", analysis: local })
+          .eq("id", song.id);
+        if (localUpdate.error) throw new Error(localUpdate.error.message);
+      } catch (e) {
+        localFailure = e instanceof Error ? e : new Error(String(e));
+      }
 
       const { data: result, error: invokeError } = await supabase.functions.invoke(
         "beatvision-analyze-song",
@@ -72,6 +79,7 @@ export default function SongPage({ projectId }: Props) {
       );
 
       if (invokeError) {
+        if (!local) throw invokeError;
         const message = result?.error || invokeError.message || "Groq song transcription failed.";
         const fallbackUpdate = await supabase.from("songs").update({
           analysis_status: "completed",
@@ -80,15 +88,12 @@ export default function SongPage({ projectId }: Props) {
         }).eq("id", song.id);
         if (fallbackUpdate.error) throw new Error(fallbackUpdate.error.message);
         setError(formatFailure("Song transcription", invokeError, {
-          projectId,
-          songId: song.id,
-          localAnalysis: "completed"
+          projectId, songId: song.id, localAnalysis: "completed"
         }) + " | Local analysis was saved successfully.");
+      } else if (localFailure) {
+        setError("Server transcription completed. Browser musical DSP was unavailable, so some musical fields may be unavailable.");
       }
 
-      // The DB is authoritative. Do not unlock Save/World until the client has
-      // reloaded the committed analysis state instead of racing a fire-and-forget
-      // reload against setSaving(false).
       await reload();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Song analysis failed.";
