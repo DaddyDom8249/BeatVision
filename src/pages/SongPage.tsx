@@ -8,25 +8,6 @@ import { formatFailure } from "../lib/errorDetails";
 
 interface Props { projectId: string; }
 
-function readAudioDuration(file: File): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const element = document.createElement("audio");
-    const cleanup = () => { URL.revokeObjectURL(url); element.removeAttribute("src"); element.load(); };
-    const timeout = window.setTimeout(() => { cleanup(); reject(new Error("Could not read the audio duration.")); }, 10000);
-    element.preload = "metadata";
-    element.onloadedmetadata = () => {
-      window.clearTimeout(timeout);
-      const duration = element.duration;
-      cleanup();
-      if (Number.isFinite(duration) && duration > 0) resolve(duration);
-      else reject(new Error("The uploaded audio has no readable duration."));
-    };
-    element.onerror = () => { window.clearTimeout(timeout); cleanup(); reject(new Error("Could not read the uploaded audio metadata.")); };
-    element.src = url;
-  });
-}
-
 export default function SongPage({ projectId }: Props) {
   const { project, loading: projectLoading, error: projectError } = useProject(projectId);
   const { song, loading: songLoading, error: songError, reload } = useSong(projectId);
@@ -132,9 +113,10 @@ export default function SongPage({ projectId }: Props) {
       if (!project || project.owner_id !== auth.user.id) throw new Error("This project is not available to the signed-in account.");
 
       let audioPath = song?.audio_path ?? null;
-      let songDuration = project.song_duration ?? null;
       if (audio) {
-        songDuration = await readAudioDuration(audio);
+        // Do not require browser-side audio metadata. Android browsers can reject
+        // valid MP3 metadata even when the uploaded object is valid. Server-side
+        // analysis is authoritative for duration and transcription.
         const extension = audio.name.includes(".") ? audio.name.split(".").pop() : "bin";
         audioPath = `${auth.user.id}/${projectId}/${crypto.randomUUID()}.${extension}`;
         const upload = await supabase.storage.from("songs").upload(audioPath, audio, { upsert: false, contentType: audio.type || undefined });
@@ -158,9 +140,6 @@ export default function SongPage({ projectId }: Props) {
         if (audioPath && audioPath !== song?.audio_path) await supabase.storage.from("songs").remove([audioPath]);
         throw new Error(result.error.message);
       }
-
-      const projectUpdate = await supabase.from("projects").update({ song_duration: songDuration }).eq("id", projectId);
-      if (projectUpdate.error) throw new Error(projectUpdate.error.message);
 
       await reload();
       setSaved(true);
