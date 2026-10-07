@@ -19,6 +19,27 @@ function corsHeaders(req: Request) {
 
 const WORLD_MODEL = "openai/gpt-oss-20b";
 
+const WORLD_JSON_SCHEMA = {
+  name: "beatvision_world",
+  strict: true,
+  schema: {
+    type: "object",
+    properties: Object.fromEntries([
+      "mood", "emotional_arc", "visual_language", "cinematography", "environments",
+      "color_lighting", "motifs", "atmosphere", "movement", "continuity_rules",
+      "immutable_continuity",
+    ].map((key) => [key, {
+      type: ["object", "array", "string", "number", "boolean", "null"],
+    }])),
+    required: [
+      "mood", "emotional_arc", "visual_language", "cinematography", "environments",
+      "color_lighting", "motifs", "atmosphere", "movement", "continuity_rules",
+      "immutable_continuity",
+    ],
+    additionalProperties: false,
+  },
+};
+
 const json = (req: Request, body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: corsHeaders(req) });
 
@@ -480,7 +501,7 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
     };
 
     async function callGemini(): Promise<ProviderResult> {
-      const model = "gemini-2.5-flash-lite";
+      const model = "gemini-3.5-flash-lite";
       const response = await fetch(
         "https://generativelanguage.googleapis.com/v1beta/models/" +
           model +
@@ -546,7 +567,7 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
           model,
           temperature: 0.35,
           max_tokens: 1000,
-          response_format: { type: "json_object" },
+          response_format: { type: "json_schema", json_schema: WORLD_JSON_SCHEMA },
           messages: [
             { role: "system", content: system },
             {
