@@ -52,31 +52,60 @@ export default function SongPage({ projectId }: Props) {
     setError(null); setSaved(false); setSaving(true);
     let local: Awaited<ReturnType<typeof analyzeAudioLocally>> | null = null;
     try {
-      await supabase.from("songs").update({ analysis_status: "analyzing" }).eq("id", song.id);
+      const markAnalyzing = await supabase
+        .from("songs")
+        .update({ analysis_status: "analyzing" })
+        .eq("id", song.id);
+      if (markAnalyzing.error) throw new Error(markAnalyzing.error.message);
+
       local = await analyzeAudioLocally(song.audio_url);
-      const localUpdate = await supabase.from("songs").update({ analysis_status: "analyzing", analysis: local }).eq("id", song.id);
+
+      const localUpdate = await supabase
+        .from("songs")
+        .update({ analysis_status: "analyzing", analysis: local })
+        .eq("id", song.id);
       if (localUpdate.error) throw new Error(localUpdate.error.message);
-      const { data: result, error: invokeError } = await supabase.functions.invoke("beatvision-analyze-song", { body: { projectId, audioRevision: song.audio_revision } });
+
+      const { data: result, error: invokeError } = await supabase.functions.invoke(
+        "beatvision-analyze-song",
+        { body: { projectId, audioRevision: song.audio_revision } }
+      );
+
       if (invokeError) {
         const message = result?.error || invokeError.message || "Groq song transcription failed.";
-        await supabase.from("songs").update({
+        const fallbackUpdate = await supabase.from("songs").update({
           analysis_status: "completed",
           analysis: { ...local, transcription_status: "failed", status_detail: message },
           analyzed_at: new Date().toISOString()
         }).eq("id", song.id);
-        setError(formatFailure("Song transcription", invokeError, { projectId, songId: song.id, localAnalysis: "completed" }) + " | Local analysis was saved successfully.");
+        if (fallbackUpdate.error) throw new Error(fallbackUpdate.error.message);
+        setError(formatFailure("Song transcription", invokeError, {
+          projectId,
+          songId: song.id,
+          localAnalysis: "completed"
+        }) + " | Local analysis was saved successfully.");
       }
-      void reload();
+
+      // The DB is authoritative. Do not unlock Save/World until the client has
+      // reloaded the committed analysis state instead of racing a fire-and-forget
+      // reload against setSaving(false).
+      await reload();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Song analysis failed.";
       if (local) {
-        await supabase.from("songs").update({
+        const fallbackUpdate = await supabase.from("songs").update({
           analysis_status: "completed",
           analysis: { ...local, transcription_status: "failed", status_detail: message },
           analyzed_at: new Date().toISOString()
         }).eq("id", song.id);
+        if (fallbackUpdate.error) {
+          setError(formatFailure("Song analysis", e, { projectId, songId: song.id }) +
+            " | Local analysis could not be persisted: " + fallbackUpdate.error.message);
+          return;
+        }
       }
       setError(formatFailure("Song analysis", e, { projectId, songId: song.id }));
+      await reload();
     } finally { setSaving(false); }
   }
 
