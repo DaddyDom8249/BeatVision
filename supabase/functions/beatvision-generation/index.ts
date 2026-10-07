@@ -273,16 +273,31 @@ async function persistMotionClip(db: any, job: any, responseData: any) {
   return insert.data;
 }
 
+function compactArenaResponse(data: any, jobType?: string) {
+  if (jobType !== "scene_image" || !data || typeof data !== "object") return data;
+  const clean = JSON.parse(JSON.stringify(data));
+  delete clean.image;
+  delete clean.image_base64;
+  const images = clean?.result?.images;
+  if (Array.isArray(images)) {
+    for (const image of images) {
+      if (image && typeof image === "object") {
+        delete image.image;
+        delete image.image_base64;
+      }
+    }
+  }
+  return clean;
+}
+
 function terminalState(response: Response, data: any, jobType?: string) {
   if (!response.ok) return "failed";
 
   const status = String(data?.status || data?.state || "").trim().toLowerCase();
 
-  // Arena's BeatVision scene-image bridge is synchronous: it waits for the
-  // Pixazo Flux Schnell result and returns the real image URL in the same
-  // successful response. It intentionally does not manufacture a provider
-  // job/status for the controller to poll.
-  if (jobType === "scene_image" && extractImageUrl(data)) return "completed";
+  // Arena's BeatVision scene-image bridge is synchronous and may return either
+  // a hosted image URL or real base64 image data (Cloudflare Workers AI path).
+  if (jobType === "scene_image" && (extractImageUrl(data) || extractImageBase64(data))) return "completed";
   if (["failed", "error", "provider_error", "provider_unavailable", "unavailable", "cancelled", "canceled"].includes(status)) return "failed";
   if (["processing", "submitted", "queued", "pending", "running", "in_progress"].includes(status)) return "processing";
 
@@ -339,15 +354,15 @@ async function run(db: any, job: any) {
     const state = terminalState(result.response, result.data, job.job_type);
 
     if (state === "failed") {
-      await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena rejected generation."), result.data);
+      await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena rejected generation."), compactArenaResponse(result.data, job.job_type));
     } else if (state === "completed") {
       if (job.job_type === "assembly") {
         const finalVideo = await persistFinalVideo(db, job, result.data);
-        await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: result.data, bridge_contract: "2.0", final_video: finalVideo } }).eq("id", job.id).eq("status", "processing");
+        await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: compactArenaResponse(result.data, job.job_type), bridge_contract: "2.0", final_video: finalVideo } }).eq("id", job.id).eq("status", "processing");
       } else {
         const persistedImage = await persistSceneImage(db, job, result.data);
         const persistedMotion = await persistMotionClip(db, job, result.data);
-        await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: result.data, bridge_contract: "2.0", scene_image_asset: persistedImage || null, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing");
+        await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: compactArenaResponse(result.data, job.job_type), bridge_contract: "2.0", scene_image_asset: persistedImage || null, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing");
       }
     } else {
       const upstreamJobId = job.job_type === "assembly"
