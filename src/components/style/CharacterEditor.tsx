@@ -11,6 +11,7 @@ export default function CharacterEditor({
   onSave,
   onUpload,
   onApproveAsset,
+  onApprove,
 }: {
   character: Character;
   assets: CharacterAsset[];
@@ -18,6 +19,7 @@ export default function CharacterEditor({
   onSave: (id: string, input: { name: string; sheet: Record<string, string> }) => Promise<unknown>;
   onUpload: (file: File, label: string) => Promise<unknown>;
   onApproveAsset: (asset: CharacterAsset) => Promise<unknown>;
+  onApprove: (character: Character) => Promise<unknown>;
 }) {
   const initial = useMemo(() => ({ ...emptySheet, ...character.sheet }), [character.sheet]);
   const [name, setName] = useState(character.name);
@@ -45,6 +47,7 @@ export default function CharacterEditor({
         <label>Continuity / must-not-change <textarea rows={3} value={sheet.continuity} onChange={(e) => setSheet((s) => ({ ...s, continuity: e.target.value }))} /></label>
         <button disabled={working}>{working ? "Saving…" : "Save Character Sheet"}</button>
       </form>
+      <button type="button" disabled={working || character.status === "approved"} onClick={() => void onApprove(character)}>{character.status === "approved" ? "Character Approved" : "Approve Character"}</button>
       <h4>Character Assets</h4>
       <input
         type="file"
