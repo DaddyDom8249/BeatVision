@@ -1,16 +1,27 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const cors = {
-  "Access-Control-Allow-Origin": "https://beat-vision-f8nn.vercel.app",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
-  "Content-Type": "application/json",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://beat-vision-beat-vision.vercel.app",
+  "https://beat-vision-git-main-beat-vision.vercel.app",
+  "https://beat-vision-f8nn.vercel.app",
+]);
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://beat-vision-beat-vision.vercel.app";
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+    "Vary": "Origin",
+    "Content-Type": "application/json",
+  };
+}
 
 const WORLD_MODEL = "openai/gpt-oss-20b";
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: cors });
+const json = (req: Request, body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: corsHeaders(req) });
 
 const env = (name: string) => String(Deno.env.get(name) || "").trim();
 
@@ -172,7 +183,7 @@ function mergeWorldForValidation(existing: Record<string, any>, edits: Record<st
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   try {
     const userId = await getUser(req);
@@ -183,7 +194,7 @@ Deno.serve(async (req) => {
       "";
 
     if (!projectId) {
-      return json({ error: { code: "PROJECT_REQUIRED", message: "projectId is required." } }, 400);
+      return json(req, { error: { code: "PROJECT_REQUIRED", message: "projectId is required." } }, 400);
     }
 
     const admin = adminClient();
@@ -195,7 +206,7 @@ Deno.serve(async (req) => {
 
     if (projectError) throw new Error(projectError.message);
     if (!project || project.owner_id !== userId) {
-      return json({ error: { code: "NOT_FOUND", message: "Project not found." } }, 404);
+      return json(req, { error: { code: "NOT_FOUND", message: "Project not found." } }, 404);
     }
 
     const { data: existing, error: readError } = await admin
@@ -208,16 +219,16 @@ Deno.serve(async (req) => {
 
     if (readError) throw new Error(readError.message);
 
-    if (req.method === "GET") return json({ report: existing });
+    if (req.method === "GET") return json(req, { report: existing });
 
     if (req.method === "PATCH") {
       if (!existing || existing.status !== "completed") {
-        return json({ error: { code: "WORLD_NOT_READY", message: "A completed world report must exist before editing or confirmation." } }, 409);
+        return json(req, { error: { code: "WORLD_NOT_READY", message: "A completed world report must exist before editing or confirmation." } }, 409);
       }
 
       if (body.action === "create_revision") {
         if (!existing.confirmed_at) {
-          return json({ error: { code: "WORLD_REVISION_REQUIRES_CONFIRMED", message: "Create a revision only after the current World has been confirmed." } }, 409);
+          return json(req, { error: { code: "WORLD_REVISION_REQUIRES_CONFIRMED", message: "Create a revision only after the current World has been confirmed." } }, 409);
         }
 
         const edits = readWorldEdits(body);
@@ -275,7 +286,7 @@ Deno.serve(async (req) => {
 
         if (projectUpdateError) throw new Error(projectUpdateError.message);
 
-        return json({
+        return json(req, {
           report: revision,
           action: "create_revision",
           ok: true,
@@ -286,7 +297,7 @@ Deno.serve(async (req) => {
 
       if (body.action === "save_edits") {
         if (existing.confirmed_at) {
-          return json({ error: { code: "WORLD_ALREADY_CONFIRMED", message: "Confirmed worlds are immutable. Use create_revision to make an explicit new revision." } }, 409);
+          return json(req, { error: { code: "WORLD_ALREADY_CONFIRMED", message: "Confirmed worlds are immutable. Use create_revision to make an explicit new revision." } }, 409);
         }
 
         const edits = readWorldEdits(body);
@@ -329,7 +340,7 @@ Deno.serve(async (req) => {
           })
         );
 
-        return json({
+        return json(req, {
           report: saved,
           action: "save_edits",
           ok: true,
@@ -338,10 +349,10 @@ Deno.serve(async (req) => {
       }
 
       if (body.action !== "confirm") {
-        return json({ error: { code: "INVALID_ACTION", message: "Only world editing or confirmation is supported." } }, 400);
+        return json(req, { error: { code: "INVALID_ACTION", message: "Only world editing or confirmation is supported." } }, 400);
       }
 
-      if (existing.confirmed_at) return json({ report: existing });
+      if (existing.confirmed_at) return json(req, { report: existing });
 
       const now = new Date().toISOString();
       const { data: confirmed, error } = await admin
@@ -362,11 +373,11 @@ Deno.serve(async (req) => {
 
       if (projectUpdateError) throw new Error(projectUpdateError.message);
 
-      return json({ report: confirmed });
+      return json(req, { report: confirmed });
     }
 
     if (existing?.confirmed_at) {
-      return json({
+      return json(req, {
         error: {
           code: "WORLD_ALREADY_CONFIRMED",
           message: "This World revision is immutable. Create an explicit revision before regenerating or modifying it.",
@@ -376,7 +387,7 @@ Deno.serve(async (req) => {
 
     const groqKey = env("GROQ_API_KEY");
     if (!groqKey) {
-      return json({
+      return json(req, {
         report: {
           ...(existing || {}),
           status: "unavailable",
@@ -394,7 +405,7 @@ Deno.serve(async (req) => {
 
     if (songError) throw new Error(songError.message);
     if (!song || song.analysis_status !== "completed") {
-      return json({
+      return json(req, {
         error: {
           code: "SONG_ANALYSIS_REQUIRED",
           message: "Complete song analysis before revealing the world.",
@@ -484,7 +495,7 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
         ? await admin.from("world_reports").update(payload).eq("id", existing.id).select("*").single()
         : await admin.from("world_reports").insert({ project_id: projectId, ...payload }).select("*").single();
       if (result.error) throw new Error(result.error.message);
-      return json({ report: result.data }, 503);
+      return json(req, { report: result.data }, 503);
     }
 
     const content = data?.choices?.[0]?.message?.content;
@@ -538,12 +549,12 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
 
     if (result.error) throw new Error(result.error.message);
 
-    return json({ report: result.data });
+    return json(req, { report: result.data });
   } catch (error) {
     if (error instanceof HttpError) {
-      return json({ error: { code: error.code, message: error.message } }, error.status);
+      return json(req, { error: { code: error.code, message: error.message } }, error.status);
     }
-    return json({
+    return json(req, {
       error: {
         code: "WORLD_REQUEST_FAILED",
         message: error instanceof Error ? error.message : String(error),
