@@ -108,11 +108,14 @@ export default function SongPage({ projectId }: Props) {
         if (song?.audio_path) await supabase.storage.from("songs").remove([song.audio_path]);
       }
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         project_id: projectId, title: title.trim(), artist: artist.trim(),
-        audio_path: audioPath, lyrics: lyrics.trim() || null,
+        lyrics: lyrics.trim() || null,
         creative_direction: creativeDirection.trim() || null, notes: notes.trim() || null
       };
+      // The DB invalidates analysis on UPDATE OF audio_path. Do not send the
+      // existing path on an ordinary metadata save or completed analysis resets.
+      if (audio) payload.audio_path = audioPath;
       const result = song
         ? await supabase.from("songs").update(payload).eq("id", song.id).select("id").single()
         : await supabase.from("songs").insert(payload).select("id").single();
@@ -125,8 +128,8 @@ export default function SongPage({ projectId }: Props) {
       const projectUpdate = await supabase.from("projects").update({ song_duration: songDuration }).eq("id", projectId);
       if (projectUpdate.error) throw new Error(projectUpdate.error.message);
 
+      await reload();
       setSaved(true);
-      void reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save song failed.");
     } finally { setSaving(false); }
