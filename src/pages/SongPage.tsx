@@ -173,9 +173,9 @@ export default function SongPage({ projectId }: Props) {
           <label>Notes<textarea rows={4} value={notes} onChange={e => { setNotes(e.target.value); setSaved(false); }} /></label>
           <button className="primary-button large" disabled={saving}>{saving ? "Saving…" : saved ? "Saved ✓" : "Save song →"}</button>
         </form>
-        {saved && (
+        {(saved || song?.analysis_status === "completed") && (
           <section aria-label="Next step" className="create-card">
-            <p role="status"><strong>Song saved successfully.</strong></p>
+            {saved && <p role="status"><strong>Song saved successfully.</strong></p>}
             {song?.analysis_status === "completed" ? (
               <>
                 <p>Next step: reveal the visual world for this song.</p>
