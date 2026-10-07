@@ -380,7 +380,7 @@ Deno.serve(async (req) => {
 
     if (action === "drain") {
       if (uid.kind !== "system") return json({ error: { code: "UNAUTHORIZED_SCHEDULER", message: "Scheduler authorization required." } }, 401);
-      const pending = await db.from("generation_jobs").select("id,project_id,status").in("status", ["queued", "processing"]).order("created_at", { ascending: true }).limit(8);
+      const pending = await db.from("generation_jobs").select("*").in("status", ["queued", "processing"]).order("created_at", { ascending: true }).limit(8);
       if (pending.error) throw new Error(pending.error.message);
       const results = [];
       for (const item of pending.data || []) {
