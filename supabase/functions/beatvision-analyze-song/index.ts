@@ -85,12 +85,17 @@ Deno.serve(async (req) => {
     if (!response.ok) throw new Error("Groq transcription failed (" + response.status + "): " + String(data?.error?.message || data?.message || raw).slice(0, 800));
 
     const existing = song.analysis && typeof song.analysis === "object" ? song.analysis as Record<string, unknown> : {};
-    const fallbackDuration = Number(project.song_duration);
+    const transcriptionDuration = Number(data?.duration);
+    const existingDuration = Number(existing.duration_seconds);
+    const projectDuration = Number(project.song_duration);
+    const authoritativeDuration = Number.isFinite(transcriptionDuration) && transcriptionDuration > 0
+      ? transcriptionDuration
+      : (Number.isFinite(existingDuration) && existingDuration > 0
+        ? existingDuration
+        : (Number.isFinite(projectDuration) && projectDuration > 0 ? projectDuration : null));
     const analysis = {
       ...existing,
-      duration_seconds: Number.isFinite(Number(existing.duration_seconds)) && Number(existing.duration_seconds) > 0
-        ? existing.duration_seconds
-        : (Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : null),
+      duration_seconds: authoritativeDuration,
       transcript: data?.text ?? null,
       transcript_segments: Array.isArray(data?.segments) ? data.segments : [],
       word_timestamps: Array.isArray(data?.words) ? data.words : [],
@@ -98,6 +103,13 @@ Deno.serve(async (req) => {
       transcription_model: "whisper-large-v3-turbo",
       transcription_method: "groq_whisper",
     };
+
+    if (Number.isFinite(authoritativeDuration) && authoritativeDuration > 0) {
+      const { error: projectDurationError } = await admin.from("projects")
+        .update({ song_duration: authoritativeDuration })
+        .eq("id", projectId);
+      if (projectDurationError) throw new Error(projectDurationError.message);
+    }
 
     const { error: updateError } = await admin.from("songs").update({
       analysis_status: "completed",
