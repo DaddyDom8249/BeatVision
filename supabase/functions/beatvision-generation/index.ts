@@ -13,6 +13,14 @@ function admin() {
 }
 
 async function authenticate(req: Request) {
+  const queueSecret = String(req.headers.get("X-BeatVision-Queue-Secret") || "").trim();
+  if (queueSecret) {
+    const db = admin();
+    const config = await db.from("beatvision_generation_scheduler_config").select("queue_secret").maybeSingle();
+    if (config.error) throw new HttpError(500, "SCHEDULER_CONFIG_FAILED", config.error.message);
+    if (config.data?.queue_secret && queueSecret === config.data.queue_secret) return { kind: "system" as const, userId: null };
+  }
+
   const token = req.headers.get("Authorization") || "";
   if (!/^Bearer\s+\S+$/i.test(token)) throw new HttpError(401, "UNAUTHENTICATED", "Authentication required.");
 
@@ -368,10 +376,26 @@ Deno.serve(async (req) => {
     const projectId = String(body.projectId || body.project_id || "");
     const jobId = String(body.jobId || body.job_id || "");
     const action = String(body.action || "run");
-    if (!projectId || !jobId) return json({ error: { code: "JOB_REQUIRED", message: "projectId and jobId are required." } }, 400);
-    if (!["run", "poll"].includes(action)) return json({ error: { code: "INVALID_ACTION", message: "action must be run or poll." } }, 400);
-
     const db = admin();
+
+    if (action === "drain") {
+      if (uid.kind !== "system") return json({ error: { code: "UNAUTHORIZED_SCHEDULER", message: "Scheduler authorization required." } }, 401);
+      const pending = await db.from("generation_jobs").select("id,project_id,status").in("status", ["queued", "processing"]).order("created_at", { ascending: true }).limit(8);
+      if (pending.error) throw new Error(pending.error.message);
+      const results = [];
+      for (const item of pending.data || []) {
+        try {
+          const result = item.status === "processing" ? await poll(db, item) : await run(db, item);
+          results.push({ id: item.id, action: item.status === "processing" ? "poll" : "run", status: result.status });
+        } catch (error) {
+          results.push({ id: item.id, error: error instanceof Error ? error.message : String(error) });
+        }
+      }
+      return json({ ok: true, scanned: (pending.data || []).length, results });
+    }
+
+    if (!projectId || !jobId) return json({ error: { code: "JOB_REQUIRED", message: "projectId and jobId are required." } }, 400);
+    if (!["run", "poll"].includes(action)) return json({ error: { code: "INVALID_ACTION", message: "action must be run, poll, or drain." } }, 400);
     const project = await db.from("projects").select("id,owner_id").eq("id", projectId).maybeSingle();
     if (project.error) throw new Error(project.error.message);
     if (!project.data || (uid.kind !== "system" && project.data.owner_id !== uid.userId)) return json({ error: { code: "NOT_FOUND", message: "Project not found." } }, 404);
