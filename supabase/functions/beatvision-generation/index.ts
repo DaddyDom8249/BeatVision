@@ -214,10 +214,16 @@ async function persistMotionClip(db: any, job: any, responseData: any) {
   return insert.data;
 }
 
-function terminalState(response: Response, data: any) {
+function terminalState(response: Response, data: any, jobType?: string) {
   if (!response.ok) return "failed";
 
   const status = String(data?.status || data?.state || "").trim().toLowerCase();
+
+  // Arena's BeatVision scene-image bridge is synchronous: it waits for the
+  // Pixazo Flux Schnell result and returns the real image URL in the same
+  // successful response. It intentionally does not manufacture a provider
+  // job/status for the controller to poll.
+  if (jobType === "scene_image" && extractImageUrl(data)) return "completed";
   if (["failed", "error", "provider_error", "provider_unavailable", "unavailable", "cancelled", "canceled"].includes(status)) return "failed";
   if (["processing", "submitted", "queued", "pending", "running", "in_progress"].includes(status)) return "processing";
 
@@ -271,7 +277,7 @@ async function run(db: any, job: any) {
   try {
     const path = job.job_type === "scene_image" ? "/v2/scene-image" : job.job_type === "scene_motion" ? "/v2/animate" : "/v2/assemble";
     const result = await arena(path, "POST", await bridgePayload(db, job), requestId);
-    const state = terminalState(result.response, result.data);
+    const state = terminalState(result.response, result.data, job.job_type);
 
     if (state === "failed") {
       await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena rejected generation."), result.data);
