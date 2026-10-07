@@ -17,6 +17,7 @@ import { createStubClientFactory } from "./supabase_stub.mjs";
 
 const FUNCTION_PATH = fileURLToPath(new URL("../../supabase/functions/beatvision-world/index.ts", import.meta.url));
 const SUPABASE_URL = "https://stub.supabase.co";
+const APP_ORIGIN = "https://beat-vision-beat-vision.vercel.app";
 const USER_ID = "user-owner-1";
 const PROJECT_ID = "project-1";
 const REMOTE_IMPORT = 'from "https://esm.sh/@supabase/supabase-js@2"';
@@ -167,7 +168,7 @@ async function bootFunction({ worldOverrides = {}, authUserId = USER_ID } = {}) 
 }
 
 function request(handler, { method = "PATCH", body, token = "valid-token" } = {}) {
-  const headers = { "Content-Type": "application/json" };
+  const headers = { "Content-Type": "application/json", Origin: APP_ORIGIN };
   // `token: null` omits the Authorization header entirely.
   if (token !== null) headers.Authorization = `Bearer ${token}`;
   return handler(
@@ -362,7 +363,7 @@ test("invalid or expired session returns 401", async () => {
   assert.equal(response.status, 401);
   assert.equal((await response.json()).error.code, "UNAUTHENTICATED");
   // WorldPage uses raw fetch, so CORS must be present even on failures.
-  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://beat-vision-f8nn.vercel.app");
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://beat-vision-beat-vision.vercel.app");
   assert.equal(db.world_reports[0].mood.tone, "original");
 });
 
@@ -372,7 +373,7 @@ test("missing Authorization header returns 401", async () => {
 
   assert.equal(response.status, 401);
   assert.equal((await response.json()).error.code, "UNAUTHENTICATED");
-  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://beat-vision-f8nn.vercel.app");
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://beat-vision-beat-vision.vercel.app");
   assert.equal(db.world_reports[0].mood.tone, "original");
 });
 
@@ -393,7 +394,7 @@ test("OPTIONS preflight returns the CORS headers WorldPage's raw fetch needs", a
   const response = await request(handler, { method: "OPTIONS", token: null });
 
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://beat-vision-f8nn.vercel.app");
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://beat-vision-beat-vision.vercel.app");
   const allowed = (response.headers.get("Access-Control-Allow-Headers") || "").toLowerCase();
   assert.match(allowed, /authorization/);
   assert.match(allowed, /content-type/);
