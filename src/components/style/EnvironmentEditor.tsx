@@ -11,6 +11,7 @@ export default function EnvironmentEditor({
   onSave,
   onUpload,
   onApproveAsset,
+  onApprove,
 }: {
   environment: Environment;
   assets: EnvironmentAsset[];
@@ -18,6 +19,7 @@ export default function EnvironmentEditor({
   onSave: (id: string, input: { name: string; sheet: Record<string, string> }) => Promise<unknown>;
   onUpload: (file: File, label: string) => Promise<unknown>;
   onApproveAsset: (asset: EnvironmentAsset) => Promise<unknown>;
+  onApprove: (environment: Environment) => Promise<unknown>;
 }) {
   const initial = useMemo(() => ({ ...emptySheet, ...environment.sheet }), [environment.sheet]);
   const [name, setName] = useState(environment.name);
@@ -47,6 +49,7 @@ export default function EnvironmentEditor({
         <label>Continuity / must-not-change <textarea rows={3} value={sheet.continuity} onChange={(e) => setSheet((s) => ({ ...s, continuity: e.target.value }))} /></label>
         <button disabled={working}>{working ? "Saving…" : "Save Environment Sheet"}</button>
       </form>
+      <button type="button" disabled={working || environment.status === "approved"} onClick={() => void onApprove(environment)}>{environment.status === "approved" ? "Environment Approved" : "Approve Environment"}</button>
       <h4>Environment Assets</h4>
       <input
         type="file"
