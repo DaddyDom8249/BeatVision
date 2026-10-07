@@ -38,11 +38,29 @@ export default function StylePage({ projectId }: { projectId: string }) {
   const [newCharacter, setNewCharacter] = useState({ name: "", identity: "", appearance: "", wardrobe: "", behavior: "", continuity: "" });
   const [newEnvironment, setNewEnvironment] = useState({ name: "", purpose: "", layout: "", architecture: "", surfaces: "", lighting: "", atmosphere: "", continuity: "" });
 
+  function editableLines(value: unknown): string {
+    if (!Array.isArray(value)) return "";
+    return value
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object") {
+          const record = item as Record<string, unknown>;
+          if (typeof record.rule === "string") return record.rule;
+          if (typeof record.url === "string") return record.url;
+          if (typeof record.path === "string") return record.path;
+          return JSON.stringify(item);
+        }
+        return String(item);
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+
   useEffect(() => {
     if (!styleBible) return;
-    setVisualRules(Array.isArray(styleBible.visual_rules) ? styleBible.visual_rules.join("\n") : "");
-    setReferenceAssets(Array.isArray(styleBible.reference_assets) ? styleBible.reference_assets.join("\n") : "");
-    setContinuityRules(Array.isArray(styleBible.continuity_rules) ? styleBible.continuity_rules.join("\n") : "");
+    setVisualRules(editableLines(styleBible.visual_rules));
+    setReferenceAssets(editableLines(styleBible.reference_assets));
+    setContinuityRules(editableLines(styleBible.continuity_rules));
   }, [styleBible]);
 
   if (loading) return <main className="studio-main style-page"><div className="style-loading">Loading Style Studio…</div></main>;
