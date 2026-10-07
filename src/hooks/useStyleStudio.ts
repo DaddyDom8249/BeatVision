@@ -271,6 +271,20 @@ export function useStyleStudio(projectId: string) {
     } finally { setWorking(false); }
   }, [projectId, world, styleBible, load]);
 
+  const approveCharacter = useCallback(async (id: string) => {
+    if (!styleBible || styleBible.status === "approved") throw new Error("The Style Bible is locked.");
+    setWorking(true); setError(null);
+    try {
+      const result = await supabase.rpc("approve_character", { p_character_id: id });
+      if (result.error) throw result.error;
+      await load();
+      return result.data as Character;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Unable to approve character.";
+      setError(message); throw e;
+    } finally { setWorking(false); }
+  }, [load, styleBible]);
+
   const saveEnvironment = useCallback(async (id: string | null, input: { name: string; sheet: Record<string, string> }) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
     if (styleBible.status === "approved") throw new Error("The Style Bible is locked and cannot be edited.");
@@ -295,6 +309,20 @@ export function useStyleStudio(projectId: string) {
       setError(message); throw e;
     } finally { setWorking(false); }
   }, [projectId, world, styleBible, load]);
+
+  const approveEnvironment = useCallback(async (id: string) => {
+    if (!styleBible || styleBible.status === "approved") throw new Error("The Style Bible is locked.");
+    setWorking(true); setError(null);
+    try {
+      const result = await supabase.rpc("approve_environment", { p_environment_id: id });
+      if (result.error) throw result.error;
+      await load();
+      return result.data as Environment;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Unable to approve environment.";
+      setError(message); throw e;
+    } finally { setWorking(false); }
+  }, [load, styleBible]);
 
   const uploadAsset = useCallback(async (kind: "character" | "environment", parentId: string, file: File, label: string) => {
     const userId = await getUserId();
@@ -363,6 +391,8 @@ export function useStyleStudio(projectId: string) {
     approveStyleBible,
     saveCharacter,
     saveEnvironment,
+    approveCharacter,
+    approveEnvironment,
     uploadAsset,
     approveAsset,
     reload: load,
