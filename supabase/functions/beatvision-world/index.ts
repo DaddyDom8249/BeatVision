@@ -416,13 +416,20 @@ Deno.serve(async (req) => {
       ? song.analysis as Record<string, unknown>
       : {};
 
+    // Groq enforces a TPM ceiling on the full request (input + requested output).
+    // Keep the World prompt deliberately bounded so large lyrics/transcripts/analysis
+    // cannot push an otherwise valid generation over the organization limit.
+    const compactArray = (value: unknown, maxItems: number) =>
+      Array.isArray(value) ? value.slice(0, maxItems) : [];
+    const lyrics = cleanText(song.lyrics, 6000);
+    const transcript = cleanText(analysis.transcript, 5000);
     const source = {
       project_title: cleanText(project.title, 240),
       song_title: cleanText(song.title, 240),
       artist: cleanText(song.artist, 240),
-      creative_direction: cleanText(song.creative_direction, 3000),
-      notes: cleanText(song.notes, 3000),
-      lyrics: cleanText(song.lyrics, 9000),
+      creative_direction: cleanText(song.creative_direction, 1800),
+      notes: cleanText(song.notes, 1200),
+      lyrics,
       musical_analysis: {
         duration_seconds: analysis.duration_seconds ?? null,
         bpm: analysis.bpm ?? null,
@@ -430,13 +437,14 @@ Deno.serve(async (req) => {
         key: analysis.key ?? null,
         key_confidence: analysis.key_confidence ?? null,
         time_signature: analysis.time_signature ?? null,
-        energy_curve: analysis.energy_curve ?? [],
-        energy_regions: analysis.energy_region_candidates ?? [],
-        transcript: cleanText(analysis.transcript, 9000),
-        transcript_segments: analysis.transcript_segments ?? [],
+        energy_curve: compactArray(analysis.energy_curve, 24),
+        energy_regions: compactArray(analysis.energy_region_candidates, 12),
+        transcript,
+        // Segment-level timing is not needed to define the World and can be
+        // extremely large. Preserve the transcript only for semantic context.
         vocal_presence: analysis.vocal_presence ?? null,
-        mood_tags: analysis.mood_tags ?? [],
-        genre_tags: analysis.genre_tags ?? [],
+        mood_tags: compactArray(analysis.mood_tags, 12),
+        genre_tags: compactArray(analysis.genre_tags, 12),
       },
     };
 
