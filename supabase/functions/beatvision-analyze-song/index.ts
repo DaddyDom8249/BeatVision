@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
 
     const admin = adminClient();
     const { data: project, error: projectError } = await admin.from("projects")
-      .select("id,owner_id").eq("id", projectId).maybeSingle();
+      .select("id,owner_id,song_duration").eq("id", projectId).maybeSingle();
     if (projectError) throw new Error(projectError.message);
     if (!project || project.owner_id !== userId) return json({ error: "Project not found or access denied." }, 403);
 
@@ -85,8 +85,12 @@ Deno.serve(async (req) => {
     if (!response.ok) throw new Error("Groq transcription failed (" + response.status + "): " + String(data?.error?.message || data?.message || raw).slice(0, 800));
 
     const existing = song.analysis && typeof song.analysis === "object" ? song.analysis as Record<string, unknown> : {};
+    const fallbackDuration = Number(project.song_duration);
     const analysis = {
       ...existing,
+      duration_seconds: Number.isFinite(Number(existing.duration_seconds)) && Number(existing.duration_seconds) > 0
+        ? existing.duration_seconds
+        : (Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : null),
       transcript: data?.text ?? null,
       transcript_segments: Array.isArray(data?.segments) ? data.segments : [],
       word_timestamps: Array.isArray(data?.words) ? data.words : [],
