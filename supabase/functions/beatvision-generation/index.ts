@@ -216,10 +216,17 @@ async function persistMotionClip(db: any, job: any, responseData: any) {
 
 function terminalState(response: Response, data: any) {
   if (!response.ok) return "failed";
-  const status = String(data?.status || data?.state || "").toLowerCase();
-  if (["failed", "error", "provider_error", "provider_unavailable", "unavailable"].includes(status)) return "failed";
-  if (["processing", "submitted", "queued", "pending", "running"].includes(status)) return "processing";
-  return "completed";
+
+  const status = String(data?.status || data?.state || "").trim().toLowerCase();
+  if (["failed", "error", "provider_error", "provider_unavailable", "unavailable", "cancelled", "canceled"].includes(status)) return "failed";
+  if (["processing", "submitted", "queued", "pending", "running", "in_progress"].includes(status)) return "processing";
+
+  // A successful HTTP response is not proof that media is complete.  Require
+  // an explicit terminal-success state so an unrecognised provider response
+  // cannot be persisted as a completed job without real output.
+  if (["completed", "complete", "succeeded", "success", "done", "finished"].includes(status)) return "completed";
+
+  return "processing";
 }
 
 async function setFailed(db: any, id: string, message: string, detail?: unknown) {
