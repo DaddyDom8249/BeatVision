@@ -7,6 +7,7 @@ export default function WorldPage({projectId,onNavigate}:{projectId:string;onNav
  const {song,loading:songLoading,error:songError}=useSong(projectId);
 
  if(loading||songLoading)return <main><p>Loading world…</p></main>;
+ if(songError)return <main><h1>World unavailable</h1><p role="alert">{songError}</p><p>Reload the Song page and retry after the project data is available.</p></main>;
  if(!song?.audio_path)return <main><h1>Reveal World</h1><p>Save an audio track before revealing the world.</p></main>;
  if(song.analysis_status!=="completed")return <main><h1>Analyze the song first</h1><p>BeatVision needs completed musical analysis before World Reveal. Return to Song and run Analyze music.</p>{songError&&<p role="alert">{songError}</p>}</main>;
  if(!report)return <main><h1>Reveal World</h1><p>Reveal the song's durable visual world.</p><button disabled={generating} onClick={()=>void revealWorld()}>{generating?"Revealing…":"Reveal World"}</button>{error&&<p role="alert">{error}</p>}</main>;
