@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const migration = readFileSync(new URL("../../supabase/migrations/20261008120000_link_final_videos_to_generation_jobs.sql", import.meta.url), "utf8");
+const migration = readFileSync(new URL("../../supabase/migrations/20261008160529_link_final_videos_to_generation_jobs.sql", import.meta.url), "utf8");
 const controller = readFileSync(new URL("../../supabase/functions/beatvision-generation/index.ts", import.meta.url), "utf8");
 
 test("final video uniqueness is a non-partial index usable by PostgREST onConflict", () => {
