@@ -26,19 +26,27 @@ export default function EnvironmentEditor({
   const [name, setName] = useState(environment.name);
   const [sheet, setSheet] = useState(initial);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionStatus, setActionStatus] = useState<string | null>(null);
+  const suggestedFields = environment.suggested_world_fields ?? [];
+  const missingFields = Object.keys(emptySheet).filter((field) => !sheet[field as keyof typeof emptySheet]?.trim());
   const locked = environment.status === "approved";
 
   useEffect(() => {
     setName(environment.name);
     setSheet({ ...emptySheet, ...formatCreativeRecord(environment.sheet) });
     setActionError(null);
-  }, [environment]);
+  // Preserve edits in other cards during background refreshes (such as uploads).
+  // Reload this editor only when its own persisted version changes.
+  }, [environment.id, environment.updated_at, environment.status]);
 
   function submit(event: FormEvent) {
     event.preventDefault();
     if (locked) return;
     setActionError(null);
-    void onSave(environment.id, { name, sheet }).catch((error: unknown) => {
+    setActionStatus(null);
+    void onSave(environment.id, { name, sheet }).then(() => {
+      setActionStatus("Saved environment sheet.");
+    }).catch((error: unknown) => {
       setActionError(getCreativeErrorMessage(error, "Unable to save environment."));
     });
   }
@@ -47,6 +55,14 @@ export default function EnvironmentEditor({
     <article>
       <h3>{environment.name}</h3>
       {actionError && <p role="alert" className="form-error">{actionError}</p>}
+      {actionStatus && <p role="status">{actionStatus}</p>}
+      {suggestedFields.length > 0 && !locked && <p role="status">
+        Confirmed World details suggested for: {suggestedFields.join(", ")}. Select Save Environment Sheet to persist these draft suggestions.
+      </p>}
+      {missingFields.length > 0 && <p className="style-muted">
+        {locked ? "Approved with unspecified fields (requires an explicit revision): " : "Not specified by confirmed World; creator input needed: "}
+        {missingFields.join(", ")}.
+      </p>}
       <form onSubmit={submit}>
         <label>Name <input readOnly={locked} value={name} onChange={(e) => setName(e.target.value)} required /></label>
         <label>Purpose / narrative role <textarea readOnly={locked} rows={3} value={sheet.purpose} onChange={(e) => setSheet((s) => ({ ...s, purpose: e.target.value }))} /></label>
@@ -60,7 +76,10 @@ export default function EnvironmentEditor({
       </form>
       <button type="button" disabled={working || environment.status === "approved"} onClick={() => {
         setActionError(null);
-        void onApprove(environment).catch((error: unknown) => {
+        setActionStatus(null);
+        void onApprove(environment).then(() => {
+          setActionStatus("Environment approved.");
+        }).catch((error: unknown) => {
           setActionError(getCreativeErrorMessage(error, "Unable to approve environment."));
         });
       }}>{environment.status === "approved" ? "Environment Approved" : "Approve Environment"}</button>
@@ -71,13 +90,24 @@ export default function EnvironmentEditor({
         disabled={working}
         onChange={(event) => {
           const file = event.target.files?.[0];
-          if (file) void onUpload(file, file.name).catch((error: unknown) => {
-            setActionError(getCreativeErrorMessage(error, "Unable to upload asset."));
-          });
+          if (file) {
+            setActionError(null);
+            setActionStatus(null);
+            void onUpload(file, file.name).then(() => {
+              setActionStatus("Reference image uploaded.");
+            }).catch((error: unknown) => {
+              setActionError(getCreativeErrorMessage(error, "Unable to upload asset."));
+            });
+          }
           event.currentTarget.value = "";
         }}
       />
-      <AssetList assets={assets} working={working} onApprove={(asset) => void onApproveAsset(asset)} />
+      <AssetList assets={assets} working={working} onApprove={(asset) => {
+        setActionError(null);
+        void onApproveAsset(asset).catch((error: unknown) => {
+          setActionError(getCreativeErrorMessage(error, "Unable to approve reference asset."));
+        });
+      }} />
     </article>
   );
 }

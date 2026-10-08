@@ -26,19 +26,27 @@ export default function CharacterEditor({
   const [name, setName] = useState(character.name);
   const [sheet, setSheet] = useState(initial);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionStatus, setActionStatus] = useState<string | null>(null);
+  const suggestedFields = character.suggested_world_fields ?? [];
+  const missingFields = Object.keys(emptySheet).filter((field) => !sheet[field as keyof typeof emptySheet]?.trim());
   const locked = character.status === "approved";
 
   useEffect(() => {
     setName(character.name);
     setSheet({ ...emptySheet, ...formatCreativeRecord(character.sheet) });
     setActionError(null);
-  }, [character]);
+  // Preserve edits in other cards during background refreshes (such as uploads).
+  // Reload this editor only when its own persisted version changes.
+  }, [character.id, character.updated_at, character.status]);
 
   function submit(event: FormEvent) {
     event.preventDefault();
     if (locked) return;
     setActionError(null);
-    void onSave(character.id, { name, sheet }).catch((error: unknown) => {
+    setActionStatus(null);
+    void onSave(character.id, { name, sheet }).then(() => {
+      setActionStatus("Saved character sheet.");
+    }).catch((error: unknown) => {
       setActionError(getCreativeErrorMessage(error, "Unable to save character."));
     });
   }
@@ -47,6 +55,14 @@ export default function CharacterEditor({
     <article>
       <h3>{character.name}</h3>
       {actionError && <p role="alert" className="form-error">{actionError}</p>}
+      {actionStatus && <p role="status">{actionStatus}</p>}
+      {suggestedFields.length > 0 && !locked && <p role="status">
+        Confirmed World details suggested for: {suggestedFields.join(", ")}. Select Save Character Sheet to persist these draft suggestions.
+      </p>}
+      {missingFields.length > 0 && <p className="style-muted">
+        {locked ? "Approved with unspecified fields (requires an explicit revision): " : "Not specified by confirmed World; creator input needed: "}
+        {missingFields.join(", ")}.
+      </p>}
       <form onSubmit={submit}>
         <label>Name <input readOnly={locked} value={name} onChange={(e) => setName(e.target.value)} required /></label>
         <label>Identity <textarea readOnly={locked} rows={3} value={sheet.identity} onChange={(e) => setSheet((s) => ({ ...s, identity: e.target.value }))} /></label>
@@ -58,7 +74,10 @@ export default function CharacterEditor({
       </form>
       <button type="button" disabled={working || character.status === "approved"} onClick={() => {
         setActionError(null);
-        void onApprove(character).catch((error: unknown) => {
+        setActionStatus(null);
+        void onApprove(character).then(() => {
+          setActionStatus("Character approved.");
+        }).catch((error: unknown) => {
           setActionError(getCreativeErrorMessage(error, "Unable to approve character."));
         });
       }}>{character.status === "approved" ? "Character Approved" : "Approve Character"}</button>
@@ -69,13 +88,24 @@ export default function CharacterEditor({
         disabled={working}
         onChange={(event) => {
           const file = event.target.files?.[0];
-          if (file) void onUpload(file, file.name).catch((error: unknown) => {
-            setActionError(getCreativeErrorMessage(error, "Unable to upload asset."));
-          });
+          if (file) {
+            setActionError(null);
+            setActionStatus(null);
+            void onUpload(file, file.name).then(() => {
+              setActionStatus("Reference image uploaded.");
+            }).catch((error: unknown) => {
+              setActionError(getCreativeErrorMessage(error, "Unable to upload asset."));
+            });
+          }
           event.currentTarget.value = "";
         }}
       />
-      <AssetList assets={assets} working={working} onApprove={(asset) => void onApproveAsset(asset)} />
+      <AssetList assets={assets} working={working} onApprove={(asset) => {
+        setActionError(null);
+        void onApproveAsset(asset).catch((error: unknown) => {
+          setActionError(getCreativeErrorMessage(error, "Unable to approve reference asset."));
+        });
+      }} />
     </article>
   );
 }
