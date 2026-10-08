@@ -418,7 +418,6 @@ export function useStyleStudio(projectId: string) {
 
   const saveEnvironment = useCallback(async (id: string | null, input: { name: string; sheet: Record<string, string> }) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
-    if (styleBible.status === "approved") throw new Error("The Style Bible is locked and cannot be edited.");
     if (!world?.id) throw new Error("Confirmed World Report not available.");
     const worldReportId = world.id;
     setWorking(true); setError(null);
@@ -442,7 +441,7 @@ export function useStyleStudio(projectId: string) {
   }, [projectId, world, styleBible, load]);
 
   const approveEnvironment = useCallback(async (id: string) => {
-    if (!styleBible || styleBible.status === "approved") throw new Error("The Style Bible is locked.");
+    if (!styleBible) throw new Error("Create the Style Bible first.");
     setWorking(true); setError(null);
     try {
       const result = await supabase.rpc("approve_environment", { p_environment_id: id });
