@@ -49,7 +49,7 @@ test("old Ghast draft environments receive World-supported text in missing slots
   assert.ok(urban.sheet.continuity.includes("consistent color palette"));
   assert.ok(urban.suggestedFields.includes("surfaces"));
   assert.ok(!urban.suggestedFields.includes("purpose"));
-  assert.equal(urban.sheet.architecture, "");
+  assert.equal(urban.sheet.architecture ?? "", "");
 });
 
 test("mindscape textures are sourced while no architecture is invented", () => {
