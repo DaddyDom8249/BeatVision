@@ -30,7 +30,13 @@ export default function AuthPage({ onNavigate }: Props) {
       setMessage("Account created. Check your email to confirm your account, then sign in.");
     } else {
       capture(mode === "sign-in" ? "signed_in" : "signed_up");
-      onNavigate(mode === "sign-in" ? "/" : "/projects/new");
+      const next = new URLSearchParams(window.location.search).get("next");
+      const destination = next === "/projects/new"
+        ? "/projects/new"
+        : mode === "sign-in"
+          ? "/"
+          : "/projects/new";
+      onNavigate(destination);
     }
 
     setSaving(false);
