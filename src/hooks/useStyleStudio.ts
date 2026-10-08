@@ -74,11 +74,25 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
   const windowLocation = typeof immutable.location_of_window === "string" ? immutable.location_of_window : "";
 
   const characterNames = new Set<string>();
-  const raw = world.raw_report && typeof world.raw_report === "object"
-    ? world.raw_report as Record<string, unknown>
-    : {};
   const modelOutput = raw.model_output && typeof raw.model_output === "object"
     ? raw.model_output as Record<string, unknown>
+    : {};
+  const movement = modelOutput.movement && typeof modelOutput.movement === "object"
+    ? modelOutput.movement as Record<string, unknown>
+    : {};
+  const subjectBehavior = typeof movement.subject_behavior === "string" ? movement.subject_behavior : "";
+  const motifs = Array.isArray(modelOutput.motifs)
+    ? modelOutput.motifs.map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object") {
+          const value = item as Record<string, unknown>;
+          return typeof value.symbol === "string" ? value.symbol : "";
+        }
+        return "";
+      }).filter(Boolean)
+    : [];
+  const raw = world.raw_report && typeof world.raw_report === "object"
+    ? world.raw_report as Record<string, unknown>
     : {};
   const mainCharacters = Array.isArray(raw.main_characters)
     ? raw.main_characters
@@ -99,19 +113,30 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
     })
     .filter((item): item is { name: string; sheet: Record<string, string> } => Boolean(item?.name));
 
-  if (!characters.length && (clothing || keyProp || windowLocation)) {
+  if (!characters.length && (clothing || keyProp || windowLocation || subjectBehavior || motifs.length)) {
     characters.push({
       name: "Central Figure",
       sheet: {
-        identity: "Central figure referenced by the confirmed World Report.",
+        identity: "Primary subject derived from the confirmed World Report; refine before approval.",
         wardrobe: clothing,
-        continuity: [keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`, continuityText].filter(Boolean).join("; "),
+        behavior: subjectBehavior,
+        continuity: [keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`, motifs.length && `World motifs: ${motifs.join(", ")}`, continuityText].filter(Boolean).join("; "),
       },
     });
   }
 
-  const environmentNames = Array.isArray(world.environments)
-    ? world.environments.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map((item) => item.trim())
+  const environmentDrafts = Array.isArray(world.environments)
+    ? world.environments.map((item) => {
+        if (typeof item === "string") return { name: item.trim(), description: "" };
+        if (item && typeof item === "object") {
+          const value = item as Record<string, unknown>;
+          return {
+            name: typeof value.setting === "string" ? value.setting.trim() : typeof value.name === "string" ? value.name.trim() : "",
+            description: typeof value.description === "string" ? value.description : "",
+          };
+        }
+        return { name: "", description: "" };
+      }).filter((item) => item.name)
     : [];
 
   return {
@@ -126,21 +151,20 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       style_bible_id: styleBibleId,
       status: "draft",
     })),
-    environments: [...new Set(environmentNames.map((name) => name.toLowerCase()))].map((lower) => {
-      const name = environmentNames.find((item) => item.toLowerCase() === lower) || lower;
-      return {
-        project_id: projectId,
-        world_report_id: world.id,
-        style_bible_id: styleBibleId,
-        name,
-        status: "draft",
-        sheet: {
-          lighting: [world.cinematography && typeof world.cinematography === "object" ? String((world.cinematography as Record<string, unknown>).lighting ?? "") : "", world.color_lighting && typeof world.color_lighting === "object" ? JSON.stringify(world.color_lighting) : ""].filter(Boolean).join("; "),
-          atmosphere: typeof world.atmosphere === "string" ? world.atmosphere : JSON.stringify(world.atmosphere ?? ""),
-          continuity: [continuityText, keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`].filter(Boolean).join("; "),
-        },
-      };
-    }),
+    environments: [...new Map(environmentDrafts.map((item) => [item.name.toLowerCase(), item])).values()].map((item) => ({
+      project_id: projectId,
+      world_report_id: world.id,
+      style_bible_id: styleBibleId,
+      name: item.name,
+      status: "draft",
+      sheet: {
+        purpose: item.description,
+        layout: item.description,
+        lighting: [world.cinematography && typeof world.cinematography === "object" ? String((world.cinematography as Record<string, unknown>).lighting ?? "") : "", world.color_lighting && typeof world.color_lighting === "object" ? JSON.stringify(world.color_lighting) : ""].filter(Boolean).join("; "),
+        atmosphere: typeof world.atmosphere === "string" ? world.atmosphere : JSON.stringify(world.atmosphere ?? ""),
+        continuity: [continuityText, keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`].filter(Boolean).join("; "),
+      },
+    })),
   };
 }
 
