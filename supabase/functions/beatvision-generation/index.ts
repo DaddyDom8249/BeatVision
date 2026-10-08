@@ -267,21 +267,32 @@ async function persistSceneImage(db: any, job: any, responseData: any) {
     status: "generated",
     approved: false,
   }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,storage_path,status,approved,created_at,updated_at").single();
-  if (insert.error) throw new Error("SCENE_IMAGE_PERSIST_FAILED: " + insert.error.message);
+
+  if (insert.error) {
+    const raceCheck = await db.from("scene_image_assets").select("id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,storage_path,status,approved,created_at,updated_at").eq("generation_job_id", job.id).maybeSingle();
+    if (raceCheck.data) return raceCheck.data;
+    throw new Error("SCENE_IMAGE_PERSIST_FAILED: " + insert.error.message);
+  }
   return insert.data;
 }
 
 async function persistFinalVideo(db: any, job: any, responseData: any) {
   if (job.job_type !== "assembly") return;
-  const existing = await db.from("final_videos").select("id,project_id,video_url,preview_video_url,duration,format,quality,render_status,downloadable,segment_count,created_at,updated_at").eq("project_id", job.project_id).eq("render_status", "complete").maybeSingle();
+  const videoUrl = extractVideoUrl(responseData);
+  if (!videoUrl) throw new Error("FINAL_VIDEO_OUTPUT_MISSING: Shotstack completed without a real video URL.");
+
+  const existing = await db.from("final_videos").select("id,project_id,video_url,preview_video_url,duration,format,quality,render_status,downloadable,segment_count,created_at,updated_at").eq("project_id", job.project_id).eq("video_url", videoUrl).eq("render_status", "complete").maybeSingle();
   if (existing.error) throw new Error("FINAL_VIDEO_CHECK_FAILED: " + existing.error.message);
   if (existing.data) return existing.data;
 
-  const videoUrl = extractVideoUrl(responseData);
-  if (!videoUrl) throw new Error("FINAL_VIDEO_OUTPUT_MISSING: Shotstack completed without a real video URL.");
   const duration = Number(responseData?.result?.duration_seconds || responseData?.duration_seconds || job.input_snapshot?.plan?.duration_seconds || 0);
   const finalInsert = await db.from("final_videos").insert({ project_id: job.project_id, title: String(job.input_snapshot?.plan?.title || "BeatVision Final Video"), video_url: videoUrl, preview_video_url: videoUrl, audio_file: String(job.input_snapshot?.audio_path || ""), duration: Number.isFinite(duration) && duration > 0 ? duration : null, format: "mp4", quality: "hd", render_status: "complete", downloadable: false, segment_count: Array.isArray(job.input_snapshot?.scenes) ? job.input_snapshot.scenes.length : null }).select("id,project_id,video_url,preview_video_url,duration,format,quality,render_status,downloadable,segment_count,created_at,updated_at").single();
-  if (finalInsert.error) throw new Error("FINAL_VIDEO_PERSIST_FAILED: " + finalInsert.error.message);
+
+  if (finalInsert.error) {
+    const raceCheck = await db.from("final_videos").select("id,project_id,video_url,preview_video_url,duration,format,quality,render_status,downloadable,segment_count,created_at,updated_at").eq("project_id", job.project_id).eq("video_url", videoUrl).maybeSingle();
+    if (raceCheck.data) return raceCheck.data;
+    throw new Error("FINAL_VIDEO_PERSIST_FAILED: " + finalInsert.error.message);
+  }
   return finalInsert.data;
 }
 

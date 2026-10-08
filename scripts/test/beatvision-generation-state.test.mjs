@@ -121,6 +121,57 @@ test('poll fails processing job cleanly when upstream_job_id is missing', async 
   }
 });
 
+test('persistFinalVideo inserts distinct final videos for different video_urls in same project', async () => {
+  const dbRows = [];
+  const client = {
+    from(table) {
+      assert.equal(table, 'final_videos');
+      let queryVideoUrl = null;
+      return {
+        select() { return this; },
+        eq(key, val) {
+          if (key === 'video_url') queryVideoUrl = val;
+          return this;
+        },
+        maybeSingle: async () => {
+          const match = dbRows.find(r => r.video_url === queryVideoUrl);
+          return { data: match || null, error: null };
+        },
+        insert(row) {
+          const newRow = { id: 'vid-' + (dbRows.length + 1), ...row };
+          dbRows.push(newRow);
+          return {
+            select() {
+              return { single: async () => ({ data: newRow, error: null }) };
+            }
+          };
+        }
+      };
+    }
+  };
+
+  const runtime = await loadGeneration();
+  try {
+    const job1 = { job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan A' } } };
+    const res1 = await runtime.persistFinalVideo(client, job1, { video_url: 'https://example.test/plan_a.mp4' });
+
+    const job2 = { job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan B' } } };
+    const res2 = await runtime.persistFinalVideo(client, job2, { video_url: 'https://example.test/plan_b.mp4' });
+
+    assert.notEqual(res1.id, res2.id);
+    assert.equal(res1.video_url, 'https://example.test/plan_a.mp4');
+    assert.equal(res2.video_url, 'https://example.test/plan_b.mp4');
+    assert.equal(dbRows.length, 2);
+
+    // Re-persisting job2 with same video_url reuses res2 without inserting a third row
+    const res2Retry = await runtime.persistFinalVideo(client, job2, { video_url: 'https://example.test/plan_b.mp4' });
+    assert.equal(res2Retry.id, res2.id);
+    assert.equal(dbRows.length, 2);
+  } finally {
+    await runtime.cleanup();
+  }
+});
+
 test('duplicate completion attempts reuse existing completed assets and return without duplication', async () => {
   let insertCount = 0;
   const client = {

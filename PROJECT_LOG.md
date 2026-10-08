@@ -587,13 +587,14 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 
 **Defects Confirmed & Fixed:**
 1. **0-Row Database Updates in Concurrency Race Conditions:** Database updates on `generation_jobs` using `.eq("id", job.id).eq("status", "processing")` return `{ data: [], error: null }` if another thread modifies the job status first. Adding `.select("id")` and checking `updateRes.data.length === 0` throws `GENERATION_JOB_RACE_LOST` / `SET_FAILED_ZERO_ROWS_AFFECTED` to prevent returning un-updated stale states.
-2. **Duplicate Asset Persistence:** Added deduplication lookups in `persistSceneImage` (`eq("generation_job_id", job.id)`) and `persistFinalVideo` (`eq("project_id", job.project_id).eq("render_status", "complete")`) to prevent duplicate records on concurrent/retry execution.
+2. **Duplicate Asset & Final Video Persistence:** Scoped `persistFinalVideo` lookup and race checks to `video_url` and `project_id` rather than project-wide completed status, preventing incorrect reuse of an older Visual Plan's completed video. Added race-check queries on `persistFinalVideo` and `persistSceneImage` insertion errors to handle concurrent completion gracefully.
 
 **Verification:**
 - Added regression tests in `scripts/test/beatvision-generation-state.test.mjs` verifying:
   - 0-row database update race conditions throw and fail safely.
   - Duplicate completion attempts reuse existing completed assets without creating duplicate rows.
-- `npm test`: 50/50 unit/edge tests passed.
+  - Multiple Visual Plans within the same project receive distinct final video records.
+- `npm test`: 51/51 unit/edge tests passed.
 - `npm run build`: TypeScript compilation and Vite build passed.
 - `npm run production-audit`: Passed.
 
