@@ -61,3 +61,19 @@ export function getCreativeErrorMessage(error: unknown, fallback: string): strin
   }
   return error instanceof Error ? error.message : fallback;
 }
+
+/** Preserve nested JSONB values whenever the creator did not change that field. */
+export function mergeCreativeSheet(
+  original: unknown,
+  edited: Record<string, string>,
+): Record<string, unknown> {
+  const source = original && typeof original === "object" && !Array.isArray(original)
+    ? original as Record<string, unknown> : {};
+  const result: Record<string, unknown> = { ...source };
+  for (const [field, value] of Object.entries(edited)) {
+    result[field] = Object.prototype.hasOwnProperty.call(source, field) &&
+      formatCreativeText(source[field]) === value
+      ? source[field] : value;
+  }
+  return result;
+}
