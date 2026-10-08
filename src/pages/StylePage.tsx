@@ -50,7 +50,8 @@ export default function StylePage({ projectId }: { projectId: string }) {
     setVisualRules(editableLines(styleBible.visual_rules));
     setReferenceAssets(editableLines(styleBible.reference_assets));
     setContinuityRules(editableLines(styleBible.continuity_rules));
-  }, [styleBible]);
+  // Preserve unsaved Style Bible edits when a character or image is refreshed.
+  }, [styleBible?.id, styleBible?.updated_at, styleBible?.status]);
 
   if (loading) return <main className="studio-main style-page"><div className="style-loading">Loading Style Studio…</div></main>;
 
