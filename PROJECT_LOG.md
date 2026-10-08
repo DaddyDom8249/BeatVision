@@ -599,3 +599,17 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 - `npm run production-audit`: Passed.
 
 **Status:** FIXED AND VERIFIED LOCALLY. No deployment or merge to main performed.
+
+## 2026-10-08 — Phase 3 independently repaired on review branch
+
+**Objective:** Jules reported 61 local passing tests but did not publish its Phase 3 source. Prior PR #32 was merged with generation-controller changes. New PR #33 is an independently implemented source repair, not a recovered Jules workspace patch.
+
+**Confirmed root cause:** The live approve_character and approve_environment RPCs explicitly assign approved_at, while the enforce_phase3_approval_transition BEFORE UPDATE trigger rejects assigning approved_at during the draft-to-approved transition (APPROVED_AT_DATABASE_AUTHORITY). Ownership and RLS were not weakened. Browser-side Style Bible and reference-asset approval paths contained the same trigger conflict.
+
+**Repairs:** Add readable nested JSONB text formatting, restore only wholly corrupted draft continuity arrays from the confirmed World, preserve untouched nested sheet values when editing, block approved sheet edits, show PostgREST errors, remove client-supplied approved_at, and prepare a non-destructive approval-RPC migration. Add regression guards.
+
+**Publication:** PR #33 on branch fix/phase3-style-profiles-approval-20261008; no merge or production deployment. No live creative approvals or database data changes.
+
+**Verification:** Earlier Phase 3 branch commit CI passed; the final-head CI and authenticated approval UI round-trip must be checked independently. Static code and trigger analysis are not evidence of a successful authenticated approval.
+
+**Next:** Verify latest-head CI. After approved release, apply SQL migration and run Ghast authenticated Save / Approve / Refresh, verifying persisted approved state and record immutability.
