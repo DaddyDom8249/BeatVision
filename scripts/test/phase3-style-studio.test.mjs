@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 const helper = readFileSync(new URL("../../src/lib/formatCreativeText.ts", import.meta.url), "utf8");
 const hook = readFileSync(new URL("../../src/hooks/useStyleStudio.ts", import.meta.url), "utf8");
 const style = readFileSync(new URL("../../src/pages/StylePage.tsx", import.meta.url), "utf8");
-const migration = readFileSync(new URL("../../supabase/migrations/20261008205500_fix_phase3_approval_trigger_conflict.sql", import.meta.url), "utf8");
+const migration = readFileSync(new URL("../../supabase/migrations/20261008211633_fix_phase3_approval_trigger_conflict.sql", import.meta.url), "utf8");
 
 test("approval functions let the database trigger own approved_at", () => {
   for (const functionName of ["approve_character", "approve_environment"]) {
