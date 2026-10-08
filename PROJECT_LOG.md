@@ -556,3 +556,46 @@ Remaining: authenticated production E2E not verified; AI subject motion not veri
 Publication gate: automatic approval review rejected direct main push and then review-branch push because the debugging request did not explicitly authorize GitHub publication. Repository changes remain local; production frontend is unchanged. Backend v18 deployment succeeded earlier. User approval is required to publish the tested repository fixes; no alternate publication path was attempted after the branch rejection.
 
 Follow-up: user explicitly authorized GitHub publication and frontend deployment. Local Git push failed for missing HTTPS credentials; the connected GitHub account is used to publish the identical tested tree. Deployment and CI results will be checked against the resulting remote commit.
+
+## 2026-10-08 — Autonomous Debug & Repair: Generation Controller Lifecycle Fixes
+
+**Task:** Autonomous debug and repair of BeatVision generation controller lifecycle defects identified in user review and controlled reproductions.
+
+**Defects Confirmed & Reproduced:**
+1. **Unchecked DB update error in setFailed():** `setFailed()` previously did not check database update responses for errors. When a failure update failed at the DB level, `setFailed()` swallowed the error without throwing, potentially leaving jobs in stuck `processing` state without surfacing persistence failure.
+2. **Infinite processing for scene_image / unsupported async polling:** `poll()` had no polling path for `scene_image` jobs (and non-motion/assembly job types). When `scene_image` jobs did not complete synchronously in `run()`, or were polled while `processing`, `poll()` returned the job in `processing` state indefinitely without progressing or failing cleanly.
+
+**Repairs Applied:**
+1. **`setFailed()` Error Checking:** Updated `setFailed()` in `supabase/functions/beatvision-generation/index.ts` to assert `res.error` and throw a descriptive error (`SET_FAILED_PERSIST_FAILED`) if the database update fails.
+2. **`run()` and `poll()` Status Update Audit:** Audited all status update calls on `generation_jobs`. Ensured `.update()` results check for `updateRes.error` and throw `GENERATION_JOB_UPDATE_FAILED` if persistence fails.
+3. **`scene_image` Lifecycle & Polling Correction:** Updated `run()` so that if `scene_image` does not complete synchronously with image data, it transitions to `failed` ("Arena image generation did not complete synchronously."). Updated `poll()` so that polling an unsupported job type like `scene_image` cleanly sets the job status to `failed` ("Arena job_type 'scene_image' does not support asynchronous polling.") instead of hanging in `processing`.
+
+**Verification:**
+- Added regression unit tests in `scripts/test/beatvision-generation-state.test.mjs` verifying:
+  - `setFailed()` throws when DB update fails.
+  - `poll()` sets `scene_image` job to `failed` cleanly.
+  - `poll()` sets jobs with missing `upstream_job_id` to `failed` cleanly.
+- `npm test`: 48/48 unit/edge tests passed.
+- `npm run build`: TypeScript compilation and Vite build passed.
+- `npm run production-audit`: Static production readiness audit passed.
+
+**Status:** ALL REPRODUCED DEFECTS FIXED AND VERIFIED LOCALLY. No deployment or merge to main performed.
+
+## 2026-10-08 — Generation Controller Concurrency & Idempotency Audit Fixes
+
+**Task:** Verify generation controller concurrency, idempotency, 0-row update detection, and duplicate asset prevention.
+
+**Defects Confirmed & Fixed:**
+1. **0-Row Database Updates in Concurrency Race Conditions:** Database updates on `generation_jobs` using `.eq("id", job.id).eq("status", "processing")` return `{ data: [], error: null }` if another thread modifies the job status first. Adding `.select("id")` and checking `updateRes.data.length === 0` throws `GENERATION_JOB_RACE_LOST` / `SET_FAILED_ZERO_ROWS_AFFECTED` to prevent returning un-updated stale states.
+2. **Duplicate Asset & Final Video Persistence:** Added additive migration `supabase/migrations/20261008120000_link_final_videos_to_generation_jobs.sql` adding `generation_job_id` column and unique index `final_videos_generation_job_id_uidx`. Scoped `persistFinalVideo` lookup, upsert (`onConflict: "generation_job_id"`), and race checks to `generation_job_id`, ensuring 1:1 database uniqueness per assembly job and preventing incorrect reuse of an older Visual Plan's completed video. Added race-check queries on `persistFinalVideo` and `persistSceneImage` insertion errors to handle concurrent completion gracefully.
+
+**Verification:**
+- Added regression tests in `scripts/test/beatvision-generation-state.test.mjs` verifying:
+  - 0-row database update race conditions throw and fail safely.
+  - Duplicate completion attempts reuse existing completed assets without creating duplicate rows.
+  - Multiple Visual Plans within the same project receive distinct final video records.
+- `npm test`: 51/51 unit/edge tests passed.
+- `npm run build`: TypeScript compilation and Vite build passed.
+- `npm run production-audit`: Passed.
+
+**Status:** FIXED AND VERIFIED LOCALLY. No deployment or merge to main performed.

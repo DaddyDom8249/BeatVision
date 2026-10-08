@@ -220,6 +220,10 @@ function extractVideoUrl(data: any) {
 
 async function persistSceneImage(db: any, job: any, responseData: any) {
   if (job.job_type !== "scene_image") return;
+  const existing = await db.from("scene_image_assets").select("id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,storage_path,status,approved,created_at,updated_at").eq("generation_job_id", job.id).maybeSingle();
+  if (existing.error) throw new Error("SCENE_IMAGE_CHECK_FAILED: " + existing.error.message);
+  if (existing.data) return existing.data;
+
   const imageUrl = extractImageUrl(responseData);
   const imageBase64 = extractImageBase64(responseData);
   if (!imageUrl && !imageBase64) throw new Error("ARENA_IMAGE_OUTPUT_MISSING: Arena completed without a real image URL or image data.");
@@ -263,7 +267,12 @@ async function persistSceneImage(db: any, job: any, responseData: any) {
     status: "generated",
     approved: false,
   }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,storage_path,status,approved,created_at,updated_at").single();
-  if (insert.error) throw new Error("SCENE_IMAGE_PERSIST_FAILED: " + insert.error.message);
+
+  if (insert.error) {
+    const raceCheck = await db.from("scene_image_assets").select("id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,storage_path,status,approved,created_at,updated_at").eq("generation_job_id", job.id).maybeSingle();
+    if (raceCheck.data) return raceCheck.data;
+    throw new Error("SCENE_IMAGE_PERSIST_FAILED: " + insert.error.message);
+  }
   return insert.data;
 }
 
@@ -271,9 +280,32 @@ async function persistFinalVideo(db: any, job: any, responseData: any) {
   if (job.job_type !== "assembly") return;
   const videoUrl = extractVideoUrl(responseData);
   if (!videoUrl) throw new Error("FINAL_VIDEO_OUTPUT_MISSING: Shotstack completed without a real video URL.");
+
+  const existing = await db.from("final_videos").select("id,project_id,generation_job_id,video_url,preview_video_url,duration,format,quality,render_status,downloadable,segment_count,created_at,updated_at").eq("generation_job_id", job.id).maybeSingle();
+  if (existing.error) throw new Error("FINAL_VIDEO_CHECK_FAILED: " + existing.error.message);
+  if (existing.data) return existing.data;
+
   const duration = Number(responseData?.result?.duration_seconds || responseData?.duration_seconds || job.input_snapshot?.plan?.duration_seconds || 0);
-  const finalInsert = await db.from("final_videos").insert({ project_id: job.project_id, title: String(job.input_snapshot?.plan?.title || "BeatVision Final Video"), video_url: videoUrl, preview_video_url: videoUrl, audio_file: String(job.input_snapshot?.audio_path || ""), duration: Number.isFinite(duration) && duration > 0 ? duration : null, format: "mp4", quality: "hd", render_status: "complete", downloadable: false, segment_count: Array.isArray(job.input_snapshot?.scenes) ? job.input_snapshot.scenes.length : null }).select("id,project_id,video_url,preview_video_url,duration,format,quality,render_status,downloadable,segment_count,created_at,updated_at").single();
-  if (finalInsert.error) throw new Error("FINAL_VIDEO_PERSIST_FAILED: " + finalInsert.error.message);
+  const finalInsert = await db.from("final_videos").upsert({
+    project_id: job.project_id,
+    generation_job_id: job.id,
+    title: String(job.input_snapshot?.plan?.title || "BeatVision Final Video"),
+    video_url: videoUrl,
+    preview_video_url: videoUrl,
+    audio_file: String(job.input_snapshot?.audio_path || ""),
+    duration: Number.isFinite(duration) && duration > 0 ? duration : null,
+    format: "mp4",
+    quality: "hd",
+    render_status: "complete",
+    downloadable: false,
+    segment_count: Array.isArray(job.input_snapshot?.scenes) ? job.input_snapshot.scenes.length : null
+  }, { onConflict: "generation_job_id" }).select("id,project_id,generation_job_id,video_url,preview_video_url,duration,format,quality,render_status,downloadable,segment_count,created_at,updated_at").single();
+
+  if (finalInsert.error) {
+    const raceCheck = await db.from("final_videos").select("id,project_id,generation_job_id,video_url,preview_video_url,duration,format,quality,render_status,downloadable,segment_count,created_at,updated_at").eq("generation_job_id", job.id).maybeSingle();
+    if (raceCheck.data) return raceCheck.data;
+    throw new Error("FINAL_VIDEO_PERSIST_FAILED: " + finalInsert.error.message);
+  }
   return finalInsert.data;
 }
 
@@ -328,10 +360,14 @@ function terminalState(response: Response, data: any, jobType?: string) {
 }
 
 async function setFailed(db: any, id: string, message: string, detail?: unknown) {
-  await db.from("generation_jobs").update({
+  const res = await db.from("generation_jobs").update({
     status: "failed",
     error: { code: "ARENA_GENERATION_FAILED", message: message.slice(0, 1200), detail },
-  }).eq("id", id).in("status", ["queued", "submitted", "processing"]);
+  }).eq("id", id).in("status", ["queued", "submitted", "processing"]).select("id");
+  if (res.error) throw new Error("SET_FAILED_PERSIST_FAILED: " + res.error.message);
+  if (!res.data || res.data.length === 0) {
+    throw new Error("SET_FAILED_ZERO_ROWS_AFFECTED: Job status was not updated to failed.");
+  }
 }
 
 async function run(db: any, job: any) {
@@ -376,24 +412,37 @@ async function run(db: any, job: any) {
     } else if (state === "completed") {
       if (job.job_type === "assembly") {
         const finalVideo = await persistFinalVideo(db, job, result.data);
-        await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: compactArenaResponse(result.data, job.job_type), bridge_contract: "2.0", final_video: finalVideo } }).eq("id", job.id).eq("status", "processing");
+        const updateRes = await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: compactArenaResponse(result.data, job.job_type), bridge_contract: "2.0", final_video: finalVideo } }).eq("id", job.id).eq("status", "processing").select("id");
+        if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
+        if (!updateRes.data || updateRes.data.length === 0) throw new Error("GENERATION_JOB_RACE_LOST: Job was modified concurrently.");
       } else {
         const persistedImage = await persistSceneImage(db, job, result.data);
         const persistedMotion = await persistMotionClip(db, job, result.data);
-        await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: compactArenaResponse(result.data, job.job_type), bridge_contract: "2.0", scene_image_asset: persistedImage || null, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing");
+        const updateRes = await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: compactArenaResponse(result.data, job.job_type), bridge_contract: "2.0", scene_image_asset: persistedImage || null, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing").select("id");
+        if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
+        if (!updateRes.data || updateRes.data.length === 0) throw new Error("GENERATION_JOB_RACE_LOST: Job was modified concurrently.");
       }
+    } else if (job.job_type === "scene_image") {
+      await setFailed(db, job.id, "Arena image generation did not complete synchronously.", compactArenaResponse(result.data, job.job_type));
     } else {
       const upstreamJobId = job.job_type === "assembly"
         ? String(extractRenderId(result.data) || "").trim()
         : String(result.data?.job_id || result.data?.provider_job_id || result.data?.id || "").trim();
-      await db.from("generation_jobs").update({
-        output: {
-          arena_request_id: requestId,
-          upstream_job_id: upstreamJobId || null,
-          arena_response: result.data,
-          bridge_contract: "2.0",
-        },
-      }).eq("id", job.id).eq("status", "processing");
+
+      if (!upstreamJobId) {
+        await setFailed(db, job.id, "Arena reported processing without a provider job id.", compactArenaResponse(result.data, job.job_type));
+      } else {
+        const updateRes = await db.from("generation_jobs").update({
+          output: {
+            arena_request_id: requestId,
+            upstream_job_id: upstreamJobId,
+            arena_response: compactArenaResponse(result.data, job.job_type),
+            bridge_contract: "2.0",
+          },
+        }).eq("id", job.id).eq("status", "processing").select("id");
+        if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
+        if (!updateRes.data || updateRes.data.length === 0) throw new Error("GENERATION_JOB_RACE_LOST: Job was modified concurrently.");
+      }
     }
   } catch (error) {
     await setFailed(db, job.id, error instanceof Error ? error.message : String(error));
@@ -407,14 +456,25 @@ async function run(db: any, job: any) {
 async function poll(db: any, job: any) {
   if (job.status !== "processing") return job;
   const upstream = String(job.output?.upstream_job_id || "").trim();
-  if (!upstream) throw new Error("Arena reported processing without a provider job id.");
+  if (!upstream) {
+    await setFailed(db, job.id, "Arena reported processing without a provider job id.", job.output);
+    const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+    if (latest.error) throw new Error(latest.error.message);
+    return latest.data;
+  }
 
   const path = job.job_type === "scene_motion"
     ? "/v1/video/animate/jobs/" + encodeURIComponent(upstream)
     : job.job_type === "assembly"
       ? "/v1/video/assemble/status/" + encodeURIComponent(upstream)
       : null;
-  if (!path) return job;
+
+  if (!path) {
+    await setFailed(db, job.id, `Arena job_type '${job.job_type}' does not support asynchronous polling.`, job.output);
+    const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+    if (latest.error) throw new Error(latest.error.message);
+    return latest.data;
+  }
 
   try {
     const pollPayload = job.job_type === "assembly" ? { target_duration_seconds: Number(job.input_snapshot?.plan?.duration_seconds || 0) } : null;
@@ -425,15 +485,21 @@ async function poll(db: any, job: any) {
     } else if (state === "completed") {
       if (job.job_type === "scene_motion") {
         const persistedMotion = await persistMotionClip(db, job, result.data);
-        await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing");
+        const updateRes = await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing").select("id");
+        if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
+        if (!updateRes.data || updateRes.data.length === 0) throw new Error("GENERATION_JOB_RACE_LOST: Job was modified concurrently.");
       } else if (job.job_type === "assembly") {
         const finalVideo = await persistFinalVideo(db, job, result.data);
-        await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, final_video: finalVideo } }).eq("id", job.id).eq("status", "processing");
+        const updateRes = await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, final_video: finalVideo } }).eq("id", job.id).eq("status", "processing").select("id");
+        if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
+        if (!updateRes.data || updateRes.data.length === 0) throw new Error("GENERATION_JOB_RACE_LOST: Job was modified concurrently.");
       }
     } else {
-      await db.from("generation_jobs").update({
+      const updateRes = await db.from("generation_jobs").update({
         output: { ...(job.output || {}), arena_status_response: result.data, last_polled_at: new Date().toISOString() },
-      }).eq("id", job.id).eq("status", "processing");
+      }).eq("id", job.id).eq("status", "processing").select("id");
+      if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
+      if (!updateRes.data || updateRes.data.length === 0) throw new Error("GENERATION_JOB_RACE_LOST: Job was modified concurrently.");
     }
   } catch (error) {
     await setFailed(db, job.id, error instanceof Error ? error.message : String(error));

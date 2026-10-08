@@ -78,3 +78,251 @@ for (const [name, owner, assetProject, expected] of [
     assert.equal(signed, expected === 200 ? 1 : 0);
   } finally { await runtime.cleanup(); }
 });
+
+test('poll fails processing job cleanly when upstream_job_id is missing', async () => {
+  let failedState = null;
+  const client = {
+    from(table) {
+      return {
+        update(data) {
+          failedState = data;
+          return {
+            eq() {
+              return {
+                in() {
+                  return {
+                    select() { return { error: null, data: [{ id: 'job-img-1' }] }; }
+                  };
+                }
+              };
+            }
+          };
+        },
+        select() {
+          return {
+            eq() {
+              return { single: async () => ({ data: { id: 'job-1', status: 'failed', error: failedState?.error } }) };
+            }
+          };
+        }
+      };
+    }
+  };
+
+  const runtime = await loadGeneration();
+  try {
+    const job = { id: 'job-1', status: 'processing', job_type: 'scene_motion', output: {} };
+    const result = await runtime.poll(client, job);
+    assert.equal(result.status, 'failed');
+    assert.equal(result.error.code, 'ARENA_GENERATION_FAILED');
+    assert.match(result.error.message, /without a provider job id/);
+  } finally {
+    await runtime.cleanup();
+  }
+});
+
+test('persistFinalVideo scopes final videos to generation_job_id and prevents duplicate creation', async () => {
+  const dbRows = [];
+  const client = {
+    from(table) {
+      assert.equal(table, 'final_videos');
+      let queryJobId = null;
+      return {
+        select() { return this; },
+        eq(key, val) {
+          if (key === 'generation_job_id') queryJobId = val;
+          return this;
+        },
+        maybeSingle: async () => {
+          const match = dbRows.find(r => r.generation_job_id === queryJobId);
+          return { data: match || null, error: null };
+        },
+        upsert(row, opts) {
+          assert.equal(opts?.onConflict, 'generation_job_id');
+          let match = dbRows.find(r => r.generation_job_id === row.generation_job_id);
+          if (!match) {
+            match = { id: 'vid-' + (dbRows.length + 1), ...row };
+            dbRows.push(match);
+          } else {
+            Object.assign(match, row);
+          }
+          return {
+            select() {
+              return { single: async () => ({ data: match, error: null }) };
+            }
+          };
+        }
+      };
+    }
+  };
+
+  const runtime = await loadGeneration();
+  try {
+    const job1 = { id: 'assembly-job-1', job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan A' } } };
+    const res1 = await runtime.persistFinalVideo(client, job1, { video_url: 'https://example.test/plan_a.mp4' });
+
+    const job2 = { id: 'assembly-job-2', job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan B' } } };
+    const res2 = await runtime.persistFinalVideo(client, job2, { video_url: 'https://example.test/plan_b.mp4' });
+
+    assert.notEqual(res1.id, res2.id);
+    assert.equal(res1.generation_job_id, 'assembly-job-1');
+    assert.equal(res2.generation_job_id, 'assembly-job-2');
+    assert.equal(dbRows.length, 2);
+
+    // Re-persisting job2 reuses res2 by generation_job_id without creating a duplicate row
+    const res2Retry = await runtime.persistFinalVideo(client, job2, { video_url: 'https://example.test/plan_b.mp4' });
+    assert.equal(res2Retry.id, res2.id);
+    assert.equal(dbRows.length, 2);
+  } finally {
+    await runtime.cleanup();
+  }
+});
+
+test('duplicate completion attempts reuse existing completed assets and return without duplication', async () => {
+  let insertCount = 0;
+  const client = {
+    from(table) {
+      if (table === 'scene_image_assets') {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  maybeSingle: async () => ({ data: { id: 'existing-asset-1', image_url: 'https://example.test/existing.jpg' } })
+                };
+              }
+            };
+          },
+          insert() {
+            insertCount++;
+            return { select: () => ({ single: async () => ({ data: {} }) }) };
+          }
+        };
+      }
+      return { select() { return this; }, eq() { return this; }, maybeSingle: async () => ({ data: null }) };
+    }
+  };
+
+  const runtime = await loadGeneration();
+  try {
+    const asset = await runtime.persistSceneImage(client, { id: 'job-dup-1', job_type: 'scene_image' }, { image_url: 'https://example.test/new.jpg' });
+    assert.equal(asset.id, 'existing-asset-1');
+    assert.equal(insertCount, 0);
+  } finally {
+    await runtime.cleanup();
+  }
+});
+
+test('0-row update race condition is detected and fails safely', async () => {
+  const client = {
+    from() {
+      return {
+        update() {
+          return {
+            eq() {
+              return {
+                in() {
+                  return {
+                    select() {
+                      return { error: null, data: [] }; // 0 rows updated
+                    }
+                  };
+                }
+              };
+            }
+          };
+        }
+      };
+    }
+  };
+
+  const runtime = await loadGeneration();
+  try {
+    await assert.rejects(
+      async () => {
+        await runtime.setFailed(client, 'job-race-1', 'Test race condition');
+      },
+      /SET_FAILED_ZERO_ROWS_AFFECTED/
+    );
+  } finally {
+    await runtime.cleanup();
+  }
+});
+
+test('setFailed throws or surfaces error when database update fails', async () => {
+  const client = {
+    from() {
+      return {
+        update() {
+          return {
+            eq() {
+              return {
+                in() {
+                  return {
+                    select() {
+                      return { error: { message: 'Database constraint failure on update' } };
+                    }
+                  };
+                }
+              };
+            }
+          };
+        }
+      };
+    }
+  };
+
+  const runtime = await loadGeneration();
+  try {
+    await assert.rejects(
+      async () => {
+        await runtime.setFailed(client, 'job-1', 'Test failure message');
+      },
+      /Database constraint failure on update/
+    );
+  } finally {
+    await runtime.cleanup();
+  }
+});
+
+test('poll fails processing scene_image job cleanly', async () => {
+  let failedState = null;
+  const client = {
+    from() {
+      return {
+        update(data) {
+          failedState = data;
+          return {
+            eq() {
+              return {
+                in() {
+                  return {
+                    select() { return { error: null, data: [{ id: 'job-img-1' }] }; }
+                  };
+                }
+              };
+            }
+          };
+        },
+        select() {
+          return {
+            eq() {
+              return { single: async () => ({ data: { id: 'job-img-1', status: 'failed', error: failedState?.error } }) };
+            }
+          };
+        }
+      };
+    }
+  };
+
+  const runtime = await loadGeneration();
+  try {
+    const job = { id: 'job-img-1', status: 'processing', job_type: 'scene_image', output: { upstream_job_id: 'up-1' } };
+    const result = await runtime.poll(client, job);
+    assert.equal(result.status, 'failed');
+    assert.equal(result.error.code, 'ARENA_GENERATION_FAILED');
+    assert.match(result.error.message, /scene_image/i);
+  } finally {
+    await runtime.cleanup();
+  }
+});
