@@ -13,6 +13,7 @@ export default function CharacterEditor({
   onUpload,
   onApproveAsset,
   onApprove,
+  onRefresh,
 }: {
   character: Character;
   assets: CharacterAsset[];
@@ -20,6 +21,7 @@ export default function CharacterEditor({
   onSave: (id: string, input: { name: string; sheet: Record<string, string> }) => Promise<unknown>;
   onUpload: (file: File, label: string) => Promise<unknown>;
   onApproveAsset: (asset: CharacterAsset) => Promise<unknown>;
+  onRefresh?: () => Promise<unknown>;
   onApprove: (character: Character) => Promise<unknown>;
 }) {
   const initial = useMemo(() => ({ ...emptySheet, ...formatCreativeRecord(character.sheet) }), [character.sheet]);
@@ -100,7 +102,7 @@ export default function CharacterEditor({
           event.currentTarget.value = "";
         }}
       />
-      <AssetList assets={assets} working={working} onApprove={(asset) => {
+      <AssetList assets={assets} onRefresh={onRefresh} working={working} onApprove={(asset) => {
         setActionError(null);
         void onApproveAsset(asset).catch((error: unknown) => {
           setActionError(getCreativeErrorMessage(error, "Unable to approve reference asset."));

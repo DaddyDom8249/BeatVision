@@ -13,6 +13,7 @@ export default function EnvironmentEditor({
   onUpload,
   onApproveAsset,
   onApprove,
+  onRefresh,
 }: {
   environment: Environment;
   assets: EnvironmentAsset[];
@@ -20,6 +21,7 @@ export default function EnvironmentEditor({
   onSave: (id: string, input: { name: string; sheet: Record<string, string> }) => Promise<unknown>;
   onUpload: (file: File, label: string) => Promise<unknown>;
   onApproveAsset: (asset: EnvironmentAsset) => Promise<unknown>;
+  onRefresh?: () => Promise<unknown>;
   onApprove: (environment: Environment) => Promise<unknown>;
 }) {
   const initial = useMemo(() => ({ ...emptySheet, ...formatCreativeRecord(environment.sheet) }), [environment.sheet]);
@@ -102,7 +104,7 @@ export default function EnvironmentEditor({
           event.currentTarget.value = "";
         }}
       />
-      <AssetList assets={assets} working={working} onApprove={(asset) => {
+      <AssetList assets={assets} onRefresh={onRefresh} working={working} onApprove={(asset) => {
         setActionError(null);
         void onApproveAsset(asset).catch((error: unknown) => {
           setActionError(getCreativeErrorMessage(error, "Unable to approve reference asset."));

@@ -33,6 +33,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
     uploadAsset,
     approveAsset,
     approveStyleBible,
+    reload,
   } = useStyleStudio(projectId);
 
   const [visualRules, setVisualRules] = useState("");
@@ -159,6 +160,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
             onSave={(id, input) => saveCharacter(id, input)}
             onUpload={(file, label) => uploadAsset("character", character.id, file, label)}
             onApproveAsset={(asset) => approveAsset("character", asset.id)}
+            onRefresh={reload}
             onApprove={(character) => approveCharacter(character.id)}
           />
         ))}
@@ -188,6 +190,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
             onSave={(id, input) => saveEnvironment(id, input)}
             onUpload={(file, label) => uploadAsset("environment", environment.id, file, label)}
             onApproveAsset={(asset) => approveAsset("environment", asset.id)}
+            onRefresh={reload}
             onApprove={(environment) => approveEnvironment(environment.id)}
           />
         ))}
