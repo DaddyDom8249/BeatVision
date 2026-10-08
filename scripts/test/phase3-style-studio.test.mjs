@@ -42,3 +42,16 @@ test("the code does not allow approved character or environment sheet edits", ()
     assert.match(source, /role="alert"/);
   }
 });
+
+test("draft sheet saving preserves unedited structured JSONB values", () => {
+  assert.match(helper, /export function mergeCreativeSheet/);
+  assert.match(helper, /formatCreativeText\(source\[field\]\) === value/);
+  assert.match(hook, /mergeCreativeSheet\(rawCharacterSheets\.current\.get\(id\), input\.sheet\)/);
+  assert.match(hook, /mergeCreativeSheet\(rawEnvironmentSheets\.current\.get\(id\), input\.sheet\)/);
+});
+
+test("reference asset approvals do not conflict with approved_at trigger", () => {
+  const branch = hook.slice(hook.indexOf("const approveAsset"));
+  assert.match(branch, /status: "approved"/);
+  assert.doesNotMatch(branch, /approved_at: new Date/);
+});
