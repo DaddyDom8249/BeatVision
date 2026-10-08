@@ -78,3 +78,35 @@ for (const [name, owner, assetProject, expected] of [
     assert.equal(signed, expected === 200 ? 1 : 0);
   } finally { await runtime.cleanup(); }
 });
+
+test('poll fails processing job cleanly when upstream_job_id is missing', async () => {
+  let failedState = null;
+  const client = {
+    from(table) {
+      return {
+        update(data) {
+          failedState = data;
+          return { eq() { return { in() { return { error: null }; } }; } };
+        },
+        select() {
+          return {
+            eq() {
+              return { single: async () => ({ data: { id: 'job-1', status: 'failed', error: failedState?.error } }) };
+            }
+          };
+        }
+      };
+    }
+  };
+
+  const runtime = await loadGeneration();
+  try {
+    const job = { id: 'job-1', status: 'processing', job_type: 'scene_motion', output: {} };
+    const result = await runtime.poll(client, job);
+    assert.equal(result.status, 'failed');
+    assert.equal(result.error.code, 'ARENA_GENERATION_FAILED');
+    assert.match(result.error.message, /without a provider job id/);
+  } finally {
+    await runtime.cleanup();
+  }
+});

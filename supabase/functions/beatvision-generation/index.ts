@@ -386,14 +386,20 @@ async function run(db: any, job: any) {
       const upstreamJobId = job.job_type === "assembly"
         ? String(extractRenderId(result.data) || "").trim()
         : String(result.data?.job_id || result.data?.provider_job_id || result.data?.id || "").trim();
-      await db.from("generation_jobs").update({
-        output: {
-          arena_request_id: requestId,
-          upstream_job_id: upstreamJobId || null,
-          arena_response: result.data,
-          bridge_contract: "2.0",
-        },
-      }).eq("id", job.id).eq("status", "processing");
+
+      if (job.job_type !== "scene_image" && !upstreamJobId) {
+        await setFailed(db, job.id, "Arena reported processing without a provider job id.", compactArenaResponse(result.data, job.job_type));
+      } else {
+        const updateRes = await db.from("generation_jobs").update({
+          output: {
+            arena_request_id: requestId,
+            upstream_job_id: upstreamJobId || null,
+            arena_response: compactArenaResponse(result.data, job.job_type),
+            bridge_contract: "2.0",
+          },
+        }).eq("id", job.id).eq("status", "processing");
+        if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
+      }
     }
   } catch (error) {
     await setFailed(db, job.id, error instanceof Error ? error.message : String(error));
@@ -407,7 +413,12 @@ async function run(db: any, job: any) {
 async function poll(db: any, job: any) {
   if (job.status !== "processing") return job;
   const upstream = String(job.output?.upstream_job_id || "").trim();
-  if (!upstream) throw new Error("Arena reported processing without a provider job id.");
+  if (!upstream) {
+    await setFailed(db, job.id, "Arena reported processing without a provider job id.", job.output);
+    const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+    if (latest.error) throw new Error(latest.error.message);
+    return latest.data;
+  }
 
   const path = job.job_type === "scene_motion"
     ? "/v1/video/animate/jobs/" + encodeURIComponent(upstream)
@@ -425,15 +436,18 @@ async function poll(db: any, job: any) {
     } else if (state === "completed") {
       if (job.job_type === "scene_motion") {
         const persistedMotion = await persistMotionClip(db, job, result.data);
-        await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing");
+        const updateRes = await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing");
+        if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
       } else if (job.job_type === "assembly") {
         const finalVideo = await persistFinalVideo(db, job, result.data);
-        await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, final_video: finalVideo } }).eq("id", job.id).eq("status", "processing");
+        const updateRes = await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, final_video: finalVideo } }).eq("id", job.id).eq("status", "processing");
+        if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
       }
     } else {
-      await db.from("generation_jobs").update({
+      const updateRes = await db.from("generation_jobs").update({
         output: { ...(job.output || {}), arena_status_response: result.data, last_polled_at: new Date().toISOString() },
       }).eq("id", job.id).eq("status", "processing");
+      if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
     }
   } catch (error) {
     await setFailed(db, job.id, error instanceof Error ? error.message : String(error));
