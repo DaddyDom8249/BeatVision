@@ -30,7 +30,7 @@ export default function AuthPage({ onNavigate }: Props) {
       setMessage("Account created. Check your email to confirm your account, then sign in.");
     } else {
       capture(mode === "sign-in" ? "signed_in" : "signed_up");
-      onNavigate("/projects/new");
+      onNavigate(mode === "sign-in" ? "/" : "/projects/new");
     }
 
     setSaving(false);
@@ -44,7 +44,7 @@ export default function AuthPage({ onNavigate }: Props) {
           <div className="eyebrow">{mode === "sign-in" ? "SIGN IN" : "CREATE ACCOUNT"}</div>
           <h1>{mode === "sign-in" ? "Enter the studio." : "Create your account."}</h1>
           <p>{mode === "sign-in"
-            ? "Sign in to create projects and keep your creative work tied to your account."
+            ? "Sign in to access your projects and continue working in your studio."
             : "Create a free BeatVision account to start a project."}</p>
 
           <form onSubmit={submit}>
