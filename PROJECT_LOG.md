@@ -599,3 +599,34 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 - `npm run production-audit`: Passed.
 
 **Status:** FIXED AND VERIFIED LOCALLY. No deployment or merge to main performed.
+
+## 2026-10-08 — Phase 3 Production Repair: Style Studio, Profiles & Approval
+
+**Task:** Repair Phase 3 Style Bible, Character profiles, Environment profiles, structured JSON rendering, and Environment/Character approval workflow (Project Ghast, World Report ID `51c43d74-6909-475c-b5c3-31be0e25fcbd`).
+
+**Defects Confirmed & Root Causes:**
+1. **`[object Object]` Rendering & Persistence:** Spreading raw JSONB objects/arrays from `character.sheet`, `environment.sheet`, and `style_bible.continuity_rules` into React state or textareas caused JavaScript implicit string coercion to evaluate to `"[object Object]"`, which was then persisted into Supabase.
+2. **Missing Profile Draft Fields:** `materializeWorldDrafts` did not populate all character and environment sheet fields (`architecture`, `surfaces`, `identity`, `appearance`, etc.) from confirmed World Report fields.
+3. **Malformed Continuity Rules:** `editableLines` mapped continuity rule objects to `"[object Object]"` strings during saves.
+4. **Environment / Character Approval Failures:** `approveEnvironment` and `approveCharacter` swallowed Supabase `PostgrestError` objects (since `err instanceof Error` evaluated to false for Postgrest errors), discarding error details and replacing them with generic "Unable to approve..." messages without showing specific database/RLS exceptions.
+5. **Lack of Card-Level Error Handling:** Component forms did not catch promise rejections locally or display approval errors on the card.
+
+**Repairs Applied:**
+1. **Structured Data Normalization Layer (`src/lib/formatCreativeText.ts`):** Created `formatCreativeText`, `formatCreativeLines`, and `formatCreativeRecord` to recursively parse JSON strings, arrays, and objects into human-readable text, stripping any `"[object Object]"` strings.
+2. **`useStyleStudio` Hooks Upgrade:**
+   - Integrated `getErrorMessage` to extract `message`, `error_description`, or `details` from Postgrest error objects.
+   - Enhanced `materializeWorldDrafts` to derive complete character (`identity`, `appearance`, `wardrobe`, `behavior`, `continuity`) and environment (`purpose`, `layout`, `architecture`, `surfaces`, `lighting`, `atmosphere`, `continuity`) draft sheets from confirmed World Reports.
+   - Added `recoverStyleBibleContinuity` to automatically recover corrupted `"[object Object]"` draft continuity rules from confirmed World Reports.
+   - Normalized character and environment sheets on load with `formatCreativeRecord`.
+3. **UI Component Hardening (`CharacterEditor.tsx`, `EnvironmentEditor.tsx`, `StylePage.tsx`):**
+   - Formatted inputs using `formatCreativeRecord` and `formatCreativeLines`.
+   - Added card-level error state and alerts.
+   - Marked approved character and environment sheets read-only to preserve immutability.
+4. **Regression Tests (`scripts/test/phase3-style-studio.test.mjs`):** Added 10 tests covering structured JSON formatting, draft profile generation, continuity recovery, PostgrestError extraction, approval status transitions, and multi-environment processing.
+
+**Verification Results:**
+- `npm test`: 61/61 unit/edge tests passed.
+- `npm run build`: TypeScript compilation and Vite build passed.
+- `npm run production-audit`: Static production audit passed.
+
+**Status:** ALL PHASE 3 DEFECTS FIXED AND VERIFIED LOCALLY.

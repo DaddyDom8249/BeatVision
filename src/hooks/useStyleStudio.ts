@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase/client";
+import {
+  formatCreativeLines,
+  formatCreativeRecord,
+  formatCreativeText,
+} from "../lib/formatCreativeText";
 import type { WorldReport } from "../types/world";
 import type {
   Character,
@@ -24,26 +29,39 @@ const environmentFields =
 const environmentAssetFields =
   "id,project_id,world_report_id,environment_id,kind,label,storage_path,status,metadata,approved_at,supersedes_asset_id,created_at";
 
+function getErrorMessage(e: unknown, fallback: string): string {
+  if (e instanceof Error && e.message) return e.message;
+  if (e && typeof e === "object") {
+    const obj = e as Record<string, unknown>;
+    if (typeof obj.message === "string" && obj.message.trim()) return obj.message;
+    if (typeof obj.error_description === "string" && obj.error_description.trim()) return obj.error_description;
+    if (typeof obj.details === "string" && obj.details.trim()) return obj.details;
+  }
+  return fallback;
+}
+
 function asLines(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  const formatted = formatCreativeLines(value);
+  return formatted ? formatted.split("\n").filter(Boolean) : [];
 }
 
 function asRecord(value: unknown): Record<string, string> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? Object.fromEntries(
-        Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, typeof item === "string" ? item : JSON.stringify(item)])
-      )
-    : {};
+  return formatCreativeRecord(value);
 }
 
 function asReferenceAssets(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.map((item) => {
-        if (typeof item === "string") return item;
-        if (item && typeof item === "object" && "url" in item) return String((item as { url?: unknown }).url ?? "");
-        return JSON.stringify(item);
-      }).filter(Boolean)
-    : [];
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (typeof item === "string") return formatCreativeText(item);
+      if (item && typeof item === "object") {
+        const record = item as Record<string, unknown>;
+        if (typeof record.url === "string") return record.url.trim();
+        if (typeof record.path === "string") return record.path.trim();
+      }
+      return formatCreativeText(item);
+    })
+    .filter((item) => Boolean(item) && item !== "[object Object]");
 }
 
 async function getUserId() {
@@ -64,10 +82,8 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
   const immutable = world.immutable_continuity && typeof world.immutable_continuity === "object"
     ? world.immutable_continuity as Record<string, unknown>
     : {};
-  const continuity = world.continuity_rules;
-  const continuityText = Array.isArray(continuity)
-    ? continuity.map((item) => typeof item === "string" ? item : JSON.stringify(item)).filter(Boolean).join("; ")
-    : typeof continuity === "string" ? continuity : JSON.stringify(continuity ?? "");
+
+  const continuityText = formatCreativeText(world.continuity_rules);
 
   const clothing = typeof immutable.central_figure_clothing === "string" ? immutable.central_figure_clothing : "";
   const keyProp = typeof immutable.key_prop === "string" ? immutable.key_prop : "";
@@ -76,24 +92,21 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
   const raw = world.raw_report && typeof world.raw_report === "object"
     ? world.raw_report as Record<string, unknown>
     : {};
-  const characterNames = new Set<string>();
   const modelOutput = raw.model_output && typeof raw.model_output === "object"
     ? raw.model_output as Record<string, unknown>
     : {};
   const movement = modelOutput.movement && typeof modelOutput.movement === "object"
     ? modelOutput.movement as Record<string, unknown>
     : {};
-  const subjectBehavior = typeof movement.subject_behavior === "string" ? movement.subject_behavior : "";
-  const motifs = Array.isArray(modelOutput.motifs)
-    ? modelOutput.motifs.map((item) => {
-        if (typeof item === "string") return item;
-        if (item && typeof item === "object") {
-          const value = item as Record<string, unknown>;
-          return typeof value.symbol === "string" ? value.symbol : "";
-        }
-        return "";
-      }).filter(Boolean)
-    : [];
+  const subjectBehavior = formatCreativeText(movement.subject_behavior || world.movement);
+  const motifs = formatCreativeText(modelOutput.motifs || world.motifs);
+
+  const visualLanguage = formatCreativeText(world.visual_language);
+  const colorLighting = formatCreativeText(world.color_lighting);
+  const atmosphereText = formatCreativeText(world.atmosphere);
+  const cinematographyText = formatCreativeText(world.cinematography);
+
+  const characterNames = new Set<string>();
   const mainCharacters = Array.isArray(raw.main_characters)
     ? raw.main_characters
     : Array.isArray(modelOutput.main_characters) ? modelOutput.main_characters : [];
@@ -105,37 +118,42 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       const value = item as Record<string, unknown>;
       const name = typeof value.name === "string" ? value.name.trim() : "";
       if (!name) return null;
-      const sheet: Record<string, string> = {};
-      for (const [key, fieldValue] of Object.entries(value)) {
-        if (key !== "name" && (typeof fieldValue === "string" || typeof fieldValue === "number" || typeof fieldValue === "boolean")) sheet[key] = String(fieldValue);
-      }
+      const sheet: Record<string, string> = {
+        identity: formatCreativeText(value.identity || value.role || value.description),
+        appearance: formatCreativeText(value.appearance || visualLanguage),
+        wardrobe: formatCreativeText(value.wardrobe || clothing),
+        behavior: formatCreativeText(value.behavior || subjectBehavior),
+        continuity: formatCreativeText(value.continuity || continuityText),
+      };
       return { name, sheet };
     })
     .filter((item): item is { name: string; sheet: Record<string, string> } => Boolean(item?.name));
 
-  if (!characters.length && (clothing || keyProp || windowLocation || subjectBehavior || motifs.length)) {
+  if (!characters.length) {
     characters.push({
       name: "Central Figure",
       sheet: {
-        identity: "Primary subject derived from the confirmed World Report; refine before approval.",
-        wardrobe: clothing,
-        behavior: subjectBehavior,
-        continuity: [keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`, motifs.length && `World motifs: ${motifs.join(", ")}`, continuityText].filter(Boolean).join("; "),
+        identity: "Primary central figure derived from the confirmed World Report.",
+        appearance: visualLanguage || "Visually defined by the confirmed World visual language.",
+        wardrobe: clothing || (keyProp ? `Central prop: ${keyProp}` : ""),
+        behavior: subjectBehavior || "Grounded by the confirmed World movement and emotional arc.",
+        continuity: [keyProp && `Key prop: ${keyProp}`, clothing && `Clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`, motifs && `Motifs: ${motifs}`, continuityText].filter(Boolean).join("; "),
       },
     });
   }
 
   const environmentDrafts = Array.isArray(world.environments)
     ? world.environments.map((item) => {
-        if (typeof item === "string") return { name: item.trim(), description: "" };
+        if (typeof item === "string") return { name: item.trim(), description: "", details: {} as Record<string, unknown> };
         if (item && typeof item === "object") {
           const value = item as Record<string, unknown>;
           return {
             name: typeof value.setting === "string" ? value.setting.trim() : typeof value.name === "string" ? value.name.trim() : "",
             description: typeof value.description === "string" ? value.description : "",
+            details: value,
           };
         }
-        return { name: "", description: "" };
+        return { name: "", description: "", details: {} };
       }).filter((item) => item.name)
     : [];
 
@@ -158,10 +176,12 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       name: item.name,
       status: "draft",
       sheet: {
-        purpose: item.description,
-        layout: item.description,
-        lighting: [world.cinematography && typeof world.cinematography === "object" ? String((world.cinematography as Record<string, unknown>).lighting ?? "") : "", world.color_lighting && typeof world.color_lighting === "object" ? JSON.stringify(world.color_lighting) : ""].filter(Boolean).join("; "),
-        atmosphere: typeof world.atmosphere === "string" ? world.atmosphere : JSON.stringify(world.atmosphere ?? ""),
+        purpose: formatCreativeText(item.details.purpose || item.description || "Primary narrative location derived from confirmed World Report."),
+        layout: formatCreativeText(item.details.layout || item.description || visualLanguage),
+        architecture: formatCreativeText(item.details.architecture || cinematographyText),
+        surfaces: formatCreativeText(item.details.surfaces || (keyProp ? `Key prop: ${keyProp}` : "")),
+        lighting: formatCreativeText(item.details.lighting || colorLighting || cinematographyText),
+        atmosphere: formatCreativeText(item.details.atmosphere || atmosphereText || world.mood),
         continuity: [continuityText, keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`].filter(Boolean).join("; "),
       },
     })),
@@ -193,6 +213,37 @@ async function ensureWorldDrafts(world: WorldReport, projectId: string, styleBib
   }
 }
 
+async function recoverStyleBibleContinuity(styleBible: StyleBible, world: WorldReport) {
+  if (styleBible.status === "approved") return styleBible;
+
+  const currentRules = formatCreativeLines(styleBible.continuity_rules);
+  const hasMalformed = !currentRules || currentRules.includes("[object Object]");
+
+  if (hasMalformed) {
+    const recoveredText = formatCreativeLines([
+      world.continuity_rules,
+      world.immutable_continuity,
+    ]);
+    const cleanLines = recoveredText.split("\n").filter(Boolean);
+
+    if (cleanLines.length) {
+      const updateResult = await supabase
+        .from("style_bibles")
+        .update({ continuity_rules: cleanLines })
+        .eq("id", styleBible.id)
+        .eq("status", "draft")
+        .select(styleFields)
+        .single();
+
+      if (!updateResult.error && updateResult.data) {
+        return updateResult.data as StyleBible;
+      }
+    }
+  }
+
+  return styleBible;
+}
+
 export function useStyleStudio(projectId: string) {
   const [world, setWorld] = useState<WorldReport | null>(null);
   const [styleBible, setStyleBible] = useState<StyleBible | null>(null);
@@ -215,7 +266,7 @@ export function useStyleStudio(projectId: string) {
       .single();
 
     if (projectResult.error) {
-      setError(projectResult.error.message);
+      setError(getErrorMessage(projectResult.error, "Unable to load project."));
       setLoading(false);
       return;
     }
@@ -239,7 +290,7 @@ export function useStyleStudio(projectId: string) {
       .single();
 
     if (worldResult.error) {
-      setError(worldResult.error.message);
+      setError(getErrorMessage(worldResult.error, "Unable to load World Report."));
       setLoading(false);
       return;
     }
@@ -264,18 +315,18 @@ export function useStyleStudio(projectId: string) {
       .maybeSingle();
 
     if (styleResult.error) {
-      setError(styleResult.error.message);
+      setError(getErrorMessage(styleResult.error, "Unable to load Style Bible."));
       setLoading(false);
       return;
     }
 
-    const currentStyleBible = (styleResult.data ?? null) as StyleBible | null;
+    let currentStyleBible = (styleResult.data ?? null) as StyleBible | null;
     if (currentStyleBible) {
       try {
+        currentStyleBible = await recoverStyleBibleContinuity(currentStyleBible, currentWorld);
         await ensureWorldDrafts(currentWorld, projectId, currentStyleBible);
       } catch (e) {
-        const message = e instanceof Error ? e.message : "Unable to materialize World-derived drafts.";
-        setError(message);
+        setError(getErrorMessage(e, "Unable to materialize World-derived drafts."));
         setLoading(false);
         return;
       }
@@ -290,21 +341,30 @@ export function useStyleStudio(projectId: string) {
       ]);
 
     const firstError =
-      styleResult.error ??
       characterResult.error ??
       characterAssetResult.error ??
       environmentResult.error ??
       environmentAssetResult.error;
 
     if (firstError) {
-      setError(firstError.message);
+      setError(getErrorMessage(firstError, "Unable to load style assets."));
       setLoading(false);
       return;
     }
 
-    setStyleBible((styleResult.data ?? null) as StyleBible | null);
-    setCharacters((characterResult.data ?? []) as Character[]);
-    setEnvironments((environmentResult.data ?? []) as Environment[]);
+    setStyleBible(currentStyleBible);
+    setCharacters(
+      ((characterResult.data ?? []) as Character[]).map((c) => ({
+        ...c,
+        sheet: formatCreativeRecord(c.sheet),
+      }))
+    );
+    setEnvironments(
+      ((environmentResult.data ?? []) as Environment[]).map((e) => ({
+        ...e,
+        sheet: formatCreativeRecord(e.sheet),
+      }))
+    );
     setCharacterAssets(await signAssetUrls(
       (characterAssetResult.data ?? []) as CharacterAsset[],
       (row, url) => ({ ...row, signed_url: url })
@@ -343,36 +403,46 @@ export function useStyleStudio(projectId: string) {
         color_lighting: world.color_lighting ?? {},
         atmosphere: world.atmosphere ?? {},
         movement: world.movement ?? {},
-        continuity_rules: world.continuity_rules ?? [],
+        continuity_rules: asLines(world.continuity_rules),
         visual_rules: [],
         reference_assets: [],
       };
       const result = await supabase.from("style_bibles").insert(payload).select(styleFields).single();
       if (result.error) throw result.error;
       setStyleBible(result.data as StyleBible);
+      await load();
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to create Style Bible.";
+      const message = getErrorMessage(e, "Unable to create Style Bible.");
       setError(message);
-      throw e;
+      throw new Error(message);
     } finally {
       setWorking(false);
     }
-  }, [projectId, world]);
+  }, [projectId, world, load]);
 
   const saveStyleBible = useCallback(async (draft: Pick<StyleBible, "visual_rules" | "reference_assets" | "continuity_rules">) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
     if (styleBible.status === "approved") throw new Error("The Style Bible is locked and cannot be edited.");
     setWorking(true); setError(null);
     try {
+      const cleanDraft = {
+        visual_rules: asLines(draft.visual_rules),
+        reference_assets: asReferenceAssets(draft.reference_assets),
+        continuity_rules: asLines(draft.continuity_rules),
+      };
       const result = await supabase
         .from("style_bibles")
-        .update(draft)
+        .update(cleanDraft)
         .eq("id", styleBible.id)
         .eq("status", "draft")
         .select(styleFields)
         .single();
       if (result.error) throw result.error;
       setStyleBible(result.data as StyleBible);
+    } catch (e) {
+      const message = getErrorMessage(e, "Unable to save Style Bible.");
+      setError(message);
+      throw new Error(message);
     } finally {
       setWorking(false);
     }
@@ -394,9 +464,9 @@ export function useStyleStudio(projectId: string) {
       setStyleBible(result.data as StyleBible);
       return result.data as StyleBible;
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to lock Style Bible.";
+      const message = getErrorMessage(e, "Unable to lock Style Bible.");
       setError(message);
-      throw e;
+      throw new Error(message);
     } finally {
       setWorking(false);
     }
@@ -408,7 +478,7 @@ export function useStyleStudio(projectId: string) {
     const worldReportId = world.id;
     setWorking(true); setError(null);
     try {
-      const base = { name: input.name.trim(), sheet: input.sheet };
+      const base = { name: input.name.trim(), sheet: formatCreativeRecord(input.sheet) };
       const result = id
         ? await supabase.from("characters").update(base).eq("id", id).select(characterFields).single()
         : await supabase.from("characters").insert({
@@ -421,8 +491,9 @@ export function useStyleStudio(projectId: string) {
       await load();
       return result.data as Character;
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to save character.";
-      setError(message); throw e;
+      const message = getErrorMessage(e, "Unable to save character.");
+      setError(message);
+      throw new Error(message);
     } finally { setWorking(false); }
   }, [projectId, world, styleBible, load]);
 
@@ -435,8 +506,9 @@ export function useStyleStudio(projectId: string) {
       await load();
       return result.data as Character;
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to approve character.";
-      setError(message); throw e;
+      const message = getErrorMessage(e, "Unable to approve character.");
+      setError(message);
+      throw new Error(message);
     } finally { setWorking(false); }
   }, [load, styleBible]);
 
@@ -446,7 +518,7 @@ export function useStyleStudio(projectId: string) {
     const worldReportId = world.id;
     setWorking(true); setError(null);
     try {
-      const base = { name: input.name.trim(), sheet: input.sheet };
+      const base = { name: input.name.trim(), sheet: formatCreativeRecord(input.sheet) };
       const result = id
         ? await supabase.from("environments").update(base).eq("id", id).select(environmentFields).single()
         : await supabase.from("environments").insert({
@@ -459,8 +531,9 @@ export function useStyleStudio(projectId: string) {
       await load();
       return result.data as Environment;
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to save environment.";
-      setError(message); throw e;
+      const message = getErrorMessage(e, "Unable to save environment.");
+      setError(message);
+      throw new Error(message);
     } finally { setWorking(false); }
   }, [projectId, world, styleBible, load]);
 
@@ -473,8 +546,9 @@ export function useStyleStudio(projectId: string) {
       await load();
       return result.data as Environment;
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to approve environment.";
-      setError(message); throw e;
+      const message = getErrorMessage(e, "Unable to approve environment.");
+      setError(message);
+      throw new Error(message);
     } finally { setWorking(false); }
   }, [load, styleBible]);
 
@@ -507,8 +581,9 @@ export function useStyleStudio(projectId: string) {
       if (result.error) throw result.error;
       await load();
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to add asset.";
-      setError(message); throw e;
+      const message = getErrorMessage(e, "Unable to add asset.");
+      setError(message);
+      throw new Error(message);
     } finally { setWorking(false); }
   }, [projectId, styleBible, world, load]);
 
@@ -524,8 +599,9 @@ export function useStyleStudio(projectId: string) {
       if (result.error) throw result.error;
       await load();
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to approve asset.";
-      setError(message); throw e;
+      const message = getErrorMessage(e, "Unable to approve asset.");
+      setError(message);
+      throw new Error(message);
     } finally { setWorking(false); }
   }, [load, styleBible]);
 

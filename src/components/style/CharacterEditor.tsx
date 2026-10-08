@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { formatCreativeRecord } from "../../lib/formatCreativeText";
 import type { Character, CharacterAsset } from "../../types/style";
 import AssetList from "./AssetList";
 
@@ -21,45 +22,75 @@ export default function CharacterEditor({
   onApproveAsset: (asset: CharacterAsset) => Promise<unknown>;
   onApprove: (character: Character) => Promise<unknown>;
 }) {
-  const initial = useMemo(() => ({ ...emptySheet, ...character.sheet }), [character.sheet]);
+  const initial = useMemo(() => ({ ...emptySheet, ...formatCreativeRecord(character.sheet) }), [character.sheet]);
   const [name, setName] = useState(character.name);
   const [sheet, setSheet] = useState(initial);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setName(character.name);
-    setSheet({ ...emptySheet, ...character.sheet });
+    setSheet({ ...emptySheet, ...formatCreativeRecord(character.sheet) });
+    setError(null);
   }, [character]);
 
-  function submit(event: FormEvent) {
+  const isApproved = character.status === "approved";
+
+  async function submit(event: FormEvent) {
     event.preventDefault();
-    void onSave(character.id, { name, sheet });
+    if (isApproved) return;
+    setError(null);
+    try {
+      await onSave(character.id, { name, sheet });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function handleApprove() {
+    if (isApproved) return;
+    setError(null);
+    try {
+      await onApprove(character);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   }
 
   return (
-    <article>
-      <h3>{character.name}</h3>
+    <article className="character-editor-card">
+      <div className="character-card-header">
+        <h3>{character.name}</h3>
+        <span className={`status-badge ${character.status}`}>{isApproved ? "APPROVED" : "DRAFT"}</span>
+      </div>
+      {error && <p className="form-error" role="alert">{error}</p>}
       <form onSubmit={submit}>
-        <label>Name <input value={name} onChange={(e) => setName(e.target.value)} required /></label>
-        <label>Identity <textarea rows={3} value={sheet.identity} onChange={(e) => setSheet((s) => ({ ...s, identity: e.target.value }))} /></label>
-        <label>Appearance <textarea rows={4} value={sheet.appearance} onChange={(e) => setSheet((s) => ({ ...s, appearance: e.target.value }))} /></label>
-        <label>Wardrobe / props <textarea rows={3} value={sheet.wardrobe} onChange={(e) => setSheet((s) => ({ ...s, wardrobe: e.target.value }))} /></label>
-        <label>Behavior / movement <textarea rows={3} value={sheet.behavior} onChange={(e) => setSheet((s) => ({ ...s, behavior: e.target.value }))} /></label>
-        <label>Continuity / must-not-change <textarea rows={3} value={sheet.continuity} onChange={(e) => setSheet((s) => ({ ...s, continuity: e.target.value }))} /></label>
-        <button disabled={working}>{working ? "Saving…" : "Save Character Sheet"}</button>
+        <label>Name <input value={name} readOnly={isApproved} onChange={(e) => setName(e.target.value)} required /></label>
+        <label>Identity <textarea rows={3} readOnly={isApproved} value={sheet.identity} onChange={(e) => setSheet((s) => ({ ...s, identity: e.target.value }))} /></label>
+        <label>Appearance <textarea rows={4} readOnly={isApproved} value={sheet.appearance} onChange={(e) => setSheet((s) => ({ ...s, appearance: e.target.value }))} /></label>
+        <label>Wardrobe / props <textarea rows={3} readOnly={isApproved} value={sheet.wardrobe} onChange={(e) => setSheet((s) => ({ ...s, wardrobe: e.target.value }))} /></label>
+        <label>Behavior / movement <textarea rows={3} readOnly={isApproved} value={sheet.behavior} onChange={(e) => setSheet((s) => ({ ...s, behavior: e.target.value }))} /></label>
+        <label>Continuity / must-not-change <textarea rows={3} readOnly={isApproved} value={sheet.continuity} onChange={(e) => setSheet((s) => ({ ...s, continuity: e.target.value }))} /></label>
+        {!isApproved && <button disabled={working}>{working ? "Saving…" : "Save Character Sheet"}</button>}
       </form>
-      <button type="button" disabled={working || character.status === "approved"} onClick={() => void onApprove(character)}>{character.status === "approved" ? "Character Approved" : "Approve Character"}</button>
+      {!isApproved && (
+        <button type="button" disabled={working} onClick={() => void handleApprove()}>
+          {working ? "Approving…" : "Approve Character"}
+        </button>
+      )}
       <h4>Character Assets</h4>
-      <input
-        type="file"
-        accept="image/*"
-        disabled={working}
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) void onUpload(file, file.name);
-          event.currentTarget.value = "";
-        }}
-      />
-      <AssetList assets={assets} working={working} onApprove={(asset) => void onApproveAsset(asset)} />
+      {!isApproved && (
+        <input
+          type="file"
+          accept="image/*"
+          disabled={working}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void onUpload(file, file.name);
+            event.currentTarget.value = "";
+          }}
+        />
+      )}
+      <AssetList assets={assets} working={working || isApproved} onApprove={(asset) => void onApproveAsset(asset)} />
     </article>
   );
 }
