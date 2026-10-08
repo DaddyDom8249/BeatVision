@@ -73,6 +73,9 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
   const keyProp = typeof immutable.key_prop === "string" ? immutable.key_prop : "";
   const windowLocation = typeof immutable.location_of_window === "string" ? immutable.location_of_window : "";
 
+  const raw = world.raw_report && typeof world.raw_report === "object"
+    ? world.raw_report as Record<string, unknown>
+    : {};
   const characterNames = new Set<string>();
   const modelOutput = raw.model_output && typeof raw.model_output === "object"
     ? raw.model_output as Record<string, unknown>
@@ -91,9 +94,6 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
         return "";
       }).filter(Boolean)
     : [];
-  const raw = world.raw_report && typeof world.raw_report === "object"
-    ? world.raw_report as Record<string, unknown>
-    : {};
   const mainCharacters = Array.isArray(raw.main_characters)
     ? raw.main_characters
     : Array.isArray(modelOutput.main_characters) ? modelOutput.main_characters : [];
