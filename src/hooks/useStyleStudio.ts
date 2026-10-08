@@ -92,8 +92,8 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       const name = typeof value.name === "string" ? value.name.trim() : "";
       if (!name) return null;
       const sheet: Record<string, string> = {};
-      for (const [key, value] of Object.entries(value)) {
-        if (key !== "name" && (typeof value === "string" || typeof value === "number" || typeof value === "boolean")) sheet[key] = String(value);
+      for (const [key, fieldValue] of Object.entries(value)) {
+        if (key !== "name" && (typeof fieldValue === "string" || typeof fieldValue === "number" || typeof fieldValue === "boolean")) sheet[key] = String(fieldValue);
       }
       return { name, sheet };
     })
