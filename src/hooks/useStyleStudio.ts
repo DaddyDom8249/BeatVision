@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase/client";
+import { suggestMissingWorldFields } from "../lib/style/worldSheetSuggestions";
 import type { WorldReport } from "../types/world";
 import {
   formatCreativeText,
@@ -204,11 +205,17 @@ export function useStyleStudio(projectId: string) {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [environmentAssets, setEnvironmentAssets] = useState<EnvironmentAsset[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasStartedLoad = useRef(false);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    // Retain mounted editor forms on save/upload/approval refreshes.
+    // The first load owns the page-level spinner; subsequent loads are background refreshes.
+    if (!hasStartedLoad.current) {
+      hasStartedLoad.current = true;
+      setLoading(true);
+    }
     setError(null);
 
     const projectResult = await supabase
@@ -324,12 +331,18 @@ export function useStyleStudio(projectId: string) {
     rawCharacterSheets.current = new Map((characterResult.data ?? []).map((row) => [row.id, row.sheet]));
     rawEnvironmentSheets.current = new Map((environmentResult.data ?? []).map((row) => [row.id, row.sheet]));
     setStyleBible(currentStyleBible);
-    setCharacters((characterResult.data ?? []).map((row) => ({
-      ...row, sheet: formatCreativeRecord(row.sheet),
-    })) as Character[]);
-    setEnvironments((environmentResult.data ?? []).map((row) => ({
-      ...row, sheet: formatCreativeRecord(row.sheet),
-    })) as Environment[]);
+    setCharacters((characterResult.data ?? []).map((row) => {
+      const proposal = suggestMissingWorldFields(
+        formatCreativeRecord(row.sheet), currentWorld, "character", row.name, row.status,
+      );
+      return { ...row, sheet: proposal.sheet, suggested_world_fields: proposal.suggestedFields };
+    }) as Character[]);
+    setEnvironments((environmentResult.data ?? []).map((row) => {
+      const proposal = suggestMissingWorldFields(
+        formatCreativeRecord(row.sheet), currentWorld, "environment", row.name, row.status,
+      );
+      return { ...row, sheet: proposal.sheet, suggested_world_fields: proposal.suggestedFields };
+    }) as Environment[]);
     setCharacterAssets(await signAssetUrls(
       (characterAssetResult.data ?? []) as CharacterAsset[],
       (row, url) => ({ ...row, signed_url: url })
@@ -341,7 +354,12 @@ export function useStyleStudio(projectId: string) {
     setLoading(false);
   }, [projectId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load().catch((cause: unknown) => {
+      setError(getCreativeErrorMessage(cause, "Unable to refresh the Style Studio."));
+      setLoading(false);
+    });
+  }, [load]);
 
   const createStyleBible = useCallback(async () => {
     if (!world || world.status !== "completed" || !world.confirmed_at) throw new Error("Confirm the Visual World Report before creating the Style Bible.");
