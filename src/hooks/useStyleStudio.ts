@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase/client";
 import type { WorldReport } from "../types/world";
+import {
+  formatCreativeText,
+  formatCreativeLines,
+  formatCreativeRecord,
+  recoverWorldContinuity,
+  getCreativeErrorMessage,
+} from "../lib/formatCreativeText";
 import type {
   Character,
   CharacterAsset,
@@ -29,11 +36,7 @@ function asLines(value: unknown): string[] {
 }
 
 function asRecord(value: unknown): Record<string, string> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? Object.fromEntries(
-        Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, typeof item === "string" ? item : JSON.stringify(item)])
-      )
-    : {};
+  return formatCreativeRecord(value);
 }
 
 function asReferenceAssets(value: unknown): string[] {
@@ -64,10 +67,7 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
   const immutable = world.immutable_continuity && typeof world.immutable_continuity === "object"
     ? world.immutable_continuity as Record<string, unknown>
     : {};
-  const continuity = world.continuity_rules;
-  const continuityText = Array.isArray(continuity)
-    ? continuity.map((item) => typeof item === "string" ? item : JSON.stringify(item)).filter(Boolean).join("; ")
-    : typeof continuity === "string" ? continuity : JSON.stringify(continuity ?? "");
+  const continuityText = formatCreativeLines(world.continuity_rules).join("; ");
 
   const clothing = typeof immutable.central_figure_clothing === "string" ? immutable.central_figure_clothing : "";
   const keyProp = typeof immutable.key_prop === "string" ? immutable.key_prop : "";
@@ -107,7 +107,7 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       if (!name) return null;
       const sheet: Record<string, string> = {};
       for (const [key, fieldValue] of Object.entries(value)) {
-        if (key !== "name" && (typeof fieldValue === "string" || typeof fieldValue === "number" || typeof fieldValue === "boolean")) sheet[key] = String(fieldValue);
+        if (key !== "name") sheet[key] = formatCreativeText(fieldValue);
       }
       return { name, sheet };
     })
@@ -160,8 +160,8 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       sheet: {
         purpose: item.description,
         layout: item.description,
-        lighting: [world.cinematography && typeof world.cinematography === "object" ? String((world.cinematography as Record<string, unknown>).lighting ?? "") : "", world.color_lighting && typeof world.color_lighting === "object" ? JSON.stringify(world.color_lighting) : ""].filter(Boolean).join("; "),
-        atmosphere: typeof world.atmosphere === "string" ? world.atmosphere : JSON.stringify(world.atmosphere ?? ""),
+        lighting: formatCreativeText(world.color_lighting),
+        atmosphere: formatCreativeText(world.atmosphere),
         continuity: [continuityText, keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`].filter(Boolean).join("; "),
       },
     })),
@@ -269,13 +269,29 @@ export function useStyleStudio(projectId: string) {
       return;
     }
 
-    const currentStyleBible = (styleResult.data ?? null) as StyleBible | null;
+    let currentStyleBible = (styleResult.data ?? null) as StyleBible | null;
     if (currentStyleBible) {
       try {
+        // The existing Ghast draft stored "[object Object]" instead of rules.
+        // Only recover drafts whose entire array contains these invalid values.
+        const existingRules = currentStyleBible.continuity_rules;
+        if (currentStyleBible.status === "draft" &&
+            Array.isArray(existingRules) && existingRules.length > 0 &&
+            existingRules.every((item) => item === "[object Object]")) {
+          const recovered = recoverWorldContinuity(existingRules, currentWorld.continuity_rules);
+          if (recovered.length) {
+            const repair = await supabase.from("style_bibles")
+              .update({ continuity_rules: recovered })
+              .eq("id", currentStyleBible.id)
+              .eq("status", "draft")
+              .select(styleFields).single();
+            if (repair.error) throw repair.error;
+            currentStyleBible = repair.data as StyleBible;
+          }
+        }
         await ensureWorldDrafts(currentWorld, projectId, currentStyleBible);
       } catch (e) {
-        const message = e instanceof Error ? e.message : "Unable to materialize World-derived drafts.";
-        setError(message);
+        setError(getCreativeErrorMessage(e, "Unable to load World-derived drafts."));
         setLoading(false);
         return;
       }
@@ -302,9 +318,13 @@ export function useStyleStudio(projectId: string) {
       return;
     }
 
-    setStyleBible((styleResult.data ?? null) as StyleBible | null);
-    setCharacters((characterResult.data ?? []) as Character[]);
-    setEnvironments((environmentResult.data ?? []) as Environment[]);
+    setStyleBible(currentStyleBible);
+    setCharacters((characterResult.data ?? []).map((row) => ({
+      ...row, sheet: formatCreativeRecord(row.sheet),
+    })) as Character[]);
+    setEnvironments((environmentResult.data ?? []).map((row) => ({
+      ...row, sheet: formatCreativeRecord(row.sheet),
+    })) as Environment[]);
     setCharacterAssets(await signAssetUrls(
       (characterAssetResult.data ?? []) as CharacterAsset[],
       (row, url) => ({ ...row, signed_url: url })
@@ -351,7 +371,7 @@ export function useStyleStudio(projectId: string) {
       if (result.error) throw result.error;
       setStyleBible(result.data as StyleBible);
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to create Style Bible.";
+      const message = getCreativeErrorMessage(e, "Unable to create Style Bible.");
       setError(message);
       throw e;
     } finally {
@@ -373,6 +393,9 @@ export function useStyleStudio(projectId: string) {
         .single();
       if (result.error) throw result.error;
       setStyleBible(result.data as StyleBible);
+    } catch (e) {
+      setError(getCreativeErrorMessage(e, "Unable to save Style Bible."));
+      throw e;
     } finally {
       setWorking(false);
     }
@@ -385,7 +408,7 @@ export function useStyleStudio(projectId: string) {
     try {
       const result = await supabase
         .from("style_bibles")
-        .update({ status: "approved", approved_at: new Date().toISOString() })
+        .update({ status: "approved" })
         .eq("id", styleBible.id)
         .eq("status", "draft")
         .select(styleFields)
@@ -394,7 +417,7 @@ export function useStyleStudio(projectId: string) {
       setStyleBible(result.data as StyleBible);
       return result.data as StyleBible;
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to lock Style Bible.";
+      const message = getCreativeErrorMessage(e, "Unable to lock Style Bible.");
       setError(message);
       throw e;
     } finally {
@@ -406,11 +429,14 @@ export function useStyleStudio(projectId: string) {
     if (!styleBible) throw new Error("Create the Style Bible first.");
     if (!world?.id) throw new Error("Confirmed World Report not available.");
     const worldReportId = world.id;
+    if (id && characters.some((row) => row.id === id && row.status === "approved")) {
+      throw new Error("Approved character sheets are immutable.");
+    }
     setWorking(true); setError(null);
     try {
-      const base = { name: input.name.trim(), sheet: input.sheet };
+      const base = { name: input.name.trim(), sheet: formatCreativeRecord(input.sheet) };
       const result = id
-        ? await supabase.from("characters").update(base).eq("id", id).select(characterFields).single()
+        ? await supabase.from("characters").update(base).eq("id", id).eq("status", "draft").select(characterFields).single()
         : await supabase.from("characters").insert({
             ...base,
             project_id: projectId,
@@ -421,10 +447,10 @@ export function useStyleStudio(projectId: string) {
       await load();
       return result.data as Character;
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to save character.";
+      const message = getCreativeErrorMessage(e, "Unable to save character.");
       setError(message); throw e;
     } finally { setWorking(false); }
-  }, [projectId, world, styleBible, load]);
+  }, [projectId, world, styleBible, characters, load]);
 
   const approveCharacter = useCallback(async (id: string) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
@@ -435,7 +461,7 @@ export function useStyleStudio(projectId: string) {
       await load();
       return result.data as Character;
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to approve character.";
+      const message = getCreativeErrorMessage(e, "Unable to approve character.");
       setError(message); throw e;
     } finally { setWorking(false); }
   }, [load, styleBible]);
@@ -444,11 +470,14 @@ export function useStyleStudio(projectId: string) {
     if (!styleBible) throw new Error("Create the Style Bible first.");
     if (!world?.id) throw new Error("Confirmed World Report not available.");
     const worldReportId = world.id;
+    if (id && environments.some((row) => row.id === id && row.status === "approved")) {
+      throw new Error("Approved environment sheets are immutable.");
+    }
     setWorking(true); setError(null);
     try {
-      const base = { name: input.name.trim(), sheet: input.sheet };
+      const base = { name: input.name.trim(), sheet: formatCreativeRecord(input.sheet) };
       const result = id
-        ? await supabase.from("environments").update(base).eq("id", id).select(environmentFields).single()
+        ? await supabase.from("environments").update(base).eq("id", id).eq("status", "draft").select(environmentFields).single()
         : await supabase.from("environments").insert({
             ...base,
             project_id: projectId,
@@ -459,10 +488,10 @@ export function useStyleStudio(projectId: string) {
       await load();
       return result.data as Environment;
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to save environment.";
+      const message = getCreativeErrorMessage(e, "Unable to save environment.");
       setError(message); throw e;
     } finally { setWorking(false); }
-  }, [projectId, world, styleBible, load]);
+  }, [projectId, world, styleBible, environments, load]);
 
   const approveEnvironment = useCallback(async (id: string) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
@@ -473,7 +502,7 @@ export function useStyleStudio(projectId: string) {
       await load();
       return result.data as Environment;
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to approve environment.";
+      const message = getCreativeErrorMessage(e, "Unable to approve environment.");
       setError(message); throw e;
     } finally { setWorking(false); }
   }, [load, styleBible]);
@@ -507,7 +536,7 @@ export function useStyleStudio(projectId: string) {
       if (result.error) throw result.error;
       await load();
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to add asset.";
+      const message = getCreativeErrorMessage(e, "Unable to add asset.");
       setError(message); throw e;
     } finally { setWorking(false); }
   }, [projectId, styleBible, world, load]);
@@ -524,7 +553,7 @@ export function useStyleStudio(projectId: string) {
       if (result.error) throw result.error;
       await load();
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to approve asset.";
+      const message = getCreativeErrorMessage(e, "Unable to approve asset.");
       setError(message); throw e;
     } finally { setWorking(false); }
   }, [load, styleBible]);
