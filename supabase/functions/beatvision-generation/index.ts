@@ -1,9 +1,26 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+const ALLOWED_ORIGINS = new Set([
+  "https://beat-vision-theta.vercel.app",
+  "https://beat-vision-beat-vision.vercel.app",
+  "https://beat-vision-git-main-beat-vision.vercel.app",
+]);
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+  if (ALLOWED_ORIGINS.has(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  return headers;
+}
+
+const json = (req: Request, body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
-  headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+  headers: { ...corsHeaders(req), "Content-Type": "application/json", "Cache-Control": "no-store" },
 });
 
 function env(name: string) { return String(Deno.env.get(name) || "").trim(); }
@@ -268,7 +285,7 @@ async function persistMotionClip(db: any, job: any, responseData: any) {
   const imageResult = await db.from("scene_image_assets").select("id").eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("scene_id", job.visual_plan_scene_id).eq("approved", true).eq("status", "approved").order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (imageResult.error) throw new Error("APPROVED_SCENE_IMAGE_LOOKUP_FAILED: " + imageResult.error.message);
   if (!imageResult.data?.id) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion completed without an approved source image.");
-  const insert = await db.from("motion_clip_assets").upsert({ project_id: job.project_id, visual_plan_id: job.visual_plan_id, scene_id: job.visual_plan_scene_id, generation_job_id: job.id, scene_image_id: imageResult.data.id, provider: "arena", model: modelFor(job.job_type) || "unknown", video_url: videoUrl, status: "generated", approved: false }, { onConflict: "generation_job_id" }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").single();
+  const insert = await db.from("motion_clip_assets").upsert({ project_id: job.project_id, visual_plan_id: job.visual_plan_id, scene_id: job.visual_plan_scene_id, generation_job_id: job.id, scene_image_id: imageResult.data.id, provider: String(responseData?.provider || responseData?.result?.clips?.[0]?.provider || "unknown"), model: String(responseData?.model || responseData?.result?.clips?.[0]?.model || "unknown"), video_url: videoUrl, status: "generated", approved: false }, { onConflict: "generation_job_id" }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").single();
   if (insert.error) throw new Error("MOTION_CLIP_PERSIST_FAILED: " + insert.error.message);
   return insert.data;
 }
@@ -291,14 +308,15 @@ function compactArenaResponse(data: any, jobType?: string) {
 }
 
 function terminalState(response: Response, data: any, jobType?: string) {
-  if (!response.ok) return "failed";
+  if (!response.ok || data?.ok === false) return "failed";
 
   const status = String(data?.status || data?.state || "").trim().toLowerCase();
+
+  if (["failed", "error", "provider_error", "provider_unavailable", "unavailable", "cancelled", "canceled"].includes(status)) return "failed";
 
   // Arena's BeatVision scene-image bridge is synchronous and may return either
   // a hosted image URL or real base64 image data (Cloudflare Workers AI path).
   if (jobType === "scene_image" && (extractImageUrl(data) || extractImageBase64(data))) return "completed";
-  if (["failed", "error", "provider_error", "provider_unavailable", "unavailable", "cancelled", "canceled"].includes(status)) return "failed";
   if (["processing", "submitted", "queued", "pending", "running", "in_progress"].includes(status)) return "processing";
 
   // A successful HTTP response is not proof that media is complete.  Require
@@ -427,7 +445,8 @@ async function poll(db: any, job: any) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== "POST") return json({ error: "POST required." }, 405);
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(req) });
+  if (req.method !== "POST") return json(req, { error: "POST required." }, 405);
   try {
     const uid = await authenticate(req);
     const body = await req.json().catch(() => ({}));
@@ -437,7 +456,7 @@ Deno.serve(async (req) => {
     const db = admin();
 
     if (action === "drain") {
-      if (uid.kind !== "system") return json({ error: { code: "UNAUTHORIZED_SCHEDULER", message: "Scheduler authorization required." } }, 401);
+      if (uid.kind !== "system") return json(req, { error: { code: "UNAUTHORIZED_SCHEDULER", message: "Scheduler authorization required." } }, 401);
       const pending = await db.from("generation_jobs").select("*").in("status", ["queued", "processing"]).order("created_at", { ascending: true }).limit(8);
       if (pending.error) throw new Error(pending.error.message);
       const results = [];
@@ -449,25 +468,38 @@ Deno.serve(async (req) => {
           results.push({ id: item.id, error: error instanceof Error ? error.message : String(error) });
         }
       }
-      return json({ ok: true, scanned: (pending.data || []).length, results });
+      return json(req, { ok: true, scanned: (pending.data || []).length, results });
     }
 
-    if (!projectId || !jobId) return json({ error: { code: "JOB_REQUIRED", message: "projectId and jobId are required." } }, 400);
-    if (!["run", "poll"].includes(action)) return json({ error: { code: "INVALID_ACTION", message: "action must be run, poll, or drain." } }, 400);
+    if (!projectId || (action !== "image_url" && !jobId)) return json(req, { error: { code: "JOB_REQUIRED", message: "projectId and jobId are required." } }, 400);
+    if (!["run", "poll", "image_url"].includes(action)) return json(req, { error: { code: "INVALID_ACTION", message: "action must be run, poll, image_url, or drain." } }, 400);
     const project = await db.from("projects").select("id,owner_id").eq("id", projectId).maybeSingle();
     if (project.error) throw new Error(project.error.message);
-    if (!project.data || (uid.kind !== "system" && project.data.owner_id !== uid.userId)) return json({ error: { code: "NOT_FOUND", message: "Project not found." } }, 404);
+    if (!project.data || (uid.kind !== "system" && project.data.owner_id !== uid.userId)) return json(req, { error: { code: "NOT_FOUND", message: "Project not found." } }, 404);
+
+    // Re-sign only an asset belonging to the authenticated owner's project.
+    // Generated paths begin with project ID; user-upload storage policies use user ID.
+    if (action === "image_url") {
+      const asset = await db.from("scene_image_assets").select("id,image_url,storage_path")
+        .eq("id", String(body.assetId || "")).eq("project_id", projectId).maybeSingle();
+      if (asset.error) throw new Error(asset.error.message);
+      if (!asset.data) return json(req, { error: { code: "NOT_FOUND", message: "Image asset not found." } }, 404);
+      if (!asset.data.storage_path) return json(req, { image_url: asset.data.image_url });
+      const signed = await db.storage.from("visual-assets").createSignedUrl(asset.data.storage_path, 3600);
+      if (signed.error || !signed.data?.signedUrl) throw new Error("IMAGE_SIGNING_FAILED: " + (signed.error?.message || "No signed URL returned."));
+      return json(req, { image_url: signed.data.signedUrl });
+    }
 
     const job = await db.from("generation_jobs").select("*").eq("id", jobId).eq("project_id", projectId).maybeSingle();
     if (job.error) throw new Error(job.error.message);
-    if (!job.data) return json({ error: { code: "NOT_FOUND", message: "Generation job not found." } }, 404);
+    if (!job.data) return json(req, { error: { code: "NOT_FOUND", message: "Generation job not found." } }, 404);
 
     const result = action === "poll" ? await poll(db, job.data) : await run(db, job.data);
-    return json({ job: result });
+    return json(req, { job: result });
   } catch (error) {
     if (error instanceof HttpError) {
-      return json({ error: { code: error.code, message: error.message } }, error.status);
+      return json(req, { error: { code: error.code, message: error.message } }, error.status);
     }
-    return json({ error: { code: "GENERATION_CONTROLLER_FAILED", message: error instanceof Error ? error.message : String(error) } }, 500);
+    return json(req, { error: { code: "GENERATION_CONTROLLER_FAILED", message: error instanceof Error ? error.message : String(error) } }, 500);
   }
 });

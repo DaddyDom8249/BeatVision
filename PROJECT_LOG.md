@@ -542,3 +542,17 @@ Chronological engineering record for BeatVision. Entries record meaningful imple
 **Repository repair:** Added the corrected deployed controller source at `supabase/functions/beatvision-generation/index.ts` and a regression test at `scripts/test/generation-auth.edge.test.mjs`.
 
 **Remaining:** Authenticated live generation execution is still UNVERIFIED because no authenticated test session is available. The controller also depends on Arena gateway configuration and the free generation provider path, which must be tested with a real locked project/job.
+
+## 2026-10-08 — Systematic production debug
+
+Inspected main 7aa50b3, the matching Vercel production alias, Generation v17 source, live jobs/assets, storage policies and migration ledger. Reproduced browser preflight 405, four UI async/media failures, incorrect delivered-motion provenance and two failure-classification edge cases. Baseline tests: 30/31; build passed.
+
+Repaired allowlisted CORS, owner-authorized private image URL refresh, independent database-backed pending-job UI state, inline errors, active-plan final output selection, provider provenance and failure precedence. Added runtime/DOM/auth regressions and enabled tests in production CI. Full verification: 45/45 tests, build, static production-audit, diff check passed. Deployed Generation v18; fetched source matched; live preflight now 204; missing auth remains 401; untrusted origin is not CORS-allowed.
+
+Live evidence: 8 completed image jobs and 8 completed procedural Shotstack motion jobs on Test bug; all motion assets unapproved; no final video records. One MP4 verified with ffprobe (720p H.264, 7.807667s). Ghast has no Vision Lock or Visual Plan. No generation, creative approvals, paid calls, production data deletes, or auth/RLS weakening performed.
+
+Remaining: authenticated production E2E not verified; AI subject motion not verified; legacy non-song bucket write/delete policies lack ownership constraints; migration reproducibility and controller retry/concurrency need follow-up. Detailed evidence and limitations: docs/audits/2026-10-08-production-debug.md.
+
+Publication gate: automatic approval review rejected direct main push and then review-branch push because the debugging request did not explicitly authorize GitHub publication. Repository changes remain local; production frontend is unchanged. Backend v18 deployment succeeded earlier. User approval is required to publish the tested repository fixes; no alternate publication path was attempted after the branch rejection.
+
+Follow-up: user explicitly authorized GitHub publication and frontend deployment. Local Git push failed for missing HTTPS credentials; the connected GitHub account is used to publish the identical tested tree. Deployment and CI results will be checked against the resulting remote commit.
