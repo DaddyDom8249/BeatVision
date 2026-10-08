@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase/client";
 import type { WorldReport } from "../types/world";
 import {
   formatCreativeText,
   formatCreativeLines,
   formatCreativeRecord,
+  mergeCreativeSheet,
   recoverWorldContinuity,
   getCreativeErrorMessage,
 } from "../lib/formatCreativeText";
@@ -198,6 +199,8 @@ export function useStyleStudio(projectId: string) {
   const [styleBible, setStyleBible] = useState<StyleBible | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [characterAssets, setCharacterAssets] = useState<CharacterAsset[]>([]);
+  const rawCharacterSheets = useRef(new Map<string, unknown>());
+  const rawEnvironmentSheets = useRef(new Map<string, unknown>());
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [environmentAssets, setEnvironmentAssets] = useState<EnvironmentAsset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -318,6 +321,8 @@ export function useStyleStudio(projectId: string) {
       return;
     }
 
+    rawCharacterSheets.current = new Map((characterResult.data ?? []).map((row) => [row.id, row.sheet]));
+    rawEnvironmentSheets.current = new Map((environmentResult.data ?? []).map((row) => [row.id, row.sheet]));
     setStyleBible(currentStyleBible);
     setCharacters((characterResult.data ?? []).map((row) => ({
       ...row, sheet: formatCreativeRecord(row.sheet),
@@ -434,7 +439,10 @@ export function useStyleStudio(projectId: string) {
     }
     setWorking(true); setError(null);
     try {
-      const base = { name: input.name.trim(), sheet: formatCreativeRecord(input.sheet) };
+      const base = {
+        name: input.name.trim(),
+        sheet: id ? mergeCreativeSheet(rawCharacterSheets.current.get(id), input.sheet) : input.sheet,
+      };
       const result = id
         ? await supabase.from("characters").update(base).eq("id", id).eq("status", "draft").select(characterFields).single()
         : await supabase.from("characters").insert({
@@ -475,7 +483,10 @@ export function useStyleStudio(projectId: string) {
     }
     setWorking(true); setError(null);
     try {
-      const base = { name: input.name.trim(), sheet: formatCreativeRecord(input.sheet) };
+      const base = {
+        name: input.name.trim(),
+        sheet: id ? mergeCreativeSheet(rawEnvironmentSheets.current.get(id), input.sheet) : input.sheet,
+      };
       const result = id
         ? await supabase.from("environments").update(base).eq("id", id).eq("status", "draft").select(environmentFields).single()
         : await supabase.from("environments").insert({
