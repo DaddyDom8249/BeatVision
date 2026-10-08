@@ -110,3 +110,67 @@ test('poll fails processing job cleanly when upstream_job_id is missing', async 
     await runtime.cleanup();
   }
 });
+
+test('setFailed throws or surfaces error when database update fails', async () => {
+  const client = {
+    from() {
+      return {
+        update() {
+          return {
+            eq() {
+              return {
+                in() {
+                  return { error: { message: 'Database constraint failure on update' } };
+                }
+              };
+            }
+          };
+        }
+      };
+    }
+  };
+
+  const runtime = await loadGeneration();
+  try {
+    await assert.rejects(
+      async () => {
+        await runtime.setFailed(client, 'job-1', 'Test failure message');
+      },
+      /Database constraint failure on update/
+    );
+  } finally {
+    await runtime.cleanup();
+  }
+});
+
+test('poll fails processing scene_image job cleanly', async () => {
+  let failedState = null;
+  const client = {
+    from() {
+      return {
+        update(data) {
+          failedState = data;
+          return { eq() { return { in() { return { error: null }; } }; } };
+        },
+        select() {
+          return {
+            eq() {
+              return { single: async () => ({ data: { id: 'job-img-1', status: 'failed', error: failedState?.error } }) };
+            }
+          };
+        }
+      };
+    }
+  };
+
+  const runtime = await loadGeneration();
+  try {
+    const job = { id: 'job-img-1', status: 'processing', job_type: 'scene_image', output: { upstream_job_id: 'up-1' } };
+    const result = await runtime.poll(client, job);
+    assert.equal(result.status, 'failed');
+    assert.equal(result.error.code, 'ARENA_GENERATION_FAILED');
+    assert.match(result.error.message, /scene_image/i);
+  } finally {
+    await runtime.cleanup();
+  }
+});

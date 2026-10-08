@@ -328,10 +328,11 @@ function terminalState(response: Response, data: any, jobType?: string) {
 }
 
 async function setFailed(db: any, id: string, message: string, detail?: unknown) {
-  await db.from("generation_jobs").update({
+  const res = await db.from("generation_jobs").update({
     status: "failed",
     error: { code: "ARENA_GENERATION_FAILED", message: message.slice(0, 1200), detail },
   }).eq("id", id).in("status", ["queued", "submitted", "processing"]);
+  if (res.error) throw new Error("SET_FAILED_PERSIST_FAILED: " + res.error.message);
 }
 
 async function run(db: any, job: any) {
@@ -376,24 +377,28 @@ async function run(db: any, job: any) {
     } else if (state === "completed") {
       if (job.job_type === "assembly") {
         const finalVideo = await persistFinalVideo(db, job, result.data);
-        await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: compactArenaResponse(result.data, job.job_type), bridge_contract: "2.0", final_video: finalVideo } }).eq("id", job.id).eq("status", "processing");
+        const updateRes = await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: compactArenaResponse(result.data, job.job_type), bridge_contract: "2.0", final_video: finalVideo } }).eq("id", job.id).eq("status", "processing");
+        if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
       } else {
         const persistedImage = await persistSceneImage(db, job, result.data);
         const persistedMotion = await persistMotionClip(db, job, result.data);
-        await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: compactArenaResponse(result.data, job.job_type), bridge_contract: "2.0", scene_image_asset: persistedImage || null, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing");
+        const updateRes = await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: compactArenaResponse(result.data, job.job_type), bridge_contract: "2.0", scene_image_asset: persistedImage || null, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing");
+        if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
       }
+    } else if (job.job_type === "scene_image") {
+      await setFailed(db, job.id, "Arena image generation did not complete synchronously.", compactArenaResponse(result.data, job.job_type));
     } else {
       const upstreamJobId = job.job_type === "assembly"
         ? String(extractRenderId(result.data) || "").trim()
         : String(result.data?.job_id || result.data?.provider_job_id || result.data?.id || "").trim();
 
-      if (job.job_type !== "scene_image" && !upstreamJobId) {
+      if (!upstreamJobId) {
         await setFailed(db, job.id, "Arena reported processing without a provider job id.", compactArenaResponse(result.data, job.job_type));
       } else {
         const updateRes = await db.from("generation_jobs").update({
           output: {
             arena_request_id: requestId,
-            upstream_job_id: upstreamJobId || null,
+            upstream_job_id: upstreamJobId,
             arena_response: compactArenaResponse(result.data, job.job_type),
             bridge_contract: "2.0",
           },
@@ -425,7 +430,13 @@ async function poll(db: any, job: any) {
     : job.job_type === "assembly"
       ? "/v1/video/assemble/status/" + encodeURIComponent(upstream)
       : null;
-  if (!path) return job;
+
+  if (!path) {
+    await setFailed(db, job.id, `Arena job_type '${job.job_type}' does not support asynchronous polling.`, job.output);
+    const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+    if (latest.error) throw new Error(latest.error.message);
+    return latest.data;
+  }
 
   try {
     const pollPayload = job.job_type === "assembly" ? { target_duration_seconds: Number(job.input_snapshot?.plan?.duration_seconds || 0) } : null;
