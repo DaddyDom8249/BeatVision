@@ -60,6 +60,115 @@ async function signAssetUrls<T extends { storage_path: string }>(rows: T[], with
   }));
 }
 
+function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibleId: string) {
+  const immutable = world.immutable_continuity && typeof world.immutable_continuity === "object"
+    ? world.immutable_continuity as Record<string, unknown>
+    : {};
+  const continuity = world.continuity_rules;
+  const continuityText = Array.isArray(continuity)
+    ? continuity.map((item) => typeof item === "string" ? item : JSON.stringify(item)).filter(Boolean).join("; ")
+    : typeof continuity === "string" ? continuity : JSON.stringify(continuity ?? "");
+
+  const clothing = typeof immutable.central_figure_clothing === "string" ? immutable.central_figure_clothing : "";
+  const keyProp = typeof immutable.key_prop === "string" ? immutable.key_prop : "";
+  const windowLocation = typeof immutable.location_of_window === "string" ? immutable.location_of_window : "";
+
+  const characterNames = new Set<string>();
+  const raw = world.raw_report && typeof world.raw_report === "object"
+    ? world.raw_report as Record<string, unknown>
+    : {};
+  const modelOutput = raw.model_output && typeof raw.model_output === "object"
+    ? raw.model_output as Record<string, unknown>
+    : {};
+  const mainCharacters = Array.isArray(raw.main_characters)
+    ? raw.main_characters
+    : Array.isArray(modelOutput.main_characters) ? modelOutput.main_characters : [];
+
+  const characters = mainCharacters
+    .map((item) => {
+      if (typeof item === "string") return { name: item.trim(), sheet: {} as Record<string, string> };
+      if (!item || typeof item !== "object") return null;
+      const value = item as Record<string, unknown>;
+      const name = typeof value.name === "string" ? value.name.trim() : "";
+      if (!name) return null;
+      const sheet: Record<string, string> = {};
+      for (const [key, value] of Object.entries(value)) {
+        if (key !== "name" && (typeof value === "string" || typeof value === "number" || typeof value === "boolean")) sheet[key] = String(value);
+      }
+      return { name, sheet };
+    })
+    .filter((item): item is { name: string; sheet: Record<string, string> } => Boolean(item?.name));
+
+  if (!characters.length && (clothing || keyProp || windowLocation)) {
+    characters.push({
+      name: "Central Figure",
+      sheet: {
+        identity: "Central figure referenced by the confirmed World Report.",
+        wardrobe: clothing,
+        continuity: [keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`, continuityText].filter(Boolean).join("; "),
+      },
+    });
+  }
+
+  const environmentNames = Array.isArray(world.environments)
+    ? world.environments.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map((item) => item.trim())
+    : [];
+
+  return {
+    characters: characters.filter((item) => {
+      if (characterNames.has(item.name.toLowerCase())) return false;
+      characterNames.add(item.name.toLowerCase());
+      return true;
+    }).map((item) => ({
+      ...item,
+      project_id: projectId,
+      world_report_id: world.id,
+      style_bible_id: styleBibleId,
+      status: "draft",
+    })),
+    environments: [...new Set(environmentNames.map((name) => name.toLowerCase()))].map((lower) => {
+      const name = environmentNames.find((item) => item.toLowerCase() === lower) || lower;
+      return {
+        project_id: projectId,
+        world_report_id: world.id,
+        style_bible_id: styleBibleId,
+        name,
+        status: "draft",
+        sheet: {
+          lighting: [world.cinematography && typeof world.cinematography === "object" ? String((world.cinematography as Record<string, unknown>).lighting ?? "") : "", world.color_lighting && typeof world.color_lighting === "object" ? JSON.stringify(world.color_lighting) : ""].filter(Boolean).join("; "),
+          atmosphere: typeof world.atmosphere === "string" ? world.atmosphere : JSON.stringify(world.atmosphere ?? ""),
+          continuity: [continuityText, keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`].filter(Boolean).join("; "),
+        },
+      };
+    }),
+  };
+}
+
+async function ensureWorldDrafts(world: WorldReport, projectId: string, styleBible: StyleBible) {
+  const [existingCharacters, existingEnvironments] = await Promise.all([
+    supabase.from("characters").select("id,name").eq("project_id", projectId).eq("world_report_id", world.id).eq("style_bible_id", styleBible.id),
+    supabase.from("environments").select("id,name").eq("project_id", projectId).eq("world_report_id", world.id).eq("style_bible_id", styleBible.id),
+  ]);
+  if (existingCharacters.error) throw existingCharacters.error;
+  if (existingEnvironments.error) throw existingEnvironments.error;
+
+  const drafts = materializeWorldDrafts(world, projectId, styleBible.id);
+  const characterNames = new Set((existingCharacters.data ?? []).map((row) => row.name.toLowerCase()));
+  const environmentNames = new Set((existingEnvironments.data ?? []).map((row) => row.name.toLowerCase()));
+
+  const missingCharacters = drafts.characters.filter((row) => !characterNames.has(row.name.toLowerCase()));
+  const missingEnvironments = drafts.environments.filter((row) => !environmentNames.has(row.name.toLowerCase()));
+
+  if (missingCharacters.length) {
+    const result = await supabase.from("characters").insert(missingCharacters);
+    if (result.error) throw result.error;
+  }
+  if (missingEnvironments.length) {
+    const result = await supabase.from("environments").insert(missingEnvironments);
+    if (result.error) throw result.error;
+  }
+}
+
 export function useStyleStudio(projectId: string) {
   const [world, setWorld] = useState<WorldReport | null>(null);
   const [styleBible, setStyleBible] = useState<StyleBible | null>(null);
@@ -124,13 +233,36 @@ export function useStyleStudio(projectId: string) {
       return;
     }
 
-    const [styleResult, characterResult, characterAssetResult, environmentResult, environmentAssetResult] =
+    const styleResult = await supabase
+      .from("style_bibles")
+      .select(styleFields)
+      .eq("project_id", projectId)
+      .maybeSingle();
+
+    if (styleResult.error) {
+      setError(styleResult.error.message);
+      setLoading(false);
+      return;
+    }
+
+    const currentStyleBible = (styleResult.data ?? null) as StyleBible | null;
+    if (currentStyleBible) {
+      try {
+        await ensureWorldDrafts(currentWorld, projectId, currentStyleBible);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Unable to materialize World-derived drafts.";
+        setError(message);
+        setLoading(false);
+        return;
+      }
+    }
+
+    const [characterResult, characterAssetResult, environmentResult, environmentAssetResult] =
       await Promise.all([
-        supabase.from("style_bibles").select(styleFields).eq("project_id", projectId).maybeSingle(),
-        supabase.from("characters").select(characterFields).eq("project_id", projectId).order("created_at", { ascending: true }),
-        supabase.from("character_assets").select(characterAssetFields).eq("project_id", projectId).order("created_at", { ascending: true }),
-        supabase.from("environments").select(environmentFields).eq("project_id", projectId).order("created_at", { ascending: true }),
-        supabase.from("environment_assets").select(environmentAssetFields).eq("project_id", projectId).order("created_at", { ascending: true }),
+        supabase.from("characters").select(characterFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).eq("style_bible_id", currentStyleBible?.id ?? "").order("created_at", { ascending: true }),
+        supabase.from("character_assets").select(characterAssetFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).order("created_at", { ascending: true }),
+        supabase.from("environments").select(environmentFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).eq("style_bible_id", currentStyleBible?.id ?? "").order("created_at", { ascending: true }),
+        supabase.from("environment_assets").select(environmentAssetFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).order("created_at", { ascending: true }),
       ]);
 
     const firstError =
@@ -248,7 +380,6 @@ export function useStyleStudio(projectId: string) {
 
   const saveCharacter = useCallback(async (id: string | null, input: { name: string; sheet: Record<string, string> }) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
-    if (styleBible.status === "approved") throw new Error("The Style Bible is locked and cannot be edited.");
     if (!world?.id) throw new Error("Confirmed World Report not available.");
     const worldReportId = world.id;
     setWorking(true); setError(null);
@@ -272,7 +403,7 @@ export function useStyleStudio(projectId: string) {
   }, [projectId, world, styleBible, load]);
 
   const approveCharacter = useCallback(async (id: string) => {
-    if (!styleBible || styleBible.status === "approved") throw new Error("The Style Bible is locked.");
+    if (!styleBible) throw new Error("Create the Style Bible first.");
     setWorking(true); setError(null);
     try {
       const result = await supabase.rpc("approve_character", { p_character_id: id });
@@ -326,7 +457,7 @@ export function useStyleStudio(projectId: string) {
 
   const uploadAsset = useCallback(async (kind: "character" | "environment", parentId: string, file: File, label: string) => {
     const userId = await getUserId();
-    if (!styleBible || styleBible.status === "approved" || !world?.confirmed_at) throw new Error("The Style Bible must be editable before adding assets.");
+    if (!styleBible || !world?.confirmed_at) throw new Error("The confirmed World and Style Bible are required before adding assets.");
     setWorking(true); setError(null);
     try {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
