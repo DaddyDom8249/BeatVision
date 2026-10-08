@@ -587,7 +587,7 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 
 **Defects Confirmed & Fixed:**
 1. **0-Row Database Updates in Concurrency Race Conditions:** Database updates on `generation_jobs` using `.eq("id", job.id).eq("status", "processing")` return `{ data: [], error: null }` if another thread modifies the job status first. Adding `.select("id")` and checking `updateRes.data.length === 0` throws `GENERATION_JOB_RACE_LOST` / `SET_FAILED_ZERO_ROWS_AFFECTED` to prevent returning un-updated stale states.
-2. **Duplicate Asset & Final Video Persistence:** Scoped `persistFinalVideo` lookup and race checks to `video_url` and `project_id` rather than project-wide completed status, preventing incorrect reuse of an older Visual Plan's completed video. Added race-check queries on `persistFinalVideo` and `persistSceneImage` insertion errors to handle concurrent completion gracefully.
+2. **Duplicate Asset & Final Video Persistence:** Added additive migration `supabase/migrations/20261008120000_link_final_videos_to_generation_jobs.sql` adding `generation_job_id` column and unique index `final_videos_generation_job_id_uidx`. Scoped `persistFinalVideo` lookup, upsert (`onConflict: "generation_job_id"`), and race checks to `generation_job_id`, ensuring 1:1 database uniqueness per assembly job and preventing incorrect reuse of an older Visual Plan's completed video. Added race-check queries on `persistFinalVideo` and `persistSceneImage` insertion errors to handle concurrent completion gracefully.
 
 **Verification:**
 - Added regression tests in `scripts/test/beatvision-generation-state.test.mjs` verifying:

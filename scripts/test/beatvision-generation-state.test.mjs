@@ -121,28 +121,34 @@ test('poll fails processing job cleanly when upstream_job_id is missing', async 
   }
 });
 
-test('persistFinalVideo inserts distinct final videos for different video_urls in same project', async () => {
+test('persistFinalVideo scopes final videos to generation_job_id and prevents duplicate creation', async () => {
   const dbRows = [];
   const client = {
     from(table) {
       assert.equal(table, 'final_videos');
-      let queryVideoUrl = null;
+      let queryJobId = null;
       return {
         select() { return this; },
         eq(key, val) {
-          if (key === 'video_url') queryVideoUrl = val;
+          if (key === 'generation_job_id') queryJobId = val;
           return this;
         },
         maybeSingle: async () => {
-          const match = dbRows.find(r => r.video_url === queryVideoUrl);
+          const match = dbRows.find(r => r.generation_job_id === queryJobId);
           return { data: match || null, error: null };
         },
-        insert(row) {
-          const newRow = { id: 'vid-' + (dbRows.length + 1), ...row };
-          dbRows.push(newRow);
+        upsert(row, opts) {
+          assert.equal(opts?.onConflict, 'generation_job_id');
+          let match = dbRows.find(r => r.generation_job_id === row.generation_job_id);
+          if (!match) {
+            match = { id: 'vid-' + (dbRows.length + 1), ...row };
+            dbRows.push(match);
+          } else {
+            Object.assign(match, row);
+          }
           return {
             select() {
-              return { single: async () => ({ data: newRow, error: null }) };
+              return { single: async () => ({ data: match, error: null }) };
             }
           };
         }
@@ -152,18 +158,18 @@ test('persistFinalVideo inserts distinct final videos for different video_urls i
 
   const runtime = await loadGeneration();
   try {
-    const job1 = { job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan A' } } };
+    const job1 = { id: 'assembly-job-1', job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan A' } } };
     const res1 = await runtime.persistFinalVideo(client, job1, { video_url: 'https://example.test/plan_a.mp4' });
 
-    const job2 = { job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan B' } } };
+    const job2 = { id: 'assembly-job-2', job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan B' } } };
     const res2 = await runtime.persistFinalVideo(client, job2, { video_url: 'https://example.test/plan_b.mp4' });
 
     assert.notEqual(res1.id, res2.id);
-    assert.equal(res1.video_url, 'https://example.test/plan_a.mp4');
-    assert.equal(res2.video_url, 'https://example.test/plan_b.mp4');
+    assert.equal(res1.generation_job_id, 'assembly-job-1');
+    assert.equal(res2.generation_job_id, 'assembly-job-2');
     assert.equal(dbRows.length, 2);
 
-    // Re-persisting job2 with same video_url reuses res2 without inserting a third row
+    // Re-persisting job2 reuses res2 by generation_job_id without creating a duplicate row
     const res2Retry = await runtime.persistFinalVideo(client, job2, { video_url: 'https://example.test/plan_b.mp4' });
     assert.equal(res2Retry.id, res2.id);
     assert.equal(dbRows.length, 2);
