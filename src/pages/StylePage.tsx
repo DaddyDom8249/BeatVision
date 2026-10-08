@@ -67,12 +67,6 @@ export default function StylePage({ projectId }: { projectId: string }) {
 
   if (loading) return <main className="studio-main style-page"><div className="style-loading">Loading Style Studio…</div></main>;
 
-  if (locked) {
-    return (
-      <main className="studio-main style-page"><header className="style-header"><div><span className="eyebrow">PHASE 3 / STYLE BIBLE</span><h1>Style Bible Locked</h1><p>The Style Bible is approved and immutable.</p></div><div className="style-lock-badge">LOCKED</div></header><section className="style-locked-panel"><div><span className="style-card-label">Creative source secured</span><h2>Ready for Visual Plan</h2><p>The confirmed World and approved Style Bible can now drive the scene-by-scene visual plan.</p></div><a className="primary-button" href={`/projects/${projectId}/visual-plan`}>Continue to Visual Plan <span>→</span></a></section></main>
-    );
-  }
-
   if (!styleBible) {
     return (
       <main className="studio-main style-page">
@@ -128,29 +122,29 @@ export default function StylePage({ projectId }: { projectId: string }) {
   return (
     <main className="studio-main style-page">
       {error && <p className="form-error style-error" role="alert">{error}</p>}
-      <header className="style-header"><div><span className="eyebrow">PHASE 3 / STYLE BIBLE</span><h1>Style Bible</h1><p>Translate the confirmed World into repeatable visual rules, character continuity, environments, and reference language.</p></div><div className="style-status">DRAFT / WORLD BOUND</div></header>
+      <header className="style-header"><div><span className="eyebrow">PHASE 3 / STYLE BIBLE</span><h1>Style Bible</h1><p>{locked ? "The approved Style Bible is immutable. Character and environment drafts continue from this locked creative source." : "Translate the confirmed World into repeatable visual rules, character continuity, environments, and reference language."}</p></div><div className="style-status">{locked ? "APPROVED / DOWNSTREAM ASSETS" : "DRAFT / WORLD BOUND"}</div></header>
 
       <section className="style-section">
         <div className="style-section-heading"><div><span className="panel-label">01 / SOURCE</span><h2>World Foundation</h2></div><span className="style-lineage">World: {world?.id ? `${world.id.slice(0, 8)}…` : "Unavailable"}</span></div>
         <p className="style-section-copy">These fields come from the confirmed World Report. They are reference data for this stage, not an editable replacement for the World.</p><div className="style-foundation-grid">{Object.entries(styleBible.world_basis ?? {}).map(([key, value]) => <article className="style-foundation-card" key={key}><span className="style-card-label">{key.replace(/_/g, " ")}</span><StyleValue value={value} /></article>)}</div>
         <form className="style-form" onSubmit={saveStyle}>
           <label>Visual rules, one per line
-            <textarea rows={8} value={visualRules} onChange={(e) => setVisualRules(e.target.value)} />
+            <textarea rows={8} value={visualRules} readOnly={locked} onChange={(e) => setVisualRules(e.target.value)} />
           </label>
           <label>Reference assets, one URL/path per line
-            <textarea rows={8} value={referenceAssets} onChange={(e) => setReferenceAssets(e.target.value)} />
+            <textarea rows={8} value={referenceAssets} readOnly={locked} onChange={(e) => setReferenceAssets(e.target.value)} />
           </label>
           <label>Continuity rules, one per line
-            <textarea rows={8} value={continuityRules} onChange={(e) => setContinuityRules(e.target.value)} />
+            <textarea rows={8} value={continuityRules} readOnly={locked} onChange={(e) => setContinuityRules(e.target.value)} />
           </label>
-          <button disabled={working}>{working ? "Saving…" : "Save Style Bible"}</button>
+          <button disabled={working || locked}>{working ? "Saving…" : "Save Style Bible"}</button>
         </form>
-        <button
+        {!locked && (<button
           disabled={working}
           onClick={() => void approveStyleBible()}
         >
           {working ? "Locking…" : "Lock Style Bible"}
-        </button>
+        </button>)}
       </section>
 
       <section className="style-section">
