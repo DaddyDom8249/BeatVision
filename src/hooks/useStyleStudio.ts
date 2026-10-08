@@ -571,7 +571,9 @@ export function useStyleStudio(projectId: string) {
   }, [projectId, styleBible, world, load]);
 
   const approveAsset = useCallback(async (kind: "character" | "environment", assetId: string) => {
-    if (!styleBible || styleBible.status === "approved") throw new Error("The Style Bible is locked.");
+    // A locked Style Bible remains immutable, but new reference assets are
+    // separate draft records with their own explicit approval lifecycle.
+    if (!styleBible || !world?.confirmed_at) throw new Error("A confirmed World and Style Bible are required.");
     setWorking(true); setError(null);
     try {
       const table = kind === "character" ? "character_assets" : "environment_assets";
@@ -585,7 +587,7 @@ export function useStyleStudio(projectId: string) {
       const message = getCreativeErrorMessage(e, "Unable to approve asset.");
       setError(message); throw e;
     } finally { setWorking(false); }
-  }, [load, styleBible]);
+  }, [load, styleBible, world]);
 
   return {
     world,
