@@ -547,9 +547,9 @@ export function useStyleStudio(projectId: string) {
     try {
       const table = kind === "character" ? "character_assets" : "environment_assets";
       const result = await supabase.from(table).update({
+        // The Phase 3 approval trigger is authoritative for approved_at.
         status: "approved",
-        approved_at: new Date().toISOString(),
-      }).eq("id", assetId).select("*").single();
+      }).eq("id", assetId).eq("status", "draft").select("*").single();
       if (result.error) throw result.error;
       await load();
     } catch (e) {
