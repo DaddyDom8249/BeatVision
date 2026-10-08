@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import CharacterEditor from "../components/style/CharacterEditor";
 import EnvironmentEditor from "../components/style/EnvironmentEditor";
 import { useStyleStudio } from "../hooks/useStyleStudio";
+import { formatCreativeLines } from "../lib/formatCreativeText";
 
 function StyleValue({ value }: { value: unknown }) {
   if (Array.isArray(value)) return <div className="style-value-list">{value.length ? value.map((item, index) => <div className="style-value-item" key={index}><StyleValue value={item} /></div>) : <span className="style-muted">Not specified</span>}</div>;
@@ -41,21 +42,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
   const [newEnvironment, setNewEnvironment] = useState({ name: "", purpose: "", layout: "", architecture: "", surfaces: "", lighting: "", atmosphere: "", continuity: "" });
 
   function editableLines(value: unknown): string {
-    if (!Array.isArray(value)) return "";
-    return value
-      .map((item) => {
-        if (typeof item === "string") return item;
-        if (item && typeof item === "object") {
-          const record = item as Record<string, unknown>;
-          if (typeof record.rule === "string") return record.rule;
-          if (typeof record.url === "string") return record.url;
-          if (typeof record.path === "string") return record.path;
-          return JSON.stringify(item);
-        }
-        return String(item);
-      })
-      .filter(Boolean)
-      .join("\n");
+    return formatCreativeLines(value).join("\n");
   }
 
   useEffect(() => {
@@ -86,7 +73,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
       visual_rules: visualRules.split("\n").map((value) => value.trim()).filter(Boolean),
       reference_assets: referenceAssets.split("\n").map((value) => value.trim()).filter(Boolean),
       continuity_rules: continuityRules.split("\n").map((value) => value.trim()).filter(Boolean),
-    });
+    }).catch(() => { /* The hook displays the actionable error. */ });
   }
 
   function createCharacter(event: FormEvent) {
@@ -100,7 +87,8 @@ export default function StylePage({ projectId }: { projectId: string }) {
         behavior: newCharacter.behavior,
         continuity: newCharacter.continuity,
       },
-    }).then(() => setNewCharacter({ name: "", identity: "", appearance: "", wardrobe: "", behavior: "", continuity: "" }));
+    }).then(() => setNewCharacter({ name: "", identity: "", appearance: "", wardrobe: "", behavior: "", continuity: "" }))
+      .catch(() => { /* Preserve input; the hook shows the failure. */ });
   }
 
   function createEnvironment(event: FormEvent) {
@@ -116,7 +104,8 @@ export default function StylePage({ projectId }: { projectId: string }) {
         atmosphere: newEnvironment.atmosphere,
         continuity: newEnvironment.continuity,
       },
-    }).then(() => setNewEnvironment({ name: "", purpose: "", layout: "", architecture: "", surfaces: "", lighting: "", atmosphere: "", continuity: "" }));
+    }).then(() => setNewEnvironment({ name: "", purpose: "", layout: "", architecture: "", surfaces: "", lighting: "", atmosphere: "", continuity: "" }))
+      .catch(() => { /* Preserve input; the hook shows the failure. */ });
   }
 
   return (
@@ -141,7 +130,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
         </form>
         {!locked && (<button
           disabled={working}
-          onClick={() => void approveStyleBible()}
+          onClick={() => void approveStyleBible().catch(() => { /* Error shown by hook. */ })}
         >
           {working ? "Locking…" : "Lock Style Bible"}
         </button>)}
