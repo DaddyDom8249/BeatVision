@@ -580,3 +580,21 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 - `npm run production-audit`: Static production readiness audit passed.
 
 **Status:** ALL REPRODUCED DEFECTS FIXED AND VERIFIED LOCALLY. No deployment or merge to main performed.
+
+## 2026-10-08 — Generation Controller Concurrency & Idempotency Audit Fixes
+
+**Task:** Verify generation controller concurrency, idempotency, 0-row update detection, and duplicate asset prevention.
+
+**Defects Confirmed & Fixed:**
+1. **0-Row Database Updates in Concurrency Race Conditions:** Database updates on `generation_jobs` using `.eq("id", job.id).eq("status", "processing")` return `{ data: [], error: null }` if another thread modifies the job status first. Adding `.select("id")` and checking `updateRes.data.length === 0` throws `GENERATION_JOB_RACE_LOST` / `SET_FAILED_ZERO_ROWS_AFFECTED` to prevent returning un-updated stale states.
+2. **Duplicate Asset Persistence:** Added deduplication lookups in `persistSceneImage` (`eq("generation_job_id", job.id)`) and `persistFinalVideo` (`eq("project_id", job.project_id).eq("render_status", "complete")`) to prevent duplicate records on concurrent/retry execution.
+
+**Verification:**
+- Added regression tests in `scripts/test/beatvision-generation-state.test.mjs` verifying:
+  - 0-row database update race conditions throw and fail safely.
+  - Duplicate completion attempts reuse existing completed assets without creating duplicate rows.
+- `npm test`: 50/50 unit/edge tests passed.
+- `npm run build`: TypeScript compilation and Vite build passed.
+- `npm run production-audit`: Passed.
+
+**Status:** FIXED AND VERIFIED LOCALLY. No deployment or merge to main performed.

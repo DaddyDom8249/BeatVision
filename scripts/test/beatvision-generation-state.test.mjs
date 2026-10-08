@@ -86,7 +86,17 @@ test('poll fails processing job cleanly when upstream_job_id is missing', async 
       return {
         update(data) {
           failedState = data;
-          return { eq() { return { in() { return { error: null }; } }; } };
+          return {
+            eq() {
+              return {
+                in() {
+                  return {
+                    select() { return { error: null, data: [{ id: 'job-img-1' }] }; }
+                  };
+                }
+              };
+            }
+          };
         },
         select() {
           return {
@@ -111,6 +121,77 @@ test('poll fails processing job cleanly when upstream_job_id is missing', async 
   }
 });
 
+test('duplicate completion attempts reuse existing completed assets and return without duplication', async () => {
+  let insertCount = 0;
+  const client = {
+    from(table) {
+      if (table === 'scene_image_assets') {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  maybeSingle: async () => ({ data: { id: 'existing-asset-1', image_url: 'https://example.test/existing.jpg' } })
+                };
+              }
+            };
+          },
+          insert() {
+            insertCount++;
+            return { select: () => ({ single: async () => ({ data: {} }) }) };
+          }
+        };
+      }
+      return { select() { return this; }, eq() { return this; }, maybeSingle: async () => ({ data: null }) };
+    }
+  };
+
+  const runtime = await loadGeneration();
+  try {
+    const asset = await runtime.persistSceneImage(client, { id: 'job-dup-1', job_type: 'scene_image' }, { image_url: 'https://example.test/new.jpg' });
+    assert.equal(asset.id, 'existing-asset-1');
+    assert.equal(insertCount, 0);
+  } finally {
+    await runtime.cleanup();
+  }
+});
+
+test('0-row update race condition is detected and fails safely', async () => {
+  const client = {
+    from() {
+      return {
+        update() {
+          return {
+            eq() {
+              return {
+                in() {
+                  return {
+                    select() {
+                      return { error: null, data: [] }; // 0 rows updated
+                    }
+                  };
+                }
+              };
+            }
+          };
+        }
+      };
+    }
+  };
+
+  const runtime = await loadGeneration();
+  try {
+    await assert.rejects(
+      async () => {
+        await runtime.setFailed(client, 'job-race-1', 'Test race condition');
+      },
+      /SET_FAILED_ZERO_ROWS_AFFECTED/
+    );
+  } finally {
+    await runtime.cleanup();
+  }
+});
+
 test('setFailed throws or surfaces error when database update fails', async () => {
   const client = {
     from() {
@@ -120,7 +201,11 @@ test('setFailed throws or surfaces error when database update fails', async () =
             eq() {
               return {
                 in() {
-                  return { error: { message: 'Database constraint failure on update' } };
+                  return {
+                    select() {
+                      return { error: { message: 'Database constraint failure on update' } };
+                    }
+                  };
                 }
               };
             }
@@ -150,7 +235,17 @@ test('poll fails processing scene_image job cleanly', async () => {
       return {
         update(data) {
           failedState = data;
-          return { eq() { return { in() { return { error: null }; } }; } };
+          return {
+            eq() {
+              return {
+                in() {
+                  return {
+                    select() { return { error: null, data: [{ id: 'job-img-1' }] }; }
+                  };
+                }
+              };
+            }
+          };
         },
         select() {
           return {
