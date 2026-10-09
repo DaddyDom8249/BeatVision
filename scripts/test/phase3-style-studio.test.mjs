@@ -131,6 +131,10 @@ test("actual createStyleBible callback fails closed on read errors and preserves
 
   const permission = harness([{ data: null, error: null }],
     { data: null, error: { code: "42501", message: "permission denied" } });
-  await assert.rejects(permission.cb(), /permission denied/);
+  await assert.rejects(permission.cb(), (error) => {
+    assert.equal(error.code, "42501");
+    assert.equal(error.message, "permission denied");
+    return true;
+  });
   assert.equal(permission.inserts, 1, "RLS failure is surfaced rather than silently retried");
 });
