@@ -4,6 +4,8 @@ const ALLOWED_ORIGINS = new Set([
   "https://beat-vision-beat-vision.vercel.app",
   "https://beat-vision-git-main-beat-vision.vercel.app",
   "https://beat-vision-theta.vercel.app",
+  "https://beat-vision-git-fix-style-description-genera-790bfa-beat-vision.vercel.app",
+  "https://beat-vision-f8nn-git-fix-style-description-g-a4cacb-beat-vision.vercel.app",
 ]);
 
 const FIELDS = {

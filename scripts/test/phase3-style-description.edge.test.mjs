@@ -10,6 +10,7 @@ const FUNCTION_PATH = fileURLToPath(new URL("../../supabase/functions/beatvision
 const REMOTE_IMPORT = 'from "https://esm.sh/@supabase/supabase-js@2"';
 const SUPABASE_URL = "https://stub.supabase.co";
 const APP_ORIGIN = "https://beat-vision-beat-vision.vercel.app";
+const PR_PREVIEW_ORIGIN = "https://beat-vision-git-fix-style-description-genera-790bfa-beat-vision.vercel.app";
 const USER_ID = "owner-1";
 const PROJECT_ID = "project-1";
 const RECORD_ID = "character-1";
@@ -88,12 +89,12 @@ async function bootFunction({ authUserId = USER_ID, ownerId = USER_ID, status = 
   return { handler, db, groqCalls: () => groqCalls };
 }
 
-function request(handler, { token = "valid", recordId = RECORD_ID } = {}) {
-  const headers = { "Content-Type": "application/json", Origin: APP_ORIGIN };
+function request(handler, { token = "valid", recordId = RECORD_ID, origin = APP_ORIGIN, method = "POST" } = {}) {
+  const headers = { "Content-Type": "application/json", Origin: origin };
   if (token !== null) headers.Authorization = `Bearer ${token}`;
   return handler(new Request(`${SUPABASE_URL}/functions/v1/beatvision-style-draft`, {
-    method: "POST", headers,
-    body: JSON.stringify({ projectId: PROJECT_ID, kind: "character", recordId }),
+    method, headers,
+    body: method === "OPTIONS" ? undefined : JSON.stringify({ projectId: PROJECT_ID, kind: "character", recordId }),
   }));
 }
 
@@ -138,5 +139,13 @@ test("missing session is rejected before any model call", async () => {
   const response = await request(handler, { token: null });
   assert.equal(response.status, 401);
   assert.equal((await response.json()).error.code, "UNAUTHENTICATED");
+  assert.equal(groqCalls(), 0);
+});
+
+test("preview preflight returns the requesting PR origin", async () => {
+  const { handler, groqCalls } = await bootFunction();
+  const response = await request(handler, { method: "OPTIONS", token: null, origin: PR_PREVIEW_ORIGIN });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), PR_PREVIEW_ORIGIN);
   assert.equal(groqCalls(), 0);
 });

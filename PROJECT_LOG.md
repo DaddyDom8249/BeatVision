@@ -633,3 +633,13 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 **Not verified:** The frontend source is not yet published or deployed. A real authenticated Ghast button click, Groq response, draft save, revision creation, approval, reload, and inherited-asset rendering remain UNVERIFIED until the GitHub/Vercel release completes and an authenticated browser session is used.
 
 **Next:** Publish the tested branch, verify CI and the production Vercel commit, then run the authenticated Ghast character and environment generation regression without approving or replacing existing creative assets automatically.
+
+## 2026-10-08 — PR preview Edge Function CORS repair
+
+**Observed failure:** `Reveal World` on the PR #36 Vercel preview failed in the browser with `World service network request failed: Failed to fetch` before an HTTP response was available to the application.
+
+**Root cause:** The deployed World CORS allowlist contained production aliases but not either active PR #36 preview origin. Preflight therefore returned the production `Access-Control-Allow-Origin`, which did not match the requesting preview origin. The Style Draft and Generation functions had the same omission.
+
+**Repair:** Added only the two active PR #36 Vercel origins to the World, Style Draft, and Generation function allowlists. Arbitrary origins remain denied. Added regression coverage for preview preflight behavior.
+
+**Verification:** The new tests failed against the old allowlists, then passed after the repair. Full suite passed 83/83; production audit and production build passed. Deployed World v34, Style Draft v2, and Generation v20. A live `OPTIONS` request to World returned HTTP 200 and the exact requesting PR preview origin. The authenticated `Reveal World` POST still requires a user browser retry and is not claimed verified.
