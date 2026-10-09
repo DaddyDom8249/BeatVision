@@ -18,6 +18,7 @@ import { createStubClientFactory } from "./supabase_stub.mjs";
 const FUNCTION_PATH = fileURLToPath(new URL("../../supabase/functions/beatvision-world/index.ts", import.meta.url));
 const SUPABASE_URL = "https://stub.supabase.co";
 const APP_ORIGIN = "https://beat-vision-beat-vision.vercel.app";
+const PR_PREVIEW_ORIGIN = "https://beat-vision-git-fix-style-description-genera-790bfa-beat-vision.vercel.app";
 const USER_ID = "user-owner-1";
 const PROJECT_ID = "project-1";
 const REMOTE_IMPORT = 'from "https://esm.sh/@supabase/supabase-js@2"';
@@ -167,8 +168,8 @@ async function bootFunction({ worldOverrides = {}, authUserId = USER_ID } = {}) 
   return { handler, db, logs };
 }
 
-function request(handler, { method = "PATCH", body, token = "valid-token" } = {}) {
-  const headers = { "Content-Type": "application/json", Origin: APP_ORIGIN };
+function request(handler, { method = "PATCH", body, token = "valid-token", origin = APP_ORIGIN } = {}) {
+  const headers = { "Content-Type": "application/json", Origin: origin };
   // `token: null` omits the Authorization header entirely.
   if (token !== null) headers.Authorization = `Bearer ${token}`;
   return handler(
@@ -398,6 +399,14 @@ test("OPTIONS preflight returns the CORS headers WorldPage's raw fetch needs", a
   const allowed = (response.headers.get("Access-Control-Allow-Headers") || "").toLowerCase();
   assert.match(allowed, /authorization/);
   assert.match(allowed, /content-type/);
+});
+
+test("OPTIONS preflight permits the active PR preview origin", async () => {
+  const { handler } = await bootFunction();
+  const response = await request(handler, { method: "OPTIONS", token: null, origin: PR_PREVIEW_ORIGIN });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), PR_PREVIEW_ORIGIN);
 });
 
 test("save_edits cannot leave a completed world with an empty field", async () => {

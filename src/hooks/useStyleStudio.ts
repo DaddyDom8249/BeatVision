@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase, supabasePublishableKey, supabaseUrl } from "../lib/supabase/client";
 import { suggestMissingWorldFields } from "../lib/style/worldSheetSuggestions";
+import type { StyleDraftKind } from "../lib/style/generatedStyleDraft";
+import { mergeGeneratedStyleDraft } from "../lib/style/generatedStyleDraft";
 import type { WorldReport } from "../types/world";
 import {
   formatCreativeText,
@@ -22,13 +24,13 @@ const styleFields =
   "id,project_id,world_report_id,status,world_basis,visual_language,cinematography,color_lighting,atmosphere,movement,continuity_rules,visual_rules,reference_assets,approved_at,created_at,updated_at";
 
 const characterFields =
-  "id,project_id,world_report_id,style_bible_id,name,status,sheet,approved_at,created_at,updated_at";
+  "id,project_id,world_report_id,style_bible_id,name,status,sheet,supersedes_character_id,revision_number,approved_at,created_at,updated_at";
 
 const characterAssetFields =
   "id,project_id,world_report_id,character_id,kind,label,storage_path,status,metadata,approved_at,supersedes_asset_id,created_at";
 
 const environmentFields =
-  "id,project_id,world_report_id,style_bible_id,name,status,sheet,approved_at,created_at,updated_at";
+  "id,project_id,world_report_id,style_bible_id,name,status,sheet,supersedes_environment_id,revision_number,approved_at,created_at,updated_at";
 
 const environmentAssetFields =
   "id,project_id,world_report_id,environment_id,kind,label,storage_path,status,metadata,approved_at,supersedes_asset_id,created_at";
@@ -378,17 +380,45 @@ export function useStyleStudio(projectId: string) {
     rawCharacterSheets.current = new Map((characterResult.data ?? []).map((row) => [row.id, row.sheet]));
     rawEnvironmentSheets.current = new Map((environmentResult.data ?? []).map((row) => [row.id, row.sheet]));
     setStyleBible(currentStyleBible);
-    setCharacters((characterResult.data ?? []).map((row) => {
+    const characterRows = characterResult.data ?? [];
+    const characterParent = new Map(characterRows.map((row) => [row.id, row.supersedes_character_id as string | null]));
+    const characterAncestors = (id: string) => {
+      const ids: string[] = [];
+      let parent = characterParent.get(id) ?? null;
+      while (parent && !ids.includes(parent)) {
+        ids.push(parent);
+        parent = characterParent.get(parent) ?? null;
+      }
+      return ids;
+    };
+    const supersededCharacterIds = new Set(characterRows
+      .filter((row) => row.status === "approved" && row.supersedes_character_id)
+      .map((row) => row.supersedes_character_id));
+    setCharacters(characterRows.filter((row) => !supersededCharacterIds.has(row.id)).map((row) => {
       const proposal = suggestMissingWorldFields(
         formatCreativeRecord(row.sheet), currentWorld, "character", row.name, row.status,
       );
-      return { ...row, sheet: proposal.sheet, suggested_world_fields: proposal.suggestedFields };
+      return { ...row, sheet: proposal.sheet, suggested_world_fields: proposal.suggestedFields, revision_ancestor_ids: characterAncestors(row.id) };
     }) as Character[]);
-    setEnvironments((environmentResult.data ?? []).map((row) => {
+    const environmentRows = environmentResult.data ?? [];
+    const environmentParent = new Map(environmentRows.map((row) => [row.id, row.supersedes_environment_id as string | null]));
+    const environmentAncestors = (id: string) => {
+      const ids: string[] = [];
+      let parent = environmentParent.get(id) ?? null;
+      while (parent && !ids.includes(parent)) {
+        ids.push(parent);
+        parent = environmentParent.get(parent) ?? null;
+      }
+      return ids;
+    };
+    const supersededEnvironmentIds = new Set(environmentRows
+      .filter((row) => row.status === "approved" && row.supersedes_environment_id)
+      .map((row) => row.supersedes_environment_id));
+    setEnvironments(environmentRows.filter((row) => !supersededEnvironmentIds.has(row.id)).map((row) => {
       const proposal = suggestMissingWorldFields(
         formatCreativeRecord(row.sheet), currentWorld, "environment", row.name, row.status,
       );
-      return { ...row, sheet: proposal.sheet, suggested_world_fields: proposal.suggestedFields };
+      return { ...row, sheet: proposal.sheet, suggested_world_fields: proposal.suggestedFields, revision_ancestor_ids: environmentAncestors(row.id) };
     }) as Environment[]);
     setCharacterAssets(await signAssetUrls(
       (characterAssetResult.data ?? []) as CharacterAsset[],
@@ -414,6 +444,7 @@ export function useStyleStudio(projectId: string) {
     try {
       // Check if a Style Bible already exists for this project first to avoid duplicate insert errors or coercion issues.
       const existing = await supabase.from("style_bibles").select(styleFields).eq("project_id", projectId).maybeSingle();
+      if (existing.error) throw existing.error;
       if (existing.data) {
         setStyleBible(existing.data as StyleBible);
         return existing.data as StyleBible;
@@ -722,6 +753,69 @@ export function useStyleStudio(projectId: string) {
     } finally { setWorking(false); }
   }, [load, styleBible, world]);
 
+  const generateDescription = useCallback(async (kind: StyleDraftKind, recordId: string) => {
+    if (!styleBible || !world?.confirmed_at) {
+      throw new Error("The confirmed World and Style Bible are required before generating descriptions.");
+    }
+    setWorking(true); setError(null);
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke("beatvision-style-draft", {
+        body: { projectId, kind, recordId },
+      });
+      const remoteMessage = data && typeof data === "object" && data.error &&
+        typeof data.error === "object" && typeof data.error.message === "string"
+        ? data.error.message : null;
+      if (invokeError) throw new Error(remoteMessage || invokeError.message || "Description generation failed.");
+      if (!data?.draft || typeof data.draft !== "object" || Array.isArray(data.draft)) {
+        throw new Error("Description generation returned an invalid draft.");
+      }
+      return data.draft as Record<string, unknown>;
+    } catch (e) {
+      const message = getCreativeErrorMessage(e, "Unable to generate description.");
+      setError(message);
+      throw e;
+    } finally {
+      setWorking(false);
+    }
+  }, [projectId, styleBible, world]);
+
+  const createRevision = useCallback(async (
+    kind: StyleDraftKind,
+    recordId: string,
+    proposal: Record<string, unknown>,
+  ) => {
+    if (!styleBible || !world?.confirmed_at) {
+      throw new Error("The confirmed World and Style Bible are required before creating a revision.");
+    }
+    const source = kind === "character"
+      ? characters.find((row) => row.id === recordId)
+      : environments.find((row) => row.id === recordId);
+    if (!source || source.status !== "approved") throw new Error("Only an approved sheet can create a revision.");
+
+    const raw = kind === "character"
+      ? rawCharacterSheets.current.get(recordId)
+      : rawEnvironmentSheets.current.get(recordId);
+    const current = formatCreativeRecord(raw);
+    const proposedSheet = mergeGeneratedStyleDraft(current, proposal, kind);
+    const sheet = mergeCreativeSheet(raw, proposedSheet);
+    const functionName = kind === "character" ? "create_character_revision" : "create_environment_revision";
+    const idName = kind === "character" ? "p_character_id" : "p_environment_id";
+
+    setWorking(true); setError(null);
+    try {
+      const result = await supabase.rpc(functionName, { [idName]: recordId, p_sheet: sheet });
+      if (result.error) throw result.error;
+      await load();
+      return result.data;
+    } catch (e) {
+      const message = getCreativeErrorMessage(e, "Unable to create revision.");
+      setError(message);
+      throw e;
+    } finally {
+      setWorking(false);
+    }
+  }, [styleBible, world, characters, environments, load]);
+
   return {
     world,
     styleBible,
@@ -744,6 +838,8 @@ export function useStyleStudio(projectId: string) {
     approveEnvironment,
     uploadAsset,
     approveAsset,
+    generateDescription,
+    createRevision,
     reload: load,
     asLines,
     asRecord,
