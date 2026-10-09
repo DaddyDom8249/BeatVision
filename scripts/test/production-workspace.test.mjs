@@ -11,13 +11,15 @@ import { createRoot } from 'react-dom/client';
 const rootDir = fileURLToPath(new URL('../../', import.meta.url));
 const dir = await mkdtemp(join(rootDir, '.ui-test-'));
 const source = await readFile(new URL('../../src/pages/ProductionWorkspacePage.tsx', import.meta.url), 'utf8');
-const transformed = ts.transpileModule(source.replace('"../lib/supabase/client"', '"./stub.mjs"'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+const transformed = ts.transpileModule(source.replace('"../lib/supabase/client"', '"./stub.mjs"').replace('"../lib/formatCreativeText"', '"./formatCreativeText.mjs"'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }).outputText;
 await writeFile(join(dir, 'page.mjs'), transformed);
+const errorHelper = await readFile(new URL('../../src/lib/formatCreativeText.ts', import.meta.url), 'utf8');
+await writeFile(join(dir, 'formatCreativeText.mjs'), ts.transpileModule(errorHelper, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText);
 await writeFile(join(dir, 'stub.mjs'), 'export const supabase = new Proxy({}, { get: (_, key) => globalThis.__uiDb[key] });');
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ motionJob = null, runError = null, stored = false } = {}) {
+async function mount({ motionJob = null, runError = null, stored = false, rpcError = null } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
@@ -40,7 +42,7 @@ async function mount({ motionJob = null, runError = null, stored = false } = {})
       };
       return query;
     },
-    rpc: async (_name, args) => ({ data: { id: 'job-1', status: 'queued', job_type: args.p_job_type }, error: null }),
+    rpc: async (_name, args) => ({ data: rpcError ? null : { id: 'job-1', status: 'queued', job_type: args.p_job_type }, error: rpcError }),
     functions: { invoke: async (_name, { body }) => {
       calls.push(body);
       if (body.action === 'image_url') return { data: { image_url: 'https://fresh.test/image.jpg' }, error: null };
@@ -100,5 +102,16 @@ test('async assembly retains its job and exposes the status control', async () =
     assert.match(document.body.textContent, /Build the shots/);
     await view.click('Check Assembly Status');
     assert.equal(view.calls.at(-1).jobId, 'job-1');
+  } finally { await view.cleanup(); }
+});
+
+test('structured missing-motion assembly errors explain the prerequisite without calling a provider', async () => {
+  const view = await mount({ rpcError: { message: 'ASSEMBLY_MOTION_NOT_FULLY_APPROVED', code: '55000', details: 'approved_motion=0 required=8' } });
+  try {
+    await view.click('Assemble Final Video');
+    assert.match(document.querySelector('[role="alert"]').textContent, /approve.*motion clip.*every scene/i);
+    assert.doesNotMatch(document.body.textContent, /\[object Object\]/);
+    assert.match(document.body.textContent, /Build the shots/);
+    assert.equal(view.calls.length, 0);
   } finally { await view.cleanup(); }
 });
