@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { Environment, EnvironmentAsset } from "../../types/style";
 import AssetList from "./AssetList";
 import { formatCreativeRecord, getCreativeErrorMessage } from "../../lib/formatCreativeText";
+import { mergeGeneratedStyleDraft, pickGeneratedStyleDraft } from "../../lib/style/generatedStyleDraft";
 
 const emptySheet = { purpose: "", layout: "", architecture: "", surfaces: "", lighting: "", atmosphere: "", continuity: "" };
 
@@ -12,6 +13,8 @@ export default function EnvironmentEditor({
   onSave,
   onUpload,
   onApproveAsset,
+  onGenerate,
+  onCreateRevision,
   onApprove,
   onRefresh,
 }: {
@@ -21,6 +24,8 @@ export default function EnvironmentEditor({
   onSave: (id: string, input: { name: string; sheet: Record<string, string> }) => Promise<unknown>;
   onUpload: (file: File, label: string) => Promise<unknown>;
   onApproveAsset: (asset: EnvironmentAsset) => Promise<unknown>;
+  onGenerate: (environment: Environment) => Promise<Record<string, unknown>>;
+  onCreateRevision: (environment: Environment, proposal: Record<string, string>) => Promise<unknown>;
   onRefresh?: () => Promise<unknown>;
   onApprove: (environment: Environment) => Promise<unknown>;
 }) {
@@ -29,6 +34,7 @@ export default function EnvironmentEditor({
   const [sheet, setSheet] = useState(initial);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
+  const [generatedProposal, setGeneratedProposal] = useState<Record<string, string> | null>(null);
   const suggestedFields = environment.suggested_world_fields ?? [];
   const missingFields = Object.keys(emptySheet).filter((field) => !sheet[field as keyof typeof emptySheet]?.trim());
   const locked = environment.status === "approved";
@@ -37,6 +43,7 @@ export default function EnvironmentEditor({
     setName(environment.name);
     setSheet({ ...emptySheet, ...formatCreativeRecord(environment.sheet) });
     setActionError(null);
+    setGeneratedProposal(null);
   // Preserve edits in other cards during background refreshes (such as uploads).
   // Reload this editor only when its own persisted version changes.
   }, [environment.id, environment.updated_at, environment.status]);
@@ -55,7 +62,7 @@ export default function EnvironmentEditor({
 
   return (
     <article>
-      <h3>{environment.name}</h3>
+      <h3>{environment.name} {environment.revision_number > 1 && <small>Revision {environment.revision_number}</small>}</h3>
       {actionError && <p role="alert" className="form-error">{actionError}</p>}
       {actionStatus && <p role="status">{actionStatus}</p>}
       {suggestedFields.length > 0 && !locked && <p role="status">
@@ -76,6 +83,35 @@ export default function EnvironmentEditor({
         <label>Continuity / must-not-change <textarea readOnly={locked} rows={3} value={sheet.continuity} onChange={(e) => setSheet((s) => ({ ...s, continuity: e.target.value }))} /></label>
         <button disabled={working || locked}>{locked ? "Environment Approved" : working ? "Saving…" : "Save Environment Sheet"}</button>
       </form>
+      <button type="button" disabled={working} onClick={() => {
+        setActionError(null);
+        setActionStatus(null);
+        void onGenerate(environment).then((proposal) => {
+          const picked = pickGeneratedStyleDraft(proposal, "environment");
+          setGeneratedProposal(picked);
+          if (locked) {
+            setActionStatus("Generated a revision proposal. The approved environment remains unchanged.");
+          } else {
+            setSheet((current) => mergeGeneratedStyleDraft(current, proposal, "environment"));
+            setActionStatus("Generated missing environment descriptions. Review and save them to persist.");
+          }
+        }).catch((error: unknown) => {
+          setActionError(getCreativeErrorMessage(error, "Unable to generate environment description."));
+        });
+      }}>{working ? "Generating…" : "Generate Environment Description"}</button>
+      {locked && generatedProposal && <section className="style-generated-proposal" aria-label="Generated environment revision proposal">
+        <h4>Generated revision proposal</h4>
+        <p>The approved environment was not changed. Create a revision before persisting this proposal.</p>
+        {Object.entries(generatedProposal).map(([field, value]) => <div key={field}>
+          <strong>{field.replace(/_/g, " ")}</strong><span>{value}</span>
+        </div>)}
+        <button type="button" disabled={working} onClick={() => {
+          setActionError(null);
+          void onCreateRevision(environment, generatedProposal).catch((error: unknown) => {
+            setActionError(getCreativeErrorMessage(error, "Unable to create environment revision."));
+          });
+        }}>Create Revision from Proposal</button>
+      </section>}
       <button type="button" disabled={working || environment.status === "approved"} onClick={() => {
         setActionError(null);
         setActionStatus(null);

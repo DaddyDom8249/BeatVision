@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { Character, CharacterAsset } from "../../types/style";
 import AssetList from "./AssetList";
 import { formatCreativeRecord, getCreativeErrorMessage } from "../../lib/formatCreativeText";
+import { mergeGeneratedStyleDraft, pickGeneratedStyleDraft } from "../../lib/style/generatedStyleDraft";
 
 const emptySheet = { identity: "", appearance: "", wardrobe: "", behavior: "", continuity: "" };
 
@@ -12,6 +13,8 @@ export default function CharacterEditor({
   onSave,
   onUpload,
   onApproveAsset,
+  onGenerate,
+  onCreateRevision,
   onApprove,
   onRefresh,
 }: {
@@ -21,6 +24,8 @@ export default function CharacterEditor({
   onSave: (id: string, input: { name: string; sheet: Record<string, string> }) => Promise<unknown>;
   onUpload: (file: File, label: string) => Promise<unknown>;
   onApproveAsset: (asset: CharacterAsset) => Promise<unknown>;
+  onGenerate: (character: Character) => Promise<Record<string, unknown>>;
+  onCreateRevision: (character: Character, proposal: Record<string, string>) => Promise<unknown>;
   onRefresh?: () => Promise<unknown>;
   onApprove: (character: Character) => Promise<unknown>;
 }) {
@@ -29,6 +34,7 @@ export default function CharacterEditor({
   const [sheet, setSheet] = useState(initial);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
+  const [generatedProposal, setGeneratedProposal] = useState<Record<string, string> | null>(null);
   const suggestedFields = character.suggested_world_fields ?? [];
   const missingFields = Object.keys(emptySheet).filter((field) => !sheet[field as keyof typeof emptySheet]?.trim());
   const locked = character.status === "approved";
@@ -37,6 +43,7 @@ export default function CharacterEditor({
     setName(character.name);
     setSheet({ ...emptySheet, ...formatCreativeRecord(character.sheet) });
     setActionError(null);
+    setGeneratedProposal(null);
   // Preserve edits in other cards during background refreshes (such as uploads).
   // Reload this editor only when its own persisted version changes.
   }, [character.id, character.updated_at, character.status]);
@@ -55,7 +62,7 @@ export default function CharacterEditor({
 
   return (
     <article>
-      <h3>{character.name}</h3>
+      <h3>{character.name} {character.revision_number > 1 && <small>Revision {character.revision_number}</small>}</h3>
       {actionError && <p role="alert" className="form-error">{actionError}</p>}
       {actionStatus && <p role="status">{actionStatus}</p>}
       {suggestedFields.length > 0 && !locked && <p role="status">
@@ -74,6 +81,35 @@ export default function CharacterEditor({
         <label>Continuity / must-not-change <textarea readOnly={locked} rows={3} value={sheet.continuity} onChange={(e) => setSheet((s) => ({ ...s, continuity: e.target.value }))} /></label>
         <button disabled={working || locked}>{locked ? "Character Approved" : working ? "Saving…" : "Save Character Sheet"}</button>
       </form>
+      <button type="button" disabled={working} onClick={() => {
+        setActionError(null);
+        setActionStatus(null);
+        void onGenerate(character).then((proposal) => {
+          const picked = pickGeneratedStyleDraft(proposal, "character");
+          setGeneratedProposal(picked);
+          if (locked) {
+            setActionStatus("Generated a revision proposal. The approved character remains unchanged.");
+          } else {
+            setSheet((current) => mergeGeneratedStyleDraft(current, proposal, "character"));
+            setActionStatus("Generated missing character descriptions. Review and save them to persist.");
+          }
+        }).catch((error: unknown) => {
+          setActionError(getCreativeErrorMessage(error, "Unable to generate character description."));
+        });
+      }}>{working ? "Generating…" : "Generate Character Description"}</button>
+      {locked && generatedProposal && <section className="style-generated-proposal" aria-label="Generated character revision proposal">
+        <h4>Generated revision proposal</h4>
+        <p>The approved character was not changed. Create a revision before persisting this proposal.</p>
+        {Object.entries(generatedProposal).map(([field, value]) => <div key={field}>
+          <strong>{field.replace(/_/g, " ")}</strong><span>{value}</span>
+        </div>)}
+        <button type="button" disabled={working} onClick={() => {
+          setActionError(null);
+          void onCreateRevision(character, generatedProposal).catch((error: unknown) => {
+            setActionError(getCreativeErrorMessage(error, "Unable to create character revision."));
+          });
+        }}>Create Revision from Proposal</button>
+      </section>}
       <button type="button" disabled={working || character.status === "approved"} onClick={() => {
         setActionError(null);
         setActionStatus(null);

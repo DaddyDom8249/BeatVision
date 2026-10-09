@@ -613,3 +613,23 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 **Verification:** Earlier Phase 3 branch commit CI passed; the final-head CI and authenticated approval UI round-trip must be checked independently. Static code and trigger analysis are not evidence of a successful authenticated approval.
 
 **Next:** Verify latest-head CI. After approved release, apply SQL migration and run Ghast authenticated Save / Approve / Refresh, verifying persisted approved state and record immutability.
+
+## 2026-10-08 — Character/environment description generation and sheet revisions
+
+**Objective:** Repair the confirmed Phase 3 defect where character and environment editors did not generate descriptions. Preserve creator text, approved-record immutability, project ownership, reference assets, and Vision Lock lineage.
+
+**Confirmed root cause:** The editors only saved manual text. `useStyleStudio` never invoked a language-generation function, while `worldSheetSuggestions` and its regression tests deliberately copied only literal World fields. Missing appearance, wardrobe, architecture, and other creative fields therefore remained blank. The approved Central Figure also had no revision path.
+
+**Repository repair:** Added the authenticated `beatvision-style-draft` Edge Function using the existing Groq `openai/gpt-oss-20b` path. It verifies the JWT, checks `projects.owner_id`, loads the current confirmed World and matching Style Bible, treats source content as untrusted data, returns a bounded structured proposal, and never writes or approves it. Both editors now expose explicit Generate Description controls. Draft editors fill only empty fields and require Save; creator-authored text is never overwritten. Approved editors display a proposal without mutation and expose Create Revision from Proposal.
+
+**Revision repair:** Added explicit `supersedes_*_id` and `revision_number` lineage, owner-scoped SECURITY INVOKER revision RPCs, inherited reference-asset display, and latest-approved-leaf selection in Vision Lock snapshots. Approval is blocked with `VISION_LOCK_REVISION_REQUIRED` whenever a Vision Lock already exists, preventing a new sheet or revision from silently bypassing the frozen snapshot.
+
+**Production backend:** Applied Supabase migration `phase3_sheet_revisions` successfully. Deployed `beatvision-style-draft` v1 as ACTIVE with `verify_jwt=true` and deployment SHA `55cf3fb3223216bd918c966bf347710d466dda6db36d8b55afe33506281ef0e4`.
+
+**Authorization verification:** Real Edge Function source tests confirm owner success, approved-record proposal-only behavior, non-owner 404 before any model request, and missing-session 401. A live transactional database check executed the owner revision RPC, verified draft lineage/revision 2 and unchanged approved source, rejected a synthetic non-owner, then rolled back. Follow-up confirmed zero revision rows remained and Ghast still has zero Vision Locks.
+
+**Verification:** Targeted generation/revision tests pass; full suite, production audit, and production build pass. Supabase security advisor shows no new finding from the revision RPCs or Style Draft function. Existing warnings remain for three intentionally callable SECURITY DEFINER functions (including `create_vision_lock`) and leaked-password protection.
+
+**Not verified:** The frontend source is not yet published or deployed. A real authenticated Ghast button click, Groq response, draft save, revision creation, approval, reload, and inherited-asset rendering remain UNVERIFIED until the GitHub/Vercel release completes and an authenticated browser session is used.
+
+**Next:** Publish the tested branch, verify CI and the production Vercel commit, then run the authenticated Ghast character and environment generation regression without approving or replacing existing creative assets automatically.
