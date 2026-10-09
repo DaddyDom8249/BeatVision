@@ -139,3 +139,23 @@ Do not touch `main`, production secrets, production DB, locked reference assets 
 **Current integration outcome:** No supported free SkyReels-V2 API/GPU from this directory has been confirmed. This directory does NOT unblock production integration. Do not deploy, pay or scrape without permission. Feature candidate stays behind explicit capability flag / unavailable status; do not claim real video creation from a directory listing.
 
 **No code or production data changes**, no additional Jules task. Research-only parking decision.
+
+
+## SkyReels V2 free GPU feasibility — Hugging Face ZeroGPU (checked 2026-10-09)
+
+**Most promising genuinely no-charge candidate for a bounded experiment: Hugging Face ZeroGPU.** Official docs: https://huggingface.co/docs/hub/spaces-zerogpu and https://huggingface.co/docs/hub/spaces-api-endpoints.
+
+**Current official terms:** Eligible *free personal* HF accounts in good standing (email verified, age >30 days) can host **up to two free ZeroGPU Gradio Spaces**. Default GPU allocation is **48 GB VRAM** (half RTX Pro 6000 Blackwell); xlarge is **96 GB** at **2×** quota. Free-account **daily GPU execution allowance = 5 minutes**, reset 24h after first usage. Per-call decorator has a default **60-second timeout** but supports a custom `@spaces.GPU(duration=120)` or dynamic timeout. A Space can be called via an official Gradio API from Python/JS/HTTP; API calls consume caller quota and are not unlimited. GPU/cold start/runtime compatibility and actual SkyReels inference duration remain **NOT VERIFIED**. PyTorch 2.8+ and supported Gradio SDK/Python versions are documented. A Space must explicitly use ZeroGPU hardware; free ordinary Gradio CPU Spaces currently have separate subscription constraints.
+ 
+**SkyReels compatibility hypothesis:** The upstream official repo https://github.com/SkyworkAI/SkyReels-V2 reports approximately **14.7 GB peak GPU memory** for 540p SkyReels-V2-I2V-1.3B; thus 48 GB VRAM is numerically sufficient, but **NOT** proof the model, CUDA dependencies, startup/download, CPU RAM, GPU time or model licensing will run under ZeroGPU quotas. Start with 1.3B at fewer frames/steps, then only try upstream 97 frames/24fps (~4s) if smaller prototype works. No published verified SkyReels V2 ZeroGPU functional endpoint was found in this research.
+
+**Other free GPU providers:** Google Colab free offers interactive notebook access, but expressly **prohibits running unrelated web services, remote worker control and bypassing notebook UI**; it is not suitable for a persistent public BeatVision API. Official: https://research.google.com/colaboratory/faq.html . Kaggle Notebooks offer limited-time GPU sessions for manually generating/testing one clip, not a reliable hosted API; official https://www.kaggle.com/docs/notebooks. Cloudflare Workers AI allows a daily free neuron allowance but runs its supported model catalog and does **not** demonstrate available custom SkyReels V2 GPU hosting; special custom model requests require provider coordination (https://developers.cloudflare.com/workers-ai/platform/limits/).
+
+**Recommended zero-cost architecture TEST PLAN, NOT IMPLEMENTATION:**
+1. Verify user-owned Hugging Face account meets free ZeroGPU hosting requirements and Space quota, *without* provisioning paid hardware or sharing token in browser/source.
+2. Create a user-authorized Gradio Space pinned to approved upstream 1.3B model/versions and use `@spaces.GPU` with bounded per-job GPU duration; expose only the Gradio API used via server-side authentication (HF token held in secure Edge/Worker environment), no public anonymous access to private content.
+3. Run ONE draft test scene with explicit permission and record true quota/cold-start, inference, format, output verification (`ffprobe`), storage retention and licensing.
+4. Only if actual inference succeeds for real media within the quota, integrate async polling and provenance through the existing BeatVision generation controller/Cloudflare Arena boundary with a **disabled-by-default capability**; never auto-charge, spin up GPU credits, affect approved assets, mislabel 200 responses as MP4 success or silently switch from LTX.
+5. Free 5min/day is probably insufficient for a production service covering multiple 4-second scenes, but actual throughput remains unknown until measured.
+
+**Evidence classification:** Platform free-hosting quota and SkyReels approximate VRAM = CONFIRMED from current official documents. Actual ZeroGPU SkyReels executable environment, API authentication, stable processing, number of clips/day, available remaining quota, paid-free segregation, or production use = NOT VERIFIED. No Space, provider job, inference or production implementation created.
