@@ -60,7 +60,7 @@ function SceneEditor({ scene, working, onSave }: {
           lyric_moment: draft.lyric_moment.trim(),
           transition_style: draft.transition_style.trim(),
           continuity_notes: draft.continuity_notes.trim(),
-        })}>
+        }).catch(() => undefined)}>
           {working ? "Saving…" : dirty ? "Save Scene Direction" : "Saved"}
         </button>
       )}
@@ -102,13 +102,13 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
         <p>Translate the locked World and Style Bible into a scene-by-scene production plan.</p>
       </header>
 
-      {error && <p role="alert">{error}</p>}
+      {error && <div role="alert"><p>{error}</p><a href={`/projects/${projectId}/style`}>Return to Style Bible</a></div>}
 
       {!plan ? (
         <section>
           <h2>Build Visual Plan</h2>
           <p>{song?.analysis?.sections?.length ?? 0} analyzed song sections are available as the initial timing structure.</p>
-          <button className="primary-button" disabled={working} onClick={() => void createPlan()}>
+          <button className="primary-button" disabled={working} onClick={() => void createPlan().catch(() => undefined)}>
             {working ? "Building…" : "Build Visual Plan from Song"}
           </button>
         </section>
@@ -121,7 +121,7 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
               <p>{plan.status === "approved" ? "Visual Plan locked. Production must follow this approved direction." : "Draft. Edit the scene directions, then lock the plan."}</p>
             </div>
             {plan.status === "draft" && (
-              <button className="primary-button" disabled={working || scenes.length === 0} onClick={() => void approvePlan()}>
+              <button className="primary-button" disabled={working || scenes.length === 0} onClick={() => void approvePlan().catch(() => undefined)}>
                 {working ? "Locking…" : "Lock Visual Plan"}
               </button>
             )}

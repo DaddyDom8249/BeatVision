@@ -1,5 +1,19 @@
 # BeatVision Project Log
 
+## 2026-10-09 16:50 UTC — Authenticated Ghast Visual Plan approval diagnosis
+
+**Objective:** Exercise the real Ghast pipeline through the private BeatVision Field Lab, with live GitHub/Vercel/Cloudflare/Supabase audit evidence.
+
+**Reproduction:** Stored-vault sign-in succeeded. Existing Ghast World and Style Bible are locked. Character description generation returned HTTP 200; explicit Central Figure revision 2 persisted after reload and was approved through the browser. Revision 1 retained its original sheet hash. Clicking Build Visual Plan from Song returned HTTP 400 from create_vision_lock with VISION_LOCK_ENVIRONMENTS_NOT_APPROVED because dimly lit interior revision 3 is still draft. The UI displayed only Unable to create Visual Plan.
+
+**Root cause:** useVisualPlan accepted Error instances only, discarding structured PostgREST message objects. The missing environment approval is an intentional backend guard and remains enforced.
+
+**Repair:** Map known Vision Lock prerequisites to artist-readable instructions, preserve unknown structured database errors, provide a Return to Style Bible link, and consume the page action promise after the hook records its visible error. Reuse the existing structured-error helper. No database, auth, RLS, provider, or approved-record changes.
+
+**Regression evidence:** Two tests execute the real transpiled useVisualPlan hook against a PostgREST object. Both failed against main, reproducing the generic fallback, and pass after the repair. They also require that blocked locks do not create plans/scenes and that working state resets. Full suite passes 91/91; production audit and TypeScript/Vite production build pass.
+
+**Deployment/verification:** Pending at this commit. After release, reproduce the still-draft environment prerequisite in the authenticated browser, then review/approve the draft and continue. A build or READY deployment alone does not establish end-to-end success. Paid/unknown-cost media generation remains blocked until current free-provider evidence exists.
+
 Chronological engineering record for BeatVision. Entries record meaningful implementation work, verification, failures, fixes, decisions, and references.
 
 ## 2026-10-02 — 18:59 UTC

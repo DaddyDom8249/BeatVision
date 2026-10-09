@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase/client";
+import { getVisualPlanErrorMessage } from "../lib/visualPlanErrors";
 import type { StyleBible } from "../types/style";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 import type { WorldReport } from "../types/world";
@@ -142,7 +143,7 @@ export function useVisualPlan(projectId: string) {
       setPlan(planResult.data as VisualPlan);
       setScenes((sceneResult.data ?? []) as VisualPlanScene[]);
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to create Visual Plan.";
+      const message = getVisualPlanErrorMessage(e, "Unable to create Visual Plan.");
       setError(message);
       if (createdPlanId) await supabase.from("visual_plans").delete().eq("id", createdPlanId);
       throw e;
@@ -157,7 +158,7 @@ export function useVisualPlan(projectId: string) {
       if (result.error) throw result.error;
       setScenes((current) => current.map((scene) => scene.id === sceneId ? result.data as VisualPlanScene : scene));
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to save scene direction.";
+      const message = getVisualPlanErrorMessage(e, "Unable to save scene direction.");
       setError(message); throw e;
     } finally { setWorking(false); }
   }, [plan]);
@@ -172,7 +173,7 @@ export function useVisualPlan(projectId: string) {
       setPlan(result.data as VisualPlan);
       setScenes((current) => current.map((scene) => ({ ...scene, status: "approved" })));
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unable to lock Visual Plan.";
+      const message = getVisualPlanErrorMessage(e, "Unable to lock Visual Plan.");
       setError(message); throw e;
     } finally { setWorking(false); }
   }, [plan, scenes.length]);
