@@ -613,3 +613,19 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 **Verification:** Earlier Phase 3 branch commit CI passed; the final-head CI and authenticated approval UI round-trip must be checked independently. Static code and trigger analysis are not evidence of a successful authenticated approval.
 
 **Next:** Verify latest-head CI. After approved release, apply SQL migration and run Ghast authenticated Save / Approve / Refresh, verifying persisted approved state and record immutability.
+
+## 2026-10-09 — Agent 01: fix query-string authentication routing
+
+**Baseline:** Re-inspected current GitHub main at `bd035220439220bf1436212f51b000f47cf415f2` (the earlier Agent 01 report inspected the stale `cdf48e3` revision). The routing defect remains in current source.
+
+**Reproduction:** Added `scripts/test/auth-navigation.test.mjs`, transpiling and exercising the actual `App.tsx`, `CreateProjectPage.tsx`, and `AuthPage.tsx` with mocked Supabase Auth (no real credentials). Against the unfixed `App.tsx`, GitHub Actions run 37867561910 had **74 passed, 1 failed**; the new test showed actual `DashboardPage` instead of expected `AuthPage` after clicking Sign in from New Project with `/auth?next=/projects/new`. Direct deep-link route checks passed.
+
+**Cause:** `App.navigate()` used `setPath(next)` on a query-bearing URL, while route equality expects the pathname only. `window.history.pushState` already preserves query parameters.
+
+**Fix:** One-line production change in `src/app/App.tsx`: `setPath(currentPath())` after `pushState`. Browser URL retains `?next=/projects/new` so `AuthPage` can return the user to the New Project form. All existing routes remain unchanged.
+
+**Verification:** GitHub Actions run 37867616416 on repair SHA `795456c1e0655596f317e2ef9ecda5b79e5c75e3`: **75/75 tests passed**, `npm run production-audit` passed, `npm run build` passed. The login test uses mocked credentials and does not establish real Supabase sign-in, email-confirmation, or authenticated project creation.
+
+**Publication:** PR #37, branch `fix/auth-query-route-20261008`. Live production deployment and authenticated browser verification not established at the time of this log entry.
+
+**Next:** Merge/release after review; verify New Project → Sign in → form → authorized login → return to New Project in a real authenticated browser, then creation of a project row.

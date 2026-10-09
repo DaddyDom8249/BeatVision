@@ -47,7 +47,8 @@ export default function App() {
 
   function navigate(next: string) {
     window.history.pushState({}, "", next);
-    setPath(next);
+    // Route state contains only the pathname; preserve ?next= in the browser URL.
+    setPath(currentPath());
   }
 
   if (path === "/") return <DashboardPage onNavigate={navigate} />;
