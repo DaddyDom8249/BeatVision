@@ -15,6 +15,8 @@ function AssetCard<T extends Asset>({
   working: boolean;
 }) {
   const [previewFailed, setPreviewFailed] = useState(false);
+  const mediaType = typeof asset.metadata?.mime_type === "string" ? asset.metadata.mime_type : "";
+  const isHeif = /^image\/hei[cf]$/i.test(mediaType) || /\.(heif|heic)$/i.test(asset.label);
   const [refreshError, setRefreshError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ function AssetCard<T extends Asset>({
   }
 
   return (
-    <article>
+    <article className="style-asset-card">
       {asset.signed_url && !previewFailed ? (
         <img
           src={asset.signed_url}
@@ -41,9 +43,13 @@ function AssetCard<T extends Asset>({
           style={{ maxWidth: "220px", display: "block" }}
         />
       ) : (
-        <p role="status">Reference preview unavailable or its secure link expired. The uploaded record is still saved.</p>
+        isHeif ? (
+          <p role="status">HEIF/HEIC reference saved, but this browser could not display its preview. Refreshing the secure link will not convert the file. For a visible reference, upload a JPEG or PNG separately; the original record stays unchanged.</p>
+        ) : (
+          <p role="status">Reference preview unavailable or its secure link expired. The uploaded record is still saved.</p>
+        )
       )}
-      {(previewFailed || !asset.signed_url) && onRefresh && (
+      {(previewFailed || !asset.signed_url) && onRefresh && !isHeif && (
         <button type="button" disabled={working} onClick={refresh}>
           Refresh image preview
         </button>
@@ -51,7 +57,7 @@ function AssetCard<T extends Asset>({
       {refreshError && <p role="alert" className="form-error">{refreshError}</p>}
       <strong>{asset.label}</strong>
       <p>Status: {asset.status}</p>
-      <p>Stored at: {asset.storage_path}</p>
+      <details className="style-asset-storage"><summary>Storage details</summary><code>{asset.storage_path}</code></details>
       {asset.status !== "approved" && (
         <button type="button" disabled={working} onClick={() => onApprove(asset)}>
           Approve Asset
@@ -75,7 +81,7 @@ export default function AssetList<T extends Asset>({
   if (assets.length === 0) return <p>No assets yet. New assets are appended to the record history.</p>;
 
   return (
-    <div>
+    <div className="style-asset-list">
       {assets.map((asset) => (
         <AssetCard
           key={asset.id}

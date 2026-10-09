@@ -61,7 +61,7 @@ export default function CharacterEditor({
   }
 
   return (
-    <article>
+    <article className="style-record-card">
       <h3>{character.name} {character.revision_number > 1 && <small>Revision {character.revision_number}</small>}</h3>
       {actionError && <p role="alert" className="form-error">{actionError}</p>}
       {actionStatus && <p role="status">{actionStatus}</p>}

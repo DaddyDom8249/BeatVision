@@ -32,3 +32,29 @@
 
 .auth-link { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 8px 0 8px 14px; text-decoration: underline; text-underline-offset: 3px; }
 .auth-link:hover { opacity: .8; }
+
+
+/* Phase 3: Style Studio persisted record editors (mobile-safe).
+   The older .style-entity-list selectors were never attached to these editors.
+   Do not change generated text or approved sheet state in presentation rules. */
+.style-record-card{min-width:0;margin-top:18px;padding:22px;border:1px solid #302e28;background:#11110f;overflow-wrap:anywhere}
+.style-record-card>h3{margin:0 0 18px;font-size:21px;line-height:1.35}
+.style-record-card>h4{font:10px 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.1em;color:#c9a66b;margin:26px 0 14px}
+.style-record-card>form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.style-record-card>form>label{display:grid;gap:8px;min-width:0;color:#c8c3b8;font-size:13px;line-height:1.4}
+.style-record-card>form>label>input,.style-record-card>form>label>textarea{box-sizing:border-box;display:block;width:100%;min-width:0;max-width:100%;padding:12px;border:1px solid #37342c;border-radius:2px;background:#11110f;color:#f3f0e8;font:inherit;line-height:1.5;outline:none}
+.style-record-card>form>label>textarea{min-height:110px;resize:vertical}
+.style-record-card>form>label>input:focus,.style-record-card>form>label>textarea:focus{border-color:#8e754a}
+.style-record-card>form>button{grid-column:1/-1;justify-self:start}
+.style-record-card button{max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.4;padding:10px 14px;margin-top:8px;border:1px solid #51462f;background:#242015;color:#f3f0e8;cursor:pointer}
+.style-record-card button:disabled{cursor:not-allowed;opacity:.55}
+.style-record-card>input[type=file]{box-sizing:border-box;display:block;width:100%;max-width:100%;padding:12px;border:1px dashed #3b382f;background:#141411;color:#c8c3b8}
+.style-asset-list{display:grid;gap:14px;margin-top:12px;min-width:0}
+.style-asset-card{box-sizing:border-box;min-width:0;padding:16px;border:1px solid #302e28;background:#141411;overflow-wrap:anywhere}
+.style-asset-card img{display:block;max-width:100%;height:auto;margin-bottom:10px;border:1px solid #302e28}
+.style-asset-card>strong{display:block;overflow-wrap:anywhere;color:#eee9df;font-size:14px}
+.style-asset-card>p{overflow-wrap:anywhere;font-size:12px;line-height:1.55;color:#aca69b}
+.style-asset-storage{font-size:12px;color:#8f8a80;margin:12px 0}
+.style-asset-storage summary{cursor:pointer;color:#c9a66b}
+.style-asset-storage code{display:block;margin-top:8px;overflow-wrap:anywhere;word-break:break-word;white-space:normal;font-size:11px;line-height:1.5}
+@media(max-width:700px){.style-record-card{padding:16px}.style-record-card>form{grid-template-columns:minmax(0,1fr)}.style-record-card>form>button{justify-self:stretch}.style-record-card>button{display:block;width:100%;text-align:center}.style-asset-card{padding:12px}}
