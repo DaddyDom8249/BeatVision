@@ -600,60 +600,60 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 
 **Status:** FIXED AND VERIFIED LOCALLY. No deployment or merge to main performed.
 
-## 2026-10-08 — Phase 3 Production Repair: Style Studio, Profiles & Approval
+## 2026-10-08 — Phase 3 independently repaired on review branch
 
-**Task:** Repair Phase 3 Style Bible, Character profiles, Environment profiles, structured JSON rendering, and Environment/Character approval workflow (Project Ghast, World Report ID `51c43d74-6909-475c-b5c3-31be0e25fcbd`).
+**Objective:** Jules reported 61 local passing tests but did not publish its Phase 3 source. Prior PR #32 was merged with generation-controller changes. New PR #33 is an independently implemented source repair, not a recovered Jules workspace patch.
 
-**Defects Confirmed & Root Causes:**
-1. **`[object Object]` Rendering & Persistence:** Spreading raw JSONB objects/arrays from `character.sheet`, `environment.sheet`, and `style_bible.continuity_rules` into React state or textareas caused JavaScript implicit string coercion to evaluate to `"[object Object]"`, which was then persisted into Supabase.
-2. **Missing Profile Draft Fields:** `materializeWorldDrafts` did not populate all character and environment sheet fields (`architecture`, `surfaces`, `identity`, `appearance`, etc.) from confirmed World Report fields.
-3. **Malformed Continuity Rules:** `editableLines` mapped continuity rule objects to `"[object Object]"` strings during saves.
-4. **Environment / Character Approval Failures:** `approveEnvironment` and `approveCharacter` swallowed Supabase `PostgrestError` objects (since `err instanceof Error` evaluated to false for Postgrest errors), discarding error details and replacing them with generic "Unable to approve..." messages without showing specific database/RLS exceptions.
-5. **Lack of Card-Level Error Handling:** Component forms did not catch promise rejections locally or display approval errors on the card.
+**Confirmed root cause:** The live approve_character and approve_environment RPCs explicitly assign approved_at, while the enforce_phase3_approval_transition BEFORE UPDATE trigger rejects assigning approved_at during the draft-to-approved transition (APPROVED_AT_DATABASE_AUTHORITY). Ownership and RLS were not weakened. Browser-side Style Bible and reference-asset approval paths contained the same trigger conflict.
+
+**Repairs:** Add readable nested JSONB text formatting, restore only wholly corrupted draft continuity rules from the confirmed World, preserve untouched nested sheet values when editing, block approved sheet edits, show PostgREST errors, remove client-supplied approved_at, and prepare a non-destructive approval-RPC migration. Add regression guards.
+
+**Publication:** PR #33 on branch fix/phase3-style-profiles-approval-20261008; no merge or production deployment. No live creative approvals or database data changes.
+
+**Verification:** Earlier Phase 3 branch commit CI passed; the final-head CI and authenticated approval UI round-trip must be checked independently. Static code and trigger analysis are not evidence of a successful authenticated approval.
+
+**Next:** Verify latest-head CI. After approved release, apply SQL migration and run Ghast authenticated Save / Approve / Refresh, verifying persisted approved state and record immutability.
+
+## 2026-10-09 — Agent 01: fix query-string authentication routing
+
+**Baseline:** Re-inspected current GitHub main at `bd035220439220bf1436212f51b000f47cf415f2` (the earlier Agent 01 report inspected the stale `cdf48e3` revision). The routing defect remains in current source.
+
+**Reproduction:** Added `scripts/test/auth-navigation.test.mjs`, transpiling and exercising the actual `App.tsx`, `CreateProjectPage.tsx`, and `AuthPage.tsx` with mocked Supabase Auth (no real credentials). Against the unfixed `App.tsx`, GitHub Actions run 37867561910 had **74 passed, 1 failed**; the new test showed actual `DashboardPage` instead of expected `AuthPage` after clicking Sign in from New Project with `/auth?next=/projects/new`. Direct deep-link route checks passed.
+
+**Cause:** `App.navigate()` used `setPath(next)` on a query-bearing URL, while route equality expects the pathname only. `window.history.pushState` already preserves query parameters.
+
+**Fix:** One-line production change in `src/app/App.tsx`: `setPath(currentPath())` after `pushState`. Browser URL retains `?next=/projects/new` so `AuthPage` can return the user to the New Project form. All existing routes remain unchanged.
+
+**Verification:** GitHub Actions run 37867616416 on repair SHA `795456c1e0655596f317e2ef9ecda5b79e5c75e3`: **75/75 tests passed**, `npm run production-audit` passed, `npm run build` passed. The login test uses mocked credentials and does not establish real Supabase sign-in, email-confirmation, or authenticated project creation.
+
+**Publication:** PR #37, branch `fix/auth-query-route-20261008`. Live production deployment and authenticated browser verification not established at the time of this log entry.
+
+**Next:** Merge/release after review; verify New Project → Sign in → form → authorized login → return to New Project in a real authenticated browser, then creation of a project row.
+
+## 2026-10-09 — Phase 3 Profiles, Approvals, AI Description Generation & Generation Lifecycle Re-Integration
+
+**Task:** Re-integrate and verify Phase 3 Style Studio fixes (JSON formatting, error extraction, draft continuity recovery, creator-initiated AI description generation for characters and environments) and Generation Controller lifecycle / concurrency hardening onto the latest `origin/main` baseline (`945f73754823ef884ad3c572871245236c375b58`).
 
 **Repairs Applied:**
-1. **Structured Data Normalization Layer (`src/lib/formatCreativeText.ts`):** Created `formatCreativeText`, `formatCreativeLines`, and `formatCreativeRecord` to recursively parse JSON strings, arrays, and objects into human-readable text, stripping any `"[object Object]"` strings.
-2. **`useStyleStudio` Hooks Upgrade:**
-   - Integrated `getErrorMessage` to extract `message`, `error_description`, or `details` from Postgrest error objects.
-   - Enhanced `materializeWorldDrafts` to derive complete character (`identity`, `appearance`, `wardrobe`, `behavior`, `continuity`) and environment (`purpose`, `layout`, `architecture`, `surfaces`, `lighting`, `atmosphere`, `continuity`) draft sheets from confirmed World Reports.
-   - Added `recoverStyleBibleContinuity` to automatically recover corrupted `"[object Object]"` draft continuity rules from confirmed World Reports.
-   - Normalized character and environment sheets on load with `formatCreativeRecord`.
-3. **UI Component Hardening (`CharacterEditor.tsx`, `EnvironmentEditor.tsx`, `StylePage.tsx`):**
-   - Formatted inputs using `formatCreativeRecord` and `formatCreativeLines`.
-   - Added card-level error state and alerts.
-   - Marked approved character and environment sheets read-only to preserve immutability.
-4. **Regression Tests (`scripts/test/phase3-style-studio.test.mjs`):** Added 10 tests covering structured JSON formatting, draft profile generation, continuity recovery, PostgrestError extraction, approval status transitions, and multi-environment processing.
+1. **JSON Formatting & Error Extraction (`src/lib/formatCreativeText.ts`, `src/hooks/useStyleStudio.ts`)**:
+   - `formatCreativeRecord` recursively formats nested JSON objects/arrays into human-readable strings, preventing `"[object Object]"` output.
+   - `getCreativeErrorMessage` surfaces detailed PostgrestError messages without hiding error context.
+   - `materializeWorldDrafts` and `recoverStyleBibleContinuity` extract complete character and environment sheets and recover corrupted rules from confirmed World Reports.
+2. **Server-Side AI Description Generation (`supabase/functions/beatvision-world/index.ts`, `src/hooks/useStyleStudio.ts`)**:
+   - Added `generate_character_sheet` and `generate_environment_sheet` actions to `beatvision-world` using free-tier LLM providers (Groq, OpenRouter, Gemini).
+   - Added `generateCharacterSheet` and `generateEnvironmentSheet` methods to `useStyleStudio`.
+3. **UI Enhancements (`CharacterEditor.tsx`, `EnvironmentEditor.tsx`, `StylePage.tsx`)**:
+   - Added creator-initiated "Generate AI Description" buttons with loading states and card-level error alerts.
+   - Enforced `readOnly` state on approved character and environment sheets.
+4. **Generation Controller Lifecycle & Concurrency (`supabase/functions/beatvision-generation/index.ts`)**:
+   - `setFailed()` asserts `res.error` and throws errors on database persistence failure.
+   - All `generation_jobs` status updates check for 0-row update race conditions (`GENERATION_JOB_RACE_LOST`).
+   - Unsupported job types or missing `upstream_job_id` during polling cleanly transition to `failed`.
+   - Additive migration `supabase/migrations/20261008120000_link_final_videos_to_generation_jobs.sql` links final videos 1:1 to assembly `generation_job_id`.
 
-**Verification Results:**
-- `npm test`: 61/61 unit/edge tests passed.
-- `npm run build`: TypeScript compilation and Vite build passed.
-- `npm run production-audit`: Static production audit passed.
+**Verification:**
+- `npm test`: **75/75 passed** (0 failures).
+- `npm run build`: Success.
+- `npm run production-audit`: PASS.
 
-**Status:** ALL PHASE 3 DEFECTS FIXED AND VERIFIED LOCALLY.
-
-## 2026-10-08 — Phase 3 Character & Environment AI Description Generation
-
-**Task:** Implement genuine AI text generation for Character and Environment creative descriptions grounded in confirmed World Reports, Style Bibles, and song creative direction.
-
-**Implementation Details:**
-1. **Edge Function Actions (`supabase/functions/beatvision-world/index.ts`):** Added `generate_character_sheet` and `generate_environment_sheet` server-side actions.
-   - Enforces project owner authorization and confirmed World Report + Style Bible prerequisites.
-   - Leverages configured free-tier LLM providers (Groq `openai/gpt-oss-20b`, OpenRouter, or Gemini).
-   - Generates structured JSON sheets containing:
-     - Character: `identity`, `appearance`, `wardrobe`, `behavior`, `continuity`
-     - Environment: `purpose`, `layout`, `architecture`, `surfaces`, `lighting`, `atmosphere`, `continuity`
-   - Returns 503 (`PROVIDER_UNAVAILABLE`) if no text LLM API key is configured.
-2. **Hook Integration (`src/hooks/useStyleStudio.ts`):**
-   - Added `generateCharacterSheet` and `generateEnvironmentSheet`.
-   - Protects approved records (`status === "approved"`) from regeneration.
-   - Persists generated sheets as un-approved drafts so the user must review and manually Save/Approve.
-3. **UI Enhancements (`CharacterEditor.tsx`, `EnvironmentEditor.tsx`, `StylePage.tsx`):**
-   - Added creator-initiated "Generate AI Description" action buttons to Character and Environment editor cards.
-   - Displays inline loading states and card-level error messages if AI generation fails or provider is unavailable.
-
-**Verification Results:**
-- `npm test`: **65/65 unit and edge tests passed**.
-- `npm run build`: TypeScript compilation and Vite build passed.
-- `npm run production-audit`: Passed.
-
-**Status:** IMPLEMENTED AND VERIFIED LOCALLY.
+**Status:** ALL REPRODUCED DEFECTS FIXED AND VERIFIED LOCALLY.

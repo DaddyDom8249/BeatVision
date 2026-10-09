@@ -1,133 +1,79 @@
 /**
- * Safe normalization helper for structured creative data.
- * Converts strings, arrays, objects, and JSON strings into human-readable text.
- * Prevents literal "[object Object]" leaking into UI fields, forms, or database records.
+ * Human-readable, lossless display of World-derived JSONB fields.
+ * The canonical World data stays structured; only draft editor values are flattened.
  */
-
-export function formatCreativeText(value: unknown, joinSeparator = "; "): string {
-  if (value === null || value === undefined || value === "") {
-    return "";
-  }
-
+export function formatCreativeText(value: unknown): string {
+  if (value == null) return "";
   if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed || trimmed === "[object Object]") {
-      return "";
-    }
-
-    if (trimmed.includes("[object Object]")) {
-      const cleaned = trimmed.replace(/\[object Object\]/g, "").replace(/\s*;\s*;\s*/g, "; ").trim();
-      return cleaned.replace(/^;\s*|\s*;$/g, "");
-    }
-
-    // Try parsing stringified JSON
-    if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+    const input = value.trim();
+    if (!input || input === "[object Object]") return "";
+    if ((input.startsWith("{") && input.endsWith("}")) ||
+        (input.startsWith("[") && input.endsWith("]"))) {
       try {
-        const parsed = JSON.parse(trimmed);
-        return formatCreativeText(parsed, joinSeparator);
+        return formatCreativeText(JSON.parse(input) as unknown);
       } catch {
-        // Fallback to literal string if JSON parse fails
+        // Creator-authored strings need not be valid JSON.
       }
     }
-
-    return trimmed;
+    return value;
   }
-
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-
-  if (Array.isArray(value)) {
-    const items = value
-      .map((item) => formatCreativeText(item, joinSeparator))
-      .filter((item) => Boolean(item) && item !== "[object Object]");
-
-    return items.join(joinSeparator);
-  }
-
+  if (Array.isArray(value)) return value.map(formatCreativeText).filter(Boolean).join("\n");
   if (typeof value === "object") {
     const record = value as Record<string, unknown>;
-
-    // Common single-value object wrappers
-    if (typeof record.rule === "string" && record.rule.trim()) {
-      return formatCreativeText(record.rule, joinSeparator);
+    const keys = Object.keys(record);
+    if (keys.length === 1 && ["rule", "text", "description", "url", "path"].includes(keys[0])) {
+      return formatCreativeText(record[keys[0]]);
     }
-    if (typeof record.description === "string" && record.description.trim()) {
-      return formatCreativeText(record.description, joinSeparator);
-    }
-    if (typeof record.text === "string" && record.text.trim()) {
-      return formatCreativeText(record.text, joinSeparator);
-    }
-    if (typeof record.symbol === "string" && record.symbol.trim()) {
-      return formatCreativeText(record.symbol, joinSeparator);
-    }
-
-    // Key-value object mapping
-    const entries = Object.entries(record)
-      .map(([key, val]) => {
-        const formattedKey = key.replace(/_/g, " ").trim();
-        const formattedVal = formatCreativeText(val, ", ");
-        if (!formattedVal || formattedVal === "[object Object]") return "";
-        return `${formattedKey}: ${formattedVal}`;
-      })
-      .filter(Boolean);
-
-    return entries.join(joinSeparator);
+    return keys.map((key) => {
+      const text = formatCreativeText(record[key]);
+      return text ? key.replace(/_/g, " ") + ": " + text : "";
+    }).filter(Boolean).join("\n");
   }
-
-  return "";
+  return String(value);
 }
 
-/**
- * Normalizes an array of items (e.g. continuity_rules or visual_rules) into readable multiline text.
- */
-export function formatCreativeLines(value: unknown): string {
-  if (value === null || value === undefined) return "";
-
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed || trimmed === "[object Object]") return "";
-    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
-      try {
-        const parsed = JSON.parse(trimmed);
-        return formatCreativeLines(parsed);
-      } catch {
-        // Fall through
-      }
-    }
-    return trimmed
-      .split("\n")
-      .map((line) => formatCreativeText(line))
-      .filter((line) => Boolean(line) && line !== "[object Object]")
-      .join("\n");
-  }
-
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => formatCreativeText(item))
-      .filter((item) => Boolean(item) && item !== "[object Object]")
-      .join("\n");
-  }
-
-  if (typeof value === "object") {
-    const formatted = formatCreativeText(value, "\n");
-    return formatted.replace(/;\s*/g, "\n");
-  }
-
-  return "";
+export function formatCreativeLines(value: unknown): string[] {
+  if (Array.isArray(value)) return value.flatMap((item) => formatCreativeText(item).split("\n")).map((line) => line.trim()).filter(Boolean);
+  return formatCreativeText(value).split("\n").map((line) => line.trim()).filter(Boolean);
 }
 
-/**
- * Normalizes a record (e.g. character or environment sheet) so all properties are clean strings.
- */
 export function formatCreativeRecord(value: unknown): Record<string, string> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+    .map(([key, fieldValue]) => [key, formatCreativeText(fieldValue)]));
+}
 
-  const result: Record<string, string> = {};
-  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-    result[key] = formatCreativeText(val);
+/** Draft-only recovery: never throw away valid creator-authored rules. */
+export function recoverWorldContinuity(draft: unknown, worldRules: unknown): string[] {
+  const existing = Array.isArray(draft) ? draft : [];
+  if (existing.length && existing.every((item) => item === "[object Object]")) {
+    return formatCreativeLines(worldRules);
+  }
+  return formatCreativeLines(draft);
+}
+
+export function getCreativeErrorMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    for (const key of ["message", "error_description", "details", "hint", "code"]) {
+      if (typeof record[key] === "string" && record[key].trim()) return record[key].trim();
+    }
+  }
+  return error instanceof Error ? error.message : fallback;
+}
+
+/** Preserve nested JSONB values whenever the creator did not change that field. */
+export function mergeCreativeSheet(
+  original: unknown,
+  edited: Record<string, string>,
+): Record<string, unknown> {
+  const source = original && typeof original === "object" && !Array.isArray(original)
+    ? original as Record<string, unknown> : {};
+  const result: Record<string, unknown> = { ...source };
+  for (const [field, value] of Object.entries(edited)) {
+    result[field] = Object.prototype.hasOwnProperty.call(source, field) &&
+      formatCreativeText(source[field]) === value
+      ? source[field] : value;
   }
   return result;
 }

@@ -31,6 +31,8 @@ export interface Character {
   approved_at: string | null;
   created_at: string;
   updated_at: string;
+  /** UI-only suggestions from the confirmed World, not persisted until saved. */
+  suggested_world_fields?: string[];
 }
 
 export interface CharacterAsset {
@@ -60,6 +62,8 @@ export interface Environment {
   approved_at: string | null;
   created_at: string;
   updated_at: string;
+  /** UI-only suggestions from the confirmed World, not persisted until saved. */
+  suggested_world_fields?: string[];
 }
 
 export interface EnvironmentAsset {

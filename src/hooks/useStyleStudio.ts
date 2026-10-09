@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase, supabasePublishableKey, supabaseUrl } from "../lib/supabase/client";
+import { suggestMissingWorldFields } from "../lib/style/worldSheetSuggestions";
+import type { WorldReport } from "../types/world";
 import {
+  formatCreativeText,
   formatCreativeLines,
   formatCreativeRecord,
-  formatCreativeText,
+  mergeCreativeSheet,
+  recoverWorldContinuity,
+  getCreativeErrorMessage,
 } from "../lib/formatCreativeText";
-import type { WorldReport } from "../types/world";
 import type {
   Character,
   CharacterAsset,
@@ -29,18 +33,7 @@ const environmentFields =
 const environmentAssetFields =
   "id,project_id,world_report_id,environment_id,kind,label,storage_path,status,metadata,approved_at,supersedes_asset_id,created_at";
 
-function getErrorMessage(e: unknown, fallback: string): string {
-  if (e instanceof Error && e.message) return e.message;
-  if (e && typeof e === "object") {
-    const obj = e as Record<string, unknown>;
-    if (typeof obj.message === "string" && obj.message.trim()) return obj.message;
-    if (typeof obj.error_description === "string" && obj.error_description.trim()) return obj.error_description;
-    if (typeof obj.details === "string" && obj.details.trim()) return obj.details;
-  }
-  return fallback;
-}
-
-async function callWorldService(body: unknown) {
+async function callWorldService(projectId: string, body: unknown) {
   const { data: sessionData } = await supabase.auth.getSession();
   let session = sessionData.session;
   if (!session?.access_token) {
@@ -74,8 +67,7 @@ async function callWorldService(body: unknown) {
 }
 
 function asLines(value: unknown): string[] {
-  const formatted = formatCreativeLines(value);
-  return formatted ? formatted.split("\n").filter(Boolean) : [];
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
 function asRecord(value: unknown): Record<string, string> {
@@ -83,18 +75,13 @@ function asRecord(value: unknown): Record<string, string> {
 }
 
 function asReferenceAssets(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => {
-      if (typeof item === "string") return formatCreativeText(item);
-      if (item && typeof item === "object") {
-        const record = item as Record<string, unknown>;
-        if (typeof record.url === "string") return record.url.trim();
-        if (typeof record.path === "string") return record.path.trim();
-      }
-      return formatCreativeText(item);
-    })
-    .filter((item) => Boolean(item) && item !== "[object Object]");
+  return Array.isArray(value)
+    ? value.map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object" && "url" in item) return String((item as { url?: unknown }).url ?? "");
+        return JSON.stringify(item);
+      }).filter(Boolean)
+    : [];
 }
 
 async function getUserId() {
@@ -115,8 +102,7 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
   const immutable = world.immutable_continuity && typeof world.immutable_continuity === "object"
     ? world.immutable_continuity as Record<string, unknown>
     : {};
-
-  const continuityText = formatCreativeText(world.continuity_rules);
+  const continuityText = formatCreativeLines(world.continuity_rules).join("; ");
 
   const clothing = typeof immutable.central_figure_clothing === "string" ? immutable.central_figure_clothing : "";
   const keyProp = typeof immutable.key_prop === "string" ? immutable.key_prop : "";
@@ -125,21 +111,24 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
   const raw = world.raw_report && typeof world.raw_report === "object"
     ? world.raw_report as Record<string, unknown>
     : {};
+  const characterNames = new Set<string>();
   const modelOutput = raw.model_output && typeof raw.model_output === "object"
     ? raw.model_output as Record<string, unknown>
     : {};
   const movement = modelOutput.movement && typeof modelOutput.movement === "object"
     ? modelOutput.movement as Record<string, unknown>
     : {};
-  const subjectBehavior = formatCreativeText(movement.subject_behavior || world.movement);
-  const motifs = formatCreativeText(modelOutput.motifs || world.motifs);
-
-  const visualLanguage = formatCreativeText(world.visual_language);
-  const colorLighting = formatCreativeText(world.color_lighting);
-  const atmosphereText = formatCreativeText(world.atmosphere);
-  const cinematographyText = formatCreativeText(world.cinematography);
-
-  const characterNames = new Set<string>();
+  const subjectBehavior = typeof movement.subject_behavior === "string" ? movement.subject_behavior : "";
+  const motifs = Array.isArray(modelOutput.motifs)
+    ? modelOutput.motifs.map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object") {
+          const value = item as Record<string, unknown>;
+          return typeof value.symbol === "string" ? value.symbol : "";
+        }
+        return "";
+      }).filter(Boolean)
+    : [];
   const mainCharacters = Array.isArray(raw.main_characters)
     ? raw.main_characters
     : Array.isArray(modelOutput.main_characters) ? modelOutput.main_characters : [];
@@ -151,42 +140,37 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       const value = item as Record<string, unknown>;
       const name = typeof value.name === "string" ? value.name.trim() : "";
       if (!name) return null;
-      const sheet: Record<string, string> = {
-        identity: formatCreativeText(value.identity || value.role || value.description),
-        appearance: formatCreativeText(value.appearance || visualLanguage),
-        wardrobe: formatCreativeText(value.wardrobe || clothing),
-        behavior: formatCreativeText(value.behavior || subjectBehavior),
-        continuity: formatCreativeText(value.continuity || continuityText),
-      };
+      const sheet: Record<string, string> = {};
+      for (const [key, fieldValue] of Object.entries(value)) {
+        if (key !== "name") sheet[key] = formatCreativeText(fieldValue);
+      }
       return { name, sheet };
     })
     .filter((item): item is { name: string; sheet: Record<string, string> } => Boolean(item?.name));
 
-  if (!characters.length) {
+  if (!characters.length && (clothing || keyProp || windowLocation || subjectBehavior || motifs.length)) {
     characters.push({
       name: "Central Figure",
       sheet: {
-        identity: "Primary central figure derived from the confirmed World Report.",
-        appearance: visualLanguage || "Visually defined by the confirmed World visual language.",
-        wardrobe: clothing || (keyProp ? `Central prop: ${keyProp}` : ""),
-        behavior: subjectBehavior || "Grounded by the confirmed World movement and emotional arc.",
-        continuity: [keyProp && `Key prop: ${keyProp}`, clothing && `Clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`, motifs && `Motifs: ${motifs}`, continuityText].filter(Boolean).join("; "),
+        identity: "Primary subject derived from the confirmed World Report; refine before approval.",
+        wardrobe: clothing,
+        behavior: subjectBehavior,
+        continuity: [keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`, motifs.length && `World motifs: ${motifs.join(", ")}`, continuityText].filter(Boolean).join("; "),
       },
     });
   }
 
   const environmentDrafts = Array.isArray(world.environments)
     ? world.environments.map((item) => {
-        if (typeof item === "string") return { name: item.trim(), description: "", details: {} as Record<string, unknown> };
+        if (typeof item === "string") return { name: item.trim(), description: "" };
         if (item && typeof item === "object") {
           const value = item as Record<string, unknown>;
           return {
             name: typeof value.setting === "string" ? value.setting.trim() : typeof value.name === "string" ? value.name.trim() : "",
             description: typeof value.description === "string" ? value.description : "",
-            details: value,
           };
         }
-        return { name: "", description: "", details: {} };
+        return { name: "", description: "" };
       }).filter((item) => item.name)
     : [];
 
@@ -209,12 +193,10 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       name: item.name,
       status: "draft",
       sheet: {
-        purpose: formatCreativeText(item.details.purpose || item.description || "Primary narrative location derived from confirmed World Report."),
-        layout: formatCreativeText(item.details.layout || item.description || visualLanguage),
-        architecture: formatCreativeText(item.details.architecture || cinematographyText),
-        surfaces: formatCreativeText(item.details.surfaces || (keyProp ? `Key prop: ${keyProp}` : "")),
-        lighting: formatCreativeText(item.details.lighting || colorLighting || cinematographyText),
-        atmosphere: formatCreativeText(item.details.atmosphere || atmosphereText || world.mood),
+        purpose: item.description,
+        layout: item.description,
+        lighting: formatCreativeText(world.color_lighting),
+        atmosphere: formatCreativeText(world.atmosphere),
         continuity: [continuityText, keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`].filter(Boolean).join("; "),
       },
     })),
@@ -246,50 +228,27 @@ async function ensureWorldDrafts(world: WorldReport, projectId: string, styleBib
   }
 }
 
-async function recoverStyleBibleContinuity(styleBible: StyleBible, world: WorldReport) {
-  if (styleBible.status === "approved") return styleBible;
-
-  const currentRules = formatCreativeLines(styleBible.continuity_rules);
-  const hasMalformed = !currentRules || currentRules.includes("[object Object]");
-
-  if (hasMalformed) {
-    const recoveredText = formatCreativeLines([
-      world.continuity_rules,
-      world.immutable_continuity,
-    ]);
-    const cleanLines = recoveredText.split("\n").filter(Boolean);
-
-    if (cleanLines.length) {
-      const updateResult = await supabase
-        .from("style_bibles")
-        .update({ continuity_rules: cleanLines })
-        .eq("id", styleBible.id)
-        .eq("status", "draft")
-        .select(styleFields)
-        .single();
-
-      if (!updateResult.error && updateResult.data) {
-        return updateResult.data as StyleBible;
-      }
-    }
-  }
-
-  return styleBible;
-}
-
 export function useStyleStudio(projectId: string) {
   const [world, setWorld] = useState<WorldReport | null>(null);
   const [styleBible, setStyleBible] = useState<StyleBible | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [characterAssets, setCharacterAssets] = useState<CharacterAsset[]>([]);
+  const rawCharacterSheets = useRef(new Map<string, unknown>());
+  const rawEnvironmentSheets = useRef(new Map<string, unknown>());
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [environmentAssets, setEnvironmentAssets] = useState<EnvironmentAsset[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasStartedLoad = useRef(false);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    // Retain mounted editor forms on save/upload/approval refreshes.
+    // The first load owns the page-level spinner; subsequent loads are background refreshes.
+    if (!hasStartedLoad.current) {
+      hasStartedLoad.current = true;
+      setLoading(true);
+    }
     setError(null);
 
     const projectResult = await supabase
@@ -299,7 +258,7 @@ export function useStyleStudio(projectId: string) {
       .single();
 
     if (projectResult.error) {
-      setError(getErrorMessage(projectResult.error, "Unable to load project."));
+      setError(projectResult.error.message);
       setLoading(false);
       return;
     }
@@ -323,7 +282,7 @@ export function useStyleStudio(projectId: string) {
       .single();
 
     if (worldResult.error) {
-      setError(getErrorMessage(worldResult.error, "Unable to load World Report."));
+      setError(worldResult.error.message);
       setLoading(false);
       return;
     }
@@ -348,7 +307,7 @@ export function useStyleStudio(projectId: string) {
       .maybeSingle();
 
     if (styleResult.error) {
-      setError(getErrorMessage(styleResult.error, "Unable to load Style Bible."));
+      setError(styleResult.error.message);
       setLoading(false);
       return;
     }
@@ -356,10 +315,26 @@ export function useStyleStudio(projectId: string) {
     let currentStyleBible = (styleResult.data ?? null) as StyleBible | null;
     if (currentStyleBible) {
       try {
-        currentStyleBible = await recoverStyleBibleContinuity(currentStyleBible, currentWorld);
+        // The existing Ghast draft stored "[object Object]" instead of rules.
+        // Only recover drafts whose entire array contains these invalid values.
+        const existingRules = currentStyleBible.continuity_rules;
+        if (currentStyleBible.status === "draft" &&
+            Array.isArray(existingRules) && existingRules.length > 0 &&
+            existingRules.every((item) => item === "[object Object]")) {
+          const recovered = recoverWorldContinuity(existingRules, currentWorld.continuity_rules);
+          if (recovered.length) {
+            const repair = await supabase.from("style_bibles")
+              .update({ continuity_rules: recovered })
+              .eq("id", currentStyleBible.id)
+              .eq("status", "draft")
+              .select(styleFields).single();
+            if (repair.error) throw repair.error;
+            currentStyleBible = repair.data as StyleBible;
+          }
+        }
         await ensureWorldDrafts(currentWorld, projectId, currentStyleBible);
       } catch (e) {
-        setError(getErrorMessage(e, "Unable to materialize World-derived drafts."));
+        setError(getCreativeErrorMessage(e, "Unable to load World-derived drafts."));
         setLoading(false);
         return;
       }
@@ -374,30 +349,33 @@ export function useStyleStudio(projectId: string) {
       ]);
 
     const firstError =
+      styleResult.error ??
       characterResult.error ??
       characterAssetResult.error ??
       environmentResult.error ??
       environmentAssetResult.error;
 
     if (firstError) {
-      setError(getErrorMessage(firstError, "Unable to load style assets."));
+      setError(firstError.message);
       setLoading(false);
       return;
     }
 
+    rawCharacterSheets.current = new Map((characterResult.data ?? []).map((row) => [row.id, row.sheet]));
+    rawEnvironmentSheets.current = new Map((environmentResult.data ?? []).map((row) => [row.id, row.sheet]));
     setStyleBible(currentStyleBible);
-    setCharacters(
-      ((characterResult.data ?? []) as Character[]).map((c) => ({
-        ...c,
-        sheet: formatCreativeRecord(c.sheet),
-      }))
-    );
-    setEnvironments(
-      ((environmentResult.data ?? []) as Environment[]).map((e) => ({
-        ...e,
-        sheet: formatCreativeRecord(e.sheet),
-      }))
-    );
+    setCharacters((characterResult.data ?? []).map((row) => {
+      const proposal = suggestMissingWorldFields(
+        formatCreativeRecord(row.sheet), currentWorld, "character", row.name, row.status,
+      );
+      return { ...row, sheet: proposal.sheet, suggested_world_fields: proposal.suggestedFields };
+    }) as Character[]);
+    setEnvironments((environmentResult.data ?? []).map((row) => {
+      const proposal = suggestMissingWorldFields(
+        formatCreativeRecord(row.sheet), currentWorld, "environment", row.name, row.status,
+      );
+      return { ...row, sheet: proposal.sheet, suggested_world_fields: proposal.suggestedFields };
+    }) as Environment[]);
     setCharacterAssets(await signAssetUrls(
       (characterAssetResult.data ?? []) as CharacterAsset[],
       (row, url) => ({ ...row, signed_url: url })
@@ -409,7 +387,12 @@ export function useStyleStudio(projectId: string) {
     setLoading(false);
   }, [projectId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load().catch((cause: unknown) => {
+      setError(getCreativeErrorMessage(cause, "Unable to refresh the Style Studio."));
+      setLoading(false);
+    });
+  }, [load]);
 
   const createStyleBible = useCallback(async () => {
     if (!world || world.status !== "completed" || !world.confirmed_at) throw new Error("Confirm the Visual World Report before creating the Style Bible.");
@@ -436,36 +419,30 @@ export function useStyleStudio(projectId: string) {
         color_lighting: world.color_lighting ?? {},
         atmosphere: world.atmosphere ?? {},
         movement: world.movement ?? {},
-        continuity_rules: asLines(world.continuity_rules),
+        continuity_rules: world.continuity_rules ?? [],
         visual_rules: [],
         reference_assets: [],
       };
       const result = await supabase.from("style_bibles").insert(payload).select(styleFields).single();
       if (result.error) throw result.error;
       setStyleBible(result.data as StyleBible);
-      await load();
     } catch (e) {
-      const message = getErrorMessage(e, "Unable to create Style Bible.");
+      const message = getCreativeErrorMessage(e, "Unable to create Style Bible.");
       setError(message);
-      throw new Error(message);
+      throw e;
     } finally {
       setWorking(false);
     }
-  }, [projectId, world, load]);
+  }, [projectId, world]);
 
   const saveStyleBible = useCallback(async (draft: Pick<StyleBible, "visual_rules" | "reference_assets" | "continuity_rules">) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
     if (styleBible.status === "approved") throw new Error("The Style Bible is locked and cannot be edited.");
     setWorking(true); setError(null);
     try {
-      const cleanDraft = {
-        visual_rules: asLines(draft.visual_rules),
-        reference_assets: asReferenceAssets(draft.reference_assets),
-        continuity_rules: asLines(draft.continuity_rules),
-      };
       const result = await supabase
         .from("style_bibles")
-        .update(cleanDraft)
+        .update(draft)
         .eq("id", styleBible.id)
         .eq("status", "draft")
         .select(styleFields)
@@ -473,9 +450,8 @@ export function useStyleStudio(projectId: string) {
       if (result.error) throw result.error;
       setStyleBible(result.data as StyleBible);
     } catch (e) {
-      const message = getErrorMessage(e, "Unable to save Style Bible.");
-      setError(message);
-      throw new Error(message);
+      setError(getCreativeErrorMessage(e, "Unable to save Style Bible."));
+      throw e;
     } finally {
       setWorking(false);
     }
@@ -488,7 +464,7 @@ export function useStyleStudio(projectId: string) {
     try {
       const result = await supabase
         .from("style_bibles")
-        .update({ status: "approved", approved_at: new Date().toISOString() })
+        .update({ status: "approved" })
         .eq("id", styleBible.id)
         .eq("status", "draft")
         .select(styleFields)
@@ -497,9 +473,9 @@ export function useStyleStudio(projectId: string) {
       setStyleBible(result.data as StyleBible);
       return result.data as StyleBible;
     } catch (e) {
-      const message = getErrorMessage(e, "Unable to lock Style Bible.");
+      const message = getCreativeErrorMessage(e, "Unable to lock Style Bible.");
       setError(message);
-      throw new Error(message);
+      throw e;
     } finally {
       setWorking(false);
     }
@@ -509,11 +485,17 @@ export function useStyleStudio(projectId: string) {
     if (!styleBible) throw new Error("Create the Style Bible first.");
     if (!world?.id) throw new Error("Confirmed World Report not available.");
     const worldReportId = world.id;
+    if (id && characters.some((row) => row.id === id && row.status === "approved")) {
+      throw new Error("Approved character sheets are immutable.");
+    }
     setWorking(true); setError(null);
     try {
-      const base = { name: input.name.trim(), sheet: formatCreativeRecord(input.sheet) };
+      const base = {
+        name: input.name.trim(),
+        sheet: id ? mergeCreativeSheet(rawCharacterSheets.current.get(id), input.sheet) : input.sheet,
+      };
       const result = id
-        ? await supabase.from("characters").update(base).eq("id", id).select(characterFields).single()
+        ? await supabase.from("characters").update(base).eq("id", id).eq("status", "draft").select(characterFields).single()
         : await supabase.from("characters").insert({
             ...base,
             project_id: projectId,
@@ -524,20 +506,19 @@ export function useStyleStudio(projectId: string) {
       await load();
       return result.data as Character;
     } catch (e) {
-      const message = getErrorMessage(e, "Unable to save character.");
-      setError(message);
-      throw new Error(message);
+      const message = getCreativeErrorMessage(e, "Unable to save character.");
+      setError(message); throw e;
     } finally { setWorking(false); }
-  }, [projectId, world, styleBible, load]);
+  }, [projectId, world, styleBible, characters, load]);
 
   const generateCharacterSheet = useCallback(async (characterId: string) => {
     const char = characters.find((c) => c.id === characterId);
     if (!char) throw new Error("Character profile not found.");
-    if (char.status === "approved") throw new Error("Approved characters are locked and cannot be regenerated.");
+    if (char.status === "approved") throw new Error("Approved character sheets are immutable.");
 
     setWorking(true); setError(null);
     try {
-      const payload = await callWorldService({
+      const payload = await callWorldService(projectId, {
         projectId,
         action: "generate_character_sheet",
         characterName: char.name,
@@ -552,7 +533,7 @@ export function useStyleStudio(projectId: string) {
       const updated = await saveCharacter(characterId, { name: char.name, sheet: formattedSheet });
       return updated;
     } catch (e) {
-      const message = getErrorMessage(e, "Unable to generate character description.");
+      const message = getCreativeErrorMessage(e, "Unable to generate character description.");
       setError(message);
       throw new Error(message);
     } finally { setWorking(false); }
@@ -567,9 +548,8 @@ export function useStyleStudio(projectId: string) {
       await load();
       return result.data as Character;
     } catch (e) {
-      const message = getErrorMessage(e, "Unable to approve character.");
-      setError(message);
-      throw new Error(message);
+      const message = getCreativeErrorMessage(e, "Unable to approve character.");
+      setError(message); throw e;
     } finally { setWorking(false); }
   }, [load, styleBible]);
 
@@ -577,11 +557,17 @@ export function useStyleStudio(projectId: string) {
     if (!styleBible) throw new Error("Create the Style Bible first.");
     if (!world?.id) throw new Error("Confirmed World Report not available.");
     const worldReportId = world.id;
+    if (id && environments.some((row) => row.id === id && row.status === "approved")) {
+      throw new Error("Approved environment sheets are immutable.");
+    }
     setWorking(true); setError(null);
     try {
-      const base = { name: input.name.trim(), sheet: formatCreativeRecord(input.sheet) };
+      const base = {
+        name: input.name.trim(),
+        sheet: id ? mergeCreativeSheet(rawEnvironmentSheets.current.get(id), input.sheet) : input.sheet,
+      };
       const result = id
-        ? await supabase.from("environments").update(base).eq("id", id).select(environmentFields).single()
+        ? await supabase.from("environments").update(base).eq("id", id).eq("status", "draft").select(environmentFields).single()
         : await supabase.from("environments").insert({
             ...base,
             project_id: projectId,
@@ -592,20 +578,19 @@ export function useStyleStudio(projectId: string) {
       await load();
       return result.data as Environment;
     } catch (e) {
-      const message = getErrorMessage(e, "Unable to save environment.");
-      setError(message);
-      throw new Error(message);
+      const message = getCreativeErrorMessage(e, "Unable to save environment.");
+      setError(message); throw e;
     } finally { setWorking(false); }
-  }, [projectId, world, styleBible, load]);
+  }, [projectId, world, styleBible, environments, load]);
 
   const generateEnvironmentSheet = useCallback(async (environmentId: string) => {
     const env = environments.find((e) => e.id === environmentId);
     if (!env) throw new Error("Environment profile not found.");
-    if (env.status === "approved") throw new Error("Approved environments are locked and cannot be regenerated.");
+    if (env.status === "approved") throw new Error("Approved environment sheets are immutable.");
 
     setWorking(true); setError(null);
     try {
-      const payload = await callWorldService({
+      const payload = await callWorldService(projectId, {
         projectId,
         action: "generate_environment_sheet",
         environmentName: env.name,
@@ -620,7 +605,7 @@ export function useStyleStudio(projectId: string) {
       const updated = await saveEnvironment(environmentId, { name: env.name, sheet: formattedSheet });
       return updated;
     } catch (e) {
-      const message = getErrorMessage(e, "Unable to generate environment description.");
+      const message = getCreativeErrorMessage(e, "Unable to generate environment description.");
       setError(message);
       throw new Error(message);
     } finally { setWorking(false); }
@@ -635,9 +620,8 @@ export function useStyleStudio(projectId: string) {
       await load();
       return result.data as Environment;
     } catch (e) {
-      const message = getErrorMessage(e, "Unable to approve environment.");
-      setError(message);
-      throw new Error(message);
+      const message = getCreativeErrorMessage(e, "Unable to approve environment.");
+      setError(message); throw e;
     } finally { setWorking(false); }
   }, [load, styleBible]);
 
@@ -670,29 +654,29 @@ export function useStyleStudio(projectId: string) {
       if (result.error) throw result.error;
       await load();
     } catch (e) {
-      const message = getErrorMessage(e, "Unable to add asset.");
-      setError(message);
-      throw new Error(message);
+      const message = getCreativeErrorMessage(e, "Unable to add asset.");
+      setError(message); throw e;
     } finally { setWorking(false); }
   }, [projectId, styleBible, world, load]);
 
   const approveAsset = useCallback(async (kind: "character" | "environment", assetId: string) => {
-    if (!styleBible || styleBible.status === "approved") throw new Error("The Style Bible is locked.");
+    // A locked Style Bible remains immutable, but new reference assets are
+    // separate draft records with their own explicit approval lifecycle.
+    if (!styleBible || !world?.confirmed_at) throw new Error("A confirmed World and Style Bible are required.");
     setWorking(true); setError(null);
     try {
       const table = kind === "character" ? "character_assets" : "environment_assets";
       const result = await supabase.from(table).update({
+        // The Phase 3 approval trigger is authoritative for approved_at.
         status: "approved",
-        approved_at: new Date().toISOString(),
-      }).eq("id", assetId).select("*").single();
+      }).eq("id", assetId).eq("status", "draft").select("*").single();
       if (result.error) throw result.error;
       await load();
     } catch (e) {
-      const message = getErrorMessage(e, "Unable to approve asset.");
-      setError(message);
-      throw new Error(message);
+      const message = getCreativeErrorMessage(e, "Unable to approve asset.");
+      setError(message); throw e;
     } finally { setWorking(false); }
-  }, [load, styleBible]);
+  }, [load, styleBible, world]);
 
   return {
     world,

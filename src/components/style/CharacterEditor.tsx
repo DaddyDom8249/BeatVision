@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { formatCreativeRecord } from "../../lib/formatCreativeText";
 import type { Character, CharacterAsset } from "../../types/style";
 import AssetList from "./AssetList";
+import { formatCreativeRecord, getCreativeErrorMessage } from "../../lib/formatCreativeText";
 
 const emptySheet = { identity: "", appearance: "", wardrobe: "", behavior: "", continuity: "" };
 
@@ -14,6 +14,7 @@ export default function CharacterEditor({
   onUpload,
   onApproveAsset,
   onApprove,
+  onRefresh,
 }: {
   character: Character;
   assets: CharacterAsset[];
@@ -22,53 +23,51 @@ export default function CharacterEditor({
   onGenerate?: (character: Character) => Promise<unknown>;
   onUpload: (file: File, label: string) => Promise<unknown>;
   onApproveAsset: (asset: CharacterAsset) => Promise<unknown>;
+  onRefresh?: () => Promise<unknown>;
   onApprove: (character: Character) => Promise<unknown>;
 }) {
   const initial = useMemo(() => ({ ...emptySheet, ...formatCreativeRecord(character.sheet) }), [character.sheet]);
   const [name, setName] = useState(character.name);
   const [sheet, setSheet] = useState(initial);
-  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const suggestedFields = character.suggested_world_fields ?? [];
+  const missingFields = Object.keys(emptySheet).filter((field) => !sheet[field as keyof typeof emptySheet]?.trim());
+  const locked = character.status === "approved";
 
   useEffect(() => {
     setName(character.name);
     setSheet({ ...emptySheet, ...formatCreativeRecord(character.sheet) });
-    setError(null);
-  }, [character]);
+    setActionError(null);
+  // Preserve edits in other cards during background refreshes (such as uploads).
+  // Reload this editor only when its own persisted version changes.
+  }, [character.id, character.updated_at, character.status]);
 
-  const isApproved = character.status === "approved";
-
-  async function submit(event: FormEvent) {
+  function submit(event: FormEvent) {
     event.preventDefault();
-    if (isApproved) return;
-    setError(null);
-    try {
-      await onSave(character.id, { name, sheet });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
+    if (locked) return;
+    setActionError(null);
+    setActionStatus(null);
+    void onSave(character.id, { name, sheet }).then(() => {
+      setActionStatus("Saved character sheet.");
+    }).catch((error: unknown) => {
+      setActionError(getCreativeErrorMessage(error, "Unable to save character."));
+    });
   }
 
   async function handleGenerate() {
-    if (isApproved || !onGenerate) return;
-    setError(null);
+    if (locked || !onGenerate) return;
+    setActionError(null);
+    setActionStatus(null);
     setGenerating(true);
     try {
       await onGenerate(character);
+      setActionStatus("Generated AI character description draft.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setActionError(getCreativeErrorMessage(e, "Unable to generate character description."));
     } finally {
       setGenerating(false);
-    }
-  }
-
-  async function handleApprove() {
-    if (isApproved) return;
-    setError(null);
-    try {
-      await onApprove(character);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -76,17 +75,25 @@ export default function CharacterEditor({
     <article className="character-editor-card">
       <div className="character-card-header">
         <h3>{character.name}</h3>
-        <span className={`status-badge ${character.status}`}>{isApproved ? "APPROVED" : "DRAFT"}</span>
+        <span className={`status-badge ${character.status}`}>{locked ? "APPROVED" : "DRAFT"}</span>
       </div>
-      {error && <p className="form-error" role="alert">{error}</p>}
+      {actionError && <p role="alert" className="form-error">{actionError}</p>}
+      {actionStatus && <p role="status" className="form-status">{actionStatus}</p>}
+      {suggestedFields.length > 0 && !locked && <p role="status">
+        Confirmed World details suggested for: {suggestedFields.join(", ")}. Select Save Character Sheet to persist these draft suggestions.
+      </p>}
+      {missingFields.length > 0 && <p className="style-muted">
+        {locked ? "Approved with unspecified fields (requires an explicit revision): " : "Not specified by confirmed World; creator input needed: "}
+        {missingFields.join(", ")}.
+      </p>}
       <form onSubmit={submit}>
-        <label>Name <input value={name} readOnly={isApproved} onChange={(e) => setName(e.target.value)} required /></label>
-        <label>Identity <textarea rows={3} readOnly={isApproved} value={sheet.identity} onChange={(e) => setSheet((s) => ({ ...s, identity: e.target.value }))} /></label>
-        <label>Appearance <textarea rows={4} readOnly={isApproved} value={sheet.appearance} onChange={(e) => setSheet((s) => ({ ...s, appearance: e.target.value }))} /></label>
-        <label>Wardrobe / props <textarea rows={3} readOnly={isApproved} value={sheet.wardrobe} onChange={(e) => setSheet((s) => ({ ...s, wardrobe: e.target.value }))} /></label>
-        <label>Behavior / movement <textarea rows={3} readOnly={isApproved} value={sheet.behavior} onChange={(e) => setSheet((s) => ({ ...s, behavior: e.target.value }))} /></label>
-        <label>Continuity / must-not-change <textarea rows={3} readOnly={isApproved} value={sheet.continuity} onChange={(e) => setSheet((s) => ({ ...s, continuity: e.target.value }))} /></label>
-        {!isApproved && (
+        <label>Name <input readOnly={locked} value={name} onChange={(e) => setName(e.target.value)} required /></label>
+        <label>Identity <textarea readOnly={locked} rows={3} value={sheet.identity} onChange={(e) => setSheet((s) => ({ ...s, identity: e.target.value }))} /></label>
+        <label>Appearance <textarea readOnly={locked} rows={4} value={sheet.appearance} onChange={(e) => setSheet((s) => ({ ...s, appearance: e.target.value }))} /></label>
+        <label>Wardrobe / props <textarea readOnly={locked} rows={3} value={sheet.wardrobe} onChange={(e) => setSheet((s) => ({ ...s, wardrobe: e.target.value }))} /></label>
+        <label>Behavior / movement <textarea readOnly={locked} rows={3} value={sheet.behavior} onChange={(e) => setSheet((s) => ({ ...s, behavior: e.target.value }))} /></label>
+        <label>Continuity / must-not-change <textarea readOnly={locked} rows={3} value={sheet.continuity} onChange={(e) => setSheet((s) => ({ ...s, continuity: e.target.value }))} /></label>
+        {!locked && (
           <div className="card-actions">
             <button disabled={working || generating}>{working ? "Saving…" : "Save Character Sheet"}</button>
             {onGenerate && (
@@ -102,25 +109,44 @@ export default function CharacterEditor({
           </div>
         )}
       </form>
-      {!isApproved && (
-        <button type="button" disabled={working || generating} onClick={() => void handleApprove()}>
-          {working ? "Approving…" : "Approve Character"}
-        </button>
+      {!locked && (
+        <button type="button" disabled={working || generating} onClick={() => {
+          setActionError(null);
+          setActionStatus(null);
+          void onApprove(character).then(() => {
+            setActionStatus("Character approved.");
+          }).catch((error: unknown) => {
+            setActionError(getCreativeErrorMessage(error, "Unable to approve character."));
+          });
+        }}>Approve Character</button>
       )}
       <h4>Character Assets</h4>
-      {!isApproved && (
+      {!locked && (
         <input
           type="file"
           accept="image/*"
           disabled={working || generating}
           onChange={(event) => {
             const file = event.target.files?.[0];
-            if (file) void onUpload(file, file.name);
+            if (file) {
+              setActionError(null);
+              setActionStatus(null);
+              void onUpload(file, file.name).then(() => {
+                setActionStatus("Reference image uploaded.");
+              }).catch((error: unknown) => {
+                setActionError(getCreativeErrorMessage(error, "Unable to upload asset."));
+              });
+            }
             event.currentTarget.value = "";
           }}
         />
       )}
-      <AssetList assets={assets} working={working || isApproved || generating} onApprove={(asset) => void onApproveAsset(asset)} />
+      <AssetList assets={assets} onRefresh={onRefresh} working={working || locked || generating} onApprove={(asset) => {
+        setActionError(null);
+        void onApproveAsset(asset).catch((error: unknown) => {
+          setActionError(getCreativeErrorMessage(error, "Unable to approve reference asset."));
+        });
+      }} />
     </article>
   );
 }
