@@ -59,6 +59,21 @@ export default function StylePage({ projectId }: { projectId: string }) {
   if (loading) return <main className="studio-main style-page"><div className="style-loading">Loading Style Studio…</div></main>;
 
   if (!styleBible) {
+    // A failed load is NOT evidence of a missing Style Bible. Never offer
+    // duplicate creation when the account, World, or DB read is failing.
+    if (error || !world || world.status !== "completed" || !world.confirmed_at) {
+      return (
+        <main className="studio-main style-page">
+          <header className="style-header"><div><span className="eyebrow">PHASE 3 / STYLE BIBLE</span><h1>Unable to load Style Studio</h1></div></header>
+          <section className="style-empty-panel">
+            <p className="form-error" role="alert">{error || "Confirm the project's Visual World before continuing."}</p>
+            <button type="button" disabled={working} onClick={() => void reload().catch(() => { /* Hook shows error. */ })}>
+              Retry Style Studio Load
+            </button>
+          </section>
+        </main>
+      );
+    }
     return (
       <main className="studio-main style-page">
         <header className="style-header"><div><span className="eyebrow">PHASE 3 / STYLE BIBLE</span><h1>Create Style Bible</h1>

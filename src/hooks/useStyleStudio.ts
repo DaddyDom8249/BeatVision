@@ -395,6 +395,19 @@ export function useStyleStudio(projectId: string) {
     if (!world || world.status !== "completed" || !world.confirmed_at) throw new Error("Confirm the Visual World Report before creating the Style Bible.");
     setWorking(true); setError(null);
     try {
+      // Read before inserting: a previous creator approval is authoritative.
+      // IMPORTANT: fail closed on read errors; null data alone means absent.
+      const existing = await supabase.from("style_bibles")
+        .select(styleFields).eq("project_id", projectId).maybeSingle();
+      if (existing.error) throw existing.error;
+      if (existing.data) {
+        if (existing.data.world_report_id !== world.id) {
+          throw new Error("Style Bible belongs to a different World revision. Refresh the project instead of creating another.");
+        }
+        setStyleBible(existing.data as StyleBible);
+        return existing.data as StyleBible;
+      }
+
       const payload = {
         project_id: projectId,
         world_report_id: world.id,
@@ -421,8 +434,23 @@ export function useStyleStudio(projectId: string) {
         reference_assets: [],
       };
       const result = await supabase.from("style_bibles").insert(payload).select(styleFields).single();
-      if (result.error) throw result.error;
+      if (result.error) {
+        // A simultaneous creator action may have inserted the single allowed row.
+        // Only a confirmed unique-key collision is safe to recover from.
+        if (result.error.code === "23505") {
+          const retry = await supabase.from("style_bibles")
+            .select(styleFields).eq("project_id", projectId).maybeSingle();
+          if (retry.error) throw retry.error;
+          if (retry.data?.world_report_id === world.id) {
+            setStyleBible(retry.data as StyleBible);
+            return retry.data as StyleBible;
+          }
+        }
+        throw result.error;
+      }
+      if (!result.data) throw new Error("Style Bible creation returned no record. Refresh and verify the project.");
       setStyleBible(result.data as StyleBible);
+      return result.data as StyleBible;
     } catch (e) {
       const message = getCreativeErrorMessage(e, "Unable to create Style Bible.");
       setError(message);
