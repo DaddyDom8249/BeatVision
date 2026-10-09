@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase/client";
 import { getVisualPlanErrorMessage } from "../lib/visualPlanErrors";
+import { formatCreativeText } from "../lib/formatCreativeText";
 import type { StyleBible } from "../types/style";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 import type { WorldReport } from "../types/world";
@@ -11,10 +12,8 @@ const styleFields = "id,project_id,world_report_id,status,world_basis,visual_lan
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
 
 function firstText(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) return value.filter((v): v is string => typeof v === "string").join(", ");
-  if (value && typeof value === "object") return Object.values(value as Record<string, unknown>).filter((v): v is string => typeof v === "string").join(", ");
-  return "";
+  const text = formatCreativeText(value);
+  return typeof value === "string" ? text : text.replace(/\n+/g, ", ");
 }
 
 function sectionWindows(analysis: SongAnalysis, duration: number) {
