@@ -96,3 +96,33 @@ The current `main` repository source `supabase/functions/beatvision-world/index.
 6. No model-API key configured or modified, no API quota consumed, no inference attempt, no new Jules session, no provider adapter or production deployment as part of this research note.
 
 **Parking disposition:** **HIGH PRIORITY for reliability and zero-cost fallback verification** in the existing World and description pipelines; **NOT** priority ahead of obtaining a real scene-image → motion → final-video E2E result. This discovery does not authorize an automatic provider switch, approval bypass, production changes or spending.
+
+
+## SkyReels-V2 — scene-motion candidate (owner inquiry, 2026-10-09)
+
+**Priority:** HIGH for **BeatVision Motion-stage R&D**. **Disposition: PARKED — candidate only; integration and actual inference NOT VERIFIED.** Keep separate from the existing LTX video path until a real, cost-approved alternative is available.
+
+**Upstream:** https://github.com/SkyworkAI/SkyReels-V2
+**Model:** https://huggingface.co/Skywork/SkyReels-V2-I2V-1.3B-540P
+**License:** https://github.com/SkyworkAI/SkyReels-V2/blob/main/LICENSE.txt
+**Sources verified:** Official GitHub README and license; Hugging Face model card, reviewed 2026-10-09.
+
+### What it can do
+- SkyReels-V2 releases image-to-video (I2V), text-to-video (T2V), and Diffusion-Forcing (DF) auto-regressive video extension models. Diffusion-Forcing can extend beyond a fixed short clip length; this is **not** proof of unlimited stable quality, low latency, music sync, or no-cost compute.
+- Relevant deployment candidates: `Skywork/SkyReels-V2-I2V-1.3B-540P` (first scene test), `Skywork/SkyReels-V2-DF-1.3B-540P` (later extension test). 14B higher-quality variants are heavier. The upstream 540P examples use 544×960 resolution, 97 frames/24 fps (~4 seconds) in one nominal window; DF examples specify ~10s/30s/60s via more frames and overlap. Extending long videos requires retaining scene intent and visual continuity.
+- Official README peak VRAM for a 540P run: ~14.7 GB for 1.3B, ~43.4 GB for 14B. CPU offload may help but is not proof that it runs reliably on low-VRAM consumer hardware. GPU runtime/inference not provided by Supabase Edge Functions or Vercel serverless.
+- **License:** Skywork Community License (`skywork-license`), **not MIT or Apache**. The publisher says commercial use is supported **subject to full community-license terms** and asks that deployments for internet services undergo appropriate security review. Review the full PDF before publishing a public BeatVision service; do not assume universal unrestricted commercial redistribution.
+- Free *weights and source code* do not mean free GPU hosting. No documented reliable production-grade $0 API/quota has been verified for SkyReels-V2. Some separate SkyReels-V3 APIs exist, but they do not demonstrate V2 zero-cost integration.
+
+### Proposed BeatVision placement (no changes executed)
+`approved scene image + approved snapshot + explicit direction` -> `optional scene_motion provider SkyReels V2 (feature OFF)` -> `job queued/submitted/processing/completed/failed` -> `real MP4 in private object storage + exact model/seed/duration/fps/provenance` -> `creator review` -> `approved motion` -> existing Shotstack assembly.
+
+Do not touch `main`, production secrets, production DB, locked reference assets or current LTX. Maintain owner RLS, signed-media URLs, scene timecodes, exact source image lineage, batch append-only storage, no silent replacement, no fallback to billable inference, and no auto-approval.
+
+### Single smallest proof-of-use trial (not run)
+1. Confirm licensed production use and whether an authorized truly $0 GPU source/local desktop with ≥15GB free VRAM exists. If not, report BLOCKED. No paid GPU reservation or unknown-cost hosted endpoint.
+2. In a sandbox, evaluate **one** explicitly owner-approved *draft* test image against 1.3B I2V at 540P/97 frames; record wall time, peak VRAM, output metadata, model provenance, actual costs, errors and identity stability.
+3. Probe actual output using ffprobe and visually inspect it (not just `HTTP 200` or job `completed`). Verify approximate 4s footage, no unexpected scene drift and sync viability.
+4. Only if trial passes, design and test a disabled-by-default provider adapter on isolated feature branch with no production writes. Compare against Wan2.2 for quality per dollar and throughput. Confirm final-video assembly separately.
+
+**Status:** DOCUMENTED / NOT IMPLEMENTED / E2E NOT VERIFIED. No inference, paid or production action authorized by this research note.
