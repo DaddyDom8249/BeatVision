@@ -28,11 +28,15 @@ export interface Character {
   name: string;
   status: "draft" | "approved";
   sheet: Record<string, string>;
+  supersedes_character_id: string | null;
+  revision_number: number;
   approved_at: string | null;
   created_at: string;
   updated_at: string;
   /** UI-only suggestions from the confirmed World, not persisted until saved. */
   suggested_world_fields?: string[];
+  /** UI-only lineage used to inherit approved reference assets in revisions. */
+  revision_ancestor_ids?: string[];
 }
 
 export interface CharacterAsset {
@@ -59,11 +63,15 @@ export interface Environment {
   name: string;
   status: "draft" | "approved";
   sheet: Record<string, string>;
+  supersedes_environment_id: string | null;
+  revision_number: number;
   approved_at: string | null;
   created_at: string;
   updated_at: string;
   /** UI-only suggestions from the confirmed World, not persisted until saved. */
   suggested_world_fields?: string[];
+  /** UI-only lineage used to inherit approved reference assets in revisions. */
+  revision_ancestor_ids?: string[];
 }
 
 export interface EnvironmentAsset {

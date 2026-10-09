@@ -32,6 +32,8 @@ export default function StylePage({ projectId }: { projectId: string }) {
     approveEnvironment,
     uploadAsset,
     approveAsset,
+    generateDescription,
+    createRevision,
     approveStyleBible,
     reload,
   } = useStyleStudio(projectId);
@@ -110,6 +112,16 @@ export default function StylePage({ projectId }: { projectId: string }) {
       .catch(() => { /* Preserve input; the hook shows the failure. */ });
   }
 
+  function characterRevisionIds(startId: string) {
+    const row = characters.find((item) => item.id === startId);
+    return new Set([startId, ...(row?.revision_ancestor_ids ?? [])]);
+  }
+
+  function environmentRevisionIds(startId: string) {
+    const row = environments.find((item) => item.id === startId);
+    return new Set([startId, ...(row?.revision_ancestor_ids ?? [])]);
+  }
+
   return (
     <main className="studio-main style-page">
       {error && <p className="form-error style-error" role="alert">{error}</p>}
@@ -155,11 +167,13 @@ export default function StylePage({ projectId }: { projectId: string }) {
           <CharacterEditor
             key={character.id}
             character={character}
-            assets={characterAssets.filter((asset) => asset.character_id === character.id)}
+            assets={characterAssets.filter((asset) => characterRevisionIds(character.id).has(asset.character_id))}
             working={working}
             onSave={(id, input) => saveCharacter(id, input)}
             onUpload={(file, label) => uploadAsset("character", character.id, file, label)}
             onApproveAsset={(asset) => approveAsset("character", asset.id)}
+            onGenerate={(character) => generateDescription("character", character.id)}
+            onCreateRevision={(character, proposal) => createRevision("character", character.id, proposal)}
             onRefresh={reload}
             onApprove={(character) => approveCharacter(character.id)}
           />
@@ -185,11 +199,13 @@ export default function StylePage({ projectId }: { projectId: string }) {
           <EnvironmentEditor
             key={environment.id}
             environment={environment}
-            assets={environmentAssets.filter((asset) => asset.environment_id === environment.id)}
+            assets={environmentAssets.filter((asset) => environmentRevisionIds(environment.id).has(asset.environment_id))}
             working={working}
             onSave={(id, input) => saveEnvironment(id, input)}
             onUpload={(file, label) => uploadAsset("environment", environment.id, file, label)}
             onApproveAsset={(asset) => approveAsset("environment", asset.id)}
+            onGenerate={(environment) => generateDescription("environment", environment.id)}
+            onCreateRevision={(environment, proposal) => createRevision("environment", environment.id, proposal)}
             onRefresh={reload}
             onApprove={(environment) => approveEnvironment(environment.id)}
           />

@@ -629,3 +629,33 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 **Publication:** PR #37, branch `fix/auth-query-route-20261008`. Live production deployment and authenticated browser verification not established at the time of this log entry.
 
 **Next:** Merge/release after review; verify New Project → Sign in → form → authorized login → return to New Project in a real authenticated browser, then creation of a project row.
+
+## 2026-10-08 — Character/environment description generation and sheet revisions
+
+**Objective:** Repair the confirmed Phase 3 defect where character and environment editors did not generate descriptions. Preserve creator text, approved-record immutability, project ownership, reference assets, and Vision Lock lineage.
+
+**Confirmed root cause:** The editors only saved manual text. `useStyleStudio` never invoked a language-generation function, while `worldSheetSuggestions` and its regression tests deliberately copied only literal World fields. Missing appearance, wardrobe, architecture, and other creative fields therefore remained blank. The approved Central Figure also had no revision path.
+
+**Repository repair:** Added the authenticated `beatvision-style-draft` Edge Function using the existing Groq `openai/gpt-oss-20b` path. It verifies the JWT, checks `projects.owner_id`, loads the current confirmed World and matching Style Bible, treats source content as untrusted data, returns a bounded structured proposal, and never writes or approves it. Both editors now expose explicit Generate Description controls. Draft editors fill only empty fields and require Save; creator-authored text is never overwritten. Approved editors display a proposal without mutation and expose Create Revision from Proposal.
+
+**Revision repair:** Added explicit `supersedes_*_id` and `revision_number` lineage, owner-scoped SECURITY INVOKER revision RPCs, inherited reference-asset display, and latest-approved-leaf selection in Vision Lock snapshots. Approval is blocked with `VISION_LOCK_REVISION_REQUIRED` whenever a Vision Lock already exists, preventing a new sheet or revision from silently bypassing the frozen snapshot.
+
+**Production backend:** Applied Supabase migration `phase3_sheet_revisions` successfully. Deployed `beatvision-style-draft` v1 as ACTIVE with `verify_jwt=true` and deployment SHA `55cf3fb3223216bd918c966bf347710d466dda6db36d8b55afe33506281ef0e4`.
+
+**Authorization verification:** Real Edge Function source tests confirm owner success, approved-record proposal-only behavior, non-owner 404 before any model request, and missing-session 401. A live transactional database check executed the owner revision RPC, verified draft lineage/revision 2 and unchanged approved source, rejected a synthetic non-owner, then rolled back. Follow-up confirmed zero revision rows remained and Ghast still has zero Vision Locks.
+
+**Verification:** Targeted generation/revision tests pass; full suite, production audit, and production build pass. Supabase security advisor shows no new finding from the revision RPCs or Style Draft function. Existing warnings remain for three intentionally callable SECURITY DEFINER functions (including `create_vision_lock`) and leaked-password protection.
+
+**Not verified:** The frontend source is not yet published or deployed. A real authenticated Ghast button click, Groq response, draft save, revision creation, approval, reload, and inherited-asset rendering remain UNVERIFIED until the GitHub/Vercel release completes and an authenticated browser session is used.
+
+**Next:** Publish the tested branch, verify CI and the production Vercel commit, then run the authenticated Ghast character and environment generation regression without approving or replacing existing creative assets automatically.
+
+## 2026-10-08 — PR preview Edge Function CORS repair
+
+**Observed failure:** `Reveal World` on the PR #36 Vercel preview failed in the browser with `World service network request failed: Failed to fetch` before an HTTP response was available to the application.
+
+**Root cause:** The deployed World CORS allowlist contained production aliases but not either active PR #36 preview origin. Preflight therefore returned the production `Access-Control-Allow-Origin`, which did not match the requesting preview origin. The Style Draft and Generation functions had the same omission.
+
+**Repair:** Added only the two active PR #36 Vercel origins to the World, Style Draft, and Generation function allowlists. Arbitrary origins remain denied. Added regression coverage for preview preflight behavior.
+
+**Verification:** The new tests failed against the old allowlists, then passed after the repair. Full suite passed 83/83; production audit and production build passed. Deployed World v34, Style Draft v2, and Generation v20. A live `OPTIONS` request to World returned HTTP 200 and the exact requesting PR preview origin. The authenticated `Reveal World` POST still requires a user browser retry and is not claimed verified.

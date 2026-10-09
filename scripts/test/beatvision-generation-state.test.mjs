@@ -18,7 +18,12 @@ for (const [name, data, type, expected] of [
 test('browser preflight succeeds for production and does not permit arbitrary origins', async () => {
   const runtime = await loadGeneration();
   try {
-    for (const origin of ['https://beat-vision-theta.vercel.app', 'https://beat-vision-beat-vision.vercel.app']) {
+    for (const origin of [
+      'https://beat-vision-theta.vercel.app',
+      'https://beat-vision-beat-vision.vercel.app',
+      'https://beat-vision-git-fix-style-description-genera-790bfa-beat-vision.vercel.app',
+      'https://beat-vision-f8nn-git-fix-style-description-g-a4cacb-beat-vision.vercel.app',
+    ]) {
       const response = await runtime.handler(new Request('https://test/function', { method: 'OPTIONS', headers: { Origin: origin } }));
       assert.equal(response.status, 204);
       assert.equal(response.headers.get('Access-Control-Allow-Origin'), origin);
