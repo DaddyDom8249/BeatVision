@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase/client";
+import { getCreativeErrorMessage } from "../lib/formatCreativeText";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
 const imageFields = "id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,storage_path,status,approved,created_at,updated_at";
+
+function productionErrorMessage(error: unknown) {
+  const message = typeof error === "string" ? error : getCreativeErrorMessage(error, "Production request failed.");
+  if (message.includes("ASSEMBLY_MOTION_NOT_FULLY_APPROVED")) {
+    return "Approve a real motion clip for every scene before assembling the final video.";
+  }
+  return message;
+}
 
 function time(seconds: number) {
   const total = Math.max(0, Math.floor(seconds));
@@ -95,7 +104,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         if (!active) return;
         setPlan(result.data as VisualPlan); setScenes((sceneResult.data ?? []) as VisualPlanScene[]);
         await refreshFinal(result.data.id);
-      } catch (e) { if (active) setError(e instanceof Error ? e.message : String(e)); }
+      } catch (e) { if (active) setError(productionErrorMessage(e)); }
       finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
@@ -106,7 +115,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     setImage(null); setMotion(null); setImageJob(null); setMotionJob(null); setError(null);
     if (!scene) return;
     setAssetLoading(true);
-    refreshScene(scene.id).catch(e => { if (active) setError(e.message); }).finally(() => { if (active) setAssetLoading(false); });
+    refreshScene(scene.id).catch(e => { if (active) setError(productionErrorMessage(e)); }).finally(() => { if (active) setAssetLoading(false); });
     return () => { active = false; };
   }, [scene?.id, refreshScene]);
 
@@ -116,7 +125,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     const interval = pending(imageJob) || pending(motionJob) || pending(assemblyJob) ? 5000 : 50 * 60 * 1000;
     let active = true;
     const timer = window.setInterval(() => {
-      Promise.all([refreshScene(scene.id), refreshFinal(plan.id)]).catch(e => { if (active) setError(e.message); });
+      Promise.all([refreshScene(scene.id), refreshFinal(plan.id)]).catch(e => { if (active) setError(productionErrorMessage(e)); });
     }, interval);
     return () => { active = false; window.clearInterval(timer); };
   }, [scene?.id, plan?.id, imageJob?.status, motionJob?.status, assemblyJob?.status, refreshScene, refreshFinal]);
@@ -148,7 +157,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       setJob(result);
       if (result.status === "failed") throw new Error(result.error?.message || "Generation failed.");
       if (type === "assembly" && result.status === "completed") setFinalVideo(result.output?.final_video ?? null);
-    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    } catch (e) { setError(productionErrorMessage(e)); }
     finally { setBusy(false); }
   }
 
@@ -162,14 +171,14 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     if (!motion || motion.status !== "generated" || !motion.video_url) return;
     setError(null);
     const result = await supabase.rpc("approve_motion_clip_asset", { p_asset_id: motion.id });
-    if (result.error) setError(result.error.message); else setMotion(result.data);
+    if (result.error) setError(productionErrorMessage(result.error)); else setMotion(result.data);
   }
 
   async function approveImage() {
     if (!image || image.status !== "generated" || !image.image_url) return;
     setError(null);
     const result = await supabase.rpc("approve_scene_image_asset", { p_asset_id: image.id });
-    if (result.error) setError(result.error.message); else setImage({ ...result.data, image_url: image.image_url });
+    if (result.error) setError(productionErrorMessage(result.error)); else setImage({ ...result.data, image_url: image.image_url });
   }
 
   async function copyBrief() {

@@ -1,5 +1,15 @@
 # BeatVision Project Log
 
+## 2026-10-09 17:25 UTC — Explain blocked final assembly in Production Workspace
+
+**Live progress:** PR #41 is merged at 308c859c. Released that pinned commit to the primary Vercel project (dpl_74xvewfLm2o9Efgmvb1mn1a2TgKu) and verified the actual beat-vision-theta alias. Corrected all eight existing unlocked Ghast draft scenes through the browser, saved each, reloaded, reviewed and approved the Visual Plan. approve_visual_plan returned HTTP 200; SQL confirms all eight scenes approved, with the locked Vision snapshot hash unchanged. New-plan creation defaults after PR #41 remain separately unverified because no duplicate/deletion was introduced.
+
+**Reproduction:** The real Production Workspace exposes Assemble Final Video before approved motion exists. Read the deployed enqueue_assembly_generation definition first: its prerequisite rejects missing motion before any job insert. The authorized negative browser test returned HTTP 500 from that RPC and displayed [object Object], with no generation-controller request. No media generation was submitted; current free-provider quota is unverified.
+
+**Cause and repair:** ProductionWorkspacePage coerced structured PostgREST errors using String(error). Reuse the existing structured-message helper and map ASSEMBLY_MOTION_NOT_FULLY_APPROVED to an instruction to approve a real motion clip for every scene. Loading, polling and approval errors retain readable messages too. The backend guard, approved records, provider configuration and authentication remain unchanged.
+
+**Verification:** A regression executes the actual page with the structured missing-motion response. It failed before the fix, then passed while requiring the workspace to remain visible and zero provider invocations. Full suite passes 93/93; production audit and TypeScript/Vite build pass. Production release and same-prerequisite browser retest are pending at this commit.
+
 ## 2026-10-09 17:05 UTC — Preserve structured World defaults in Visual Plan
 
 **Production verification of PR #40:** GitHub main and CI passed at 34203916. The secondary Vercel project deployed that commit automatically; the primary project serving beat-vision-theta.vercel.app did not. Released that exact tested Git commit through the authenticated Vercel API to primary deployment dpl_EdvVVT3WJAh16ZF1zR4igmcYqjqE. Confirmed the real alias points to it. The authenticated page now explains the missing environment approval; its return link works. Approved the reviewed environment revision through the UI (RPC 200), preserving the original approved sheet hashes. Visual Plan then created a locked Vision Lock and eight saved draft scenes with HTTP 200/201/201.
