@@ -59,13 +59,31 @@ export default function StylePage({ projectId }: { projectId: string }) {
   if (loading) return <main className="studio-main style-page"><div className="style-loading">Loading Style Studio…</div></main>;
 
   if (!styleBible) {
+    if (error) {
+      return (
+        <main className="studio-main style-page">
+          <header className="style-header">
+            <div>
+              <span className="eyebrow">PHASE 3 / STYLE BIBLE</span>
+              <h1>Style Studio Context</h1>
+            </div>
+          </header>
+          <section className="style-empty-panel">
+            <p className="form-error" role="alert">{error}</p>
+            <button disabled={working} onClick={() => void reload()}>
+              Retry Style Studio Load
+            </button>
+          </section>
+        </main>
+      );
+    }
+
     return (
       <main className="studio-main style-page">
         <header className="style-header"><div><span className="eyebrow">PHASE 3 / STYLE BIBLE</span><h1>Create Style Bible</h1>
         <p>The Style Bible will be created from the confirmed World Report. Its world foundation is lineage data, not a disposable UI copy.</p></div></header><section className="style-empty-panel"><button disabled={working} onClick={() => void createStyleBible()}>
           {working ? "Creating…" : "Create Style Bible from Confirmed World"}
         </button>
-        {error && <p className="form-error" role="alert">{error}</p>}
         </section>
       </main>
     );

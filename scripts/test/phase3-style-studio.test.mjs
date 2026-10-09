@@ -55,3 +55,15 @@ test("reference asset approvals do not conflict with approved_at trigger", () =>
   assert.match(branch, /status: "approved"/);
   assert.doesNotMatch(branch, /approved_at: new Date/);
 });
+
+test("createStyleBible handles existing rows safely using maybeSingle to prevent PGRST116 coercion errors", () => {
+  const branch = hook.slice(hook.indexOf("const createStyleBible"));
+  assert.match(branch, /maybeSingle\(\)/);
+  assert.match(branch, /existing\.data/);
+  assert.doesNotMatch(branch, /\.insert\(payload\)\.select\(styleFields\)\.single\(\)/);
+});
+
+test("StylePage presents error feedback and retry action on load failure rather than misleading Create button", () => {
+  assert.match(style, /if\s*\(!styleBible\)\s*{\s*if\s*\(error\)/);
+  assert.match(style, /Retry Style Studio Load/);
+});

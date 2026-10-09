@@ -255,15 +255,18 @@ export function useStyleStudio(projectId: string) {
       .from("projects")
       .select("world_report_id")
       .eq("id", projectId)
-      .single();
+      .maybeSingle();
 
     if (projectResult.error) {
-      setError(projectResult.error.message);
+      setError(getCreativeErrorMessage(projectResult.error, "Unable to load project context."));
       setLoading(false);
       return;
     }
 
-    if (!projectResult.data.world_report_id) {
+    if (!projectResult.data || !projectResult.data.world_report_id) {
+      if (!projectResult.data) {
+        setError("Project not found or access denied.");
+      }
       setWorld(null);
       setStyleBible(null);
       setCharacters([]);
@@ -279,10 +282,22 @@ export function useStyleStudio(projectId: string) {
       .select("*")
       .eq("id", projectResult.data.world_report_id)
       .eq("project_id", projectId)
-      .single();
+      .maybeSingle();
 
     if (worldResult.error) {
-      setError(worldResult.error.message);
+      setError(getCreativeErrorMessage(worldResult.error, "Unable to load World report."));
+      setLoading(false);
+      return;
+    }
+
+    if (!worldResult.data) {
+      setError("Confirmed World Report not found.");
+      setWorld(null);
+      setStyleBible(null);
+      setCharacters([]);
+      setCharacterAssets([]);
+      setEnvironments([]);
+      setEnvironmentAssets([]);
       setLoading(false);
       return;
     }
@@ -307,7 +322,7 @@ export function useStyleStudio(projectId: string) {
       .maybeSingle();
 
     if (styleResult.error) {
-      setError(styleResult.error.message);
+      setError(getCreativeErrorMessage(styleResult.error, "Unable to check Style Bible status."));
       setLoading(false);
       return;
     }
@@ -327,9 +342,9 @@ export function useStyleStudio(projectId: string) {
               .update({ continuity_rules: recovered })
               .eq("id", currentStyleBible.id)
               .eq("status", "draft")
-              .select(styleFields).single();
+              .select(styleFields).maybeSingle();
             if (repair.error) throw repair.error;
-            currentStyleBible = repair.data as StyleBible;
+            if (repair.data) currentStyleBible = repair.data as StyleBible;
           }
         }
         await ensureWorldDrafts(currentWorld, projectId, currentStyleBible);
@@ -349,14 +364,13 @@ export function useStyleStudio(projectId: string) {
       ]);
 
     const firstError =
-      styleResult.error ??
       characterResult.error ??
       characterAssetResult.error ??
       environmentResult.error ??
       environmentAssetResult.error;
 
     if (firstError) {
-      setError(firstError.message);
+      setError(getCreativeErrorMessage(firstError, "Unable to load character or environment assets."));
       setLoading(false);
       return;
     }
@@ -398,6 +412,13 @@ export function useStyleStudio(projectId: string) {
     if (!world || world.status !== "completed" || !world.confirmed_at) throw new Error("Confirm the Visual World Report before creating the Style Bible.");
     setWorking(true); setError(null);
     try {
+      // Check if a Style Bible already exists for this project first to avoid duplicate insert errors or coercion issues.
+      const existing = await supabase.from("style_bibles").select(styleFields).eq("project_id", projectId).maybeSingle();
+      if (existing.data) {
+        setStyleBible(existing.data as StyleBible);
+        return existing.data as StyleBible;
+      }
+
       const payload = {
         project_id: projectId,
         world_report_id: world.id,
@@ -423,9 +444,26 @@ export function useStyleStudio(projectId: string) {
         visual_rules: [],
         reference_assets: [],
       };
-      const result = await supabase.from("style_bibles").insert(payload).select(styleFields).single();
-      if (result.error) throw result.error;
+      const result = await supabase.from("style_bibles").insert(payload).select(styleFields).maybeSingle();
+      if (result.error) {
+        // If insert failed due to concurrent insert or unique constraint, re-query existing row
+        const recheck = await supabase.from("style_bibles").select(styleFields).eq("project_id", projectId).maybeSingle();
+        if (recheck.data) {
+          setStyleBible(recheck.data as StyleBible);
+          return recheck.data as StyleBible;
+        }
+        throw result.error;
+      }
+      if (!result.data) {
+        const recheck = await supabase.from("style_bibles").select(styleFields).eq("project_id", projectId).maybeSingle();
+        if (recheck.data) {
+          setStyleBible(recheck.data as StyleBible);
+          return recheck.data as StyleBible;
+        }
+        throw new Error("Unable to retrieve created Style Bible.");
+      }
       setStyleBible(result.data as StyleBible);
+      return result.data as StyleBible;
     } catch (e) {
       const message = getCreativeErrorMessage(e, "Unable to create Style Bible.");
       setError(message);
@@ -446,8 +484,9 @@ export function useStyleStudio(projectId: string) {
         .eq("id", styleBible.id)
         .eq("status", "draft")
         .select(styleFields)
-        .single();
+        .maybeSingle();
       if (result.error) throw result.error;
+      if (!result.data) throw new Error("Style Bible is locked or not found.");
       setStyleBible(result.data as StyleBible);
     } catch (e) {
       setError(getCreativeErrorMessage(e, "Unable to save Style Bible."));
@@ -468,8 +507,9 @@ export function useStyleStudio(projectId: string) {
         .eq("id", styleBible.id)
         .eq("status", "draft")
         .select(styleFields)
-        .single();
+        .maybeSingle();
       if (result.error) throw result.error;
+      if (!result.data) throw new Error("Style Bible is locked or not found.");
       setStyleBible(result.data as StyleBible);
       return result.data as StyleBible;
     } catch (e) {
@@ -495,14 +535,15 @@ export function useStyleStudio(projectId: string) {
         sheet: id ? mergeCreativeSheet(rawCharacterSheets.current.get(id), input.sheet) : input.sheet,
       };
       const result = id
-        ? await supabase.from("characters").update(base).eq("id", id).eq("status", "draft").select(characterFields).single()
+        ? await supabase.from("characters").update(base).eq("id", id).eq("status", "draft").select(characterFields).maybeSingle()
         : await supabase.from("characters").insert({
             ...base,
             project_id: projectId,
             world_report_id: worldReportId,
             style_bible_id: styleBible.id,
-          }).select(characterFields).single();
+          }).select(characterFields).maybeSingle();
       if (result.error) throw result.error;
+      if (!result.data) throw new Error("Unable to save character profile.");
       await load();
       return result.data as Character;
     } catch (e) {
@@ -567,14 +608,15 @@ export function useStyleStudio(projectId: string) {
         sheet: id ? mergeCreativeSheet(rawEnvironmentSheets.current.get(id), input.sheet) : input.sheet,
       };
       const result = id
-        ? await supabase.from("environments").update(base).eq("id", id).eq("status", "draft").select(environmentFields).single()
+        ? await supabase.from("environments").update(base).eq("id", id).eq("status", "draft").select(environmentFields).maybeSingle()
         : await supabase.from("environments").insert({
             ...base,
             project_id: projectId,
             world_report_id: worldReportId,
             style_bible_id: styleBible.id,
-          }).select(environmentFields).single();
+          }).select(environmentFields).maybeSingle();
       if (result.error) throw result.error;
+      if (!result.data) throw new Error("Unable to save environment profile.");
       await load();
       return result.data as Environment;
     } catch (e) {
@@ -650,8 +692,9 @@ export function useStyleStudio(projectId: string) {
         status: "draft",
         metadata: { original_name: file.name, mime_type: file.type, size: file.size },
       };
-      const result = await supabase.from(table).insert(payload).select("*").single();
+      const result = await supabase.from(table).insert(payload).select("*").maybeSingle();
       if (result.error) throw result.error;
+      if (!result.data) throw new Error("Unable to register uploaded asset.");
       await load();
     } catch (e) {
       const message = getCreativeErrorMessage(e, "Unable to add asset.");
@@ -669,8 +712,9 @@ export function useStyleStudio(projectId: string) {
       const result = await supabase.from(table).update({
         // The Phase 3 approval trigger is authoritative for approved_at.
         status: "approved",
-      }).eq("id", assetId).eq("status", "draft").select("*").single();
+      }).eq("id", assetId).eq("status", "draft").select("*").maybeSingle();
       if (result.error) throw result.error;
+      if (!result.data) throw new Error("Unable to approve reference asset.");
       await load();
     } catch (e) {
       const message = getCreativeErrorMessage(e, "Unable to approve asset.");
