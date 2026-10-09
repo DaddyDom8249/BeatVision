@@ -1,5 +1,17 @@
 # BeatVision Project Log
 
+## 2026-10-09 17:05 UTC — Preserve structured World defaults in Visual Plan
+
+**Production verification of PR #40:** GitHub main and CI passed at 34203916. The secondary Vercel project deployed that commit automatically; the primary project serving beat-vision-theta.vercel.app did not. Released that exact tested Git commit through the authenticated Vercel API to primary deployment dpl_EdvVVT3WJAh16ZF1zR4igmcYqjqE. Confirmed the real alias points to it. The authenticated page now explains the missing environment approval; its return link works. Approved the reviewed environment revision through the UI (RPC 200), preserving the original approved sheet hashes. Visual Plan then created a locked Vision Lock and eight saved draft scenes with HTTP 200/201/201.
+
+**Next failure:** The real draft shows atmosphere as Location and only shot_lengths as Camera direction. World environments and emotional arc are arrays of objects; cinematography includes nested arrays. useVisualPlan's firstText drops every non-string array element/property, discarding the locations, arc, movements, camera types, and focus techniques.
+
+**Repair:** Reuse formatCreativeText to retain structured fields in new plan defaults. Keep scalar creator strings unchanged and flatten structured line breaks for one-line location inputs. No database, auth, RLS, provider, or locked-snapshot changes; no deletion/rebuild of Ghast. Existing draft correction and approval remain explicit browser actions.
+
+**Regression:** A real-hook build test with Ghast-shaped structured World input fails against main because Location becomes atmosphere, then passes with the repair. It requires actual World settings, camera movement/type/focus, continuity and emotional arc in the persisted insert payload. Full suite passes 92/92; production audit and TypeScript/Vite build pass.
+
+**Deployment/live verification:** Pending. The existing Ghast plan remains draft for review and browser correction. New-plan creation must not be inferred from a build alone. Primary-project automatic Git deployment remains unverified; two-project mismatch is recorded in Field Lab.
+
 ## 2026-10-09 16:50 UTC — Authenticated Ghast Visual Plan approval diagnosis
 
 **Objective:** Exercise the real Ghast pipeline through the private BeatVision Field Lab, with live GitHub/Vercel/Cloudflare/Supabase audit evidence.
