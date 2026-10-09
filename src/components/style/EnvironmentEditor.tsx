@@ -10,6 +10,7 @@ export default function EnvironmentEditor({
   assets,
   working,
   onSave,
+  onGenerate,
   onUpload,
   onApproveAsset,
   onApprove,
@@ -18,6 +19,7 @@ export default function EnvironmentEditor({
   assets: EnvironmentAsset[];
   working: boolean;
   onSave: (id: string, input: { name: string; sheet: Record<string, string> }) => Promise<unknown>;
+  onGenerate?: (environment: Environment) => Promise<unknown>;
   onUpload: (file: File, label: string) => Promise<unknown>;
   onApproveAsset: (asset: EnvironmentAsset) => Promise<unknown>;
   onApprove: (environment: Environment) => Promise<unknown>;
@@ -26,6 +28,7 @@ export default function EnvironmentEditor({
   const [name, setName] = useState(environment.name);
   const [sheet, setSheet] = useState(initial);
   const [error, setError] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     setName(environment.name);
@@ -43,6 +46,19 @@ export default function EnvironmentEditor({
       await onSave(environment.id, { name, sheet });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function handleGenerate() {
+    if (isApproved || !onGenerate) return;
+    setError(null);
+    setGenerating(true);
+    try {
+      await onGenerate(environment);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -72,10 +88,24 @@ export default function EnvironmentEditor({
         <label>Lighting / color <textarea rows={3} readOnly={isApproved} value={sheet.lighting} onChange={(e) => setSheet((s) => ({ ...s, lighting: e.target.value }))} /></label>
         <label>Atmosphere <textarea rows={3} readOnly={isApproved} value={sheet.atmosphere} onChange={(e) => setSheet((s) => ({ ...s, atmosphere: e.target.value }))} /></label>
         <label>Continuity / must-not-change <textarea rows={3} readOnly={isApproved} value={sheet.continuity} onChange={(e) => setSheet((s) => ({ ...s, continuity: e.target.value }))} /></label>
-        {!isApproved && <button disabled={working}>{working ? "Saving…" : "Save Environment Sheet"}</button>}
+        {!isApproved && (
+          <div className="card-actions">
+            <button disabled={working || generating}>{working ? "Saving…" : "Save Environment Sheet"}</button>
+            {onGenerate && (
+              <button
+                type="button"
+                className="secondary"
+                disabled={working || generating}
+                onClick={() => void handleGenerate()}
+              >
+                {generating ? "Generating AI Draft…" : "Generate AI Description"}
+              </button>
+            )}
+          </div>
+        )}
       </form>
       {!isApproved && (
-        <button type="button" disabled={working} onClick={() => void handleApprove()}>
+        <button type="button" disabled={working || generating} onClick={() => void handleApprove()}>
           {working ? "Approving…" : "Approve Environment"}
         </button>
       )}
@@ -84,7 +114,7 @@ export default function EnvironmentEditor({
         <input
           type="file"
           accept="image/*"
-          disabled={working}
+          disabled={working || generating}
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (file) void onUpload(file, file.name);
@@ -92,7 +122,7 @@ export default function EnvironmentEditor({
           }}
         />
       )}
-      <AssetList assets={assets} working={working || isApproved} onApprove={(asset) => void onApproveAsset(asset)} />
+      <AssetList assets={assets} working={working || isApproved || generating} onApprove={(asset) => void onApproveAsset(asset)} />
     </article>
   );
 }

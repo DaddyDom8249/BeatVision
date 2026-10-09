@@ -242,6 +242,192 @@ Deno.serve(async (req) => {
 
     if (req.method === "GET") return json(req, { report: existing });
 
+    if (body.action === "generate_character_sheet" || body.action === "generate_environment_sheet") {
+      if (!existing || !existing.confirmed_at) {
+        return json(req, {
+          error: {
+            code: "WORLD_NOT_CONFIRMED",
+            message: "A confirmed World Report is required before generating profile drafts.",
+          },
+        }, 409);
+      }
+
+      const geminiKey = env("GEMINI_API_KEY");
+      const openRouterKey = env("OPENROUTER_API_KEY");
+      const groqKey = env("GROQ_API_KEY");
+
+      if (!geminiKey && !openRouterKey && !groqKey) {
+        return json(req, {
+          error: {
+            code: "PROVIDER_UNAVAILABLE",
+            message: "AI description generation is currently unavailable (no text provider configured).",
+          },
+        }, 503);
+      }
+
+      const isCharacter = body.action === "generate_character_sheet";
+      const targetName = cleanText(isCharacter ? body.characterName : body.environmentName, 200);
+      if (!targetName) {
+        return json(req, {
+          error: {
+            code: "NAME_REQUIRED",
+            message: isCharacter ? "characterName is required." : "environmentName is required.",
+          },
+        }, 400);
+      }
+
+      const { data: styleBible } = await admin
+        .from("style_bibles")
+        .select("visual_language,cinematography,color_lighting,atmosphere,movement,continuity_rules,visual_rules")
+        .eq("project_id", projectId)
+        .maybeSingle();
+
+      const contextData = {
+        target_name: targetName,
+        existing_sheet: body.existingSheet && typeof body.existingSheet === "object" ? body.existingSheet : {},
+        world: {
+          mood: existing.mood,
+          emotional_arc: existing.emotional_arc,
+          visual_language: existing.visual_language,
+          cinematography: existing.cinematography,
+          environments: existing.environments,
+          color_lighting: existing.color_lighting,
+          motifs: existing.motifs,
+          atmosphere: existing.atmosphere,
+          movement: existing.movement,
+          continuity_rules: existing.continuity_rules,
+          immutable_continuity: existing.immutable_continuity,
+        },
+        style_bible: styleBible || {},
+      };
+
+      const characterSystem = `You are BeatVision's Character Director. Generate a rich, World-consistent creative description sheet for the character named '${targetName}'.
+Ground every detail in the confirmed World Report and Style Bible provided below.
+Respect all immutable continuity rules (clothing, props, location rules).
+Return ONLY valid JSON with exactly these top-level keys:
+identity, appearance, wardrobe, behavior, continuity.
+Each value must be a concise, vivid text string (1-3 sentences) suitable for a character sheet textarea. Do not invent artist likenesses or contradict locked creative state.`;
+
+      const environmentSystem = `You are BeatVision's Environment Director. Generate a rich, World-consistent creative description sheet for the location named '${targetName}'.
+Ground every detail in the confirmed World Report and Style Bible provided below.
+Respect all immutable continuity rules (architecture, window locations, props).
+Return ONLY valid JSON with exactly these top-level keys:
+purpose, layout, architecture, surfaces, lighting, atmosphere, continuity.
+Each value must be a concise, vivid text string (1-3 sentences) suitable for an environment sheet textarea. Do not contradict locked creative state.`;
+
+      const systemPrompt = isCharacter ? characterSystem : environmentSystem;
+      const userContent = `Generate the creative description sheet for '${targetName}' based on this source material:\n\n${JSON.stringify(contextData)}`;
+
+      let sheetResult: Record<string, string> | null = null;
+      const errors: string[] = [];
+
+      if (groqKey) {
+        try {
+          const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: "Bearer " + groqKey,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: WORLD_MODEL,
+              temperature: 0.3,
+              max_completion_tokens: 1200,
+              response_format: { type: "json_object" },
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userContent },
+              ],
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const text = data?.choices?.[0]?.message?.content;
+            if (text) sheetResult = parseModelJson(text);
+          } else {
+            errors.push("groq: " + (await res.text()).slice(0, 300));
+          }
+        } catch (e) {
+          errors.push("groq: " + String(e));
+        }
+      }
+
+      if (!sheetResult && openRouterKey) {
+        try {
+          const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: "Bearer " + openRouterKey,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "openrouter/free",
+              temperature: 0.3,
+              max_tokens: 1200,
+              response_format: { type: "json_object" },
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userContent },
+              ],
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const text = data?.choices?.[0]?.message?.content;
+            if (text) sheetResult = parseModelJson(text);
+          } else {
+            errors.push("openrouter: " + (await res.text()).slice(0, 300));
+          }
+        } catch (e) {
+          errors.push("openrouter: " + String(e));
+        }
+      }
+
+      if (!sheetResult && geminiKey) {
+        try {
+          const res = await fetch(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": geminiKey,
+              },
+              body: JSON.stringify({
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                contents: [{ role: "user", parts: [{ text: userContent }] }],
+                generationConfig: {
+                  temperature: 0.3,
+                  responseMimeType: "application/json",
+                  maxOutputTokens: 1200,
+                },
+              }),
+            }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) sheetResult = parseModelJson(text);
+          } else {
+            errors.push("gemini: " + (await res.text()).slice(0, 300));
+          }
+        } catch (e) {
+          errors.push("gemini: " + String(e));
+        }
+      }
+
+      if (!sheetResult) {
+        return json(req, {
+          error: {
+            code: "GENERATION_FAILED",
+            message: "Unable to generate description from AI provider: " + (errors.join("; ") || "no response"),
+          },
+        }, 502);
+      }
+
+      return json(req, { ok: true, sheet: sheetResult });
+    }
+
     if (req.method === "PATCH") {
       if (!existing || existing.status !== "completed") {
         return json(req, { error: { code: "WORLD_NOT_READY", message: "A completed world report must exist before editing or confirmation." } }, 409);

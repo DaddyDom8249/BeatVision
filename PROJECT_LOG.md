@@ -630,3 +630,30 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 - `npm run production-audit`: Static production audit passed.
 
 **Status:** ALL PHASE 3 DEFECTS FIXED AND VERIFIED LOCALLY.
+
+## 2026-10-08 — Phase 3 Character & Environment AI Description Generation
+
+**Task:** Implement genuine AI text generation for Character and Environment creative descriptions grounded in confirmed World Reports, Style Bibles, and song creative direction.
+
+**Implementation Details:**
+1. **Edge Function Actions (`supabase/functions/beatvision-world/index.ts`):** Added `generate_character_sheet` and `generate_environment_sheet` server-side actions.
+   - Enforces project owner authorization and confirmed World Report + Style Bible prerequisites.
+   - Leverages configured free-tier LLM providers (Groq `openai/gpt-oss-20b`, OpenRouter, or Gemini).
+   - Generates structured JSON sheets containing:
+     - Character: `identity`, `appearance`, `wardrobe`, `behavior`, `continuity`
+     - Environment: `purpose`, `layout`, `architecture`, `surfaces`, `lighting`, `atmosphere`, `continuity`
+   - Returns 503 (`PROVIDER_UNAVAILABLE`) if no text LLM API key is configured.
+2. **Hook Integration (`src/hooks/useStyleStudio.ts`):**
+   - Added `generateCharacterSheet` and `generateEnvironmentSheet`.
+   - Protects approved records (`status === "approved"`) from regeneration.
+   - Persists generated sheets as un-approved drafts so the user must review and manually Save/Approve.
+3. **UI Enhancements (`CharacterEditor.tsx`, `EnvironmentEditor.tsx`, `StylePage.tsx`):**
+   - Added creator-initiated "Generate AI Description" action buttons to Character and Environment editor cards.
+   - Displays inline loading states and card-level error messages if AI generation fails or provider is unavailable.
+
+**Verification Results:**
+- `npm test`: **65/65 unit and edge tests passed**.
+- `npm run build`: TypeScript compilation and Vite build passed.
+- `npm run production-audit`: Passed.
+
+**Status:** IMPLEMENTED AND VERIFIED LOCALLY.

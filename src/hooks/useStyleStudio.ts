@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "../lib/supabase/client";
+import { supabase, supabasePublishableKey, supabaseUrl } from "../lib/supabase/client";
 import {
   formatCreativeLines,
   formatCreativeRecord,
@@ -38,6 +38,39 @@ function getErrorMessage(e: unknown, fallback: string): string {
     if (typeof obj.details === "string" && obj.details.trim()) return obj.details;
   }
   return fallback;
+}
+
+async function callWorldService(body: unknown) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  let session = sessionData.session;
+  if (!session?.access_token) {
+    const refreshed = await supabase.auth.refreshSession();
+    session = refreshed.data.session;
+  }
+  if (!session?.access_token) throw new Error("You must be signed in.");
+
+  const key = supabasePublishableKey;
+  if (!key) throw new Error("Supabase publishable key is not configured.");
+
+  const res = await fetch(`${supabaseUrl}/functions/v1/beatvision-world`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: key,
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const text = await res.text();
+  let payload: any = {};
+  try { payload = text ? JSON.parse(text) : {}; } catch { payload = {}; }
+
+  if (!res.ok) {
+    const msg = payload?.error?.message || payload?.message || `Server returned status ${res.status}`;
+    throw new Error(msg);
+  }
+  return payload;
 }
 
 function asLines(value: unknown): string[] {
@@ -497,6 +530,34 @@ export function useStyleStudio(projectId: string) {
     } finally { setWorking(false); }
   }, [projectId, world, styleBible, load]);
 
+  const generateCharacterSheet = useCallback(async (characterId: string) => {
+    const char = characters.find((c) => c.id === characterId);
+    if (!char) throw new Error("Character profile not found.");
+    if (char.status === "approved") throw new Error("Approved characters are locked and cannot be regenerated.");
+
+    setWorking(true); setError(null);
+    try {
+      const payload = await callWorldService({
+        projectId,
+        action: "generate_character_sheet",
+        characterName: char.name,
+        existingSheet: char.sheet,
+      });
+
+      if (!payload.sheet || typeof payload.sheet !== "object") {
+        throw new Error("Invalid response from description generator.");
+      }
+
+      const formattedSheet = formatCreativeRecord(payload.sheet);
+      const updated = await saveCharacter(characterId, { name: char.name, sheet: formattedSheet });
+      return updated;
+    } catch (e) {
+      const message = getErrorMessage(e, "Unable to generate character description.");
+      setError(message);
+      throw new Error(message);
+    } finally { setWorking(false); }
+  }, [characters, projectId, saveCharacter]);
+
   const approveCharacter = useCallback(async (id: string) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
     setWorking(true); setError(null);
@@ -536,6 +597,34 @@ export function useStyleStudio(projectId: string) {
       throw new Error(message);
     } finally { setWorking(false); }
   }, [projectId, world, styleBible, load]);
+
+  const generateEnvironmentSheet = useCallback(async (environmentId: string) => {
+    const env = environments.find((e) => e.id === environmentId);
+    if (!env) throw new Error("Environment profile not found.");
+    if (env.status === "approved") throw new Error("Approved environments are locked and cannot be regenerated.");
+
+    setWorking(true); setError(null);
+    try {
+      const payload = await callWorldService({
+        projectId,
+        action: "generate_environment_sheet",
+        environmentName: env.name,
+        existingSheet: env.sheet,
+      });
+
+      if (!payload.sheet || typeof payload.sheet !== "object") {
+        throw new Error("Invalid response from description generator.");
+      }
+
+      const formattedSheet = formatCreativeRecord(payload.sheet);
+      const updated = await saveEnvironment(environmentId, { name: env.name, sheet: formattedSheet });
+      return updated;
+    } catch (e) {
+      const message = getErrorMessage(e, "Unable to generate environment description.");
+      setError(message);
+      throw new Error(message);
+    } finally { setWorking(false); }
+  }, [environments, projectId, saveEnvironment]);
 
   const approveEnvironment = useCallback(async (id: string) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
@@ -620,7 +709,9 @@ export function useStyleStudio(projectId: string) {
     saveStyleBible,
     approveStyleBible,
     saveCharacter,
+    generateCharacterSheet,
     saveEnvironment,
+    generateEnvironmentSheet,
     approveCharacter,
     approveEnvironment,
     uploadAsset,

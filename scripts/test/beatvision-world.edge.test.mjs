@@ -430,3 +430,133 @@ test("the same edit can fill an empty field in one request", async () => {
   assert.equal(db.world_reports[0].atmosphere, "wet neon haze");
   assert.deepEqual(db.world_reports[0].mood, { tone: "warm" });
 });
+
+test("generate_character_sheet requires a confirmed world report", async () => {
+  const { handler } = await bootFunction({ worldOverrides: { confirmed_at: null } });
+  const response = await request(handler, {
+    method: "POST",
+    body: { projectId: PROJECT_ID, action: "generate_character_sheet", characterName: "The Ghast" },
+  });
+
+  assert.equal(response.status, 409);
+  const body = await response.json();
+  assert.equal(body.error.code, "WORLD_NOT_CONFIRMED");
+});
+
+test("generate_character_sheet returns 503 when no text LLM provider key is set", async () => {
+  const { handler } = await bootFunction({ worldOverrides: { confirmed_at: "2026-10-08T00:00:00.000Z" } });
+  const origKey = globalThis.Deno.env.get("GROQ_API_KEY");
+  globalThis.Deno.env.get = (key) => (key === "SUPABASE_URL" ? SUPABASE_URL : "");
+  try {
+    const response = await request(handler, {
+      method: "POST",
+      body: { projectId: PROJECT_ID, action: "generate_character_sheet", characterName: "The Ghast" },
+    });
+
+    assert.equal(response.status, 503);
+    const body = await response.json();
+    assert.equal(body.error.code, "PROVIDER_UNAVAILABLE");
+  } finally {
+    globalThis.Deno.env.get = (key) =>
+      ({
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY: "stub-anon-key",
+        SUPABASE_SERVICE_ROLE_KEY: "stub-service-role-key",
+        GROQ_API_KEY: origKey || "stub-groq-key",
+      })[key] ?? "";
+  }
+});
+
+test("generate_character_sheet returns AI-generated character draft when provider is active", async () => {
+  const { handler } = await bootFunction({ worldOverrides: { confirmed_at: "2026-10-08T00:00:00.000Z" } });
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (String(input).endsWith("/auth/v1/user")) {
+      return new Response(JSON.stringify({ id: USER_ID }), { status: 200 });
+    }
+    if (String(input).includes("api.groq.com")) {
+      return new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  identity: "The Ghast is a brooding spectral protagonist.",
+                  appearance: "Clad in a dark coat with silver buttons.",
+                  wardrobe: "Vintage brass locket around neck.",
+                  behavior: "Moves slowly with deliberate, haunting posture.",
+                  continuity: "Dark coat with silver buttons must remain consistent.",
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200 }
+      );
+    }
+    return origFetch(input, init);
+  };
+
+  try {
+    const response = await request(handler, {
+      method: "POST",
+      body: { projectId: PROJECT_ID, action: "generate_character_sheet", characterName: "The Ghast" },
+    });
+
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.ok, true);
+    assert.equal(body.sheet.identity, "The Ghast is a brooding spectral protagonist.");
+    assert.equal(body.sheet.wardrobe, "Vintage brass locket around neck.");
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});
+
+test("generate_environment_sheet returns AI-generated environment draft when provider is active", async () => {
+  const { handler } = await bootFunction({ worldOverrides: { confirmed_at: "2026-10-08T00:00:00.000Z" } });
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (String(input).endsWith("/auth/v1/user")) {
+      return new Response(JSON.stringify({ id: USER_ID }), { status: 200 });
+    }
+    if (String(input).includes("api.groq.com")) {
+      return new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  purpose: "A dilapidated Gothic sanctuary.",
+                  layout: "High vaulted stone arches leading to stained glass window.",
+                  architecture: "Dilapidated medieval Gothic stonework.",
+                  surfaces: "Damp flagstone with rainwater pooling.",
+                  lighting: "High-contrast chiaroscuro with moonlight filtering through glass.",
+                  atmosphere: "Thick fog and rain on stained glass.",
+                  continuity: "Stained glass window must remain on the north wall.",
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200 }
+      );
+    }
+    return origFetch(input, init);
+  };
+
+  try {
+    const response = await request(handler, {
+      method: "POST",
+      body: { projectId: PROJECT_ID, action: "generate_environment_sheet", environmentName: "Gothic Cathedral" },
+    });
+
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.ok, true);
+    assert.equal(body.sheet.purpose, "A dilapidated Gothic sanctuary.");
+    assert.equal(body.sheet.continuity, "Stained glass window must remain on the north wall.");
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});
