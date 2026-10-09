@@ -126,3 +126,16 @@ Do not touch `main`, production secrets, production DB, locked reference assets 
 4. Only if trial passes, design and test a disabled-by-default provider adapter on isolated feature branch with no production writes. Compare against Wan2.2 for quality per dollar and throughput. Confirm final-video assembly separately.
 
 **Status:** DOCUMENTED / NOT IMPLEMENTED / E2E NOT VERIFIED. No inference, paid or production action authorized by this research note.
+
+
+## BestofAI.com — discovery directory, not an inference provider (2026-10-09)
+
+**Source:** https://bestofai.com/ (official page inspected 2026-10-09). Homepage claims **15,135 products** across **102 categories**, including video, image, development, automation and media. These are directory claims, not individually verified providers. Some entries are user-submitted or sponsored. The page contains a "Sponsor Your Tool" placement; do not interpret featured status or ratings as independent benchmarks.
+
+**BeatVision utility:** RESEARCH candidate. Search terms: SkyReels, SkyReels-V2 image-to-video, Wan2.2 I2V, video generation API, model hosting, commercial rights, $0 quotas, free self-host tools, GPU credits. Compare candidate names, then verify each provider against its **official** docs, endpoint contracts, key requirements, licensing, output rights, cost and quotas. SkyReels upstream open weights require GPU execution. BestofAI does **not** itself offer official SkyReels inference hosting or a SkyReels API.
+
+**Cautionary concrete example:** https://bestofai.com/tool/ai-video-maker describes a free Wan 2.2-powered tool but says commercial rights and private storage require paid plans; thus a listing marked "free" may be unsuitable for producing commercial private BeatVision assets. Third-party site claims must not authorize automatic use.
+
+**Current integration outcome:** No supported free SkyReels-V2 API/GPU from this directory has been confirmed. This directory does NOT unblock production integration. Do not deploy, pay or scrape without permission. Feature candidate stays behind explicit capability flag / unavailable status; do not claim real video creation from a directory listing.
+
+**No code or production data changes**, no additional Jules task. Research-only parking decision.
