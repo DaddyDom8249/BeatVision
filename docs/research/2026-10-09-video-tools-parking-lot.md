@@ -38,3 +38,30 @@ Video contents inspected by sampling original frames; no demo was run and no pro
 **DESIGN ARENA**: Park a future low-priority read-only ranking connector pending free API key & licensing; use manual rankings now.
 **ARENA**: No consumer automation. Park API discovery and follow up only after zero-cost and server-side use explicitly confirmed.
 **ALL**: Do not merge, deploy, open new Jules sessions, edit production DB or perform paid inference based on this note. The existing production pipeline's verified blockers outrank speculative provider integrations.
+
+
+## Fourth owner-supplied video (2026-10-09): Ruflo / Claude Flow multi-agent orchestration
+**Source:** `820226f5e1357ff4e22087b0a660e566.mp4` (57.26 s, 576 x 1024, 30 fps). SHA-256 `35e5945e107f4e63742720051bbee7040509afd93628df2844a603c96fe6dd88`. Inspected 2-second-interval contact-sheet frames of the actual supplied video. The speaker presents **Ruflo** as a free GitHub-based agent harness, 60+ specialized agents, coordinated swarms, research/coding/testing/review, shared memory and dynamic LLM routing.
+
+### Verdict: USEFUL DEV-TOOL CANDIDATE — PARK FOR ISOLATED EVALUATION; NOT A BEATVISION MEDIA PROVIDER
+Ruflo (upstream `ruvnet/ruflo`) is an MIT-licensed multi-agent orchestration framework for Claude Code / Codex. It claims to supply agent roles, coordination, hooks, memory, MCP integration and model routing. Its repository reports multiple setup modes: limited plugin commands versus full CLI initialization, which generates `.claude/`, `.claude-flow/`, `CLAUDE.md`, helper scripts and settings. It is **not** an image/video generation provider and does not intrinsically make paid language-model API usage free. Its exact agent count and claimed performance are release-dependent vendor claims, not independently verified benchmarks.
+
+**Real potential BeatVision benefit:** coordinated, bounded engineering work such as separate read-only code investigator, test runner, Supabase Edge contract reviewer, CI/PR reviewer and independent security reviewer; route discoveries into ONE supervisor decision before any allowed patch. Existing Jules/Codex/GitHub tools already handle some of this, so a second autonomous control plane could duplicate work and increase risks. Do not replace or silently override the existing Jules supervision.
+
+**Critical security evidence:** Ruflo maintainers published advisory `GHSA-c4hm-4h84-2cf3`: pre-3.16.3 Docker MCP bridge could expose unauthenticated remote tool execution and environment secrets. Maintainers report patched in 3.16.3; this is not proof that any newly installed release is safe. Consult official advisory and review the pinned version plus current dependency issues. **NEVER** expose an unauthenticated MCP HTTP endpoint, grant production GitHub/Vercel/Supabase credentials, allow autonomous self-deploy/self-merge, run a `curl | bash` installer, or start background unlimited swarms. Inspect install side effects first.
+
+**Research sources:**
+- Official upstream: https://github.com/ruvnet/ruflo
+- README / setup modes: https://github.com/ruvnet/ruflo/blob/main/README.md
+- License: https://github.com/ruvnet/ruflo/blob/main/LICENSE
+- Security advisory: https://github.com/ruvnet/ruflo/security/advisories/GHSA-c4hm-4h84-2cf3
+- Package: https://www.npmjs.com/package/ruflo
+
+**Safe evaluation plan, NOT executed:**
+1. Create a disposable local copy/worktree of `feature/optional-free-ai-providers-20261009` with no connected production environment variables or tokens, and inspect baseline `git status`.
+2. Research pinning a reviewed Ruflo release (at least 3.16.3 for the specifically known bridge vulnerability, but inspect subsequent advisories), package dependencies and plugin hooks. No remote installer execution.
+3. Run **one** tightly scoped, read-only repo audit and a non-production test in a sandbox with network and write restrictions. Do not allow background workers or sessions, never open production MCP ports. Track exact commands and file mutations.
+4. Compare actual results against the existing single Jules/Codex workflow (defects found, reproducibility, tests, token/API cost and operator overhead). Retain only if measured benefit is substantial and cost is verified zero.
+5. If future adoption is approved, keep Ruflo in developer tooling only; always require explicit human approval for writes to production, merges, deployments and media/API billing.
+
+**Implementation decision:** PARKED (developer-side orchestration experiment only). No Ruflo package installed, no new Jules tasks, no implementation branch/source edits beyond this research note, no provider integration, no live execution or proof of security fitness. Preserve current production delivery priorities and approved assets.
