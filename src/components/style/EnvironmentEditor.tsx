@@ -61,7 +61,7 @@ export default function EnvironmentEditor({
   }
 
   return (
-    <article>
+    <article className="style-record-card">
       <h3>{environment.name} {environment.revision_number > 1 && <small>Revision {environment.revision_number}</small>}</h3>
       {actionError && <p role="alert" className="form-error">{actionError}</p>}
       {actionStatus && <p role="status">{actionStatus}</p>}
