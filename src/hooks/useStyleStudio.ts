@@ -701,7 +701,7 @@ export function useStyleStudio(projectId: string) {
           typeof data.error === "object" && typeof data.error.message === "string"
           ? data.error.message : null);
       if (invokeError) {
-        if (/Groq description generation failed \\(429\\)|rate limit reached|tokens per minute/i.test(remoteMessage ?? "")) {
+        if (/Groq description generation failed \(429\)|rate limit reached|tokens per minute/i.test(remoteMessage ?? "")) {
           throw new Error("Groq is temporarily rate-limited. Wait a few seconds and retry Generate Description. Existing approved sheets and drafts are unchanged.");
         }
         throw new Error(remoteMessage || invokeError.message || "Description generation failed.");
