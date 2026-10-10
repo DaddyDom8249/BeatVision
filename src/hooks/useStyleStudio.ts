@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase/client";
-import { suggestMissingWorldFields } from "../lib/style/worldSheetSuggestions";
+import { suggestMissingWorldFields, worldSheetSuggestions } from "../lib/style/worldSheetSuggestions";
 import type { StyleDraftKind } from "../lib/style/generatedStyleDraft";
 import { mergeGeneratedStyleDraft } from "../lib/style/generatedStyleDraft";
 import type { WorldReport } from "../types/world";
@@ -72,6 +72,8 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
     ? world.immutable_continuity as Record<string, unknown>
     : {};
   const continuityText = formatCreativeLines(world.continuity_rules).join("; ");
+  const immutableLines = formatCreativeLines(world.immutable_continuity);
+  const figureIdentity = immutableLines.find((line) => /\b(?:central figure|main character|protagonist)\b/i.test(line)) ?? "";
 
   const clothing = typeof immutable.central_figure_clothing === "string" ? immutable.central_figure_clothing : "";
   const keyProp = typeof immutable.key_prop === "string" ? immutable.key_prop : "";
@@ -87,7 +89,11 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
   const movement = modelOutput.movement && typeof modelOutput.movement === "object"
     ? modelOutput.movement as Record<string, unknown>
     : {};
-  const subjectBehavior = typeof movement.subject_behavior === "string" ? movement.subject_behavior : "";
+  const worldMovement = world.movement && typeof world.movement === "object" && !Array.isArray(world.movement)
+    ? world.movement as Record<string, unknown> : {};
+  const subjectBehavior = typeof worldMovement.subject_behavior === "string"
+    ? worldMovement.subject_behavior
+    : typeof movement.subject_behavior === "string" ? movement.subject_behavior : "";
   const motifs = Array.isArray(modelOutput.motifs)
     ? modelOutput.motifs.map((item) => {
         if (typeof item === "string") return item;
@@ -117,14 +123,16 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
     })
     .filter((item): item is { name: string; sheet: Record<string, string> } => Boolean(item?.name));
 
-  if (!characters.length && (clothing || keyProp || windowLocation || subjectBehavior || motifs.length)) {
+  // Only create a central character when the World actually identifies a
+  // character or its behavior/wardrobe. Motifs alone are not evidence of a cast.
+  if (!characters.length && (figureIdentity || clothing || subjectBehavior)) {
     characters.push({
       name: "Central Figure",
       sheet: {
-        identity: "Primary subject derived from the confirmed World Report; refine before approval.",
+        identity: figureIdentity || "Central Figure identified by the confirmed World; refine before approval.",
         wardrobe: clothing,
         behavior: subjectBehavior,
-        continuity: [keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`, motifs.length && `World motifs: ${motifs.join(", ")}`, continuityText].filter(Boolean).join("; "),
+        continuity: [figureIdentity, keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`, motifs.length && `World motifs: ${motifs.join(", ")}`, continuityText].filter(Boolean).join("; "),
       },
     });
   }
@@ -150,6 +158,7 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       return true;
     }).map((item) => ({
       ...item,
+      sheet: { ...worldSheetSuggestions(world, "character", item.name), ...item.sheet },
       project_id: projectId,
       world_report_id: world.id,
       style_bible_id: styleBibleId,
@@ -161,13 +170,9 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       style_bible_id: styleBibleId,
       name: item.name,
       status: "draft",
-      sheet: {
-        purpose: item.description,
-        layout: item.description,
-        lighting: formatCreativeText(world.color_lighting),
-        atmosphere: formatCreativeText(world.atmosphere),
-        continuity: [continuityText, keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`].filter(Boolean).join("; "),
-      },
+      // Seed the persisted draft with the same World-supported fields that
+      // the editor suggests, so it survives refresh without a manual Save.
+      sheet: worldSheetSuggestions(world, "environment", item.name),
     })),
   };
 }
@@ -403,6 +408,17 @@ export function useStyleStudio(projectId: string) {
       setLoading(false);
     });
   }, [load]);
+
+  // Creation sets the Style Bible without remounting this page. Populate and
+  // display World-derived cast/spaces immediately after its ID becomes known.
+  // A stable ID prevents loops when load refreshes the same approved row.
+  useEffect(() => {
+    if (!styleBible?.id) return;
+    void load().catch((cause: unknown) => {
+      setError(getCreativeErrorMessage(cause, "Unable to populate World-derived drafts."));
+      setLoading(false);
+    });
+  }, [styleBible?.id, load]);
 
   const createStyleBible = useCallback(async () => {
     if (!world || world.status !== "completed" || !world.confirmed_at) throw new Error("Confirm the Visual World Report before creating the Style Bible.");
