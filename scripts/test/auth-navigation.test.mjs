@@ -96,7 +96,7 @@ function makeHarness(start = "/projects/new") {
 }
 
 function walk(tree, predicate) {
-  if (tree == null || typeof tree === "string") return null;
+  if (tree == null || (typeof tree !== "object" && !Array.isArray(tree))) return null;
   if (Array.isArray(tree)) {
     for (const child of tree) { const found = walk(child, predicate); if (found) return found; }
     return null;
