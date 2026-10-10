@@ -708,3 +708,16 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 **Pending:** Full npm test, npm run production-audit and npm run build through pull-request CI. No local shell/Node/filesystem execution tool is available in this session.
 **Not verified:** Authenticated production pipeline, deployed behavior, real AI subject animation, playable final export.
 **Next blocker:** Inspect concurrent polling and interrupted submissions; verify remaining defects on current source rather than historical audit assumptions.
+
+**Follow-up verification for motion repair:** GitHub Actions run 38024325392, audit job 114131810402, passed on repair commit 2e901067b9bbb902f5d0cf4b39fa28ce72539cd2: npm test 99/99, production-audit success, TypeScript/Vite production build success. Read-only Supabase query confirmed motion_clip_assets_job_unique on generation_job_id. Live eight motion rows remain generated/unapproved; no evidence of this overwrite in existing production rows.
+
+## 2026-10-10 — Preserve original audio during song replacement
+
+**Confirmed failure:** Executed the actual SongPage submit handler with a replacement upload and a database-save failure. Before repair it deleted the old audio path before the database save, then deleted the new upload after failure, leaving the persisted song path without its audio.
+**Root cause:** Premature destructive storage cleanup before committing the new song path. Old audio can also remain referenced by immutable Vision Lock/assembly snapshots after a successful replacement.
+**Fix:** Remove old-object deletion from song saves; retain prior audio. Clear selected upload only after successful database save so later metadata saves do not upload the same selected file again. Existing cleanup only of the newly uploaded object after failed database save remains.
+**Files:** src/pages/SongPage.tsx; scripts/test/song-audio-replacement.test.mjs; PROJECT_LOG.md.
+**Verification:** Four focused checks passed against the actual extracted handler in V8. Regression file transpiles the real handler with repository TypeScript and exercises successful/failed replacement and metadata saves. Full npm test, production-audit and build pending CI for this commit.
+**Production changes:** None. No audio objects removed, provider requests made, approvals performed or deployment requested.
+**Limit:** Retaining prior audio consumes storage; reference-aware garbage collection is separate work and must not delete locked assets.
+**Remaining:** Authenticated production pipeline and playable final export remain UNVERIFIED.
