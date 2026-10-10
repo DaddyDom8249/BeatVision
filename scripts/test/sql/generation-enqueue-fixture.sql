@@ -26,3 +26,8 @@ insert into public.visual_plans values('00000000-0000-0000-0000-000000000200','0
 insert into public.visual_plan_scenes values('00000000-0000-0000-0000-000000000300','00000000-0000-0000-0000-000000000100','00000000-0000-0000-0000-000000000200','00000000-0000-0000-0000-000000000500','00000000-0000-0000-0000-000000000600','00000000-0000-0000-0000-000000000700','approved',1,0,4);
 insert into public.scene_image_assets values('00000000-0000-0000-0000-000000000800','00000000-0000-0000-0000-000000000100','00000000-0000-0000-0000-000000000200','00000000-0000-0000-0000-000000000300','approved',true);
 insert into public.motion_clip_assets values('00000000-0000-0000-0000-000000000900','00000000-0000-0000-0000-000000000100','00000000-0000-0000-0000-000000000200','00000000-0000-0000-0000-000000000300','00000000-0000-0000-0000-000000000800','approved',true,'https://example.invalid/fixture.mp4','fixture','fixture');
+
+-- Match both production constraints: the historical canonical constraint rejects assembly.
+alter table public.generation_jobs add constraint generation_jobs_canonical_job_type_check check(job_type in ('scene_image','scene_motion'));
+alter table public.generation_jobs add constraint generation_jobs_job_type_check check(job_type in ('scene_image','scene_motion','assembly'));
+alter table public.generation_jobs add constraint generation_jobs_scene_type check((job_type='assembly' and visual_plan_scene_id is null) or (job_type<>'assembly' and visual_plan_scene_id is not null));
