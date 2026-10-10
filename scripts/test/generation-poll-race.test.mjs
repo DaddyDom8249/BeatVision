@@ -49,3 +49,28 @@ test('stale terminal failure poll returns concurrent completion instead of casca
     assert.equal(failureWrites, 1);
   } finally { globalThis.fetch = originalFetch; await runtime.cleanup(); }
 });
+
+test('synchronous submission losing completion write returns winning persisted job', async () => {
+  const base = { id: 'job-run-race', status: 'queued', job_type: 'scene_image', input_snapshot: { scene: {}, vision_snapshot: { song: { analysis: { duration_seconds: 60 } } } } };
+  const winner = { ...base, status: 'completed', output: { scene_image_asset: { id: 'winning-image', approved: true } } };
+  let failureWrites = 0;
+  const client = { from(table) {
+    if (table === 'scene_image_assets') return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: winner.output.scene_image_asset }; } };
+    let changes;
+    return {
+      update(value) { changes = value; return this; }, eq() { return this; }, select() { return this; },
+      in() { failureWrites++; return this; },
+      async maybeSingle() { return { data: { ...base, ...changes } }; },
+      async single() { return { data: changes ? { ...base, ...changes } : winner }; },
+      then(resolve, reject) { return Promise.resolve({ data: [], error: null }).then(resolve, reject); },
+    };
+  } };
+  const runtime = await loadGeneration();
+  const originalFetch = globalThis.fetch;
+  globalThis.Deno.env.get = key => ({ ARENA_GATEWAY_URL: 'https://provider.test', ARENA_GATEWAY_TOKEN: 'test-token' })[key] || '';
+  globalThis.fetch = async () => new Response(JSON.stringify({ image_url: 'https://example.test/image.jpg' }), { status: 200 });
+  try {
+    assert.deepEqual(await runtime.run(client, base), winner);
+    assert.equal(failureWrites, 0);
+  } finally { globalThis.fetch = originalFetch; await runtime.cleanup(); }
+});
