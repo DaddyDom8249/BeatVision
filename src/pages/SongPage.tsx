@@ -119,9 +119,13 @@ export default function SongPage({ projectId }: Props) {
         // analysis is authoritative for duration and transcription.
         const extension = audio.name.includes(".") ? audio.name.split(".").pop() : "bin";
         audioPath = `${auth.user.id}/${projectId}/${crypto.randomUUID()}.${extension}`;
+        if (audioPath.includes('..')) throw new Error("Invalid file path.");
         const upload = await supabase.storage.from("songs").upload(audioPath, audio, { upsert: false, contentType: audio.type || undefined });
         if (upload.error) throw new Error(upload.error.message);
-        if (song?.audio_path) await supabase.storage.from("songs").remove([song.audio_path]);
+        if (song?.audio_path) {
+          if (song.audio_path.includes('..')) throw new Error("Invalid file path.");
+          await supabase.storage.from("songs").remove([song.audio_path]);
+        }
       }
 
       const payload: Record<string, unknown> = {
@@ -137,7 +141,10 @@ export default function SongPage({ projectId }: Props) {
         : await supabase.from("songs").insert(payload).select("id").single();
 
       if (result.error) {
-        if (audioPath && audioPath !== song?.audio_path) await supabase.storage.from("songs").remove([audioPath]);
+        if (audioPath && audioPath !== song?.audio_path) {
+          if (audioPath.includes('..')) throw new Error("Invalid file path.");
+          await supabase.storage.from("songs").remove([audioPath]);
+        }
         throw new Error(result.error.message);
       }
 

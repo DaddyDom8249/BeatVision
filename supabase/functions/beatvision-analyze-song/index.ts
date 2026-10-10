@@ -63,7 +63,9 @@ Deno.serve(async (req) => {
 
     // Production stores audio in the `songs` bucket (see SongPage/useSong);
     // reading `audio` fails to resolve the signed URL and breaks transcription.
-    const signed = await admin.storage.from("songs").createSignedUrl(String(song.audio_path), 900);
+    const audioPath = String(song.audio_path);
+    if (audioPath.includes('..')) throw new Error("Invalid audio path.");
+    const signed = await admin.storage.from("songs").createSignedUrl(audioPath, 900);
     if (signed.error || !signed.data?.signedUrl) throw new Error(signed.error?.message || "Could not create a temporary audio URL.");
 
     const form = new FormData();

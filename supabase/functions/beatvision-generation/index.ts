@@ -95,6 +95,7 @@ async function bridgePayload(db: any, job: any) {
     if (motionClips.length !== scenes.length) throw new Error("ASSEMBLY_MOTION_COVERAGE_INVALID: Approved motion does not cover every scene.");
     const audioPath = String(snapshot.audio_path || "").trim();
     if (!audioPath) throw new Error("ASSEMBLY_AUDIO_MISSING: Frozen song audio path is missing.");
+    if (audioPath.includes('..')) throw new Error("Invalid audio path.");
     const signed = await db.storage.from("songs").createSignedUrl(audioPath, 3600);
     if (signed.error || !signed.data?.signedUrl) throw new Error("ASSEMBLY_AUDIO_SIGNING_FAILED: " + (signed.error?.message || "No signed URL returned."));
     return {
@@ -121,7 +122,9 @@ async function bridgePayload(db: any, job: any) {
     if (!imageResult.data) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion requires an approved real scene image.");
     let motionImageUrl = String(imageResult.data.image_url || "").trim();
     if (imageResult.data.storage_path) {
-      const signed = await db.storage.from("visual-assets").createSignedUrl(String(imageResult.data.storage_path), 3600);
+      const storagePath = String(imageResult.data.storage_path);
+      if (storagePath.includes('..')) throw new Error("Invalid storage path.");
+      const signed = await db.storage.from("visual-assets").createSignedUrl(storagePath, 3600);
       if (signed.error || !signed.data?.signedUrl) throw new Error("APPROVED_SCENE_IMAGE_SIGNING_FAILED: " + (signed.error?.message || "No signed URL returned."));
       motionImageUrl = String(signed.data.signedUrl);
     }
@@ -245,6 +248,7 @@ async function persistSceneImage(db: any, job: any, responseData: any) {
     }
 
     storagePath = `${job.project_id}/scene-images/${job.visual_plan_id}/${job.visual_plan_scene_id}/${job.id}.jpg`;
+    if (storagePath.includes('..')) throw new Error("SCENE_IMAGE_STORAGE_INVALID: Invalid storage path.");
     const upload = await db.storage.from("visual-assets").upload(storagePath, binary, {
       contentType: "image/jpeg",
       cacheControl: "31536000",
@@ -553,6 +557,7 @@ Deno.serve(async (req) => {
       if (asset.error) throw new Error(asset.error.message);
       if (!asset.data) return json(req, { error: { code: "NOT_FOUND", message: "Image asset not found." } }, 404);
       if (!asset.data.storage_path) return json(req, { image_url: asset.data.image_url });
+      if (asset.data.storage_path.includes('..')) throw new Error("Invalid storage path.");
       const signed = await db.storage.from("visual-assets").createSignedUrl(asset.data.storage_path, 3600);
       if (signed.error || !signed.data?.signedUrl) throw new Error("IMAGE_SIGNING_FAILED: " + (signed.error?.message || "No signed URL returned."));
       return json(req, { image_url: signed.data.signedUrl });
