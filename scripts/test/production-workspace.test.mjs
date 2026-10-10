@@ -19,7 +19,7 @@ await writeFile(join(dir, 'stub.mjs'), 'export const supabase = new Proxy({}, { 
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ motionJob = null, imageJob = null, assemblyJob = null, runError = null, stored = false, rpcError = null } = {}) {
+async function mount({ motionJob = null, imageJob = null, assemblyJob = null, runError = null, stored = false, rpcError = null, runJob = null } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
@@ -47,7 +47,7 @@ async function mount({ motionJob = null, imageJob = null, assemblyJob = null, ru
     functions: { invoke: async (_name, { body }) => {
       calls.push(body);
       if (body.action === 'image_url') return { data: { image_url: 'https://fresh.test/image.jpg' }, error: null };
-      return { data: { job: { id: 'job-1', status: 'processing', job_type: 'scene_motion' } }, error: runError ? new Error(runError) : null };
+      return { data: { job: runJob ?? { id: 'job-1', status: 'processing', job_type: 'scene_motion' } }, error: runError ? new Error(runError) : null };
     } },
   };
   const root = createRoot(document.getElementById('root'));
@@ -140,5 +140,27 @@ test('a new motion job still dispatches once with run', async () => {
     await view.click('Generate Motion');
     assert.equal(view.calls.at(-1).action, 'run');
     assert.equal(view.rpcCalls.length, 1);
+  } finally { await view.cleanup(); }
+});
+
+
+test('restored assembly exposes the actual provider stage and last successful check', async () => {
+  const view = await mount({ assemblyJob: { id: 'assembly-1', status: 'processing', output: { last_polled_at: '2026-10-10T05:50:01.202Z', arena_status_response: { result: { status: 'preprocessing' } } } } });
+  try {
+    assert.match(document.body.textContent, /Assembly status: processing/);
+    assert.match(document.body.textContent, /Provider stage: preprocessing/);
+    assert.match(document.body.textContent, /Last checked: 2026-10-10T05:50:01.202Z/);
+    assert.doesNotMatch(document.body.textContent, /FINAL VIDEO COMPLETE/);
+  } finally { await view.cleanup(); }
+});
+test('checking assembly shows its returned pending stage without submitting again', async () => {
+  const view = await mount({ assemblyJob: { id: 'assembly-1', status: 'processing' }, runJob: { id: 'assembly-1', status: 'processing', output: { last_polled_at: '2026-10-10T05:51:00.000Z', arena_status_response: { result: { status: 'rendering' } } } } });
+  try {
+    await view.click('Check Assembly Status');
+    assert.match(document.body.textContent, /Provider stage: rendering/);
+    assert.match(document.body.textContent, /Last checked: 2026-10-10T05:51:00.000Z/);
+    assert.equal(view.calls.at(-1).action, 'poll');
+    assert.equal(view.rpcCalls.length, 0);
+    assert.doesNotMatch(document.body.textContent, /FINAL VIDEO COMPLETE/);
   } finally { await view.cleanup(); }
 });
