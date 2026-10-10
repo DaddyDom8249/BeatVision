@@ -1,5 +1,17 @@
 # BeatVision Project Log
 
+## 2026-10-10 14:35 UTC — Prevent empty UUID on first Style Bible load
+
+**User evidence:** Android Style Studio shows `invalid input syntax for type uuid: ""`. Production code queries `characters` and `environments` using `style_bible_id=eq.` when a World has been confirmed but no Style Bible row exists. A read-only database check identified existing project `Another go` with confirmed World and no Style Bible, reproducing the triggering data condition. The user-named `Things I Survived` title is not present in this Supabase project's `projects` table; the screenshot's exact project UUID is not visible.
+
+**Root cause:** `useStyleStudio.load()` intentionally allows `style_bibles.maybeSingle()` to return null, but incorrectly interpolates `currentStyleBible?.id ?? ""` into two UUID filters afterward. PostgREST rejects the empty UUID and the UI hides the valid Create Style Bible gate.
+
+**Repair:** Add an explicit no-Style-Bible exit from `load()` that clears related derived UI state, preserves the confirmed World, and allows the existing creation gate to render. Remove both empty UUID query fallbacks. No production data changes, no creative approvals, no service costs, no RLS/auth changes.
+
+**Regression:** Added a source-backed test executing the transpiled `load()` callback for a confirmed World with a successful missing Style Bible SELECT, asserting only three reads, no empty UUID predicates, visible World state, no error and cleared spinner. Full GitHub CI has **NOT VERIFIED** at this checkpoint; Vercel preview deployed as READY on `8f8c7246` but a live authenticated browser check is **BLOCKED** because the prior Skyvern session expired.
+
+**Publication:** Draft PR #62 targets the existing project-creation repair branch, not `main`. No merge or production deployment. Next: execute full CI and authenticated first-Style-Bible load regression on the actual target project, then review before release.
+
 ## 2026-10-09 17:25 UTC — Explain blocked final assembly in Production Workspace
 
 **Live progress:** PR #41 is merged at 308c859c. Released that pinned commit to the primary Vercel project (dpl_74xvewfLm2o9Efgmvb1mn1a2TgKu) and verified the actual beat-vision-theta alias. Corrected all eight existing unlocked Ghast draft scenes through the browser, saved each, reloaded, reviewed and approved the Visual Plan. approve_visual_plan returned HTTP 200; SQL confirms all eight scenes approved, with the locked Vision snapshot hash unchanged. New-plan creation defaults after PR #41 remain separately unverified because no duplicate/deletion was introduced.
