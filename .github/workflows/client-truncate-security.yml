@@ -1,0 +1,39 @@
+name: Client truncate security
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: fixture-only
+          POSTGRES_DB: enqueue_fixture
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: fixture-only
+      PGDATABASE: enqueue_fixture
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reproduce production default grants and owner RLS
+        run: psql -v ON_ERROR_STOP=1 -f scripts/test/sql/client-truncate-fixture.sql
+      - name: Apply candidate client privilege repair when present
+        run: |
+          if test -f supabase/migrations/20261010073000_revoke_client_truncate.sql; then
+            psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261010073000_revoke_client_truncate.sql
+          fi
+      - name: Verify client isolation, approved row preservation and retained owner CRUD
+        run: psql -v ON_ERROR_STOP=1 -f scripts/test/sql/client-truncate-security.sql
