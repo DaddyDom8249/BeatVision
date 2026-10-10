@@ -695,3 +695,16 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 **Repair:** Added only the two active PR #36 Vercel origins to the World, Style Draft, and Generation function allowlists. Arbitrary origins remain denied. Added regression coverage for preview preflight behavior.
 
 **Verification:** The new tests failed against the old allowlists, then passed after the repair. Full suite passed 83/83; production audit and production build passed. Deployed World v34, Style Draft v2, and Generation v20. A live `OPTIONS` request to World returned HTTP 200 and the exact requesting PR preview origin. The authenticated `Reveal World` POST still requires a user browser retry and is not claimed verified.
+
+## 2026-10-10 — Preserve motion approvals during repeated completion
+
+**Objective:** Continue the production repair loop from main `7dbea8b8009c68ba2e806a467790cc7d5d75141a`.
+**Confirmed failure:** Executing the actual persistMotionClip function against a persisted approved asset reproduced replacement of video_url and scene_image_id and reset approved=true/status=approved to false/generated.
+**Root cause:** Motion completion used ON CONFLICT generation_job_id UPDATE, writing creative state and source lineage again on every completion.
+**Repair:** Read and reuse an existing job asset; insert new motion assets without updating conflicts; after an insert conflict, read and return the winning asset. Preserve approval, rejection, URL, provenance and source lineage. Database lookup/insert errors remain explicit.
+**Files:** supabase/functions/beatvision-generation/index.ts; scripts/test/motion-completion-idempotency.test.mjs; existing motion provenance mock in scripts/test/beatvision-generation-state.test.mjs; PROJECT_LOG.md.
+**Verification:** Six focused runtime regressions passed in the available V8 execution environment using the real extracted function (only TypeScript argument annotations removed), including existing approved/rejected assets, concurrent completion, first completion provenance, lookup failure and insert failure. Pre-fix approved asset overwrite reproduced directly. This is not an npm-test or production verification claim.
+**Database/deployment:** No production changes, no provider calls, no creative approvals. Existing generation_job_id conflict constraint is retained.
+**Pending:** Full npm test, npm run production-audit and npm run build through pull-request CI. No local shell/Node/filesystem execution tool is available in this session.
+**Not verified:** Authenticated production pipeline, deployed behavior, real AI subject animation, playable final export.
+**Next blocker:** Inspect concurrent polling and interrupted submissions; verify remaining defects on current source rather than historical audit assumptions.
