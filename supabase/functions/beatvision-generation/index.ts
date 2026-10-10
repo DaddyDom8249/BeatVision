@@ -313,14 +313,26 @@ async function persistFinalVideo(db: any, job: any, responseData: any) {
 
 async function persistMotionClip(db: any, job: any, responseData: any) {
   if (job.job_type !== "scene_motion") return;
+  // A repeated completion must preserve the creator's decision and source asset.
+  const existing = await db.from("motion_clip_assets").select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").eq("generation_job_id", job.id).maybeSingle();
+  if (existing.error) throw new Error("MOTION_CLIP_CHECK_FAILED: " + existing.error.message);
+  if (existing.data) return existing.data;
+
   const videoUrl = extractVideoUrl(responseData);
   if (!videoUrl) throw new Error("ARENA_MOTION_OUTPUT_MISSING: Arena completed without a real video URL.");
   if (!job.visual_plan_scene_id) throw new Error("ARENA_MOTION_SCENE_MISSING: scene_motion job has no approved scene.");
   const imageResult = await db.from("scene_image_assets").select("id").eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("scene_id", job.visual_plan_scene_id).eq("approved", true).eq("status", "approved").order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (imageResult.error) throw new Error("APPROVED_SCENE_IMAGE_LOOKUP_FAILED: " + imageResult.error.message);
   if (!imageResult.data?.id) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion completed without an approved source image.");
-  const insert = await db.from("motion_clip_assets").upsert({ project_id: job.project_id, visual_plan_id: job.visual_plan_id, scene_id: job.visual_plan_scene_id, generation_job_id: job.id, scene_image_id: imageResult.data.id, provider: String(responseData?.provider || responseData?.result?.clips?.[0]?.provider || "unknown"), model: String(responseData?.model || responseData?.result?.clips?.[0]?.model || "unknown"), video_url: videoUrl, status: "generated", approved: false }, { onConflict: "generation_job_id" }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").single();
-  if (insert.error) throw new Error("MOTION_CLIP_PERSIST_FAILED: " + insert.error.message);
+  const insert = await db.from("motion_clip_assets").insert({ project_id: job.project_id, visual_plan_id: job.visual_plan_id, scene_id: job.visual_plan_scene_id, generation_job_id: job.id, scene_image_id: imageResult.data.id, provider: String(responseData?.provider || responseData?.result?.clips?.[0]?.provider || "unknown"), model: String(responseData?.model || responseData?.result?.clips?.[0]?.model || "unknown"), video_url: videoUrl, status: "generated", approved: false }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").single();
+  if (insert.error) {
+    // A concurrent completion may have inserted the job's asset first. Never
+    // update that row: it may already carry an approval or rejection.
+    const raceCheck = await db.from("motion_clip_assets").select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").eq("generation_job_id", job.id).maybeSingle();
+    if (raceCheck.error) throw new Error("MOTION_CLIP_CHECK_FAILED: " + raceCheck.error.message);
+    if (raceCheck.data) return raceCheck.data;
+    throw new Error("MOTION_CLIP_PERSIST_FAILED: " + insert.error.message);
+  }
   return insert.data;
 }
 
@@ -344,7 +356,7 @@ function compactArenaResponse(data: any, jobType?: string) {
 function terminalState(response: Response, data: any, jobType?: string) {
   if (!response.ok || data?.ok === false) return "failed";
 
-  const status = String(data?.status || data?.state || "").trim().toLowerCase();
+  const status = String(data?.status || data?.state || data?.result?.status || data?.result?.state || "").trim().toLowerCase();
 
   if (["failed", "error", "provider_error", "provider_unavailable", "unavailable", "cancelled", "canceled"].includes(status)) return "failed";
 
@@ -447,6 +459,13 @@ async function run(db: any, job: any) {
       }
     }
   } catch (error) {
+    // Losing a conditional write means another request owns the current state.
+    // Return that state instead of attempting to fail its completed job.
+    if (error instanceof Error && /^(GENERATION_JOB_RACE_LOST|SET_FAILED_ZERO_ROWS_AFFECTED):/.test(error.message)) {
+      const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+      if (latest.error) throw new Error(latest.error.message);
+      return latest.data;
+    }
     await setFailed(db, job.id, error instanceof Error ? error.message : String(error));
   }
 
@@ -455,15 +474,42 @@ async function run(db: any, job: any) {
   return latest.data;
 }
 
+// A provider may be accepting work while its upstream ID is not yet persisted.
+// Wait beyond the normal Edge Function/request window before surfacing an
+// interrupted dispatch. Never resubmit work whose provider acceptance is unknown.
+const DISPATCH_GRACE_MS = 5 * 60 * 1000;
+
+async function recoverDispatch(db: any, job: any) {
+  const upstream = String(job.output?.upstream_job_id || "").trim();
+  const timestamp = job.updated_at || job.created_at;
+  const started = Date.parse(String(timestamp || ""));
+  if (!upstream && Number.isFinite(started) && Date.now() - started < DISPATCH_GRACE_MS) return job;
+
+  const changes = upstream
+    ? { status: "processing" }
+    : { status: "failed", error: {
+      code: "ARENA_GENERATION_FAILED",
+      message: job.status === "submitted"
+        ? "Generation submission was interrupted without a provider job id. Provider acceptance is unknown; automatic resubmission is disabled."
+        : "Arena reported processing without a provider job id after the dispatch grace period. Provider acceptance is unknown; automatic resubmission is disabled.",
+    } };
+  let query = db.from("generation_jobs").update(changes).eq("id", job.id).eq("status", job.status);
+  // A concurrent dispatch may have persisted an upstream ID since this read.
+  // Its new row version must win over this stale recovery attempt.
+  if (job.updated_at) query = query.eq("updated_at", job.updated_at);
+  const result = await query.select("*").maybeSingle();
+  if (result.error) throw new Error("DISPATCH_RECOVERY_PERSIST_FAILED: " + result.error.message);
+  if (result.data) return result.data;
+  const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+  if (latest.error) throw new Error(latest.error.message);
+  return latest.data;
+}
+
 async function poll(db: any, job: any) {
+  if (job.status === "submitted") return await recoverDispatch(db, job);
   if (job.status !== "processing") return job;
   const upstream = String(job.output?.upstream_job_id || "").trim();
-  if (!upstream) {
-    await setFailed(db, job.id, "Arena reported processing without a provider job id.", job.output);
-    const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
-    if (latest.error) throw new Error(latest.error.message);
-    return latest.data;
-  }
+  if (!upstream) return await recoverDispatch(db, job);
 
   const path = job.job_type === "scene_motion"
     ? "/v1/video/animate/jobs/" + encodeURIComponent(upstream)
@@ -504,6 +550,13 @@ async function poll(db: any, job: any) {
       if (!updateRes.data || updateRes.data.length === 0) throw new Error("GENERATION_JOB_RACE_LOST: Job was modified concurrently.");
     }
   } catch (error) {
+    // Losing a conditional write means another request owns the current state.
+    // Return that state instead of attempting to fail its completed job.
+    if (error instanceof Error && /^(GENERATION_JOB_RACE_LOST|SET_FAILED_ZERO_ROWS_AFFECTED):/.test(error.message)) {
+      const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+      if (latest.error) throw new Error(latest.error.message);
+      return latest.data;
+    }
     await setFailed(db, job.id, error instanceof Error ? error.message : String(error));
   }
 
@@ -525,13 +578,13 @@ Deno.serve(async (req) => {
 
     if (action === "drain") {
       if (uid.kind !== "system") return json(req, { error: { code: "UNAUTHORIZED_SCHEDULER", message: "Scheduler authorization required." } }, 401);
-      const pending = await db.from("generation_jobs").select("*").in("status", ["queued", "processing"]).order("created_at", { ascending: true }).limit(8);
+      const pending = await db.from("generation_jobs").select("*").in("status", ["queued", "submitted", "processing"]).order("created_at", { ascending: true }).limit(8);
       if (pending.error) throw new Error(pending.error.message);
       const results = [];
       for (const item of pending.data || []) {
         try {
-          const result = item.status === "processing" ? await poll(db, item) : await run(db, item);
-          results.push({ id: item.id, action: item.status === "processing" ? "poll" : "run", status: result.status });
+          const result = item.status !== "queued" ? await poll(db, item) : await run(db, item);
+          results.push({ id: item.id, action: item.status !== "queued" ? "poll" : "run", status: result.status });
         } catch (error) {
           results.push({ id: item.id, error: error instanceof Error ? error.message : String(error) });
         }

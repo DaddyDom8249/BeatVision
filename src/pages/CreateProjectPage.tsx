@@ -23,23 +23,25 @@ export default function CreateProjectPage({ onNavigate }: Props) {
   async function submit(event: FormEvent) {
     event.preventDefault();
     setSaving(true); setError(null);
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) {
-      setError("Sign-in is required before a project can be created.");
-      setSaving(false);
-      return;
-    }
-    const { data, error } = await supabase.from("projects")
-      .insert({ owner_id: auth.user.id, title: title.trim(), status: "Draft", stage: "song" })
-      .select("id").single();
-    if (error) {
-      capture("project_creation_failed");
-      setError(formatFailure("Create project", error, { status: "Draft", stage: "song", title: title.trim() }));
-    } else {
+    try {
+      const { data: auth, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!auth.user) {
+        setError("Sign-in is required before a project can be created.");
+        return;
+      }
+      const { data, error: saveError } = await supabase.from("projects")
+        .insert({ owner_id: auth.user.id, title: title.trim(), status: "Draft", stage: "song" })
+        .select("id").single();
+      if (saveError) throw saveError;
       capture("project_created", { stage: "song" });
       onNavigate(`/projects/${data.id}/song`);
+    } catch (error) {
+      capture("project_creation_failed");
+      setError(formatFailure("Create project", error, { status: "Draft", stage: "song", title: title.trim() }));
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   return (

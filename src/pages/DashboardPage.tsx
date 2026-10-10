@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase/client";
+import { getCreativeErrorMessage } from "../lib/formatCreativeText";
 
 interface Props { onNavigate: (path: string) => void; }
 
@@ -8,21 +9,32 @@ type Project = { id: string; title: string; status: string; updated_at: string }
 export default function DashboardPage({ onNavigate }: Props) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshCount, setRefreshCount] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setLoading(true); setError(null);
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) { if (active) setLoading(false); return; }
-      const { data } = await supabase.from("projects")
-        .select("id,title,status,updated_at")
-        .eq("owner_id", auth.user.id)
-        .order("updated_at", { ascending: false })
-        .limit(12);
-      if (active) { setProjects((data ?? []) as Project[]); setLoading(false); }
+      try {
+        const { data: auth, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        if (!auth.user) { if (active) setProjects([]); return; }
+        const { data, error: projectError } = await supabase.from("projects")
+          .select("id,title,status,updated_at")
+          .eq("owner_id", auth.user.id)
+          .order("updated_at", { ascending: false })
+          .limit(12);
+        if (projectError) throw projectError;
+        if (active) setProjects((data ?? []) as Project[]);
+      } catch (e) {
+        if (active) setError(getCreativeErrorMessage(e, "Unable to load projects."));
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
     return () => { active = false; };
-  }, []);
+  }, [refreshCount]);
 
   return (
     <div className="app-shell">
@@ -51,6 +63,7 @@ export default function DashboardPage({ onNavigate }: Props) {
         <section className="projects-section">
           <div className="section-heading"><div><div className="eyebrow">YOUR STUDIO</div><h2>Projects</h2></div></div>
           {loading ? <div className="empty-state">Loading your worlds…</div> :
+            error ? <div className="empty-state"><p className="form-error" role="alert">{error}</p><button className="secondary-button" onClick={() => setRefreshCount(value => value + 1)}>Retry loading projects</button></div> :
             projects.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-mark">◌</div>
