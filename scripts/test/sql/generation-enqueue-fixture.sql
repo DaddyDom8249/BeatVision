@@ -31,3 +31,7 @@ insert into public.motion_clip_assets values('00000000-0000-0000-0000-0000000009
 alter table public.generation_jobs add constraint generation_jobs_canonical_job_type_check check(job_type in ('scene_image','scene_motion'));
 alter table public.generation_jobs add constraint generation_jobs_job_type_check check(job_type in ('scene_image','scene_motion','assembly'));
 alter table public.generation_jobs add constraint generation_jobs_scene_type check((job_type='assembly' and visual_plan_scene_id is null) or (job_type<>'assembly' and visual_plan_scene_id is not null));
+
+-- Columns used by production's immutable motion lineage.
+alter table public.motion_clip_assets add column generation_job_id uuid;
+alter table public.generation_jobs add column output jsonb;
