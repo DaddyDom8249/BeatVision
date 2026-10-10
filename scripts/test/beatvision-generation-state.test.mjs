@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import { loadGeneration } from './generation-runtime.mjs';
 
 for (const [name, data, type, expected] of [
+  ['nested Shotstack done completes', { ok: true, result: { status: 'done', video_url: 'https://example.test/final.mp4' } }, 'assembly', 'completed'],
+  ['nested Shotstack failure fails', { ok: true, result: { status: 'failed' } }, 'assembly', 'failed'],
+  ['nested Shotstack rendering remains pending', { ok: true, result: { status: 'rendering' } }, 'assembly', 'processing'],
+  ['nested unknown state is not successful even with media', { ok: true, result: { status: 'unexpected', video_url: 'https://example.test/final.mp4' } }, 'assembly', 'processing'],
+  ['top-level failure wins over nested completion', { status: 'failed', result: { status: 'done' } }, 'assembly', 'failed'],
   ['unknown states remain processing', { status: 'unexpected' }, 'scene_motion', 'processing'],
   ['explicit success completes', { status: 'completed' }, 'scene_motion', 'completed'],
   ['synchronous image URL completes', { image_url: 'https://example.test/image.jpg' }, 'scene_image', 'completed'],
