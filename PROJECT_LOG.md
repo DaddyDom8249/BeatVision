@@ -1,5 +1,17 @@
 # BeatVision Project Log
 
+## 2026-10-10 — Live Ghast audit and stacked-PR CI recovery
+
+**Baseline:** GitHub main `7dbea8b8009c68ba2e806a467790cc7d5d75141a` passes its last Production CI. The primary Vercel project has a production-target deployment for repair commit `2f21f44f660f0846a8c92257c627208a393a5c44`, which is newer than main. This audit did not change that deployment or merge any PR.
+
+**Read-only live evidence:** Ghast project `8faa2cd4-361f-4764-bf1e-7800b87d6292` has one approved Visual Plan, eight approved scenes, eight approved Flux Schnell image assets, eight approved Shotstack image-motion assets, and one completed assembly job. Its final_videos row records an MP4, eight segments, duration 249.13 seconds, a nonempty Shotstack staging output URL, and `downloadable=false`. Video bytes/player playback and permanent storage were not tested; final playable delivery remains NOT VERIFIED.
+
+**CI defect reproduced:** Draft PR #62 targets `repair/project-creation-error-recovery-20261010`, not main. At inspection, it had zero GitHub Actions runs on head `95e367d`. The base branch Production CI configured `pull_request.branches: [main]`, excluding stacked repair PRs. Minimal fix: commit `1b951aa` on the existing base branch removes only that PR base filter. Main push remains restricted to main. This log update synchronizes PR #62 to request its own test pass. Do not mark PR #62 verified until the actual workflow results arrive.
+
+**Additional checks:** Read-only live role-privilege query found authenticated and anon lack TRUNCATE on all 39 public tables inspected, so the historical risk in draft PR #61 is not an active live finding at this checkpoint. Supabase security advisor warns about five authenticated-callable SECURITY DEFINER RPCs and leaked-password protection; owner-check and function-body review is required before calling any RPC unsafe. No schema, asset, quota, creative approval, provider job or storage mutations were performed.
+
+**Next:** Verify PR #62 GitHub test/build after the workflow-filter change, then execute an authenticated final-MP4 byte/player/download check and preserve the output durably without substituting generated media.
+
 ## 2026-10-10 14:35 UTC — Prevent empty UUID on first Style Bible load
 
 **User evidence:** Android Style Studio shows `invalid input syntax for type uuid: ""`. Production code queries `characters` and `environments` using `style_bible_id=eq.` when a World has been confirmed but no Style Bible row exists. A read-only database check identified existing project `Another go` with confirmed World and no Style Bible, reproducing the triggering data condition. The user-named `Things I Survived` title is not present in this Supabase project's `projects` table; the screenshot's exact project UUID is not visible.
