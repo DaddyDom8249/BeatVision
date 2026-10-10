@@ -1,0 +1,39 @@
+name: Legacy storage ownership security
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: fixture-only
+          POSTGRES_DB: enqueue_fixture
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: fixture-only
+      PGDATABASE: enqueue_fixture
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reproduce legacy storage policies
+        run: psql -v ON_ERROR_STOP=1 -f scripts/test/sql/legacy-storage-fixture.sql
+      - name: Apply candidate repair when present
+        run: |
+          if test -f supabase/migrations/20261010061000_legacy_storage_owner_writes.sql; then
+            psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261010061000_legacy_storage_owner_writes.sql
+          fi
+      - name: Verify owner writes and deny cross-owner mutations
+        run: psql -v ON_ERROR_STOP=1 -f scripts/test/sql/legacy-storage-security.sql
