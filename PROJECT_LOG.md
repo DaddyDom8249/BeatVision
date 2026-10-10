@@ -1,5 +1,19 @@
 # BeatVision Project Log
 
+## 2026-10-10 — Automatically seed Characters and Environments from confirmed World
+
+**Objective:** Populate cast and spaces as World-backed editable drafts when the Style Bible is created or opened, without requiring manual re-entry or touching approved assets.
+
+**Confirmed reproduction:** Live "Another go" project `4824c04e-bc5d-4379-9060-d14be979436c` had an approved Style Bible with zero character rows and zero environment rows. Its confirmed World explicitly states "The central figure is a male" in an **array** of immutable continuity statements, and has a named "Dim Apartment" environment with props and key elements. Existing `materializeWorldDrafts` recognized immutable continuity **object keys**, but not its array form; it read `raw_report.model_output.movement.subject_behavior` instead of the top-level World movement, and it seeded environment drafts with only some of the World fields. Additionally, after `createStyleBible` changed hook state, there was no automatic load to materialize the rows until navigating/reloading the Style page.
+
+**Minimal fix:** Extract explicit protagonist identity from confirmed immutable-continuity lines, use top-level World `subject_behavior` when actually present, and never invent a protagonist merely from motifs. Persist environment purpose/layout/props/lighting/atmosphere/continuity using the same source-backed World suggestions as the editor, including explicit `key_elements`. Refresh once when a Style Bible ID becomes visible in the hook, reusing the existing idempotent `ensureWorldDrafts` path. No auto-approval or edits to any preexisting approved records. Do not synthesize physical appearance or wardrobe not in the World.
+
+**Verification:** Exact feature SHA `6fc99fca42e76c01a9bd113b62aa2d09d8940c23` passed GitHub Actions run `38064183829` (npm test, npm run production-audit, npm run build all succeeded). Executable regressions compile real World-draft source against Another-go-shaped and Ghast-shaped World input, verify props/elements and explicit-only identity, and check idempotence with an already-approved character. Primary Vercel project `prj_uY6UsWukCvImpUbyaaHG7EGFF2Cq` deployed production ID `dpl_2syvf5CWeUNfLq1Z8XtKhf4i5fFm`, READY, and confirmed `beat-vision-theta.vercel.app` points to that exact SHA.
+
+**Verification gap:** After release, read-only Supabase inspection still showed zero character and environment rows on Another go; the account owner has not yet opened/reloaded the updated Style Bible page in an authenticated browser to trigger the owner-scoped creation calls. That end-to-end persistence check remains **NOT VERIFIED**. No SQL writes, manual asset approvals, secret changes, paid provider calls, or new Jules sessions were performed.
+
+**Next:** Authenticated owner opens `/projects/4824c04e-bc5d-4379-9060-d14be979436c/style`; verify at least one World-derived character and environment appear and persist after reload; inspect exact response/error if they do not.
+
 ## 2026-10-10 — Live Ghast audit and stacked-PR CI recovery
 
 **Baseline:** GitHub main `7dbea8b8009c68ba2e806a467790cc7d5d75141a` passes its last Production CI. The primary Vercel project has a production-target deployment for repair commit `2f21f44f660f0846a8c92257c627208a393a5c44`, which is newer than main. This audit did not change that deployment or merge any PR.
