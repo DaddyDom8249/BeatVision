@@ -356,7 +356,7 @@ function compactArenaResponse(data: any, jobType?: string) {
 function terminalState(response: Response, data: any, jobType?: string) {
   if (!response.ok || data?.ok === false) return "failed";
 
-  const status = String(data?.status || data?.state || "").trim().toLowerCase();
+  const status = String(data?.status || data?.state || data?.result?.status || data?.result?.state || "").trim().toLowerCase();
 
   if (["failed", "error", "provider_error", "provider_unavailable", "unavailable", "cancelled", "canceled"].includes(status)) return "failed";
 
