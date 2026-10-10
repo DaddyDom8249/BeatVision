@@ -49,6 +49,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [finalVideo, setFinalVideo] = useState<any>(null);
   const [assemblyJob, setAssemblyJob] = useState<any>(null);
   const [assemblyRunning, setAssemblyRunning] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const [imageJob, setImageJob] = useState<any>(null);
   const [motionJob, setMotionJob] = useState<any>(null);
@@ -166,6 +167,30 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const checkMotionStatus = () => operateJob("scene_motion", motionJob);
   const assembleFinal = () => operateJob("assembly");
   const checkAssemblyStatus = () => operateJob("assembly", assemblyJob);
+
+  async function downloadFinalVideo() {
+    if (!finalVideo?.video_url || assemblyJob?.status !== "completed" || downloading) return;
+    setDownloading(true); setError(null);
+    try {
+      const response = await fetch(finalVideo.video_url);
+      if (!response.ok) throw new Error("Video download failed (HTTP " + response.status + ").");
+      const blob = await response.blob();
+      if (!blob.size || !blob.type.toLowerCase().startsWith("video/")) {
+        throw new Error("Video download failed: the server returned no valid video media.");
+      }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "BeatVision-" + projectId + ".mp4";
+      document.body.appendChild(link);
+      try { link.click(); }
+      finally {
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
+    } catch (e) { setError(productionErrorMessage(e)); }
+    finally { setDownloading(false); }
+  }
 
   async function approveMotion() {
     if (!motion || motion.status !== "generated" || !motion.video_url) return;
@@ -286,6 +311,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             <div className="production-actions">
               {!finalVideo && !pending(assemblyJob) && <button className="primary-button" disabled={busy} onClick={() => void assembleFinal()}>{assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}</button>}
               {pending(assemblyJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkAssemblyStatus()}>{assemblyRunning ? "Checking…" : "Check Assembly Status"}</button>}
+              {finalVideo?.video_url && <button className="secondary-button" disabled={downloading} onClick={() => void downloadFinalVideo()}>{downloading ? "Downloading…" : "Download Video"}</button>}
               {finalVideo?.video_url && <span className="style-lock-badge">FINAL VIDEO COMPLETE</span>}
             </div>
           </div>
