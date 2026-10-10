@@ -309,11 +309,24 @@ export function useStyleStudio(projectId: string) {
       }
     }
 
+    // A confirmed World can predate its Style Bible. Do not query UUID columns
+    // with an empty ID: PostgREST rejects style_bible_id=eq. as invalid UUID.
+    // Leave approved existing Bibles untouched and show the explicit creation gate.
+    if (!currentStyleBible) {
+      setStyleBible(null);
+      setCharacters([]);
+      setCharacterAssets([]);
+      setEnvironments([]);
+      setEnvironmentAssets([]);
+      setLoading(false);
+      return;
+    }
+
     const [characterResult, characterAssetResult, environmentResult, environmentAssetResult] =
       await Promise.all([
-        supabase.from("characters").select(characterFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).eq("style_bible_id", currentStyleBible?.id ?? "").order("created_at", { ascending: true }),
+        supabase.from("characters").select(characterFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).eq("style_bible_id", currentStyleBible.id).order("created_at", { ascending: true }),
         supabase.from("character_assets").select(characterAssetFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).order("created_at", { ascending: true }),
-        supabase.from("environments").select(environmentFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).eq("style_bible_id", currentStyleBible?.id ?? "").order("created_at", { ascending: true }),
+        supabase.from("environments").select(environmentFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).eq("style_bible_id", currentStyleBible.id).order("created_at", { ascending: true }),
         supabase.from("environment_assets").select(environmentAssetFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).order("created_at", { ascending: true }),
       ]);
 
