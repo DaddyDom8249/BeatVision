@@ -39,6 +39,8 @@ jobs:
             echo "REPLAYING $migration"
             docker exec -i "$REPLAY_DB" psql -U supabase_admin -d postgres --single-transaction -v ON_ERROR_STOP=1 -f - < "$migration"
           done
+      - name: Verify fresh project and song API contracts with owner isolation
+        run: docker exec -i "$REPLAY_DB" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f - < scripts/test/sql/fresh-install-contract.sql
       - name: Stop isolated database
         if: always()
         run: supabase stop --workdir /tmp/beatvision-replay
