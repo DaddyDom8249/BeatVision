@@ -62,6 +62,7 @@ async function getUserId() {
 
 async function signAssetUrls<T extends { storage_path: string }>(rows: T[], withAsset: (row: T, url: string | null) => T) {
   return Promise.all(rows.map(async (row) => {
+    if (row.storage_path.includes('..')) throw new Error('Invalid storage path');
     const { data } = await supabase.storage.from("visual-assets").createSignedUrl(row.storage_path, 3600);
     return withAsset(row, data?.signedUrl ?? null);
   }));
@@ -602,6 +603,7 @@ export function useStyleStudio(projectId: string) {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const root = kind === "character" ? "characters" : "environments";
       const path = `${userId}/${projectId}/${root}/${parentId}/${crypto.randomUUID()}-${safeName}`;
+      if (path.includes('..')) throw new Error("Invalid path");
       const upload = await supabase.storage.from("visual-assets").upload(path, file, {
         upsert: false,
         contentType: file.type || undefined,
