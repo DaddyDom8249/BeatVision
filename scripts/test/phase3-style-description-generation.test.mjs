@@ -66,3 +66,37 @@ test("approved sheets create owner-scoped revisions and Vision Lock keeps only t
   assert.match(migration, /newer\.supersedes_character_id = c\.id/);
   assert.match(migration, /newer\.supersedes_environment_id = e\.id/);
 });
+
+
+test("rate-limited Style Draft Edge response presents actionable cooldown rather than a generic non-2xx", async () => {
+  const source = read("src/hooks/useStyleStudio.ts");
+  const begin = source.indexOf("  const generateDescription = useCallback(async (");
+  const endMarker = "  }, [projectId, styleBible, world]);";
+  const end = source.indexOf(endMarker, begin);
+  assert.ok(begin >= 0 && end > begin);
+  const extracted = source.slice(begin, end + endMarker.length) + "\nreturn generateDescription;";
+  const code = ts.transpileModule(extracted, { compilerOptions: {
+    module: ts.ModuleKind.None, target: ts.ScriptTarget.ES2022,
+  } }).outputText;
+  const serverPayload = {
+    error: {
+      code: "STYLE_MODEL_FAILED",
+      message: "Groq description generation failed (429): Rate limit reached for model; Please try again in 4.14s.",
+    },
+  };
+  const error = new Error("Edge Function returned a non-2xx status code");
+  error.context = new Response(JSON.stringify(serverPayload), { status: 502 });
+  const state = [];
+  const generator = new Function("useCallback", "styleBible", "world", "setWorking",
+    "setError", "supabase", "projectId", "getCreativeErrorMessage", "Response", code)(
+    (fn) => fn, { id: "style-1" }, { confirmed_at: "2026-10-10" },
+    (value) => state.push(["working", value]), (value) => state.push(["error", value]),
+    { functions: { invoke: async () => ({ data: null, error }) } },
+    "project-1", (err) => err.message, Response,
+  );
+  await assert.rejects(generator("character", "approved-1"), /Groq is temporarily rate-limited/);
+  assert.equal(state.at(-1)[0], "working");
+  assert.equal(state.at(-1)[1], false);
+  assert.match(state.findLast(([name]) => name === "error")[1], /Wait a few seconds/);
+  assert.doesNotMatch(state.findLast(([name]) => name === "error")[1], /Edge Function returned a non-2xx|organization/);
+});
