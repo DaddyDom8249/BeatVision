@@ -721,3 +721,13 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 **Production changes:** None. No audio objects removed, provider requests made, approvals performed or deployment requested.
 **Limit:** Retaining prior audio consumes storage; reference-aware garbage collection is separate work and must not delete locked assets.
 **Remaining:** Authenticated production pipeline and playable final export remain UNVERIFIED.
+
+**Final verification for audio repair:** GitHub Actions run 38024430035 / audit job 114132122707 passed on f3b656d6b3f40656e89d89e2dbd8b594292c045b: npm test 103/103, zero failures; npm run production-audit passed; npm run build passed. No source changes after this verification.
+
+**Read-only authenticated production evidence:** Found an existing authorized browser session. Supabase auth user validation returned HTTP 200, and an authenticated Ghast generation_jobs GET returned HTTP 200 with zero jobs. Initial rendered page retained an old permission error; table privilege/RLS inspection and a fresh page reload disproved a current permission failure. Reloaded Production rendered PLAN LOCKED / 8 SCENES with zero alerts. No privilege or RLS change was made.
+
+**Current Ghast state:** Completed song analysis with audio; one Vision Lock; one approved Visual Plan, duration 249.126908314 seconds; eight scenes; zero scene images, motion assets or final videos. This supersedes the October 8 audit's zero-lock/zero-plan finding, without proving the complete creative pipeline.
+
+**Deployment limit:** Retrieved live Generation v20 source and compared it with inspected main 7dbea8b: equal after trimming. The live function still uses motion upsert and does not contain this branch's repair. Production verification of the patch is therefore BLOCKED by the explicit instruction not to deploy production or merge automatically. PR #44 is draft and reviewable with separate repair commits. No production deployment, generation request, approval or data deletion occurred. Provider cost eligibility and real AI subject animation remain UNVERIFIED; no unknown-cost request was attempted.
+
+**Next:** Review the tested PR and obtain deployment authorization before live verification of these repairs. Further authenticated generation-to-export verification requires a verified zero-cost provider path and the creator's explicit image/motion approvals. Fresh migration replay remains unverified because no isolated database/terminal execution environment is available.
