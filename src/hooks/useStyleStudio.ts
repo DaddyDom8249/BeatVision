@@ -685,10 +685,27 @@ export function useStyleStudio(projectId: string) {
       const { data, error: invokeError } = await supabase.functions.invoke("beatvision-style-draft", {
         body: { projectId, kind, recordId },
       });
-      const remoteMessage = data && typeof data === "object" && data.error &&
-        typeof data.error === "object" && typeof data.error.message === "string"
-        ? data.error.message : null;
-      if (invokeError) throw new Error(remoteMessage || invokeError.message || "Description generation failed.");
+      // FunctionsHttpError returns the server response on context, not in data.
+      // Decode it so an upstream Groq 429 is not displayed as a generic 502.
+      let serverError: { code?: string; message?: string } | null = null;
+      if (invokeError && "context" in invokeError && invokeError.context instanceof Response) {
+        try {
+          const payload = await invokeError.context.clone().json();
+          if (payload && typeof payload === "object" && payload.error && typeof payload.error === "object") {
+            serverError = payload.error as { code?: string; message?: string };
+          }
+        } catch { /* Preserve the original transport error if the body is not JSON. */ }
+      }
+      const remoteMessage = serverError?.message ||
+        (data && typeof data === "object" && data.error &&
+          typeof data.error === "object" && typeof data.error.message === "string"
+          ? data.error.message : null);
+      if (invokeError) {
+        if (/Groq description generation failed \\(429\\)|rate limit reached|tokens per minute/i.test(remoteMessage ?? "")) {
+          throw new Error("Groq is temporarily rate-limited. Wait a few seconds and retry Generate Description. Existing approved sheets and drafts are unchanged.");
+        }
+        throw new Error(remoteMessage || invokeError.message || "Description generation failed.");
+      }
       if (!data?.draft || typeof data.draft !== "object" || Array.isArray(data.draft)) {
         throw new Error("Description generation returned an invalid draft.");
       }
