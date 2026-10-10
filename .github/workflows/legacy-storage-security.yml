@@ -1,0 +1,53 @@
+name: Legacy storage ownership security
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261010061000_restrict_legacy_storage_bucket_writes.sql'
+      - 'scripts/test/sql/legacy-storage-*.sql'
+      - '.github/workflows/legacy-storage-security.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  storage-rls:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Establish production-equivalent legacy storage policies
+        run: psql -v ON_ERROR_STOP=1 -f scripts/test/sql/legacy-storage-fixture.sql
+      - name: Reproduce pre-fix cross-owner modification without persisting it
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          output="$(psql -v ON_ERROR_STOP=1 -f scripts/test/sql/legacy-storage-baseline-failure.sql 2>&1)"
+          code=$?
+          set -e
+          printf '%s\n' "$output"
+          test "$code" -eq 3
+          grep -Fq 'LEGACY_CROSS_OWNER_UPDATE_POSSIBLE' <<< "$output"
+      - name: Apply proposed migration in disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261010061000_restrict_legacy_storage_bucket_writes.sql
+      - name: Verify owner isolation, approved-media immutability, public reads and service writers
+        run: psql -v ON_ERROR_STOP=1 -f scripts/test/sql/legacy-storage-security.sql
