@@ -52,6 +52,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
   const [imageJob, setImageJob] = useState<any>(null);
   const [motionJob, setMotionJob] = useState<any>(null);
+  const [motionAssetJob, setMotionAssetJob] = useState<any>(null);
   const [assetLoading, setAssetLoading] = useState(false);
   const scene = scenes[selectedIndex] ?? null;
   const selectedSceneId = useRef<string | undefined>(scene?.id);
@@ -59,6 +60,21 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const busy = generating || motionGenerating || assemblyRunning || assetLoading;
   const pending = (job: any) => ["queued", "submitted", "processing"].includes(job?.status);
   const productionText = useMemo(() => scene ? prompt(scene) : "", [scene]);
+
+  // The saved asset's generating job is authoritative, not a newer retry.
+  const isProceduralMotion = useMemo(() => {
+    if (!motion) return false;
+    if (motion.model === "image-motion") return true;
+    const assetJob = motionAssetJob?.id === motion.generation_job_id
+      ? motionAssetJob
+      : motionJob?.id === motion.generation_job_id ? motionJob : null;
+    const output = assetJob?.output;
+    return [
+      output?.arena_response?.result?.generation_type,
+      output?.arena_status_response?.result?.generation_type,
+      output?.result?.generation_type,
+    ].includes("PROCEDURAL_MOTION");
+  }, [motion, motionAssetJob, motionJob]);
 
   async function displayImage(asset: any) {
     if (!asset?.storage_path) return asset;
@@ -79,7 +95,25 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     ]);
     for (const result of [images, motions, imageJobs, motionJobs]) if (result.error) throw result.error;
     if (selectedSceneId.current !== sceneId) return;
+    let sourceJob: any = null;
+    if (motions.data?.generation_job_id) {
+      if (motionJobs.data?.id === motions.data.generation_job_id) {
+        sourceJob = motionJobs.data;
+      } else {
+        const relatedJob = await supabase.from("generation_jobs")
+          .select("id,status,error,job_type,output")
+          .eq("project_id", projectId)
+          .eq("visual_plan_scene_id", sceneId)
+          .eq("job_type", "scene_motion")
+          .eq("id", motions.data.generation_job_id)
+          .maybeSingle();
+        if (relatedJob.error) throw relatedJob.error;
+        sourceJob = relatedJob.data;
+      }
+    }
+    if (selectedSceneId.current !== sceneId) return;
     setMotion(motions.data); setImageJob(imageJobs.data); setMotionJob(motionJobs.data);
+    setMotionAssetJob(sourceJob);
     const freshImage = await displayImage(images.data);
     if (selectedSceneId.current === sceneId) setImage(freshImage);
   }, [projectId]);
@@ -112,7 +146,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
   useEffect(() => {
     let active = true;
-    setImage(null); setMotion(null); setImageJob(null); setMotionJob(null); setError(null);
+    setImage(null); setMotion(null); setImageJob(null); setMotionJob(null); setMotionAssetJob(null); setError(null);
     if (!scene) return;
     setAssetLoading(true);
     refreshScene(scene.id).catch(e => { if (active) setError(productionErrorMessage(e)); }).finally(() => { if (active) setAssetLoading(false); });
@@ -265,7 +299,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-provider-note">
             <span className="panel-label">MOTION</span>
-            {motion && <p>{motion.model === "image-motion" || (motionJob?.id === motion.generation_job_id && motionJob?.output?.arena_response?.result?.generation_type === "PROCEDURAL_MOTION") ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
+            {motion && <p>{isProceduralMotion ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
             {motion?.video_url ? <video src={motion.video_url} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
             <div className="production-actions">
               {!motion && !pending(motionJob) && <button className="primary-button" disabled={busy || image?.status !== "approved"} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
