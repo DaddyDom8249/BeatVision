@@ -46,7 +46,7 @@ test('auth errors retain CORS without accepting unauthenticated requests', async
 test('motion persistence records the actual fallback provider and model', async () => {
   let saved;
   const imageQuery = { select() { return this; }, eq() { return this; }, order() { return this; }, limit() { return this; }, async maybeSingle() { return { data: { id: 'image-1' } }; } };
-  const client = { from: name => name === 'scene_image_assets' ? imageQuery : { upsert(row) { saved = row; return { select: () => ({ single: async () => ({ data: row }) }) }; } } };
+  const client = { from: name => name === 'scene_image_assets' ? imageQuery : { select() { return this; }, eq() { return this; }, maybeSingle: async () => ({ data: null }), insert(row) { saved = row; return { select: () => ({ single: async () => ({ data: row }) }) }; } } };
   const runtime = await loadGeneration();
   try {
     await runtime.persistMotionClip(client, { id: 'job-1', job_type: 'scene_motion', project_id: 'project-1', visual_plan_id: 'plan-1', visual_plan_scene_id: 'scene-1' }, { status: 'completed', provider: 'shotstack', model: 'image-motion', result: { video_url: 'https://example.test/clip.mp4', generation_type: 'PROCEDURAL_MOTION' } });
@@ -86,44 +86,19 @@ for (const [name, owner, assetProject, expected] of [
 
 test('poll fails processing job cleanly when upstream_job_id is missing', async () => {
   let failedState = null;
-  const client = {
-    from(table) {
-      return {
-        update(data) {
-          failedState = data;
-          return {
-            eq() {
-              return {
-                in() {
-                  return {
-                    select() { return { error: null, data: [{ id: 'job-img-1' }] }; }
-                  };
-                }
-              };
-            }
-          };
-        },
-        select() {
-          return {
-            eq() {
-              return { single: async () => ({ data: { id: 'job-1', status: 'failed', error: failedState?.error } }) };
-            }
-          };
-        }
-      };
-    }
-  };
-
+  const client = { from() { return {
+    update(data) { failedState = data; return this; },
+    eq() { return this; },
+    select() { return this; },
+    async maybeSingle() { return { data: { id: 'job-1', ...failedState } }; },
+  }; } };
   const runtime = await loadGeneration();
   try {
-    const job = { id: 'job-1', status: 'processing', job_type: 'scene_motion', output: {} };
-    const result = await runtime.poll(client, job);
+    const result = await runtime.poll(client, { id: 'job-1', status: 'processing', job_type: 'scene_motion', output: {} });
     assert.equal(result.status, 'failed');
     assert.equal(result.error.code, 'ARENA_GENERATION_FAILED');
     assert.match(result.error.message, /without a provider job id/);
-  } finally {
-    await runtime.cleanup();
-  }
+  } finally { await runtime.cleanup(); }
 });
 
 test('persistFinalVideo scopes final videos to generation_job_id and prevents duplicate creation', async () => {
