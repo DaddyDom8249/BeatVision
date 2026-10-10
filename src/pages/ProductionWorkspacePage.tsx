@@ -147,7 +147,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       }
       if (!job?.id) throw new Error("No generation job was returned.");
       setJob(job);
-      const run = await supabase.functions.invoke("beatvision-generation", { body: { projectId, jobId: job.id, action: job.status === "processing" ? "poll" : "run" } });
+      const run = await supabase.functions.invoke("beatvision-generation", { body: { projectId, jobId: job.id, action: ["submitted", "processing"].includes(job.status) ? "poll" : "run" } });
       if (run.error) throw run.error;
       const result = run.data?.job;
       if (!result?.id) throw new Error("Generation controller returned no job state.");
