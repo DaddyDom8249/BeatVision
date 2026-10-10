@@ -867,3 +867,20 @@ REPAIR2 ROOT CAUSE/FIX: Provider reported ok:true,result.status:done,result.vide
 LIVE VERIFICATION: Following schedulerpoll actualjob completed,errornull,providerdone; exactly1 final_videos rowcf151f0b-28d0-42c8-83e2-ef76f34098de associatedexistingjob. No manualDBcompletion/assetfabrication/providerresubmit. Independently browserplayed actualproviderMP4: duration249.12,width1280,height720,currentTime advanced1.691081,pausedfalse,errornull. Seeknearend245→245.96195 succeeded; decodedAudioBytes243007/videoBytes2154240,errornull. Originalsong249.126908314seconds, difference0.006908314seconds. ProviderintegrityPASS. Browserverification used newpublic-media-only sessionpbs_583808618986938982 because oldauthenticatedsession inaccessible; doesnotestablish authenticated pageplayerretetest or fullcreativecontinuity.
 
 NOT VERIFIED: Userauthenticatedpage refresh/player/download; wholevideo visualcontinuity and precise audio alignment notmanuallywatchedendtoend. Shotstacksandbox outputwatermarked; all8 approvedmotionclipsproceduralimage-motion, notgenuineAIsubjectanimation. Noautomaticmotionapproval. Fullproductnotdeclaredcomplete. Remaining work: review output/downloadflow and motionprovenance; Jules reused same11067167063386264554 taskonly.
+
+
+## 2026-10-10 — Comprehensive debug and prioritized verified repairs
+
+User requested full systematic debug and prioritization. Read current repo instructions/log/audit and main7dbea8b; current production uses repair branches. Full finding/evidence/status matrix: docs/audits/2026-10-10-comprehensive-debug.md.
+
+P0 CONFIRMED/FAILED/ROOTCAUSE: six legacy storage mutation policies allowed cross-owner writes by bucket alone. Reproduced CROSS_OWNER_UPDATE_ALLOWED realPostgres38050304327/job114207922517. FIX 8f23cad74a793121222bc2ca04a670f82056aba8 migration20261010061000 owner_id-bound writes, reads/paths/assets preserved. VERIFICATION38050321254/job114207974001 ownershipPASS,133tests/build/auditCI38050321281. Deployed migration legacy_storage_owner_writes; live100objects and8+8approvedGhastassets preserved. PR54.
+
+P1 CONFIRMED/FAILED: no final-download control despite playable completed output. Actual-page red4fail38050519002; Blob download success/HTTPempty/non-videoerror/pendingguard tests. Firstgreen138tests; reviewed PR53motionprovenance merged into workspace without staleJules checkout overwrite,139testsCI38050622962. Actualproduction-origin full MP4fetchHTTP200 video/mp4 34381862bytes. Authenticatedbutton/OSsavedfile UNVERIFIED. PR55.
+
+P2 CONFIRMED/FAILED: dashboard discarded auth/readerrors and falselyclaimedemptyaccount. Actualpage3regressionsred38050775651/job114209282732. FIX 3176966681c13a346a0dfab5c2192375cd39a84c ownerfilterpreserved,error/retry/finally;142tests0fail,audit/build38050791449/job114209329386; bothrealPostgressecuritysuitespass. PR57.
+
+DEPLOYED: testedfrontend3176966681c13a346a0dfab5c2192375cd39a84c Verceldpl_B3N9ZqR24exA4hU1fFSr7L4qUA1g READY exactSHA/correctproject, explicitlythetaalias. PublicentryJSHTTP200 containsall3UIrepairs. Generationv24/analyze13unchanged; no realgeneration/creatorapproval/data deletion/newproject/paidservice/mainmerge. Existingfinalcompleted/errornull/exactly1video,8images8motionapproved,0pendingjobs.
+
+MIGRATIONREPLAY FAILED: PR56 Actions38050731498/job114209150761, platformonlyfixture actualsortedSQL stops20261006174104:191 generation_jobs type missing. Diagnosticworkflowoverallgreen dueexplicitcontinue-on-error; NOTclaimedresetpass. Missinghistoricalfoundation andledgerdrift require reviewedsource reconstruction, notproductionreset/ledgerfabrication. No schema/data mutation for diagnostic.
+
+NOTVERIFIED/BLOCKED: freshbaseline recovery; authenticatedfullcreativepipeline/retry/download/continuity; genuineAImotionfreeeligibility UNKNOWN. ExistingapprovedproceduralclipsneverrepresentedgenuineAI. Supabaseauthleakedpasswordadvisoryremains, noaccountupgrade. FutureassemblysnapshotstillhardcodesGENERATIVE_VIDEO identifiedP2; frozenexistingjobsunchanged. JulesONE existingtask suppliedreviewedprovenance; no newtaskcreated. Next repair order recordedinaudit. Productnotdeclaredcomplete.
