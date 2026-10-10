@@ -79,7 +79,7 @@ begin
   )) returning * into created_job;
   return created_job;
 end;
-$function$
+$function$;
 
 revoke all on function public.enqueue_assembly_generation(uuid,uuid) from public,anon;
 grant execute on function public.enqueue_assembly_generation(uuid,uuid) to authenticated;
