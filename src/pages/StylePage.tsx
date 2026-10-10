@@ -142,7 +142,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
       {error && <p className="form-error style-error" role="alert">{error}</p>}
       <header className="style-header"><div><span className="eyebrow">PHASE 3 / STYLE BIBLE</span><h1>Style Bible</h1><p>{locked ? "The approved Style Bible is immutable. Character and environment drafts continue from this locked creative source." : "Translate the confirmed World into repeatable visual rules, character continuity, environments, and reference language."}</p></div><div className="style-status">{locked ? "APPROVED / DOWNSTREAM ASSETS" : "DRAFT / WORLD BOUND"}</div></header>
 
-      <nav className="style-actions" aria-label="Style stage navigation">
+      <nav className="style-actions style-stage-navigation" aria-label="Style stage navigation">
         <a className="secondary-button" href={`/projects/${projectId}/world`}>← Return to World</a>
         {locked ? (
           <a className="primary-button" href={`/projects/${projectId}/visual-plan`}>Continue to Visual Plan →</a>
@@ -236,7 +236,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
         ))}
       </section>
       {locked && (
-        <nav className="style-actions" aria-label="Continue after Style Studio">
+        <nav className="style-actions style-stage-navigation" aria-label="Continue after Style Studio">
           <a className="primary-button" href={`/projects/${projectId}/visual-plan`}>Continue to Visual Plan →</a>
         </nav>
       )}
