@@ -44,3 +44,10 @@ jobs:
           fi
       - name: Verify owner enqueue, isolation, idempotency and revoked direct writes
         run: psql -v ON_ERROR_STOP=1 -f scripts/test/sql/generation-enqueue-security.sql
+      - name: Apply truthful assembly provenance repair when present
+        run: |
+          if test -f supabase/migrations/20261010070000_assembly_motion_provenance.sql; then
+            psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261010070000_assembly_motion_provenance.sql
+          fi
+      - name: Verify actual approved motion provenance and immutable assembly snapshots
+        run: psql -v ON_ERROR_STOP=1 -f scripts/test/sql/assembly-motion-provenance.sql
