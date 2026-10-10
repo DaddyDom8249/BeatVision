@@ -8,34 +8,34 @@ permissions:
 jobs:
   postgres:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: fixture-only
-          POSTGRES_DB: enqueue_fixture
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     env:
       PGHOST: localhost
-      PGPORT: 5432
+      PGPORT: 54322
       PGUSER: postgres
-      PGPASSWORD: fixture-only
-      PGDATABASE: enqueue_fixture
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
     steps:
       - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start isolated Supabase PostgreSQL with real extensions
+        run: |
+          supabase init --workdir /tmp/beatvision-replay
+          supabase db start --workdir /tmp/beatvision-replay
+      - name: Disable scheduled jobs before loading application SQL
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "ALTER SYSTEM SET cron.launch_active_jobs = 'off'"
+          psql -v ON_ERROR_STOP=1 -c "SELECT pg_reload_conf()"
+          test "$(psql -At -c 'SHOW cron.launch_active_jobs')" = off
       - name: Initialize platform-only baseline
         run: psql -v ON_ERROR_STOP=1 -f scripts/test/sql/platform-replay-fixture.sql
-      - name: Replay migrations on an empty database
-        id: replay
+      - name: Replay migrations on an empty application database
         run: |
           for migration in supabase/migrations/*.sql; do
             echo "REPLAYING $migration"
             psql --single-transaction -v ON_ERROR_STOP=1 -f "$migration"
           done
-      - name: Record replay result without claiming full-schema coverage
-        run: echo "Migration replay result is ${{ steps.replay.outcome }}; platform fixture does not include any legacy application tables."
+      - name: Stop isolated database
+        if: always()
+        run: supabase stop --workdir /tmp/beatvision-replay
