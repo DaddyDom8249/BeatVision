@@ -467,15 +467,42 @@ async function run(db: any, job: any) {
   return latest.data;
 }
 
+// A provider may be accepting work while its upstream ID is not yet persisted.
+// Wait beyond the normal Edge Function/request window before surfacing an
+// interrupted dispatch. Never resubmit work whose provider acceptance is unknown.
+const DISPATCH_GRACE_MS = 5 * 60 * 1000;
+
+async function recoverDispatch(db: any, job: any) {
+  const upstream = String(job.output?.upstream_job_id || "").trim();
+  const timestamp = job.updated_at || job.created_at;
+  const started = Date.parse(String(timestamp || ""));
+  if (!upstream && Number.isFinite(started) && Date.now() - started < DISPATCH_GRACE_MS) return job;
+
+  const changes = upstream
+    ? { status: "processing" }
+    : { status: "failed", error: {
+      code: "ARENA_GENERATION_FAILED",
+      message: job.status === "submitted"
+        ? "Generation submission was interrupted without a provider job id. Provider acceptance is unknown; automatic resubmission is disabled."
+        : "Arena reported processing without a provider job id after the dispatch grace period. Provider acceptance is unknown; automatic resubmission is disabled.",
+    } };
+  let query = db.from("generation_jobs").update(changes).eq("id", job.id).eq("status", job.status);
+  // A concurrent dispatch may have persisted an upstream ID since this read.
+  // Its new row version must win over this stale recovery attempt.
+  if (job.updated_at) query = query.eq("updated_at", job.updated_at);
+  const result = await query.select("*").maybeSingle();
+  if (result.error) throw new Error("DISPATCH_RECOVERY_PERSIST_FAILED: " + result.error.message);
+  if (result.data) return result.data;
+  const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+  if (latest.error) throw new Error(latest.error.message);
+  return latest.data;
+}
+
 async function poll(db: any, job: any) {
+  if (job.status === "submitted") return await recoverDispatch(db, job);
   if (job.status !== "processing") return job;
   const upstream = String(job.output?.upstream_job_id || "").trim();
-  if (!upstream) {
-    await setFailed(db, job.id, "Arena reported processing without a provider job id.", job.output);
-    const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
-    if (latest.error) throw new Error(latest.error.message);
-    return latest.data;
-  }
+  if (!upstream) return await recoverDispatch(db, job);
 
   const path = job.job_type === "scene_motion"
     ? "/v1/video/animate/jobs/" + encodeURIComponent(upstream)
@@ -537,13 +564,13 @@ Deno.serve(async (req) => {
 
     if (action === "drain") {
       if (uid.kind !== "system") return json(req, { error: { code: "UNAUTHORIZED_SCHEDULER", message: "Scheduler authorization required." } }, 401);
-      const pending = await db.from("generation_jobs").select("*").in("status", ["queued", "processing"]).order("created_at", { ascending: true }).limit(8);
+      const pending = await db.from("generation_jobs").select("*").in("status", ["queued", "submitted", "processing"]).order("created_at", { ascending: true }).limit(8);
       if (pending.error) throw new Error(pending.error.message);
       const results = [];
       for (const item of pending.data || []) {
         try {
-          const result = item.status === "processing" ? await poll(db, item) : await run(db, item);
-          results.push({ id: item.id, action: item.status === "processing" ? "poll" : "run", status: result.status });
+          const result = item.status !== "queued" ? await poll(db, item) : await run(db, item);
+          results.push({ id: item.id, action: item.status !== "queued" ? "poll" : "run", status: result.status });
         } catch (error) {
           results.push({ id: item.id, error: error instanceof Error ? error.message : String(error) });
         }
