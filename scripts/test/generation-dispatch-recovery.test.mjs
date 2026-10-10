@@ -28,6 +28,7 @@ function fixture({ status = 'processing', age = 0, upstream = null, race = null,
           return { data: structuredClone(row) };
         },
         async single() { return { data: structuredClone(row) }; },
+        then(resolve, reject) { return this.maybeSingle().then(result => resolve({ ...result, data: result.data ? [result.data] : [] }), reject); },
       };
     },
   };
