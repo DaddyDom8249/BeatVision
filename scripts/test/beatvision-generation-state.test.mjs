@@ -311,3 +311,36 @@ test('poll fails processing scene_image job cleanly', async () => {
     await runtime.cleanup();
   }
 });
+
+test('poll persists a nested done assembly once and completes its existing job', async () => {
+  const job = { id: 'assembly-1', project_id: 'project-1', job_type: 'assembly', status: 'processing', output: { upstream_job_id: 'render-1' }, input_snapshot: { plan: { duration_seconds: 249.126908314 }, scenes: [{}] } };
+  let video = null;
+  let inserts = 0;
+  let requests = 0;
+  const client = { from(table) {
+    return {
+      select() { return this; }, eq() { return this; },
+      maybeSingle: async () => ({ data: table === 'final_videos' ? video : job, error: null }),
+      single: async () => ({ data: table === 'final_videos' ? video : job, error: null }),
+      update(row) { Object.assign(job,row); return { eq() { return this; }, select: async () => ({ data: [{id:job.id}], error:null }) }; },
+      upsert(row) { inserts++; video={id:'video-1',...row}; return this; }
+    };
+  }};
+  const oldFetch = globalThis.fetch;
+  const runtime = await loadGeneration();
+  globalThis.Deno.env.get = name => name === 'ARENA_GATEWAY_URL' ? 'https://arena.test' : name === 'ARENA_GATEWAY_TOKEN' ? 'fixture-token' : '';
+  globalThis.fetch = async url => {
+    requests++;
+    assert.match(String(url), /assemble\/status\/render-1/);
+    return new Response(JSON.stringify({ ok:true, result:{ status:'done', video_url:'https://example.test/final.mp4', duration_seconds:249.13, render_integrity:'PASS' } }), {status:200});
+  };
+  try {
+    const result=await runtime.poll(client,job);
+    assert.equal(result.status,'completed');
+    assert.equal(result.output.final_video.video_url,'https://example.test/final.mp4');
+    assert.equal(result.output.final_video.duration,249.13);
+    await runtime.poll(client,result);
+    assert.equal(inserts,1);
+    assert.equal(requests,1);
+  } finally { globalThis.fetch=oldFetch; await runtime.cleanup(); }
+});
