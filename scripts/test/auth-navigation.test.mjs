@@ -84,10 +84,13 @@ function makeHarness(start = "/projects/new") {
   }
   const appHooks = hooks();
   const App = load("app/App.tsx", appHooks);
-  const CreateProjectPage = load("pages/CreateProjectPage.tsx", hooks());
+  const createHooks = hooks();
+  const CreateProjectPage = load("pages/CreateProjectPage.tsx", createHooks);
   const AuthPage = load("pages/AuthPage.tsx", hooks());
   function renderApp() { appHooks.render(); return App(); }
-  return { browser, renderApp, CreateProjectPage, AuthPage };
+  const navigated = [];
+  function renderCreate() { createHooks.render(); return CreateProjectPage({onNavigate: path => navigated.push(path)}); }
+  return { browser, renderApp, CreateProjectPage, AuthPage, api, renderCreate, navigated };
 }
 
 function walk(tree, predicate) {
@@ -137,4 +140,52 @@ test("direct /auth?next path and other existing routes retain correct component 
     const { renderApp } = makeHarness(route);
     assert.equal(renderApp().type, expected, route);
   }
+});
+
+test("project creation surfaces rejected authentication and leaves the form retryable", async () => {
+  const view=makeHarness();
+  let requests=0;
+  view.api.auth.getUser=async()=>{throw new Error("Authentication transport unavailable")};
+  view.api.from=()=>{requests++;throw new Error("Must not query after auth failure")};
+  const tree=view.renderCreate();
+  const form=walk(tree,node=>node.type==="form");
+  await assert.doesNotReject(form.props.onSubmit({preventDefault(){}}));
+  const result=view.renderCreate();
+  assert.equal(walk(result,node=>node.type==="button"&&node.props.disabled!==undefined).props.disabled,false);
+  assert.ok(walk(result,node=>node.props.role==="alert"));
+  assert.equal(requests,0);
+  assert.deepEqual(view.navigated,[]);
+});
+test("project creation stops on an auth error even when stale user data is present", async () => {
+  const view=makeHarness();
+  let requests=0;
+  view.api.auth.getUser=async()=>({data:{user:{id:"user-1"}},error:{message:"Session validation unavailable"}});
+  view.api.from=()=>{requests++;return {insert(){return this},select(){return this},single:async()=>({data:{id:"project-1"},error:null})}};
+  await walk(view.renderCreate(),node=>node.type==="form").props.onSubmit({preventDefault(){}});
+  const result=view.renderCreate();
+  assert.equal(requests,0);
+  assert.ok(walk(result,node=>node.props.role==="alert"));
+  assert.deepEqual(view.navigated,[]);
+});
+test("project creation catches a rejected save and retries with the original title and owner", async () => {
+  const view=makeHarness();
+  view.api.auth.getUser=async()=>({data:{user:{id:"user-1"}},error:null});
+  let fail=true;
+  const writes=[];
+  view.api.from=(table)=>{assert.equal(table,"projects");return {
+    insert(payload){writes.push(payload);return this},
+    select(){return this},
+    single:async()=>{if(fail)throw new Error("Database transport unavailable");return {data:{id:"project-1"},error:null}}
+  }};
+  walk(view.renderCreate(),node=>node.type==="input").props.onChange({target:{value:"Ghast draft"}});
+  await assert.doesNotReject(walk(view.renderCreate(),node=>node.type==="form").props.onSubmit({preventDefault(){}}));
+  const failed=view.renderCreate();
+  assert.ok(walk(failed,node=>node.props.role==="alert"));
+  assert.equal(walk(failed,node=>node.type==="button"&&node.props.disabled!==undefined).props.disabled,false);
+  fail=false;
+  await walk(view.renderCreate(),node=>node.type==="form").props.onSubmit({preventDefault(){}});
+  assert.equal(writes.length,2);
+  assert.deepEqual(JSON.parse(JSON.stringify(writes[1])),{owner_id:"user-1",title:"Ghast draft",status:"Draft",stage:"song"});
+  assert.deepEqual(view.navigated,["/projects/project-1/song"]);
+  assert.equal(walk(view.renderCreate(),node=>node.props.role==="alert"),null);
 });
