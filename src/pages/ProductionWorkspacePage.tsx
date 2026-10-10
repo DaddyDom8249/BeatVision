@@ -49,9 +49,11 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [finalVideo, setFinalVideo] = useState<any>(null);
   const [assemblyJob, setAssemblyJob] = useState<any>(null);
   const [assemblyRunning, setAssemblyRunning] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const [imageJob, setImageJob] = useState<any>(null);
   const [motionJob, setMotionJob] = useState<any>(null);
+  const [motionAssetJob, setMotionAssetJob] = useState<any>(null);
   const [assetLoading, setAssetLoading] = useState(false);
   const scene = scenes[selectedIndex] ?? null;
   const selectedSceneId = useRef<string | undefined>(scene?.id);
@@ -59,6 +61,21 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const busy = generating || motionGenerating || assemblyRunning || assetLoading;
   const pending = (job: any) => ["queued", "submitted", "processing"].includes(job?.status);
   const productionText = useMemo(() => scene ? prompt(scene) : "", [scene]);
+
+  // The saved asset's generating job is authoritative, not a newer retry.
+  const isProceduralMotion = useMemo(() => {
+    if (!motion) return false;
+    if (motion.model === "image-motion") return true;
+    const assetJob = motionAssetJob?.id === motion.generation_job_id
+      ? motionAssetJob
+      : motionJob?.id === motion.generation_job_id ? motionJob : null;
+    const output = assetJob?.output;
+    return [
+      output?.arena_response?.result?.generation_type,
+      output?.arena_status_response?.result?.generation_type,
+      output?.result?.generation_type,
+    ].includes("PROCEDURAL_MOTION");
+  }, [motion, motionAssetJob, motionJob]);
 
   async function displayImage(asset: any) {
     if (!asset?.storage_path) return asset;
@@ -79,7 +96,25 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     ]);
     for (const result of [images, motions, imageJobs, motionJobs]) if (result.error) throw result.error;
     if (selectedSceneId.current !== sceneId) return;
+    let sourceJob: any = null;
+    if (motions.data?.generation_job_id) {
+      if (motionJobs.data?.id === motions.data.generation_job_id) {
+        sourceJob = motionJobs.data;
+      } else {
+        const relatedJob = await supabase.from("generation_jobs")
+          .select("id,status,error,job_type,output")
+          .eq("project_id", projectId)
+          .eq("visual_plan_scene_id", sceneId)
+          .eq("job_type", "scene_motion")
+          .eq("id", motions.data.generation_job_id)
+          .maybeSingle();
+        if (relatedJob.error) throw relatedJob.error;
+        sourceJob = relatedJob.data;
+      }
+    }
+    if (selectedSceneId.current !== sceneId) return;
     setMotion(motions.data); setImageJob(imageJobs.data); setMotionJob(motionJobs.data);
+    setMotionAssetJob(sourceJob);
     const freshImage = await displayImage(images.data);
     if (selectedSceneId.current === sceneId) setImage(freshImage);
   }, [projectId]);
@@ -112,7 +147,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
   useEffect(() => {
     let active = true;
-    setImage(null); setMotion(null); setImageJob(null); setMotionJob(null); setError(null);
+    setImage(null); setMotion(null); setImageJob(null); setMotionJob(null); setMotionAssetJob(null); setError(null);
     if (!scene) return;
     setAssetLoading(true);
     refreshScene(scene.id).catch(e => { if (active) setError(productionErrorMessage(e)); }).finally(() => { if (active) setAssetLoading(false); });
@@ -147,7 +182,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       }
       if (!job?.id) throw new Error("No generation job was returned.");
       setJob(job);
-      const run = await supabase.functions.invoke("beatvision-generation", { body: { projectId, jobId: job.id, action: job.status === "processing" ? "poll" : "run" } });
+      const run = await supabase.functions.invoke("beatvision-generation", { body: { projectId, jobId: job.id, action: ["submitted", "processing"].includes(job.status) ? "poll" : "run" } });
       if (run.error) throw run.error;
       const result = run.data?.job;
       if (!result?.id) throw new Error("Generation controller returned no job state.");
@@ -166,6 +201,30 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const checkMotionStatus = () => operateJob("scene_motion", motionJob);
   const assembleFinal = () => operateJob("assembly");
   const checkAssemblyStatus = () => operateJob("assembly", assemblyJob);
+
+  async function downloadFinalVideo() {
+    if (!finalVideo?.video_url || assemblyJob?.status !== "completed" || downloading) return;
+    setDownloading(true); setError(null);
+    try {
+      const response = await fetch(finalVideo.video_url);
+      if (!response.ok) throw new Error("Video download failed (HTTP " + response.status + ").");
+      const blob = await response.blob();
+      if (!blob.size || !blob.type.toLowerCase().startsWith("video/")) {
+        throw new Error("Video download failed: the server returned no valid video media.");
+      }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "BeatVision-" + projectId + ".mp4";
+      document.body.appendChild(link);
+      try { link.click(); }
+      finally {
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
+    } catch (e) { setError(productionErrorMessage(e)); }
+    finally { setDownloading(false); }
+  }
 
   async function approveMotion() {
     if (!motion || motion.status !== "generated" || !motion.video_url) return;
@@ -265,7 +324,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-provider-note">
             <span className="panel-label">MOTION</span>
-            {motion && <p>{motion.model === "image-motion" || (motionJob?.id === motion.generation_job_id && motionJob?.output?.arena_response?.result?.generation_type === "PROCEDURAL_MOTION") ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
+            {motion && <p>{isProceduralMotion ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
             {motion?.video_url ? <video src={motion.video_url} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
             <div className="production-actions">
               {!motion && !pending(motionJob) && <button className="primary-button" disabled={busy || image?.status !== "approved"} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
@@ -277,10 +336,16 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-provider-note">
             <span className="panel-label">FINAL ASSEMBLY</span>
+            {assemblyJob && <p role="status">
+              Assembly status: {assemblyJob.status}.
+              {" "}Provider stage: {assemblyJob.output?.arena_status_response?.result?.status ?? assemblyJob.output?.arena_response?.result?.status ?? "Not reported"}.
+              {" "}Last checked: {assemblyJob.output?.last_polled_at ?? "Not checked yet"}.
+            </p>}
             {finalVideo?.video_url ? <video src={finalVideo.video_url} controls playsInline style={{ width: "100%", maxHeight: 600, borderRadius: 12 }} /> : <p>No completed final video exists yet. Assembly requires every approved scene to have an approved real motion clip.</p>}
             <div className="production-actions">
               {!finalVideo && !pending(assemblyJob) && <button className="primary-button" disabled={busy} onClick={() => void assembleFinal()}>{assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}</button>}
               {pending(assemblyJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkAssemblyStatus()}>{assemblyRunning ? "Checking…" : "Check Assembly Status"}</button>}
+              {finalVideo?.video_url && <button className="secondary-button" disabled={downloading} onClick={() => void downloadFinalVideo()}>{downloading ? "Downloading…" : "Download Video"}</button>}
               {finalVideo?.video_url && <span className="style-lock-badge">FINAL VIDEO COMPLETE</span>}
             </div>
           </div>
