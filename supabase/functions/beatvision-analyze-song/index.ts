@@ -88,11 +88,19 @@ Deno.serve(async (req) => {
     const transcriptionDuration = Number(data?.duration);
     const existingDuration = Number(existing.duration_seconds);
     const projectDuration = Number(project.song_duration);
-    const authoritativeDuration = Number.isFinite(transcriptionDuration) && transcriptionDuration > 0
-      ? transcriptionDuration
-      : (Number.isFinite(existingDuration) && existingDuration > 0
-        ? existingDuration
+    // Keep the original audio timeline authoritative when decoding already
+    // established it. Whisper may report a different transcription duration.
+    const authoritativeDuration = Number.isFinite(existingDuration) && existingDuration > 0
+      ? existingDuration
+      : (Number.isFinite(transcriptionDuration) && transcriptionDuration > 0
+        ? transcriptionDuration
         : (Number.isFinite(projectDuration) && projectDuration > 0 ? projectDuration : null));
+    if (authoritativeDuration === null) {
+      return json({
+        error: "No valid audio duration is available. Decode the saved song or retry transcription before completing analysis.",
+        code: "AUDIO_DURATION_UNAVAILABLE",
+      }, 422);
+    }
     const analysis = {
       ...existing,
       duration_seconds: authoritativeDuration,
