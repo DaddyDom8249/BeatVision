@@ -313,14 +313,26 @@ async function persistFinalVideo(db: any, job: any, responseData: any) {
 
 async function persistMotionClip(db: any, job: any, responseData: any) {
   if (job.job_type !== "scene_motion") return;
+  // A repeated completion must preserve the creator's decision and source asset.
+  const existing = await db.from("motion_clip_assets").select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").eq("generation_job_id", job.id).maybeSingle();
+  if (existing.error) throw new Error("MOTION_CLIP_CHECK_FAILED: " + existing.error.message);
+  if (existing.data) return existing.data;
+
   const videoUrl = extractVideoUrl(responseData);
   if (!videoUrl) throw new Error("ARENA_MOTION_OUTPUT_MISSING: Arena completed without a real video URL.");
   if (!job.visual_plan_scene_id) throw new Error("ARENA_MOTION_SCENE_MISSING: scene_motion job has no approved scene.");
   const imageResult = await db.from("scene_image_assets").select("id").eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("scene_id", job.visual_plan_scene_id).eq("approved", true).eq("status", "approved").order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (imageResult.error) throw new Error("APPROVED_SCENE_IMAGE_LOOKUP_FAILED: " + imageResult.error.message);
   if (!imageResult.data?.id) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion completed without an approved source image.");
-  const insert = await db.from("motion_clip_assets").upsert({ project_id: job.project_id, visual_plan_id: job.visual_plan_id, scene_id: job.visual_plan_scene_id, generation_job_id: job.id, scene_image_id: imageResult.data.id, provider: String(responseData?.provider || responseData?.result?.clips?.[0]?.provider || "unknown"), model: String(responseData?.model || responseData?.result?.clips?.[0]?.model || "unknown"), video_url: videoUrl, status: "generated", approved: false }, { onConflict: "generation_job_id" }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").single();
-  if (insert.error) throw new Error("MOTION_CLIP_PERSIST_FAILED: " + insert.error.message);
+  const insert = await db.from("motion_clip_assets").insert({ project_id: job.project_id, visual_plan_id: job.visual_plan_id, scene_id: job.visual_plan_scene_id, generation_job_id: job.id, scene_image_id: imageResult.data.id, provider: String(responseData?.provider || responseData?.result?.clips?.[0]?.provider || "unknown"), model: String(responseData?.model || responseData?.result?.clips?.[0]?.model || "unknown"), video_url: videoUrl, status: "generated", approved: false }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").single();
+  if (insert.error) {
+    // A concurrent completion may have inserted the job's asset first. Never
+    // update that row: it may already carry an approval or rejection.
+    const raceCheck = await db.from("motion_clip_assets").select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").eq("generation_job_id", job.id).maybeSingle();
+    if (raceCheck.error) throw new Error("MOTION_CLIP_CHECK_FAILED: " + raceCheck.error.message);
+    if (raceCheck.data) return raceCheck.data;
+    throw new Error("MOTION_CLIP_PERSIST_FAILED: " + insert.error.message);
+  }
   return insert.data;
 }
 

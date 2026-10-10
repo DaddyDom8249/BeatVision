@@ -46,7 +46,7 @@ test('auth errors retain CORS without accepting unauthenticated requests', async
 test('motion persistence records the actual fallback provider and model', async () => {
   let saved;
   const imageQuery = { select() { return this; }, eq() { return this; }, order() { return this; }, limit() { return this; }, async maybeSingle() { return { data: { id: 'image-1' } }; } };
-  const client = { from: name => name === 'scene_image_assets' ? imageQuery : { upsert(row) { saved = row; return { select: () => ({ single: async () => ({ data: row }) }) }; } } };
+  const client = { from: name => name === 'scene_image_assets' ? imageQuery : { select() { return this; }, eq() { return this; }, maybeSingle: async () => ({ data: null }), insert(row) { saved = row; return { select: () => ({ single: async () => ({ data: row }) }) }; } } };
   const runtime = await loadGeneration();
   try {
     await runtime.persistMotionClip(client, { id: 'job-1', job_type: 'scene_motion', project_id: 'project-1', visual_plan_id: 'plan-1', visual_plan_scene_id: 'scene-1' }, { status: 'completed', provider: 'shotstack', model: 'image-motion', result: { video_url: 'https://example.test/clip.mp4', generation_type: 'PROCEDURAL_MOTION' } });

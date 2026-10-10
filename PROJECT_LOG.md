@@ -695,3 +695,52 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 **Repair:** Added only the two active PR #36 Vercel origins to the World, Style Draft, and Generation function allowlists. Arbitrary origins remain denied. Added regression coverage for preview preflight behavior.
 
 **Verification:** The new tests failed against the old allowlists, then passed after the repair. Full suite passed 83/83; production audit and production build passed. Deployed World v34, Style Draft v2, and Generation v20. A live `OPTIONS` request to World returned HTTP 200 and the exact requesting PR preview origin. The authenticated `Reveal World` POST still requires a user browser retry and is not claimed verified.
+
+## 2026-10-10 — Preserve motion approvals during repeated completion
+
+**Objective:** Continue the production repair loop from main `7dbea8b8009c68ba2e806a467790cc7d5d75141a`.
+**Confirmed failure:** Executing the actual persistMotionClip function against a persisted approved asset reproduced replacement of video_url and scene_image_id and reset approved=true/status=approved to false/generated.
+**Root cause:** Motion completion used ON CONFLICT generation_job_id UPDATE, writing creative state and source lineage again on every completion.
+**Repair:** Read and reuse an existing job asset; insert new motion assets without updating conflicts; after an insert conflict, read and return the winning asset. Preserve approval, rejection, URL, provenance and source lineage. Database lookup/insert errors remain explicit.
+**Files:** supabase/functions/beatvision-generation/index.ts; scripts/test/motion-completion-idempotency.test.mjs; existing motion provenance mock in scripts/test/beatvision-generation-state.test.mjs; PROJECT_LOG.md.
+**Verification:** Six focused runtime regressions passed in the available V8 execution environment using the real extracted function (only TypeScript argument annotations removed), including existing approved/rejected assets, concurrent completion, first completion provenance, lookup failure and insert failure. Pre-fix approved asset overwrite reproduced directly. This is not an npm-test or production verification claim.
+**Database/deployment:** No production changes, no provider calls, no creative approvals. Existing generation_job_id conflict constraint is retained.
+**Pending:** Full npm test, npm run production-audit and npm run build through pull-request CI. No local shell/Node/filesystem execution tool is available in this session.
+**Not verified:** Authenticated production pipeline, deployed behavior, real AI subject animation, playable final export.
+**Next blocker:** Inspect concurrent polling and interrupted submissions; verify remaining defects on current source rather than historical audit assumptions.
+
+**Follow-up verification for motion repair:** GitHub Actions run 38024325392, audit job 114131810402, passed on repair commit 2e901067b9bbb902f5d0cf4b39fa28ce72539cd2: npm test 99/99, production-audit success, TypeScript/Vite production build success. Read-only Supabase query confirmed motion_clip_assets_job_unique on generation_job_id. Live eight motion rows remain generated/unapproved; no evidence of this overwrite in existing production rows.
+
+## 2026-10-10 — Preserve original audio during song replacement
+
+**Confirmed failure:** Executed the actual SongPage submit handler with a replacement upload and a database-save failure. Before repair it deleted the old audio path before the database save, then deleted the new upload after failure, leaving the persisted song path without its audio.
+**Root cause:** Premature destructive storage cleanup before committing the new song path. Old audio can also remain referenced by immutable Vision Lock/assembly snapshots after a successful replacement.
+**Fix:** Remove old-object deletion from song saves; retain prior audio. Clear selected upload only after successful database save so later metadata saves do not upload the same selected file again. Existing cleanup only of the newly uploaded object after failed database save remains.
+**Files:** src/pages/SongPage.tsx; scripts/test/song-audio-replacement.test.mjs; PROJECT_LOG.md.
+**Verification:** Four focused checks passed against the actual extracted handler in V8. Regression file transpiles the real handler with repository TypeScript and exercises successful/failed replacement and metadata saves. Full npm test, production-audit and build pending CI for this commit.
+**Production changes:** None. No audio objects removed, provider requests made, approvals performed or deployment requested.
+**Limit:** Retaining prior audio consumes storage; reference-aware garbage collection is separate work and must not delete locked assets.
+**Remaining:** Authenticated production pipeline and playable final export remain UNVERIFIED.
+
+**Final verification for audio repair:** GitHub Actions run 38024430035 / audit job 114132122707 passed on f3b656d6b3f40656e89d89e2dbd8b594292c045b: npm test 103/103, zero failures; npm run production-audit passed; npm run build passed. No source changes after this verification.
+
+**Read-only authenticated production evidence:** Found an existing authorized browser session. Supabase auth user validation returned HTTP 200, and an authenticated Ghast generation_jobs GET returned HTTP 200 with zero jobs. Initial rendered page retained an old permission error; table privilege/RLS inspection and a fresh page reload disproved a current permission failure. Reloaded Production rendered PLAN LOCKED / 8 SCENES with zero alerts. No privilege or RLS change was made.
+
+**Current Ghast state:** Completed song analysis with audio; one Vision Lock; one approved Visual Plan, duration 249.126908314 seconds; eight scenes; zero scene images, motion assets or final videos. This supersedes the October 8 audit's zero-lock/zero-plan finding, without proving the complete creative pipeline.
+
+**Deployment limit:** Retrieved live Generation v20 source and compared it with inspected main 7dbea8b: equal after trimming. The live function still uses motion upsert and does not contain this branch's repair. Production verification of the patch is therefore BLOCKED by the explicit instruction not to deploy production or merge automatically. PR #44 is draft and reviewable with separate repair commits. No production deployment, generation request, approval or data deletion occurred. Provider cost eligibility and real AI subject animation remain UNVERIFIED; no unknown-cost request was attempted.
+
+**Next:** Review the tested PR and obtain deployment authorization before live verification of these repairs. Further authenticated generation-to-export verification requires a verified zero-cost provider path and the creator's explicit image/motion approvals. Fresh migration replay remains unverified because no isolated database/terminal execution environment is available.
+
+## 2026-10-10 — Authorized production deployment of PR #44 repairs
+
+**Authorization:** User instructed: "Deploy all fixes from now on." This supersedes the prior production-deployment restriction for verified fixes. Creator approvals, zero-cost constraints, authentication/RLS and production-data preservation remain mandatory. PR merging was not performed.
+
+**Pre-deployment verification:** Latest PR code/log commit aab8d014f4a6f07914ff442b30e8778986aca65d passed Production CI run 38024557147. Code commit f3b656d passed 103/103 tests, production audit and build; subsequent changes before deployment were documentation only.
+
+**Backend:** Deployed beatvision-generation v21 to mdofsinyofqbeapzfygu. Retrieved live source exactly matches the tested PR source after trimming. Retained the existing verify_jwt=false gateway setting; custom authenticate(), Supabase auth.getUser(), scheduler secret and project-owner checks are unchanged. No auth/RLS weakening or migrations.
+**Frontend:** Vercel project beat-vision (prj_uY6UsWukCvImpUbyaaHG7EGFF2Cq), production deployment dpl_WGMfKcvgZB9WTJE5Sa3NY9YreuBp, exact Git SHA aab8d014f4a6f07914ff442b30e8778986aca65d. Build logs confirm tsc -b && vite build and Build Completed. READY confirmed. Assigned beat-vision-theta.vercel.app and independently verified alias resolves to this deployment.
+**Rollback:** Previous production frontend deployment dpl_6BJEBL9vENMbMMRxif8EghZNftKE retained. Generation v20 source remains available as inspected main 7dbea8b8009c68ba2e806a467790cc7d5d75141a. No force-push, main merge or production-data change.
+**Live regression checks:** Existing authenticated browser Production reload displays PLAN LOCKED / 8 SCENES, no alert. Song page has populated form, completed analysis display, audio element and no alert; private audio range GET returned HTTP 206. Generation unauthenticated request returned 401; authenticated missing-asset request returned 404; OPTIONS returned 204. Requests were read-only/missing-asset probes and did not enqueue generation or create assets.
+**Limits:** Duplicate completion/failed replacement behaviors are covered by runtime regression tests; destructive failure injection against production data was not performed. Full song-through-export, AI subject motion, all creator gates and final playable download remain UNVERIFIED. No generation calls, approvals or paid requests.
+**Next:** Continue independently reproducible repairs and deploy each verified fix under the standing authorization. Real generation verification still requires a verified free provider path and explicit creator decisions.
