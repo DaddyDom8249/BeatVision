@@ -1,0 +1,41 @@
+name: Generation enqueue security
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: fixture-only
+          POSTGRES_DB: enqueue_fixture
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: fixture-only
+      PGDATABASE: enqueue_fixture
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install fixture and reproduce production privileges
+        run: |
+          psql -v ON_ERROR_STOP=1 -f scripts/test/sql/generation-enqueue-fixture.sql
+          psql -v ON_ERROR_STOP=1 -f scripts/test/sql/generation-enqueue-baseline.sql
+      - name: Apply candidate migration when present
+        run: |
+          if test -f supabase/migrations/20261010053000_owner_checked_generation_enqueue.sql; then
+            psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261010053000_owner_checked_generation_enqueue.sql
+          fi
+      - name: Verify owner enqueue, isolation, idempotency and revoked direct writes
+        run: psql -v ON_ERROR_STOP=1 -f scripts/test/sql/generation-enqueue-security.sql

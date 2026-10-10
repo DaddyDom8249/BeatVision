@@ -121,7 +121,7 @@ export default function SongPage({ projectId }: Props) {
         audioPath = `${auth.user.id}/${projectId}/${crypto.randomUUID()}.${extension}`;
         const upload = await supabase.storage.from("songs").upload(audioPath, audio, { upsert: false, contentType: audio.type || undefined });
         if (upload.error) throw new Error(upload.error.message);
-        if (song?.audio_path) await supabase.storage.from("songs").remove([song.audio_path]);
+        // Keep prior audio: failed saves and immutable Vision Locks may still reference it.
       }
 
       const payload: Record<string, unknown> = {
@@ -141,6 +141,7 @@ export default function SongPage({ projectId }: Props) {
         throw new Error(result.error.message);
       }
 
+      setAudio(null);
       await reload();
       setSaved(true);
     } catch (e) {
