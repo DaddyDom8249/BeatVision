@@ -41,4 +41,15 @@ do $test$ begin
   if has_table_privilege('authenticated','public.generation_jobs','INSERT') or has_table_privilege('authenticated','public.generation_jobs','UPDATE') then raise exception 'CLIENT_JOB_WRITES_GRANTED'; end if;
   if (select count(*) from public.generation_jobs)<>2 then raise exception 'UNAUTHORIZED_MUTATIONS'; end if;
 end $test$;
+do $test$ begin
+  begin
+    insert into public.generation_jobs(job_type,visual_plan_scene_id) values('unknown_type','00000000-0000-0000-0000-000000000300');
+    raise exception 'UNKNOWN_JOB_TYPE_ALLOWED';
+  exception when check_violation then null; end;
+  begin
+    insert into public.generation_jobs(job_type,visual_plan_scene_id) values('assembly','00000000-0000-0000-0000-000000000300');
+    raise exception 'ASSEMBLY_SCENE_LINK_ALLOWED';
+  exception when check_violation then null; end;
+  if (select count(*) from public.generation_jobs)<>2 then raise exception 'INVALID_JOB_INSERTED'; end if;
+end $test$;
 select 'GENERATION_ENQUEUE_SECURITY_PASS' as result;

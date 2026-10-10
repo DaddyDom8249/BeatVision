@@ -37,5 +37,10 @@ jobs:
           if test -f supabase/migrations/20261010053000_owner_checked_generation_enqueue.sql; then
             psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261010053000_owner_checked_generation_enqueue.sql
           fi
+      - name: Apply assembly job-type repair when present
+        run: |
+          if test -f supabase/migrations/20261010054500_allow_canonical_assembly_job_type.sql; then
+            psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261010054500_allow_canonical_assembly_job_type.sql
+          fi
       - name: Verify owner enqueue, isolation, idempotency and revoked direct writes
         run: psql -v ON_ERROR_STOP=1 -f scripts/test/sql/generation-enqueue-security.sql
