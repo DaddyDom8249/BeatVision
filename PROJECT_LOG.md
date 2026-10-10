@@ -755,3 +755,14 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 **Verification:** Eight focused checks passed against actual patched functions in V8 (TypeScript annotations removed); scheduler integration regression added for full Node CI. Includes fresh/expired dispatches, upstream preservation, concurrent accepted/completed rows and DB errors. npm tests, production-audit and build pending pull-request CI.
 **Jules:** Reused sessions/11067167063386264554; created zero Jules tasks. Jules follow-up is in progress without new findings at the last check.
 **Production:** No job mutations/provider requests made while diagnosing. Deploy only after full checks and independent review, under standing user authorization.
+
+**Recovery deployment verification:** Commit 2b97bf6452a596b47ed50c0af2391ba418e70bd2 passed CI run 38025176687 / job 114134392417: 112/112 tests, production-audit and build passed. Live DB confirms generation_jobs_updated_at trigger. Deployed Generation v22; retrieved source matches. Live unauthenticated drain=401, authenticated ordinary-user drain=401, missing owned-project job poll=404. No jobs created or modified for verification.
+
+## 2026-10-10 — Return authoritative state after losing a polling race
+
+**Confirmed failure:** Actual poll() execution reproduced a pending response arriving after another poll completed the database job. The conditional status update affected zero rows; catch attempted another failure write, which threw SET_FAILED_ZERO_ROWS_AFFECTED. The row remained completed but the caller received a controller error.
+**Root cause:** run()/poll() treated lost conditional-write races as generation errors and cascaded setFailed instead of rereading authoritative state.
+**Fix:** On the two explicit zero-row/race errors, reread and return the persisted job; preserve standalone setFailed error detection and all other genuine errors.
+**Files:** Generation controller; scripts/test/generation-poll-race.test.mjs; PROJECT_LOG.md.
+**Verification:** Focused real-function execution returns concurrent completed/failed rows with zero failure writes. Three Node regressions cover late pending and terminal provider responses. Full CI pending.
+**Limit:** No production concurrent provider requests were triggered. Provider output/approval gates unchanged.

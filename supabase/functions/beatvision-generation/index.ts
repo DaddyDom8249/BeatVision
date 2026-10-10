@@ -459,6 +459,13 @@ async function run(db: any, job: any) {
       }
     }
   } catch (error) {
+    // Losing a conditional write means another request owns the current state.
+    // Return that state instead of attempting to fail its completed job.
+    if (error instanceof Error && /^(GENERATION_JOB_RACE_LOST|SET_FAILED_ZERO_ROWS_AFFECTED):/.test(error.message)) {
+      const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+      if (latest.error) throw new Error(latest.error.message);
+      return latest.data;
+    }
     await setFailed(db, job.id, error instanceof Error ? error.message : String(error));
   }
 
@@ -543,6 +550,13 @@ async function poll(db: any, job: any) {
       if (!updateRes.data || updateRes.data.length === 0) throw new Error("GENERATION_JOB_RACE_LOST: Job was modified concurrently.");
     }
   } catch (error) {
+    // Losing a conditional write means another request owns the current state.
+    // Return that state instead of attempting to fail its completed job.
+    if (error instanceof Error && /^(GENERATION_JOB_RACE_LOST|SET_FAILED_ZERO_ROWS_AFFECTED):/.test(error.message)) {
+      const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+      if (latest.error) throw new Error(latest.error.message);
+      return latest.data;
+    }
     await setFailed(db, job.id, error instanceof Error ? error.message : String(error));
   }
 
