@@ -180,11 +180,11 @@ test("confirmed World without Style Bible shows creation gate and never queries 
   const setters = ["setLoading", "setError", "setWorld", "setStyleBible",
     "setCharacters", "setCharacterAssets", "setEnvironments", "setEnvironmentAssets"];
   const construct = new Function(
-    "useCallback", "supabase", "projectId", "hasStartedLoad", ...setters,
+    "useCallback", "supabase", "projectId", "hasStartedLoad", "styleFields", ...setters,
     compiled,
   );
   const args = setters.map(name => value => { state[name.slice(3).toLowerCase()] = value; });
-  const load = construct(fn => fn, supabase, "project-current", { current: false }, ...args);
+  const load = construct(fn => fn, supabase, "project-current", { current: false }, "id,project_id,status", ...args);
   await load();
 
   assert.deepEqual(reads, ["projects", "world_reports", "style_bibles"]);
