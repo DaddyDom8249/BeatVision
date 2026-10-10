@@ -58,3 +58,8 @@
 .style-asset-storage summary{cursor:pointer;color:#c9a66b}
 .style-asset-storage code{display:block;margin-top:8px;overflow-wrap:anywhere;word-break:break-word;white-space:normal;font-size:11px;line-height:1.5}
 @media(max-width:700px){.style-record-card{padding:16px}.style-record-card>form{grid-template-columns:minmax(0,1fr)}.style-record-card>form>button{justify-self:stretch}.style-record-card>button{display:block;width:100%;text-align:center}.style-asset-card{padding:12px}}
+
+/* Phase 3 forward navigation remains available when the mobile sidebar is hidden. */
+.style-stage-navigation{margin:0 0 24px;align-items:center;justify-content:flex-start;flex-wrap:wrap}
+.style-stage-navigation>a{text-decoration:none}
+@media(max-width:700px){.style-stage-navigation>a{display:block;width:100%;text-align:center}}

@@ -1,5 +1,19 @@
 # BeatVision Project Log
 
+## 2026-10-10 — Android Style Studio next-step navigation repair
+
+**User symptom:** Android screen recording (111.6 seconds) shows scrolling through Phase 3 Style / Characters / Environments and no forward-stage action. Existing approved sheets and generated revision proposals are visible; the recording does not prove all Vision Lock prerequisites are met.
+
+**Source-confirmed cause:** Production-pinned StylePage.tsx at `053a77fa4f246765880e67cee14b35053d522b68` contains no link to `/projects/:projectId/visual-plan`. The CSS hides `.studio-sidebar` at widths <=900px. On a mobile viewport there is no visible local "Continue" action from Style Studio. This is a navigation defect, not proof of a backend approval failure.
+
+**Scoped repair:** Branch `repair/style-mobile-continue-20261010` starts at the exact primary production SHA, preserving PR #62 fixes not present on main. Add project-specific, accessible forward links at the top and bottom of the Style page, shown only after the Style Bible is locked. For unlocked drafts, show the lock prerequisite rather than bypassing it. Add mobile wrapping CSS and real StylePage JSX-render regression tests for both states. No production data, RPC permissions, approved assets, providers, or auth changes.
+
+**Baseline:** Production source commit `053a77fa` passed GitHub Actions Production CI run `38066982368` (test/audit/build); Vercel confirmed the primary domain serves this exact production READY SHA as `dpl_4nkmy18QaPsA9rj6Hzd7EfgrVa1s`.
+
+**Verification status:** Implementation written on repair branch. New-branch CI, live authenticated Android click-through, and Vercel release are **NOT VERIFIED** at the time of this entry. Previously configured Skyvern browser session failed to connect twice; no claim of browser success. Original approval state remains authoritative; Visual Plan backend may still report missing character/environment prerequisites.
+
+**Next:** Obtain a green commit-pinned test/audit/build CI result, inspect patch, then deploy only the tested branch SHA if safe and perform a real authenticated Style → Visual Plan check. Do not merge main without owner authorization.
+
 ## 2026-10-10 — Automatically seed Characters and Environments from confirmed World
 
 **Objective:** Populate cast and spaces as World-backed editable drafts when the Style Bible is created or opened, without requiring manual re-entry or touching approved assets.
