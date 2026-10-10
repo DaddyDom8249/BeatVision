@@ -1,5 +1,19 @@
 # BeatVision Project Log
 
+## 2026-10-10 — Companion Floot Universal Gateway authentication hardening (review-only)
+
+**Scope:** Existing separate Floot project `c598dbb7-8c2b-4833-ae93-4661e775d023`, not the BeatVision React/Supabase repository. Production BeatVision was not modified. Current GitHub main was `7dbea8b8009c68ba2e806a467790cc7d5d75141a` while Vercel's primary `beat-vision-theta.vercel.app` alias pointed at `6fc99fca42e76c01a9bd113b62aa2d09d8940c23` from `repair/style-studio-missing-bible-uuid-20261010` (71 commits ahead of main); do not overwrite that deployment with older main.
+
+**Confirmed failure:** Floot gateway anonymous `POST /_api/v1/generate` returned 503 `not_configured` before checking caller authorization. This disclosed a configuration-dependent response to unauthenticated callers.
+
+**Fix in Floot:** Added `helpers/gatewayAuthentication.tsx` with SHA-256 digest comparison using `timingSafeEqual`; modified `endpoints/v1/generate_POST.ts` to uniformly reject missing/incorrect bearer credentials with HTTP 401 before parsing input or exposing configuration. The generation endpoint remains fail-closed; even a valid bearer never invokes a provider while no verified adapters are active. Added regression coverage in `helpers/gatewayAuthentication.spec.tsx` plus a guided provider-onboarding queue.
+
+**Verification:** Floot typecheck clean; Floot Jasmine default tests 3 files passed, 0 failed (two optional hook tests excluded). Direct Floot sandbox runtime anonymous POST returned HTTP 401 and invalid dummy-token POST returned HTTP 401. Earlier pre-fix anonymous POST returned HTTP 503 `not_configured`. No provider execution or paid usage. Floot named restore checkpoint `9667a423-4b4f-4a20-ba3d-13481ebeb72b`.
+
+**Blocked:** Floot managed `auth` and `database` provisioning returned internal tool failures; independent `list_resources` and database probe confirmed no connected Postgres/JWT resource. Therefore no admin-authenticated encrypted credential vault or automated key transfer exists. A secure Floot OpenRouter key-entry request is pending the owner; never paste credentials in chat/public previews. Skyvern public-only provider preflight workflow `wpid_583957599026029498` was created but not run. One follow-up was sent to existing Jules task `sessions/11067167063386264554`; task state remained COMPLETED at the immediate status check, not evidence of a running worker.
+
+**Release status:** IMPLEMENTED/TESTED in Floot preview. Not published, not authenticated-production verified. This log-only branch is for review; no main merge, database migration, generation, creative approval, or production deploy was performed.
+
 ## 2026-10-09 17:25 UTC — Explain blocked final assembly in Production Workspace
 
 **Live progress:** PR #41 is merged at 308c859c. Released that pinned commit to the primary Vercel project (dpl_74xvewfLm2o9Efgmvb1mn1a2TgKu) and verified the actual beat-vision-theta alias. Corrected all eight existing unlocked Ghast draft scenes through the browser, saved each, reloaded, reviewed and approved the Visual Plan. approve_visual_plan returned HTTP 200; SQL confirms all eight scenes approved, with the locked Vision snapshot hash unchanged. New-plan creation defaults after PR #41 remain separately unverified because no duplicate/deletion was introduced.
