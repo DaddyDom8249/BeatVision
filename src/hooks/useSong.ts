@@ -23,6 +23,9 @@ export function useSong(projectId?: string) {
     } else {
       let audio_url: string | null = null;
       if (data.audio_path) {
+        if (data.audio_path.includes('..')) {
+          throw new Error('Invalid audio path');
+        }
         const signed = await supabase.storage.from("songs").createSignedUrl(data.audio_path, 3600);
         if (signed.error) {
           setError(signed.error.message);
