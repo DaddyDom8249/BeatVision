@@ -71,7 +71,7 @@ export default function CreateProjectPage({ onNavigate }: Props) {
           <p>Give the project a working name. The song, not the prompt, becomes the source material for the visual world.</p>
           {!signedIn && <div className="auth-prompt">
             <span>Account required to save your project.</span>
-            <button type="button" className="auth-link" onClick={() => void openAccountFlow()}>Sign in or create an account →</button>
+            <button type="button" className="auth-link" onClick={openAccountFlow}>Sign in or create an account →</button>
           </div>}
           <form onSubmit={submit}>
             <label>Project name<input autoFocus required maxLength={120} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Midnight" /></label>
