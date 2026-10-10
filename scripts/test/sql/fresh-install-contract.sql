@@ -34,6 +34,25 @@ do $test$ begin
   exception when insufficient_privilege then null;
   end;
 end $test$;
+-- Persist and explicitly approve a timed scene before any generation enqueue.
+insert into public.visual_plans(id,project_id,world_report_id,style_bible_id,song_id,vision_lock_id,title,duration_seconds)
+select '00000000-0000-0000-0000-000000000200',project_id,world_report_id,style_bible_id,song_id,id,'Fixture plan',4
+from public.vision_locks;
+insert into public.visual_plan_scenes(id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,start_time,end_time,title)
+select '00000000-0000-0000-0000-000000000300',id,project_id,world_report_id,style_bible_id,song_id,1,0,4,'Fixture scene'
+from public.visual_plans;
+select public.approve_visual_plan('00000000-0000-0000-0000-000000000200');
+do $test$ declare a public.generation_jobs; b public.generation_jobs; begin
+  a:=public.enqueue_scene_generation('00000000-0000-0000-0000-000000000100','00000000-0000-0000-0000-000000000300','scene_image');
+  b:=public.enqueue_scene_generation('00000000-0000-0000-0000-000000000100','00000000-0000-0000-0000-000000000300','scene_image');
+  if a.id<>b.id or a.status<>'queued' or (select count(*) from public.generation_jobs)<>1 then raise exception 'FRESH_ENQUEUE_IDEMPOTENCY_FAILED'; end if;
+  begin
+    perform public.enqueue_assembly_generation('00000000-0000-0000-0000-000000000100','00000000-0000-0000-0000-000000000200');
+    raise exception 'FRESH_ASSEMBLY_APPROVAL_BYPASS';
+  exception when object_not_in_prerequisite_state then
+    if sqlerrm<>'ASSEMBLY_MOTION_NOT_FULLY_APPROVED' then raise; end if;
+  end;
+end $test$;
 update public.songs set audio_path='00000000-0000-0000-0000-000000000001/replacement.mp3'
 where project_id='00000000-0000-0000-0000-000000000100';
 do $test$ begin
@@ -42,7 +61,7 @@ do $test$ begin
 end $test$;
 set request.jwt.claim.sub='00000000-0000-0000-0000-000000000002';
 do $test$ begin
-  if exists(select from public.projects) or exists(select from public.songs) or exists(select from public.vision_locks) then raise exception 'FRESH_INSTALL_CROSS_OWNER_READ'; end if;
+  if exists(select from public.projects) or exists(select from public.songs) or exists(select from public.vision_locks) or exists(select from public.generation_jobs) then raise exception 'FRESH_INSTALL_CROSS_OWNER_READ'; end if;
   begin
     insert into public.projects(owner_id,title,status,stage) values('00000000-0000-0000-0000-000000000001','Forbidden','Draft','song');
     raise exception 'FRESH_INSTALL_CROSS_OWNER_INSERT';
