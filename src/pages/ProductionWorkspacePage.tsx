@@ -281,7 +281,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
               Assembly status: {assemblyJob.status}.
               {" "}Provider stage: {assemblyJob.output?.arena_status_response?.result?.status ?? assemblyJob.output?.arena_response?.result?.status ?? "Not reported"}.
               {" "}Last checked: {assemblyJob.output?.last_polled_at ?? "Not checked yet"}.
-            </p>
+            </p>}
             {finalVideo?.video_url ? <video src={finalVideo.video_url} controls playsInline style={{ width: "100%", maxHeight: 600, borderRadius: 12 }} /> : <p>No completed final video exists yet. Assembly requires every approved scene to have an approved real motion clip.</p>}
             <div className="production-actions">
               {!finalVideo && !pending(assemblyJob) && <button className="primary-button" disabled={busy} onClick={() => void assembleFinal()}>{assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}</button>}
