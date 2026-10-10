@@ -2,8 +2,8 @@ name: BeatVision Production CI
 on:
   push:
     branches: [main]
+  # Include stacked repair PRs whose base is another repair branch.
   pull_request:
-    branches: [main]
 jobs:
   audit:
     runs-on: ubuntu-latest
