@@ -164,3 +164,40 @@ test('checking assembly shows its returned pending stage without submitting agai
     assert.doesNotMatch(document.body.textContent, /FINAL VIDEO COMPLETE/);
   } finally { await view.cleanup(); }
 });
+
+test('completed final video downloads its actual bytes with an mp4 filename', async () => {
+ const view=await mount({assemblyJob:{id:'assembly-1',status:'completed',output:{final_video:{video_url:'https://media.test/final.mp4'}}}});
+ const oldFetch=globalThis.fetch,oldCreate=URL.createObjectURL,oldRevoke=URL.revokeObjectURL,oldClick=window.HTMLAnchorElement.prototype.click;
+ let saved, requested, created;
+ globalThis.fetch=async url=>{requested=url;return new Response('real fixture video bytes',{headers:{'content-type':'video/mp4'}})};
+ URL.createObjectURL=blob=>{created=blob;return 'blob:fixture-video'};
+ URL.revokeObjectURL=()=>{};
+ window.HTMLAnchorElement.prototype.click=function(){saved={href:this.href,filename:this.download}};
+ try{
+  await view.click('Download Video');
+  assert.equal(requested,'https://media.test/final.mp4');
+  assert.equal(created.size,24);
+  assert.equal(saved.href,'blob:fixture-video');
+  assert.equal(saved.filename,'BeatVision-project-1.mp4');
+  assert.equal(view.rpcCalls.length,0);
+ }finally{globalThis.fetch=oldFetch;URL.createObjectURL=oldCreate;URL.revokeObjectURL=oldRevoke;window.HTMLAnchorElement.prototype.click=oldClick;await view.cleanup()}
+});
+for(const [label,response] of [
+ ['HTTP error',()=>new Response('Not found',{status:404})],
+ ['empty media',()=>new Response('',{headers:{'content-type':'video/mp4'}})],
+ ['non-video response',()=>new Response('<html>error</html>',{headers:{'content-type':'text/html'}})]
+])test('download reports '+label+' without claiming a saved file',async()=>{
+ const view=await mount({assemblyJob:{id:'assembly-1',status:'completed',output:{final_video:{video_url:'https://media.test/final.mp4'}}}});
+ const oldFetch=globalThis.fetch;
+ globalThis.fetch=async()=>response();
+ try{
+  await view.click('Download Video');
+  assert.match(document.querySelector('[role="alert"]').textContent,/download/i);
+  assert.match(document.body.textContent,/FINAL VIDEO COMPLETE/);
+  assert.ok([...document.querySelectorAll('button')].some(b=>b.textContent==='Download Video'&&!b.disabled));
+ }finally{globalThis.fetch=oldFetch;await view.cleanup()}
+});
+test('pending assembly cannot download an uncompleted provider URL',async()=>{
+ const view=await mount({assemblyJob:{id:'assembly-1',status:'processing',output:{final_video:{video_url:'https://media.test/final.mp4'}}}});
+ try{assert.ok(![...document.querySelectorAll('button')].some(b=>b.textContent==='Download Video'))}finally{await view.cleanup()}
+});
