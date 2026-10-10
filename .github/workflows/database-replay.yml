@@ -1,0 +1,41 @@
+name: Database migration replay
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: fixture-only
+          POSTGRES_DB: enqueue_fixture
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: fixture-only
+      PGDATABASE: enqueue_fixture
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize platform-only baseline
+        run: psql -v ON_ERROR_STOP=1 -f scripts/test/sql/platform-replay-fixture.sql
+      - name: Replay migrations on an empty database
+        id: replay
+        run: |
+          for migration in supabase/migrations/*.sql; do
+            echo "REPLAYING $migration"
+            psql --single-transaction -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Record replay result without claiming full-schema coverage
+        run: echo "Migration replay result is ${{ steps.replay.outcome }}; platform fixture does not include any legacy application tables."
