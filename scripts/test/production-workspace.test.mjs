@@ -17,7 +17,7 @@ await writeFile(join(dir, 'stub.mjs'), 'export const supabase = new Proxy({}, { 
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ motionJob = null, runError = null, stored = false } = {}) {
+async function mount({ motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, jobsMap = {}, runError = null, stored = false, rpcError = null } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
@@ -31,10 +31,17 @@ async function mount({ motionJob = null, runError = null, stored = false } = {})
         select() { return this; }, eq(k,v) { filters[k] = v; return this; }, order() { return this; }, limit() { return this; },
         single() { return this; }, maybeSingle() { return this; },
         then(resolve) {
-          const data = table === 'visual_plans' ? { id: 'plan-1', status: 'approved', title: 'Locked plan' }
-            : table === 'visual_plan_scenes' ? [{ id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved' }]
-            : table === 'scene_image_assets' ? image
-            : table === 'generation_jobs' && filters.job_type === 'scene_motion' ? motionJob : null;
+          let data = null;
+          if (table === 'visual_plans') data = { id: 'plan-1', status: 'approved', title: 'Locked plan' };
+          else if (table === 'visual_plan_scenes') data = [{ id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved' }];
+          else if (table === 'scene_image_assets') data = image;
+          else if (table === 'motion_clip_assets') data = motionAsset;
+          else if (table === 'generation_jobs') {
+            if (filters.id && jobsMap[filters.id]) data = jobsMap[filters.id];
+            else if (filters.job_type === 'scene_motion') data = motionJob;
+            else if (filters.job_type === 'scene_image') data = imageJob;
+            else if (filters.job_type === 'assembly') data = assemblyJob;
+          }
           return Promise.resolve({ data, error: null }).then(resolve);
         },
       };
@@ -68,6 +75,72 @@ test('async motion keeps the workspace and exposes status without a completed as
     await view.click('Check Motion Status');
     assert.equal(view.calls.at(-1).jobId, 'job-1');
   } finally { await view.cleanup(); }
+});
+
+test('motion provenance accurately detects procedural animation from historical polling job when newer retry job exists', async () => {
+  const motionAsset = {
+    id: 'motion-1',
+    generation_job_id: 'job-a',
+    provider: 'arena',
+    model: 'ltx-video',
+    video_url: 'https://test/procedural.mp4',
+    status: 'generated',
+  };
+  const jobsMap = {
+    'job-a': {
+      id: 'job-a',
+      output: {
+        arena_status_response: {
+          result: { generation_type: 'PROCEDURAL_MOTION' },
+        },
+      },
+    },
+  };
+  const motionJob = { id: 'job-b', status: 'processing', job_type: 'scene_motion' };
+
+  const view = await mount({ motionAsset, jobsMap, motionJob });
+  try {
+    assert.match(
+      document.body.textContent,
+      /Procedural image animation \(pan\/zoom\), not AI-generated subject motion\./
+    );
+    assert.doesNotMatch(document.body.textContent, /Provider: arena · Model: ltx-video/);
+  } finally {
+    await view.cleanup();
+  }
+});
+
+test('motion provenance accurately detects procedural animation from historical polling job when newer retry job exists', async () => {
+  const motionAsset = {
+    id: 'motion-1',
+    generation_job_id: 'job-a',
+    provider: 'arena',
+    model: 'ltx-video',
+    video_url: 'https://test/procedural.mp4',
+    status: 'generated',
+  };
+  const jobsMap = {
+    'job-a': {
+      id: 'job-a',
+      output: {
+        arena_status_response: {
+          result: { generation_type: 'PROCEDURAL_MOTION' },
+        },
+      },
+    },
+  };
+  const motionJob = { id: 'job-b', status: 'processing', job_type: 'scene_motion' };
+
+  const view = await mount({ motionAsset, jobsMap, motionJob });
+  try {
+    assert.match(
+      document.body.textContent,
+      /Procedural image animation \(pan\/zoom\), not AI-generated subject motion\./
+    );
+    assert.doesNotMatch(document.body.textContent, /Provider: arena · Model: ltx-video/);
+  } finally {
+    await view.cleanup();
+  }
 });
 
 test('pending motion is restored from the database after reload', async () => {
