@@ -839,3 +839,18 @@ Reloadverification: image restored fromprivate storage and decoded1024x1024; dow
 Rollback: previousenqueueRPCdefinitions versioncontrolled in regressionbaselineSQL; restoringbothfunctions removes privileged enqueuewithoutgrantingdirectwrites. FulloriginalArena servingmodule savedbefore guardedcontent-onlypatch; namespace/bindingspreserved. Frontendunchanged since tested61b2750 andGenerationv23, analyzev13 remaindeployed.
 
 Notverified/blockers: creatoracceptance of image/identitycontinuity is NOT automatic; realAI motion andfinalMP4remainUNVERIFIED. Nextrequiredcreativegate: creatorreview image inexistingGhastProductionWorkspace beforeApproveImage; motionrequiresverifiedzero-costAIvideo path (WorkersFree confirmation doesnotprovePixazoallowance). SameJules session11067167063386264554 continues motionprovenanceUItask; noadditionaltaskscreated/no stalepatchapplied. Do notdeclareapplicationcomplete.
+
+
+## 2026-10-10 — Repair final assembly canonical job-type constraint
+
+CONFIRMED/FAILED: Owner reports all images/motion approved, but Assemble Final Video fails generation_jobs_canonical_job_type_check. Live SQL confirms enqueue_assembly_generation inserts job_type='assembly'; original job_type_check allows assembly but canonical_job_type_check only allows scene_image/scene_motion. Ghast has 8 approved scenes and 8 approved motion assets. No existing assembly jobs at inspection.
+
+ROOT CAUSE: Contradictory overlapping database checks; earlier enqueue regression fixture modeled privileges but omitted production CHECK constraints, allowing this defect to escape.
+
+FIX: supabase/migrations/20261010054500_allow_canonical_assembly_job_type.sql replaces only canonical check with scene_image/scene_motion/assembly. No job rows or approved assets altered. Fixture now reproduces all three relevant checks; security SQL also rejects unknown types and assembly linked to a scene. Workflow applies candidate migration before real PostgreSQL security tests. Owner approval guards, RLS and revoked client INSERT/UPDATE remain untouched.
+
+REPRODUCE: Red commit209f7ad91986d133d591e91ea5f83b1c5e8e5c14, realPostgres16 run38028523161/job114144394452 fails exact reported constraint with exit3. FIX commit0401428f2096d4aab5977a9de454aa565506631c. GreenPostgres run38028565612/job114144514737 prints GENERATION_ENQUEUE_SECURITY_PASS: owner scene+assembly enqueue, idempotency, cross-owner/anonymous isolation, revoked direct writes, invalid type/scene rejection. ProductionCI run38028565560/job114144514645 confirms npm test125/125pass0fail, npm run production-audit PASS, npm run build success.
+
+DEPLOYMENT: Standing user deploy authorization; applied Supabase migration allow_canonical_assembly_job_type successfully. No frontend/Edge Function/provider changes, no provider requests or production data deletion. Live post-deploy definition allows assembly; RLS enabled and authenticated direct INSERT/UPDATE remain false. Approved assets preserved. Reviewable draft PR49, dedicated repair/assembly-job-type-20261010 branch; no merge/force-push.
+
+NOT VERIFIED/BLOCKED: Authenticated browser session pbs_583771892361746600 unavailable (SDK connection error), so actual production button retry and playable final MP4 remain UNVERIFIED. No authorization bypass to manufacture live test. Existing 8 approved motion clips are procedural Shotstack image-motion, not proof of AI subject animation. Next: authenticated assembly retry, existing Shotstack cost eligibility verification before rendering, poll actual job and validate original-song synchronized playable output. Same existing Jules task continues independent motion-provenance UI repair.
