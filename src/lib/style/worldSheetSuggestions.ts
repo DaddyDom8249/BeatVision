@@ -44,13 +44,14 @@ export function worldSheetSuggestions(world: WorldReport, kind: DraftKind, name:
   });
   const record = matching && typeof matching === "object" ? matching as WorldEnvironment : {};
   const description = formatCreativeText(record.description);
+  const keyElements = formatCreativeText(record.key_elements);
   // Never infer specific architecture, costume, or appearance from mood.
   // Surface imagery is used only when the World literally names such imagery.
   const surfaceDescription = /concrete|graffiti|textures?|geometric shapes|surfaces?/i.test(description)
     ? description : "";
   return {
     purpose: formatCreativeText(record.purpose) || description,
-    layout: formatCreativeText(record.layout ?? record.composition) || description,
+    layout: formatCreativeText(record.layout ?? record.composition) || [description, keyElements && `Key elements: ${keyElements}`].filter(Boolean).join("\n"),
     architecture: formatCreativeText(record.architecture ?? record.structure),
     surfaces: formatCreativeText(record.surfaces ?? record.props) || surfaceDescription,
     lighting: formatCreativeText(record.lighting) || formatCreativeText(world.color_lighting),

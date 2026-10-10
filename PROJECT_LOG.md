@@ -1,5 +1,43 @@
 # BeatVision Project Log
 
+## 2026-10-10 — Automatically seed Characters and Environments from confirmed World
+
+**Objective:** Populate cast and spaces as World-backed editable drafts when the Style Bible is created or opened, without requiring manual re-entry or touching approved assets.
+
+**Confirmed reproduction:** Live "Another go" project `4824c04e-bc5d-4379-9060-d14be979436c` had an approved Style Bible with zero character rows and zero environment rows. Its confirmed World explicitly states "The central figure is a male" in an **array** of immutable continuity statements, and has a named "Dim Apartment" environment with props and key elements. Existing `materializeWorldDrafts` recognized immutable continuity **object keys**, but not its array form; it read `raw_report.model_output.movement.subject_behavior` instead of the top-level World movement, and it seeded environment drafts with only some of the World fields. Additionally, after `createStyleBible` changed hook state, there was no automatic load to materialize the rows until navigating/reloading the Style page.
+
+**Minimal fix:** Extract explicit protagonist identity from confirmed immutable-continuity lines, use top-level World `subject_behavior` when actually present, and never invent a protagonist merely from motifs. Persist environment purpose/layout/props/lighting/atmosphere/continuity using the same source-backed World suggestions as the editor, including explicit `key_elements`. Refresh once when a Style Bible ID becomes visible in the hook, reusing the existing idempotent `ensureWorldDrafts` path. No auto-approval or edits to any preexisting approved records. Do not synthesize physical appearance or wardrobe not in the World.
+
+**Verification:** Exact feature SHA `6fc99fca42e76c01a9bd113b62aa2d09d8940c23` passed GitHub Actions run `38064183829` (npm test, npm run production-audit, npm run build all succeeded). Executable regressions compile real World-draft source against Another-go-shaped and Ghast-shaped World input, verify props/elements and explicit-only identity, and check idempotence with an already-approved character. Primary Vercel project `prj_uY6UsWukCvImpUbyaaHG7EGFF2Cq` deployed production ID `dpl_2syvf5CWeUNfLq1Z8XtKhf4i5fFm`, READY, and confirmed `beat-vision-theta.vercel.app` points to that exact SHA.
+
+**Verification gap:** After release, read-only Supabase inspection still showed zero character and environment rows on Another go; the account owner has not yet opened/reloaded the updated Style Bible page in an authenticated browser to trigger the owner-scoped creation calls. That end-to-end persistence check remains **NOT VERIFIED**. No SQL writes, manual asset approvals, secret changes, paid provider calls, or new Jules sessions were performed.
+
+**Next:** Authenticated owner opens `/projects/4824c04e-bc5d-4379-9060-d14be979436c/style`; verify at least one World-derived character and environment appear and persist after reload; inspect exact response/error if they do not.
+
+## 2026-10-10 — Live Ghast audit and stacked-PR CI recovery
+
+**Baseline:** GitHub main `7dbea8b8009c68ba2e806a467790cc7d5d75141a` passes its last Production CI. The primary Vercel project has a production-target deployment for repair commit `2f21f44f660f0846a8c92257c627208a393a5c44`, which is newer than main. This audit did not change that deployment or merge any PR.
+
+**Read-only live evidence:** Ghast project `8faa2cd4-361f-4764-bf1e-7800b87d6292` has one approved Visual Plan, eight approved scenes, eight approved Flux Schnell image assets, eight approved Shotstack image-motion assets, and one completed assembly job. Its final_videos row records an MP4, eight segments, duration 249.13 seconds, a nonempty Shotstack staging output URL, and `downloadable=false`. Video bytes/player playback and permanent storage were not tested; final playable delivery remains NOT VERIFIED.
+
+**CI defect reproduced:** Draft PR #62 targets `repair/project-creation-error-recovery-20261010`, not main. At inspection, it had zero GitHub Actions runs on head `95e367d`. The base branch Production CI configured `pull_request.branches: [main]`, excluding stacked repair PRs. Minimal fix: commit `1b951aa` on the existing base branch removes only that PR base filter. Main push remains restricted to main. This log update synchronizes PR #62 to request its own test pass. Do not mark PR #62 verified until the actual workflow results arrive.
+
+**Additional checks:** Read-only live role-privilege query found authenticated and anon lack TRUNCATE on all 39 public tables inspected, so the historical risk in draft PR #61 is not an active live finding at this checkpoint. Supabase security advisor warns about five authenticated-callable SECURITY DEFINER RPCs and leaked-password protection; owner-check and function-body review is required before calling any RPC unsafe. No schema, asset, quota, creative approval, provider job or storage mutations were performed.
+
+**Next:** Verify PR #62 GitHub test/build after the workflow-filter change, then execute an authenticated final-MP4 byte/player/download check and preserve the output durably without substituting generated media.
+
+## 2026-10-10 14:35 UTC — Prevent empty UUID on first Style Bible load
+
+**User evidence:** Android Style Studio shows `invalid input syntax for type uuid: ""`. Production code queries `characters` and `environments` using `style_bible_id=eq.` when a World has been confirmed but no Style Bible row exists. A read-only database check identified existing project `Another go` with confirmed World and no Style Bible, reproducing the triggering data condition. The user-named `Things I Survived` title is not present in this Supabase project's `projects` table; the screenshot's exact project UUID is not visible.
+
+**Root cause:** `useStyleStudio.load()` intentionally allows `style_bibles.maybeSingle()` to return null, but incorrectly interpolates `currentStyleBible?.id ?? ""` into two UUID filters afterward. PostgREST rejects the empty UUID and the UI hides the valid Create Style Bible gate.
+
+**Repair:** Add an explicit no-Style-Bible exit from `load()` that clears related derived UI state, preserves the confirmed World, and allows the existing creation gate to render. Remove both empty UUID query fallbacks. No production data changes, no creative approvals, no service costs, no RLS/auth changes.
+
+**Regression:** Added a source-backed test executing the transpiled `load()` callback for a confirmed World with a successful missing Style Bible SELECT, asserting only three reads, no empty UUID predicates, visible World state, no error and cleared spinner. Full GitHub CI has **NOT VERIFIED** at this checkpoint; Vercel preview deployed as READY on `8f8c7246` but a live authenticated browser check is **BLOCKED** because the prior Skyvern session expired.
+
+**Publication:** Draft PR #62 targets the existing project-creation repair branch, not `main`. No merge or production deployment. Next: execute full CI and authenticated first-Style-Bible load regression on the actual target project, then review before release.
+
 ## 2026-10-09 17:25 UTC — Explain blocked final assembly in Production Workspace
 
 **Live progress:** PR #41 is merged at 308c859c. Released that pinned commit to the primary Vercel project (dpl_74xvewfLm2o9Efgmvb1mn1a2TgKu) and verified the actual beat-vision-theta alias. Corrected all eight existing unlocked Ghast draft scenes through the browser, saved each, reloaded, reviewed and approved the Visual Plan. approve_visual_plan returned HTTP 200; SQL confirms all eight scenes approved, with the locked Vision snapshot hash unchanged. New-plan creation defaults after PR #41 remain separately unverified because no duplicate/deletion was introduced.
