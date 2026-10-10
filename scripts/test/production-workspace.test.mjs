@@ -19,13 +19,14 @@ await writeFile(join(dir, 'stub.mjs'), 'export const supabase = new Proxy({}, { 
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ motionJob = null, runError = null, stored = false, rpcError = null } = {}) {
+async function mount({ motionJob = null, imageJob = null, assemblyJob = null, runError = null, stored = false, rpcError = null } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   const image = { id: 'image-1', scene_id: 'scene-1', image_url: 'https://expired.test/image.jpg', storage_path: stored ? 'project-1/scene-images/asset.jpg' : null, status: 'approved', approved: true };
   const calls = [];
+  const rpcCalls = [];
   globalThis.__uiDb = {
     from(table) {
       const filters = {};
@@ -36,13 +37,13 @@ async function mount({ motionJob = null, runError = null, stored = false, rpcErr
           const data = table === 'visual_plans' ? { id: 'plan-1', status: 'approved', title: 'Locked plan' }
             : table === 'visual_plan_scenes' ? [{ id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved' }]
             : table === 'scene_image_assets' ? image
-            : table === 'generation_jobs' && filters.job_type === 'scene_motion' ? motionJob : null;
+            : table === 'generation_jobs' ? (filters.job_type === 'scene_motion' ? motionJob : filters.job_type === 'scene_image' ? imageJob : assemblyJob) : null;
           return Promise.resolve({ data, error: null }).then(resolve);
         },
       };
       return query;
     },
-    rpc: async (_name, args) => ({ data: rpcError ? null : { id: 'job-1', status: 'queued', job_type: args.p_job_type }, error: rpcError }),
+    rpc: async (_name, args) => { rpcCalls.push({ name: _name, args }); return { data: rpcError ? null : { id: 'job-1', status: 'queued', job_type: args.p_job_type }, error: rpcError }; },
     functions: { invoke: async (_name, { body }) => {
       calls.push(body);
       if (body.action === 'image_url') return { data: { image_url: 'https://fresh.test/image.jpg' }, error: null };
@@ -53,6 +54,7 @@ async function mount({ motionJob = null, runError = null, stored = false, rpcErr
   await act(async () => { root.render(React.createElement(Page, { projectId: 'project-1' })); });
   return {
     calls,
+    rpcCalls,
     click: async text => {
       const button = [...document.querySelectorAll('button')].find(b => b.textContent === text);
       assert.ok(button, `Missing button: ${text}`);
@@ -113,5 +115,30 @@ test('structured missing-motion assembly errors explain the prerequisite without
     assert.doesNotMatch(document.body.textContent, /\[object Object\]/);
     assert.match(document.body.textContent, /Build the shots/);
     assert.equal(view.calls.length, 0);
+  } finally { await view.cleanup(); }
+});
+
+for (const [type, prop, button] of [
+  ['scene_motion', 'motionJob', 'Check Motion Status'],
+  ['scene_image', 'imageJob', 'Check Image Status'],
+  ['assembly', 'assemblyJob', 'Check Assembly Status'],
+]) {
+  test(`submitted ${type} resumes through polling without enqueueing a duplicate`, async () => {
+    const view = await mount({ [prop]: { id: 'submitted-job', status: 'submitted', job_type: type } });
+    try {
+      await view.click(button);
+      assert.equal(view.calls.at(-1).jobId, 'submitted-job');
+      assert.equal(view.calls.at(-1).action, 'poll');
+      assert.equal(view.rpcCalls.length, 0);
+    } finally { await view.cleanup(); }
+  });
+}
+
+test('a new motion job still dispatches once with run', async () => {
+  const view = await mount();
+  try {
+    await view.click('Generate Motion');
+    assert.equal(view.calls.at(-1).action, 'run');
+    assert.equal(view.rpcCalls.length, 1);
   } finally { await view.cleanup(); }
 });
