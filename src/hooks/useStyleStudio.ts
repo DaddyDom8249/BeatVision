@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase/client";
-import { suggestMissingWorldFields } from "../lib/style/worldSheetSuggestions";
+import { completeWorldDraft, suggestMissingWorldFields } from "../lib/style/worldSheetSuggestions";
 import type { StyleDraftKind } from "../lib/style/generatedStyleDraft";
 import { mergeGeneratedStyleDraft } from "../lib/style/generatedStyleDraft";
 import type { WorldReport } from "../types/world";
@@ -117,7 +117,7 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
     })
     .filter((item): item is { name: string; sheet: Record<string, string> } => Boolean(item?.name));
 
-  if (!characters.length && (clothing || keyProp || windowLocation || subjectBehavior || motifs.length)) {
+  if (!characters.length) {
     characters.push({
       name: "Central Figure",
       sheet: {
@@ -150,6 +150,7 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       return true;
     }).map((item) => ({
       ...item,
+      sheet: suggestMissingWorldFields(item.sheet, world, "character", item.name, "draft").sheet,
       project_id: projectId,
       world_report_id: world.id,
       style_bible_id: styleBibleId,
@@ -162,8 +163,9 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       name: item.name,
       status: "draft",
       sheet: {
-        purpose: item.description,
-        layout: item.description,
+        ...completeWorldDraft(world, "environment", item.name),
+        purpose: item.description || completeWorldDraft(world, "environment", item.name).purpose,
+        layout: item.description || completeWorldDraft(world, "environment", item.name).layout,
         lighting: formatCreativeText(world.color_lighting),
         atmosphere: formatCreativeText(world.atmosphere),
         continuity: [continuityText, keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`].filter(Boolean).join("; "),

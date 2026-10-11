@@ -1,5 +1,15 @@
 # BeatVision Project Log
 
+## 2026-10-11 16:50 UTC — Complete editable Style drafts and reversible save
+
+Inspected main 7dbea8b8009c68ba2e806a467790cc7d5d75141a and recording 1000004356.mp4. Baseline: 93/93 tests, production-audit and build exit 0. Reused Jules session 8349488310053633241; rejected its cumulative patch because it removed log history, did not implement missing-field completion, and provided cancellation only before save. No other task created.
+
+Root cause: materializeWorldDrafts and World suggestions copied literal fields only, leaving missing character and environment attributes blank. Added complete explicitly labeled creative proposals for missing fields, preserving literal World values, creator text and approved rows. Initial persisted drafts use those same proposals. Character/environment editors stay editable after Save; Cancel Changes discards local edits; Undo Last Save persists the previous draft through existing owner-scoped draft save callbacks. Approved sheets now offer Create Editable Revision without needing a model request, retaining originals and existing Vision Lock approval guard. No auth/RLS, SQL, provider or production data changes.
+
+Three actual-module/React mounted-editor regressions fail against baseline and pass with repair. Full suite 96/96, production-audit and build exit 0. Test inputs and database callbacks are mocked; no live generation or approval.
+
+Limits: Undo is one level in the mounted editor, cleared on identity/approval changes; it does not survive reload. World/Style/Vision Lock version transitions, real references (never fabricate URLs), and full-pipeline persistent history need further implementation. Deployment and authenticated Android/live Supabase behavior NOT VERIFIED. Source repair branch only; no merge.
+
 ## 2026-10-09 17:25 UTC — Explain blocked final assembly in Production Workspace
 
 **Live progress:** PR #41 is merged at 308c859c. Released that pinned commit to the primary Vercel project (dpl_74xvewfLm2o9Efgmvb1mn1a2TgKu) and verified the actual beat-vision-theta alias. Corrected all eight existing unlocked Ghast draft scenes through the browser, saved each, reloaded, reviewed and approved the Visual Plan. approve_visual_plan returned HTTP 200; SQL confirms all eight scenes approved, with the locked Vision snapshot hash unchanged. New-plan creation defaults after PR #41 remain separately unverified because no duplicate/deletion was introduced.

@@ -68,7 +68,7 @@ export function suggestMissingWorldFields(
   status: "draft" | "approved",
 ): { sheet: Sheet; suggestedFields: string[] } {
   if (status !== "draft") return { sheet: { ...current }, suggestedFields: [] };
-  const suggestions = worldSheetSuggestions(world, kind, name);
+  const suggestions = completeWorldDraft(world, kind, name);
   const sheet = { ...current };
   const suggestedFields: string[] = [];
   for (const [key, proposed] of Object.entries(suggestions)) {
@@ -78,4 +78,26 @@ export function suggestMissingWorldFields(
     }
   }
   return { sheet, suggestedFields };
+}
+
+/** Complete creative proposals, never detected song facts or approved changes. */
+export function completeWorldDraft(world: WorldReport, kind: DraftKind, name: string): Sheet {
+  const literal = worldSheetSuggestions(world, kind, name);
+  const atmosphere = formatCreativeText(world.atmosphere) || "intimate and focused";
+  const lighting = formatCreativeText(world.color_lighting) || "soft directional light with a restrained palette";
+  const rules = formatCreativeLines(world.continuity_rules).join("\n") || "Keep appearance, palette, props and spatial relationships consistent across shots.";
+  const defaults: Sheet = kind === "character" ? {
+    identity: `${name}: the focal subject carrying the song's emotional journey.`,
+    appearance: `A recognizable silhouette, expressive face and consistent distinguishing features; presented within the ${atmosphere} world.`,
+    wardrobe: "Simple layered clothing in the World palette, with the same outfit and accessories across connected scenes.",
+    behavior: formatCreativeText(world.movement) || "Deliberate gestures and natural movement that follow the song's changing energy.",
+    continuity: rules,
+  } : {
+    purpose: `${name}: a setting that expresses the song's emotional journey within a ${atmosphere} atmosphere.`,
+    layout: `Establish ${name} with a clear foreground, focal area and background; leave room for the subject and camera movement.`,
+    architecture: `Use a coherent structure appropriate to ${name}, keeping landmarks and spatial relationships consistent.`,
+    surfaces: `Use a restrained set of materials and recurring props appropriate to ${name}; keep their placement consistent.`,
+    lighting, atmosphere, continuity: rules,
+  };
+  return Object.fromEntries(Object.entries(defaults).map(([field, proposal]) => [field, literal[field]?.trim() ? literal[field] : `Creative proposal: ${proposal}`]));
 }

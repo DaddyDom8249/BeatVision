@@ -34,6 +34,7 @@ export default function CharacterEditor({
   const [sheet, setSheet] = useState(initial);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
+  const [undoSave, setUndoSave] = useState<{ name: string; sheet: Record<string, string> } | null>(null);
   const [generatedProposal, setGeneratedProposal] = useState<Record<string, string> | null>(null);
   const suggestedFields = character.suggested_world_fields ?? [];
   const missingFields = Object.keys(emptySheet).filter((field) => !sheet[field as keyof typeof emptySheet]?.trim());
@@ -48,12 +49,31 @@ export default function CharacterEditor({
   // Reload this editor only when its own persisted version changes.
   }, [character.id, character.updated_at, character.status]);
 
+  useEffect(() => { setUndoSave(null); }, [character.id, character.status]);
+
+  function cancelEdits() {
+    setName(character.name); setSheet(initial); setGeneratedProposal(null);
+    setActionError(null); setActionStatus("Unsaved changes discarded.");
+  }
+
+  function restoreSaved() {
+    if (!undoSave || locked || working) return;
+    const previous = undoSave;
+    setActionError(null);
+    void onSave(character.id, previous).then(() => {
+      setName(previous.name); setSheet({ ...emptySheet, ...previous.sheet });
+      setUndoSave(null); setActionStatus("Previous saved draft restored.");
+    }).catch((error: unknown) => setActionError(getCreativeErrorMessage(error, "Unable to restore saved draft.")));
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault();
     if (locked) return;
     setActionError(null);
     setActionStatus(null);
+    const previous = { name: character.name, sheet: initial };
     void onSave(character.id, { name, sheet }).then(() => {
+      setUndoSave(previous);
       setActionStatus("Saved character sheet.");
     }).catch((error: unknown) => {
       setActionError(getCreativeErrorMessage(error, "Unable to save character."));
@@ -72,6 +92,7 @@ export default function CharacterEditor({
         {locked ? "Approved with unspecified fields (requires an explicit revision): " : "Not specified by confirmed World; creator input needed: "}
         {missingFields.join(", ")}.
       </p>}
+      {!locked && <p>Creative proposals are editable. Saving keeps this a draft; approval is separate.</p>}
       <form onSubmit={submit}>
         <label>Name <input readOnly={locked} value={name} onChange={(e) => setName(e.target.value)} required /></label>
         <label>Identity <textarea readOnly={locked} rows={3} value={sheet.identity} onChange={(e) => setSheet((s) => ({ ...s, identity: e.target.value }))} /></label>
@@ -80,7 +101,14 @@ export default function CharacterEditor({
         <label>Behavior / movement <textarea readOnly={locked} rows={3} value={sheet.behavior} onChange={(e) => setSheet((s) => ({ ...s, behavior: e.target.value }))} /></label>
         <label>Continuity / must-not-change <textarea readOnly={locked} rows={3} value={sheet.continuity} onChange={(e) => setSheet((s) => ({ ...s, continuity: e.target.value }))} /></label>
         <button disabled={working || locked}>{locked ? "Character Approved" : working ? "Saving…" : "Save Character Sheet"}</button>
+        {!locked && <button type="button" disabled={working} onClick={cancelEdits}>Cancel Changes</button>}
+        {!locked && undoSave && <button type="button" disabled={working} onClick={restoreSaved}>Undo Last Save</button>}
       </form>
+      {locked && <button type="button" disabled={working} onClick={() => {
+        setActionError(null);
+        void onCreateRevision(character, {}).catch((error: unknown) => setActionError(getCreativeErrorMessage(error, "Unable to create editable revision.")));
+      }}>Create Editable Revision</button>}
+      {locked && <p>The approved original stays unchanged. A locked Visual Plan requires an explicit new plan revision before a replacement can be approved.</p>}
       <button type="button" disabled={working} onClick={() => {
         setActionError(null);
         setActionStatus(null);

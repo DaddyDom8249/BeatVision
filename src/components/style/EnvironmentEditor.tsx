@@ -34,6 +34,7 @@ export default function EnvironmentEditor({
   const [sheet, setSheet] = useState(initial);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
+  const [undoSave, setUndoSave] = useState<{ name: string; sheet: Record<string, string> } | null>(null);
   const [generatedProposal, setGeneratedProposal] = useState<Record<string, string> | null>(null);
   const suggestedFields = environment.suggested_world_fields ?? [];
   const missingFields = Object.keys(emptySheet).filter((field) => !sheet[field as keyof typeof emptySheet]?.trim());
@@ -48,12 +49,31 @@ export default function EnvironmentEditor({
   // Reload this editor only when its own persisted version changes.
   }, [environment.id, environment.updated_at, environment.status]);
 
+  useEffect(() => { setUndoSave(null); }, [environment.id, environment.status]);
+
+  function cancelEdits() {
+    setName(environment.name); setSheet(initial); setGeneratedProposal(null);
+    setActionError(null); setActionStatus("Unsaved changes discarded.");
+  }
+
+  function restoreSaved() {
+    if (!undoSave || locked || working) return;
+    const previous = undoSave;
+    setActionError(null);
+    void onSave(environment.id, previous).then(() => {
+      setName(previous.name); setSheet({ ...emptySheet, ...previous.sheet });
+      setUndoSave(null); setActionStatus("Previous saved draft restored.");
+    }).catch((error: unknown) => setActionError(getCreativeErrorMessage(error, "Unable to restore saved draft.")));
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault();
     if (locked) return;
     setActionError(null);
     setActionStatus(null);
+    const previous = { name: environment.name, sheet: initial };
     void onSave(environment.id, { name, sheet }).then(() => {
+      setUndoSave(previous);
       setActionStatus("Saved environment sheet.");
     }).catch((error: unknown) => {
       setActionError(getCreativeErrorMessage(error, "Unable to save environment."));
@@ -72,6 +92,7 @@ export default function EnvironmentEditor({
         {locked ? "Approved with unspecified fields (requires an explicit revision): " : "Not specified by confirmed World; creator input needed: "}
         {missingFields.join(", ")}.
       </p>}
+      {!locked && <p>Creative proposals are editable. Saving keeps this a draft; approval is separate.</p>}
       <form onSubmit={submit}>
         <label>Name <input readOnly={locked} value={name} onChange={(e) => setName(e.target.value)} required /></label>
         <label>Purpose / narrative role <textarea readOnly={locked} rows={3} value={sheet.purpose} onChange={(e) => setSheet((s) => ({ ...s, purpose: e.target.value }))} /></label>
@@ -82,7 +103,14 @@ export default function EnvironmentEditor({
         <label>Atmosphere <textarea readOnly={locked} rows={3} value={sheet.atmosphere} onChange={(e) => setSheet((s) => ({ ...s, atmosphere: e.target.value }))} /></label>
         <label>Continuity / must-not-change <textarea readOnly={locked} rows={3} value={sheet.continuity} onChange={(e) => setSheet((s) => ({ ...s, continuity: e.target.value }))} /></label>
         <button disabled={working || locked}>{locked ? "Environment Approved" : working ? "Saving…" : "Save Environment Sheet"}</button>
+        {!locked && <button type="button" disabled={working} onClick={cancelEdits}>Cancel Changes</button>}
+        {!locked && undoSave && <button type="button" disabled={working} onClick={restoreSaved}>Undo Last Save</button>}
       </form>
+      {locked && <button type="button" disabled={working} onClick={() => {
+        setActionError(null);
+        void onCreateRevision(environment, {}).catch((error: unknown) => setActionError(getCreativeErrorMessage(error, "Unable to create editable revision.")));
+      }}>Create Editable Revision</button>}
+      {locked && <p>The approved original stays unchanged. A locked Visual Plan requires an explicit new plan revision before a replacement can be approved.</p>}
       <button type="button" disabled={working} onClick={() => {
         setActionError(null);
         setActionStatus(null);
