@@ -1,0 +1,25 @@
+name: Motion readiness exact-head verification
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.head_ref == 'repair/motion-assembly-readiness-20261010'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Actual-page assembly readiness regressions
+        run: node --test scripts/test/production-workspace.test.mjs
+      - run: npm test
+      - run: npm run production-audit
+      - run: npm run build
