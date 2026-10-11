@@ -1,5 +1,40 @@
 # BeatVision Project Log
 
+## 2026-10-11 — Direct World lifecycle bug repair
+**Follow-up execution preparation:** Direct assistant verification now uses standard ubuntu-latest GitHub Actions in this public repository; GitHub documents public standard-hosted runner execution as free. A branch-specific Vercel git.deploymentEnabled=false rule prevents automatic deployment of repair/world-lifecycle-direct-20261011; all other branches retain default deployment settings. Added two actual React.StrictMode/jsdom hook checks in addition to six effect-model checks. The isolated workflow checks out the exact PR head, runs the focused suite, repository tests, source audit and TypeScript/Vite build, with read-only GitHub permissions and npm lifecycle scripts disabled. Actual outcomes will be recorded after execution; no claim of pass at preparation time. No physical E2E, generation or creative approval is in scope.
+
+
+**Scope:** Source debugging and regression checks by the assistant; no Jules, physical E2E, browser, generation, approvals or production writes. Base: PR #67 exact head `42f75cdc67db1baf12b9da05f464e1f3bb5e173e`, preserving its production-derived source and navigation repair.
+
+**CONFIRMED reproduction:** `src/main.tsx` wraps App in React.StrictMode. `useWorld` initialized mounted=true once and its lifecycle effect only set mounted=false on cleanup. Effect setup after cleanup never restored true. Executing the actual hook body with TypeScript annotations removed and fixture React hooks reproduced a permanent loading=true/null report after setup -> cleanup -> setup, even with a successful current GET. This proves the controlled lifecycle defect; impact on a particular production user's session is UNKNOWN.
+
+**Root cause:** A ref survives StrictMode effect replay. The one-way mounted flag rejected every state update after the initial cleanup. This is separate from provider, RLS and approved-asset behavior.
+
+**Correction:** Restore mounted=true in effect setup; set false and increment the request version at cleanup. Prior effect lifetimes cannot update current state. No network retry, provider/auth/database or approval policy change.
+
+**Verification actually executed:** In the available zero-cost V8 tool runtime, ran six focused tests against the inspected hook body and patched body with fixture auth/HTTP/React effect scheduling. Baseline: 3 PASS / 3 FAILED (success/error/stale lifecycle cases). Patched: 6 PASS / 0 FAILED. Includes ordinary load, StrictMode current success, current HTTP failure, old response while current load is pending, final unmount, latest reload wins. These are controlled hook checks, not execution of React or npm. The first adapter run had a harness import-binding error (useState undefined); corrected the adapter and reran all six. Added `scripts/test/world-lifecycle.test.mjs` for repository Node/TypeScript execution.
+
+**NOT VERIFIED:** The authored Node test file through node --test, full npm test, production audit, TypeScript/Vite build. No shell/Node/filesystem tool is available. Production/device behavior is out of scope and unverified. No branch/main/PR ref moved, no deployment/production-data changes; commit object only.
+
+**Other hypothesis challenged:** Main still deletes old song audio before committing replacement. Controlled failure reproduced, but PR #44 already repairs it and production-pinned 053a77fa source contains the repair. No duplicate Song patch created.
+
+**Next action:** Run the focused Node suite, full tests/audit/build in a verified free checkout before any branch publication or deployment.
+
+
+## 2026-10-10 — Android Style Studio next-step navigation repair
+
+**User symptom:** Android screen recording (111.6 seconds) shows scrolling through Phase 3 Style / Characters / Environments and no forward-stage action. Existing approved sheets and generated revision proposals are visible; the recording does not prove all Vision Lock prerequisites are met.
+
+**Source-confirmed cause:** Production-pinned StylePage.tsx at `053a77fa4f246765880e67cee14b35053d522b68` contains no link to `/projects/:projectId/visual-plan`. The CSS hides `.studio-sidebar` at widths <=900px. On a mobile viewport there is no visible local "Continue" action from Style Studio. This is a navigation defect, not proof of a backend approval failure.
+
+**Scoped repair:** Branch `repair/style-mobile-continue-20261010` starts at the exact primary production SHA, preserving PR #62 fixes not present on main. Add project-specific, accessible forward links at the top and bottom of the Style page, shown only after the Style Bible is locked. For unlocked drafts, show the lock prerequisite rather than bypassing it. Add mobile wrapping CSS and real StylePage JSX-render regression tests for both states. No production data, RPC permissions, approved assets, providers, or auth changes.
+
+**Baseline:** Production source commit `053a77fa` passed GitHub Actions Production CI run `38066982368` (test/audit/build); Vercel confirmed the primary domain serves this exact production READY SHA as `dpl_4nkmy18QaPsA9rj6Hzd7EfgrVa1s`.
+
+**Verification status:** Implementation written on repair branch. New-branch CI, live authenticated Android click-through, and Vercel release are **NOT VERIFIED** at the time of this entry. Previously configured Skyvern browser session failed to connect twice; no claim of browser success. Original approval state remains authoritative; Visual Plan backend may still report missing character/environment prerequisites.
+
+**Next:** Obtain a green commit-pinned test/audit/build CI result, inspect patch, then deploy only the tested branch SHA if safe and perform a real authenticated Style → Visual Plan check. Do not merge main without owner authorization.
+
 ## 2026-10-10 — Automatically seed Characters and Environments from confirmed World
 
 **Objective:** Populate cast and spaces as World-backed editable drafts when the Style Bible is created or opened, without requiring manual re-entry or touching approved assets.

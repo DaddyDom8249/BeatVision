@@ -1,0 +1,33 @@
+name: World lifecycle repair verification
+on:
+  pull_request:
+    branches: [repair/style-mobile-continue-20261010]
+    paths:
+      - src/hooks/useWorld.ts
+      - scripts/test/world-lifecycle.test.mjs
+      - .github/workflows/world-lifecycle-repair.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.head_ref == 'repair/world-lifecycle-direct-20261011'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install test and build dependencies without lifecycle scripts
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Focused World lifecycle regressions on exact PR head
+        run: node --test scripts/test/world-lifecycle.test.mjs
+      - name: Repository regression suite
+        run: npm test
+      - name: Production source audit
+        run: npm run production-audit
+      - name: TypeScript and Vite build
+        run: npm run build
