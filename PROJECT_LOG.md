@@ -16,6 +16,8 @@
 
 **Verification:** IMPLEMENTED (GitHub repair-branch commits). npm tests, production audit, build: NOT VERIFIED on this branch until CI execution; baseline main CI did not independently demonstrate its 93 tests, though merged PR #42 reports a prior 93/93 local pass. DEPLOYED: NO. PRODUCTION-VERIFIED: NO. No real media was generated or approved; no paid providers used.
 
+**CI verification (2026-10-11 01:31 UTC):** GitHub Actions run 38102114719, job 114360004840, executed on branch HEAD `ee8d78ebea573054e842200869707faa9ae6af82`: `npm install` PASS (exit 0), `npm test` PASS (97 tests, 97 pass, 0 fail, exit 0), `npm run production-audit` PASS (exit 0), `npm run build` PASS (TypeScript/Vite, exit 0), structure check PASS. Four new assembly-readiness tests and all existing tests passed. CI is code-level verification only: DEPLOYED NO, PRODUCTION-VERIFIED NO.
+
 **Next blocker:** Verify the branch regression suite/build in GitHub CI. Then verify one real approved-motion-per-scene → assembly → downloaded playable MP4 using a confirmed free provider path; this full production loop remains UNVERIFIED. Existing separate draft PRs #49, #51, #53, #55 and #59 cover distinct assembly defects and must be reviewed independently, not silently merged.
 
 ## 2026-10-09 17:25 UTC — Explain blocked final assembly in Production Workspace
