@@ -1,0 +1,28 @@
+name: Project context repair verification
+on:
+  pull_request:
+    branches: [repair/style-mobile-continue-20261010]
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.head_ref == 'repair/project-context-direct-20261011'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Focused project context behavior
+        run: node --test scripts/test/project-context.test.mjs
+      - name: Repository regressions
+        run: npm test
+      - name: Production source audit
+        run: npm run production-audit
+      - name: TypeScript and Vite build
+        run: npm run build
