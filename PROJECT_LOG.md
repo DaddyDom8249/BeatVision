@@ -1,5 +1,29 @@
 # BeatVision Project Log
 
+## 2026-10-11 17:00 UTC — PR #72 independent review and repairs
+
+TARGET: exact PR head dece63aea229660d3ee1d8d4bbf32bb3109aaa7b. Main remains 7dbea8b8009c68ba2e806a467790cc7d5d75141a. Prior entry's 16:50 timestamp was inaccurate: GitHub publication occurred at 16:41 UTC. History retained. Baseline 96 tests/audit/build from prior cycle reused.
+
+CONFIRMED: materializeWorldDrafts overwrote complete environment values with description or blank World globals, losing explicit purpose/layout/lighting and leaving sparse persisted sheets incomplete. Generate Description could not replace fallback proposals because mergeGeneratedStyleDraft skipped every nonempty value. Undo captured the UI suggestion-augmented string sheet instead of saved JSON, could lose nested types, and lacked a version precondition.
+
+CHANGE: initial environment drafts now use the complete World proposal mapping directly; generated descriptions replace only unchanged proposed fields, preserving edited text. UI retains original persisted_sheet separately. Undo restores exact saved JSON and uses updated_at/project_id/draft filters; normal draft saves also use optimistic version checks. Undo is cleared when another version is observed. Approved rows and revision RPC guards remain unchanged. Files: useStyleStudio.ts, generatedStyleDraft.ts, CharacterEditor.tsx, EnvironmentEditor.tsx, types/style.ts, editable-populated-drafts.test.mjs. No SQL or production data changes.
+
+EVIDENCE: two additional regressions failed on PR's initial materialization/generation paths then passed after repair. Seven focused actual-module/mounted-React/callback tests pass; full npm test 100/100, npm run production-audit, npm run build and git diff --check exit 0. Boundaries use mocks, not real generation/database success. Existing nested JSON undo, observed stale versions, version-mismatched saves, creator fields and approved read-only/revision behavior covered.
+
+Reused exactly Jules session 8349488310053633241 for read-only review. Its returned report conflated production/base and PR behavior (mentions absent Revert Unsaved Changes, reports 95 instead of PR's 96); not accepted as exact-head execution evidence. Direct source comparison independently confirms production 053a77fa contains additional missing-Style-Bible load and Groq error-body handling fixes absent on PR's main base.
+
+STATUS: scoped source defects RESOLVED by local regression. Production integration BLOCKED by source drift: releasing main-based PR directly would remove existing production fixes. Exact preview/CI of updated head and authenticated Android/live Supabase behavior NOT VERIFIED at logging. Configured Field Lab read succeeded; browser liveness and zero-cost browser operations not established. No live writes or approvals attempted. NEXT: reconcile with production source while preserving all existing fixes, then authenticated regression under explicit production-write authorization. Undo remains one level until editor unmount/reload; no claim of persistent history.
+
+## 2026-10-11 16:50 UTC — Complete editable Style drafts and reversible save
+
+Inspected main 7dbea8b8009c68ba2e806a467790cc7d5d75141a and recording 1000004356.mp4. Baseline: 93/93 tests, production-audit and build exit 0. Reused Jules session 8349488310053633241; rejected its cumulative patch because it removed log history, did not implement missing-field completion, and provided cancellation only before save. No other task created.
+
+Root cause: materializeWorldDrafts and World suggestions copied literal fields only, leaving missing character and environment attributes blank. Added complete explicitly labeled creative proposals for missing fields, preserving literal World values, creator text and approved rows. Initial persisted drafts use those same proposals. Character/environment editors stay editable after Save; Cancel Changes discards local edits; Undo Last Save persists the previous draft through existing owner-scoped draft save callbacks. Approved sheets now offer Create Editable Revision without needing a model request, retaining originals and existing Vision Lock approval guard. No auth/RLS, SQL, provider or production data changes.
+
+Three actual-module/React mounted-editor regressions fail against baseline and pass with repair. Full suite 96/96, production-audit and build exit 0. Test inputs and database callbacks are mocked; no live generation or approval.
+
+Limits: Undo is one level in the mounted editor, cleared on identity/approval changes; it does not survive reload. World/Style/Vision Lock version transitions, real references (never fabricate URLs), and full-pipeline persistent history need further implementation. Deployment and authenticated Android/live Supabase behavior NOT VERIFIED. Source repair branch only; no merge.
+
 ## 2026-10-09 17:25 UTC — Explain blocked final assembly in Production Workspace
 
 **Live progress:** PR #41 is merged at 308c859c. Released that pinned commit to the primary Vercel project (dpl_74xvewfLm2o9Efgmvb1mn1a2TgKu) and verified the actual beat-vision-theta alias. Corrected all eight existing unlocked Ghast draft scenes through the browser, saved each, reloaded, reviewed and approved the Visual Plan. approve_visual_plan returned HTTP 200; SQL confirms all eight scenes approved, with the locked Vision snapshot hash unchanged. New-plan creation defaults after PR #41 remain separately unverified because no duplicate/deletion was introduced.
