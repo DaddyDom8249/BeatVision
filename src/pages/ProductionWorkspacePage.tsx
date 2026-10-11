@@ -49,6 +49,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [finalVideo, setFinalVideo] = useState<any>(null);
   const [assemblyJob, setAssemblyJob] = useState<any>(null);
   const [assemblyRunning, setAssemblyRunning] = useState(false);
+  const [assemblyReadiness, setAssemblyReadiness] = useState({ ready: false, message: "Checking approved motion clips…" });
 
   const [imageJob, setImageJob] = useState<any>(null);
   const [motionJob, setMotionJob] = useState<any>(null);
@@ -92,9 +93,51 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     setFinalVideo(result.data?.status === "completed" ? result.data.output?.final_video ?? null : null);
   }, [projectId]);
 
+  const refreshAssemblyReadiness = useCallback(async (planId: string) => {
+    let status = { ready: false, message: "Unable to verify approved motion. Assembly remains unavailable." };
+    try {
+      // Do not rely on the selected scene or the newest attempt: approved
+      // motion from an earlier job can remain authoritative after a retry.
+      const [sceneResult, motionResult] = await Promise.all([
+        supabase.from("visual_plan_scenes").select("id,status").eq("project_id", projectId).eq("visual_plan_id", planId),
+        supabase.from("motion_clip_assets").select("id,scene_id,status,approved,video_url").eq("project_id", projectId).eq("visual_plan_id", planId).eq("status", "approved").eq("approved", true),
+      ]);
+      if (sceneResult.error) throw sceneResult.error;
+      if (motionResult.error) throw motionResult.error;
+      const allScenes = sceneResult.data ?? [];
+      const approved = motionResult.data ?? [];
+      if (!allScenes.length) {
+        status = { ready: false, message: "No approved scenes are available for final assembly." };
+      } else if (allScenes.some(row => row.status !== "approved")) {
+        status = { ready: false, message: "Approve every scene before final assembly." };
+      } else {
+        const counts = new Map<string, number>();
+        for (const clip of approved) {
+          if (clip.status === "approved" && clip.approved === true && clip.video_url) {
+            counts.set(clip.scene_id, (counts.get(clip.scene_id) ?? 0) + 1);
+          }
+        }
+        const remaining = allScenes.filter(row => counts.get(row.id) !== 1).length;
+        status = remaining
+          ? { ready: false, message: `${remaining} of ${allScenes.length} scenes still need exactly one approved real motion clip.` }
+          : { ready: approved.length === allScenes.length, message: "All scene motion is approved. Final assembly is available." };
+        // Extra approved rows (including stale or wrong-scene records) must
+        // never make the UI more permissive than the server-side RPC.
+        if (!remaining && approved.length !== allScenes.length) {
+          status = { ready: false, message: "Motion approval records are inconsistent. Final assembly is unavailable." };
+        }
+      }
+    } catch (e) {
+      status = { ready: false, message: "Could not check approved motion: " + productionErrorMessage(e) };
+    }
+    setAssemblyReadiness(status);
+    return status;
+  }, [projectId]);
+
   useEffect(() => {
     let active = true;
     setLoading(true); setError(null); setPlan(null); setScenes([]); setSelectedIndex(0);
+    setAssemblyReadiness({ ready: false, message: "Checking approved motion clips…" });
     (async () => {
       try {
         const result = await supabase.from("visual_plans").select(planFields).eq("project_id", projectId).eq("status", "approved").single();
@@ -103,12 +146,12 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         if (sceneResult.error) throw sceneResult.error;
         if (!active) return;
         setPlan(result.data as VisualPlan); setScenes((sceneResult.data ?? []) as VisualPlanScene[]);
-        await refreshFinal(result.data.id);
+        await Promise.all([refreshFinal(result.data.id), refreshAssemblyReadiness(result.data.id)]);
       } catch (e) { if (active) setError(productionErrorMessage(e)); }
       finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
-  }, [projectId, refreshFinal]);
+  }, [projectId, refreshFinal, refreshAssemblyReadiness]);
 
   useEffect(() => {
     let active = true;
@@ -138,6 +181,12 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     setBusy(true); setError(null);
     try {
       let job = existing;
+      if (!job && type === "assembly") {
+        // Recheck at click time: the rendered readiness can be stale after
+        // another browser tab revokes or supersedes a motion approval.
+        const current = await refreshAssemblyReadiness(plan.id);
+        if (!current.ready) throw new Error(current.message);
+      }
       if (!job) {
         const queued = type === "assembly"
           ? await supabase.rpc("enqueue_assembly_generation", { p_project_id: projectId, p_visual_plan_id: plan.id })
@@ -171,7 +220,11 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     if (!motion || motion.status !== "generated" || !motion.video_url) return;
     setError(null);
     const result = await supabase.rpc("approve_motion_clip_asset", { p_asset_id: motion.id });
-    if (result.error) setError(productionErrorMessage(result.error)); else setMotion(result.data);
+    if (result.error) setError(productionErrorMessage(result.error));
+    else {
+      setMotion(result.data);
+      if (plan) await refreshAssemblyReadiness(plan.id);
+    }
   }
 
   async function approveImage() {
@@ -278,8 +331,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
           <div className="production-provider-note">
             <span className="panel-label">FINAL ASSEMBLY</span>
             {finalVideo?.video_url ? <video src={finalVideo.video_url} controls playsInline style={{ width: "100%", maxHeight: 600, borderRadius: 12 }} /> : <p>No completed final video exists yet. Assembly requires every approved scene to have an approved real motion clip.</p>}
+            {!finalVideo && <p role="status">{assemblyReadiness.message}</p>}
             <div className="production-actions">
-              {!finalVideo && !pending(assemblyJob) && <button className="primary-button" disabled={busy} onClick={() => void assembleFinal()}>{assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}</button>}
+              {!finalVideo && !pending(assemblyJob) && <button className="primary-button" disabled={busy || !assemblyReadiness.ready} onClick={() => void assembleFinal()}>{assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}</button>}
               {pending(assemblyJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkAssemblyStatus()}>{assemblyRunning ? "Checking…" : "Check Assembly Status"}</button>}
               {finalVideo?.video_url && <span className="style-lock-badge">FINAL VIDEO COMPLETE</span>}
             </div>
