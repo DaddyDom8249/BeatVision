@@ -124,3 +124,80 @@ test("latest World reload still wins over an older response", async () => {
   assert.equal(f.states[1], false);
   f.cleanup();
 });
+
+import * as React from "react";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
+import { JSDOM } from "jsdom";
+
+async function mountReact(t) {
+  const dom = new JSDOM("<div id='root'></div>", { url: "https://fixture.test" });
+  const previous = { window: globalThis.window, document: globalThis.document,
+    IS_REACT_ACT_ENVIRONMENT: globalThis.IS_REACT_ACT_ENVIRONMENT };
+  globalThis.window = dom.window;
+  globalThis.document = dom.window.document;
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const requests = [];
+  const mod = { exports: {} };
+  runInNewContext(code, {
+    module: mod, exports: mod.exports,
+    require(name) {
+      if (name === "react") return React;
+      if (name === "../lib/supabase/client") return {
+        supabase: { auth: { getSession: async () => ({
+          data: { session: { access_token: "fixture-token" } },
+        }) } },
+        supabaseUrl: "https://fixture.test", supabasePublishableKey: "fixture-key",
+      };
+      if (name === "../lib/errorDetails") return {
+        formatFailure: (_label, error) => error.message,
+        formatHttpFailure: (_label, response, text) => "HTTP " + response.status + ": " + text,
+      };
+      throw new Error("Unexpected import: " + name);
+    },
+    fetch(url, options) {
+      return new Promise(resolve => requests.push({ url, options, resolve }));
+    },
+    encodeURIComponent,
+  });
+  let latest;
+  function Probe() { latest = mod.exports.useWorld("project-1"); return null; }
+  const root = createRoot(dom.window.document.getElementById("root"));
+  t.after(async () => {
+    try { await act(async () => root.unmount()); }
+    finally {
+      dom.window.close();
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete globalThis[key]; else globalThis[key] = value;
+      }
+    }
+  });
+  await act(async () => root.render(React.createElement(React.StrictMode, null,
+    React.createElement(Probe))));
+  assert.equal(requests.length, 2, "Real React must replay the initial GET effect");
+  return { requests, state: () => latest, respond: async (index, report, status = 200) => {
+    await act(async () => requests[index].resolve({
+      ok: status >= 200 && status < 300, status,
+      text: async () => status === 200 ? JSON.stringify({ report }) : "forbidden",
+    }));
+  } };
+}
+
+test("real React StrictMode accepts current World response after effect replay", async t => {
+  const f = await mountReact(t);
+  await f.respond(1, { id: "current-world" });
+  assert.equal(f.state().report?.id, "current-world");
+  assert.equal(f.state().loading, false);
+  await f.respond(0, { id: "stale-world" });
+  assert.equal(f.state().report.id, "current-world");
+  assert.ok(f.requests.every(r => r.options.method === "GET"));
+});
+
+test("real React StrictMode shows current HTTP error and leaves loading", async t => {
+  const f = await mountReact(t);
+  await f.respond(1, null, 403);
+  assert.equal(f.state().loading, false);
+  assert.match(f.state().error, /403/);
+  await f.respond(0, { id: "stale-world" });
+  assert.equal(f.state().report, null);
+});

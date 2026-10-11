@@ -1,6 +1,8 @@
 # BeatVision Project Log
 
 ## 2026-10-11 — Direct World lifecycle bug repair
+**Follow-up execution preparation:** Direct assistant verification now uses standard ubuntu-latest GitHub Actions in this public repository; GitHub documents public standard-hosted runner execution as free. A branch-specific Vercel git.deploymentEnabled=false rule prevents automatic deployment of repair/world-lifecycle-direct-20261011; all other branches retain default deployment settings. Added two actual React.StrictMode/jsdom hook checks in addition to six effect-model checks. The isolated workflow checks out the exact PR head, runs the focused suite, repository tests, source audit and TypeScript/Vite build, with read-only GitHub permissions and npm lifecycle scripts disabled. Actual outcomes will be recorded after execution; no claim of pass at preparation time. No physical E2E, generation or creative approval is in scope.
+
 
 **Scope:** Source debugging and regression checks by the assistant; no Jules, physical E2E, browser, generation, approvals or production writes. Base: PR #67 exact head `42f75cdc67db1baf12b9da05f464e1f3bb5e173e`, preserving its production-derived source and navigation repair.
 
