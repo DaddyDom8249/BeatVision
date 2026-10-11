@@ -56,22 +56,22 @@ export default function App() {
   if (path === "/projects/new") return <CreateProjectPage onNavigate={navigate} />;
 
   const worldMatch = path.match(/^\/projects\/([^/]+)\/world\/?$/);
-  if (worldMatch) return <WorldPage projectId={worldMatch[1]} onNavigate={navigate} />;
+  if (worldMatch) return <WorldPage key={worldMatch[1]} projectId={worldMatch[1]} onNavigate={navigate} />;
 
   const visualPlanMatch = path.match(/^\/projects\/([^/]+)\/visual-plan\/?$/);
-  if (visualPlanMatch) return <VisualPlanPage projectId={visualPlanMatch[1]} />;
+  if (visualPlanMatch) return <VisualPlanPage key={visualPlanMatch[1]} projectId={visualPlanMatch[1]} />;
 
   const sceneProductionMatch = path.match(/^\/projects\/([^/]+)\/scenes\/?$/);
-  if (sceneProductionMatch) return <SceneProductionPage projectId={sceneProductionMatch[1]} />;
+  if (sceneProductionMatch) return <SceneProductionPage key={sceneProductionMatch[1]} projectId={sceneProductionMatch[1]} />;
 
   const productionMatch = path.match(/^\/projects\/([^/]+)\/production\/?$/);
-  if (productionMatch) return <ProductionWorkspacePage projectId={productionMatch[1]} />;
+  if (productionMatch) return <ProductionWorkspacePage key={productionMatch[1]} projectId={productionMatch[1]} />;
 
   const styleMatch = path.match(/^\/projects\/([^/]+)\/style\/?$/);
-  if (styleMatch) return <StylePage projectId={styleMatch[1]} />;
+  if (styleMatch) return <StylePage key={styleMatch[1]} projectId={styleMatch[1]} />;
 
   const songMatch = path.match(/^\/projects\/([^/]+)\/song\/?$/);
-  if (songMatch) return <SongPage projectId={songMatch[1]} />;
+  if (songMatch) return <SongPage key={songMatch[1]} projectId={songMatch[1]} />;
 
   return <DashboardPage onNavigate={navigate} />;
 }
