@@ -1,5 +1,23 @@
 # BeatVision Project Log
 
+## 2026-10-10 — Gate final assembly on every scene's persisted approved motion (repair branch)
+
+**Objective:** Motion → Final Assembly (P0) only. Baseline main HEAD: `7dbea8b8009c68ba2e806a467790cc7d5d75141a`. AGENTS.md and current Project Log reviewed; source and recent assembly PRs inspected.
+
+**Defect reproduced from source:** ProductionWorkspacePage rendered the Assemble Final Video button with `disabled={busy}`, independently of motion approvals. The existing UI test could enqueue assembly with zero motion rows. The database enqueue_assembly_generation RPC already denies missing motion (ASSEMBLY_MOTION_NOT_FULLY_APPROVED); a previous authenticated Ghast negative test recorded this rejection before the error-message repair. Passing a server guard does not satisfy the required disabled-button behavior.
+
+**Root cause:** The page only loads motion for the selected scene and never computes plan-wide approved motion eligibility. Browser error messaging was improved in PR #42 but the action was still enabled.
+
+**Code repair:** `src/pages/ProductionWorkspacePage.tsx` now reads all scene statuses and all approved motion rows scoped to the current project and locked plan. Readiness requires every scene approved, exactly one approved motion with real video_url per scene, and no extra approved rows. Missing/duplicate/inaccessible data disables assembly with an explicit message. Motion approval refreshes readiness, and Assemble re-queries immediately before enqueue to guard stale browser state; the existing database RPC stays authoritative. No provider, database, security policy, or creative-asset changes.
+
+**Targeted tests:** `scripts/test/production-workspace.test.mjs` updated with 2-scene coverage, missing-motion disablement, all-approved enablement, stale approval recheck and duplicate motion rejection, while retaining the structured server-error regression. The old `disabled={busy}` source visibly fails this UI prerequisite; actual test execution on this branch remains pending CI at time of entry.
+
+**Code commit:** `76fdb5e6b32ce19246514213cf5d8fafdbe02470`. **Test commit:** `45edd501f3a4bb4aa367bd70551e385114fff47f`. Branch: `repair/motion-assembly-readiness-20261010`. No main commits or merges.
+
+**Verification:** IMPLEMENTED (GitHub repair-branch commits). npm tests, production audit, build: NOT VERIFIED on this branch until CI execution; baseline main CI did not independently demonstrate its 93 tests, though merged PR #42 reports a prior 93/93 local pass. DEPLOYED: NO. PRODUCTION-VERIFIED: NO. No real media was generated or approved; no paid providers used.
+
+**Next blocker:** Verify the branch regression suite/build in GitHub CI. Then verify one real approved-motion-per-scene → assembly → downloaded playable MP4 using a confirmed free provider path; this full production loop remains UNVERIFIED. Existing separate draft PRs #49, #51, #53, #55 and #59 cover distinct assembly defects and must be reviewed independently, not silently merged.
+
 ## 2026-10-09 17:25 UTC — Explain blocked final assembly in Production Workspace
 
 **Live progress:** PR #41 is merged at 308c859c. Released that pinned commit to the primary Vercel project (dpl_74xvewfLm2o9Efgmvb1mn1a2TgKu) and verified the actual beat-vision-theta alias. Corrected all eight existing unlocked Ghast draft scenes through the browser, saved each, reloaded, reviewed and approved the Visual Plan. approve_visual_plan returned HTTP 200; SQL confirms all eight scenes approved, with the locked Vision snapshot hash unchanged. New-plan creation defaults after PR #41 remain separately unverified because no duplicate/deletion was introduced.
