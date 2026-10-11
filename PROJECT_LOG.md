@@ -1,5 +1,24 @@
 # BeatVision Project Log
 
+## 2026-10-11 — Direct World lifecycle bug repair
+
+**Scope:** Source debugging and regression checks by the assistant; no Jules, physical E2E, browser, generation, approvals or production writes. Base: PR #67 exact head `42f75cdc67db1baf12b9da05f464e1f3bb5e173e`, preserving its production-derived source and navigation repair.
+
+**CONFIRMED reproduction:** `src/main.tsx` wraps App in React.StrictMode. `useWorld` initialized mounted=true once and its lifecycle effect only set mounted=false on cleanup. Effect setup after cleanup never restored true. Executing the actual hook body with TypeScript annotations removed and fixture React hooks reproduced a permanent loading=true/null report after setup -> cleanup -> setup, even with a successful current GET. This proves the controlled lifecycle defect; impact on a particular production user's session is UNKNOWN.
+
+**Root cause:** A ref survives StrictMode effect replay. The one-way mounted flag rejected every state update after the initial cleanup. This is separate from provider, RLS and approved-asset behavior.
+
+**Correction:** Restore mounted=true in effect setup; set false and increment the request version at cleanup. Prior effect lifetimes cannot update current state. No network retry, provider/auth/database or approval policy change.
+
+**Verification actually executed:** In the available zero-cost V8 tool runtime, ran six focused tests against the inspected hook body and patched body with fixture auth/HTTP/React effect scheduling. Baseline: 3 PASS / 3 FAILED (success/error/stale lifecycle cases). Patched: 6 PASS / 0 FAILED. Includes ordinary load, StrictMode current success, current HTTP failure, old response while current load is pending, final unmount, latest reload wins. These are controlled hook checks, not execution of React or npm. The first adapter run had a harness import-binding error (useState undefined); corrected the adapter and reran all six. Added `scripts/test/world-lifecycle.test.mjs` for repository Node/TypeScript execution.
+
+**NOT VERIFIED:** The authored Node test file through node --test, full npm test, production audit, TypeScript/Vite build. No shell/Node/filesystem tool is available. Production/device behavior is out of scope and unverified. No branch/main/PR ref moved, no deployment/production-data changes; commit object only.
+
+**Other hypothesis challenged:** Main still deletes old song audio before committing replacement. Controlled failure reproduced, but PR #44 already repairs it and production-pinned 053a77fa source contains the repair. No duplicate Song patch created.
+
+**Next action:** Run the focused Node suite, full tests/audit/build in a verified free checkout before any branch publication or deployment.
+
+
 ## 2026-10-10 — Android Style Studio next-step navigation repair
 
 **User symptom:** Android screen recording (111.6 seconds) shows scrolling through Phase 3 Style / Characters / Environments and no forward-stage action. Existing approved sheets and generated revision proposals are visible; the recording does not prove all Vision Lock prerequisites are met.
