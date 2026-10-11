@@ -113,7 +113,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       } else {
         const counts = new Map<string, number>();
         for (const clip of approved) {
-          if (clip.status === "approved" && clip.approved === true && clip.video_url) {
+          if (clip.status === "approved" && clip.approved === true &&
+              typeof clip.video_url === "string" && /^https?:\/\//i.test(clip.video_url.trim())) {
             counts.set(clip.scene_id, (counts.get(clip.scene_id) ?? 0) + 1);
           }
         }
