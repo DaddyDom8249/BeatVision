@@ -1,5 +1,19 @@
 # BeatVision Project Log
 
+## 2026-10-11 17:00 UTC — PR #72 independent review and repairs
+
+TARGET: exact PR head dece63aea229660d3ee1d8d4bbf32bb3109aaa7b. Main remains 7dbea8b8009c68ba2e806a467790cc7d5d75141a. Prior entry's 16:50 timestamp was inaccurate: GitHub publication occurred at 16:41 UTC. History retained. Baseline 96 tests/audit/build from prior cycle reused.
+
+CONFIRMED: materializeWorldDrafts overwrote complete environment values with description or blank World globals, losing explicit purpose/layout/lighting and leaving sparse persisted sheets incomplete. Generate Description could not replace fallback proposals because mergeGeneratedStyleDraft skipped every nonempty value. Undo captured the UI suggestion-augmented string sheet instead of saved JSON, could lose nested types, and lacked a version precondition.
+
+CHANGE: initial environment drafts now use the complete World proposal mapping directly; generated descriptions replace only unchanged proposed fields, preserving edited text. UI retains original persisted_sheet separately. Undo restores exact saved JSON and uses updated_at/project_id/draft filters; normal draft saves also use optimistic version checks. Undo is cleared when another version is observed. Approved rows and revision RPC guards remain unchanged. Files: useStyleStudio.ts, generatedStyleDraft.ts, CharacterEditor.tsx, EnvironmentEditor.tsx, types/style.ts, editable-populated-drafts.test.mjs. No SQL or production data changes.
+
+EVIDENCE: two additional regressions failed on PR's initial materialization/generation paths then passed after repair. Seven focused actual-module/mounted-React/callback tests pass; full npm test 100/100, npm run production-audit, npm run build and git diff --check exit 0. Boundaries use mocks, not real generation/database success. Existing nested JSON undo, observed stale versions, version-mismatched saves, creator fields and approved read-only/revision behavior covered.
+
+Reused exactly Jules session 8349488310053633241 for read-only review. Its returned report conflated production/base and PR behavior (mentions absent Revert Unsaved Changes, reports 95 instead of PR's 96); not accepted as exact-head execution evidence. Direct source comparison independently confirms production 053a77fa contains additional missing-Style-Bible load and Groq error-body handling fixes absent on PR's main base.
+
+STATUS: scoped source defects RESOLVED by local regression. Production integration BLOCKED by source drift: releasing main-based PR directly would remove existing production fixes. Exact preview/CI of updated head and authenticated Android/live Supabase behavior NOT VERIFIED at logging. Configured Field Lab read succeeded; browser liveness and zero-cost browser operations not established. No live writes or approvals attempted. NEXT: reconcile with production source while preserving all existing fixes, then authenticated regression under explicit production-write authorization. Undo remains one level until editor unmount/reload; no claim of persistent history.
+
 ## 2026-10-11 16:50 UTC — Complete editable Style drafts and reversible save
 
 Inspected main 7dbea8b8009c68ba2e806a467790cc7d5d75141a and recording 1000004356.mp4. Baseline: 93/93 tests, production-audit and build exit 0. Reused Jules session 8349488310053633241; rejected its cumulative patch because it removed log history, did not implement missing-field completion, and provided cancellation only before save. No other task created.

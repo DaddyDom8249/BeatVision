@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import type { Environment, EnvironmentAsset } from "../../types/style";
+import type { Environment, EnvironmentAsset, StyleSheetSaveInput } from "../../types/style";
 import AssetList from "./AssetList";
 import { formatCreativeRecord, getCreativeErrorMessage } from "../../lib/formatCreativeText";
 import { mergeGeneratedStyleDraft, pickGeneratedStyleDraft } from "../../lib/style/generatedStyleDraft";
@@ -21,7 +21,7 @@ export default function EnvironmentEditor({
   environment: Environment;
   assets: EnvironmentAsset[];
   working: boolean;
-  onSave: (id: string, input: { name: string; sheet: Record<string, string> }) => Promise<unknown>;
+  onSave: (id: string, input: StyleSheetSaveInput) => Promise<unknown>;
   onUpload: (file: File, label: string) => Promise<unknown>;
   onApproveAsset: (asset: EnvironmentAsset) => Promise<unknown>;
   onGenerate: (environment: Environment) => Promise<Record<string, unknown>>;
@@ -34,7 +34,7 @@ export default function EnvironmentEditor({
   const [sheet, setSheet] = useState(initial);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
-  const [undoSave, setUndoSave] = useState<{ name: string; sheet: Record<string, string> } | null>(null);
+  const [undoSave, setUndoSave] = useState<(StyleSheetSaveInput & { expectedUpdatedAt: string }) | null>(null);
   const [generatedProposal, setGeneratedProposal] = useState<Record<string, string> | null>(null);
   const suggestedFields = environment.suggested_world_fields ?? [];
   const missingFields = Object.keys(emptySheet).filter((field) => !sheet[field as keyof typeof emptySheet]?.trim());
@@ -50,6 +50,9 @@ export default function EnvironmentEditor({
   }, [environment.id, environment.updated_at, environment.status]);
 
   useEffect(() => { setUndoSave(null); }, [environment.id, environment.status]);
+  useEffect(() => {
+    setUndoSave((previous) => previous && previous.expectedUpdatedAt !== environment.updated_at ? null : previous);
+  }, [environment.updated_at]);
 
   function cancelEdits() {
     setName(environment.name); setSheet(initial); setGeneratedProposal(null);
@@ -71,9 +74,11 @@ export default function EnvironmentEditor({
     if (locked) return;
     setActionError(null);
     setActionStatus(null);
-    const previous = { name: environment.name, sheet: initial };
-    void onSave(environment.id, { name, sheet }).then(() => {
-      setUndoSave(previous);
+    const savedSheet = environment.persisted_sheet ?? environment.sheet;
+    const previous = { name: environment.name, sheet: { ...emptySheet, ...formatCreativeRecord(savedSheet) }, restoreSheet: savedSheet };
+    void onSave(environment.id, { name, sheet }).then((saved) => {
+      const version = saved && typeof saved === "object" && "updated_at" in saved ? String(saved.updated_at) : "";
+      setUndoSave(version ? { ...previous, expectedUpdatedAt: version } : null);
       setActionStatus("Saved environment sheet.");
     }).catch((error: unknown) => {
       setActionError(getCreativeErrorMessage(error, "Unable to save environment."));
@@ -86,7 +91,7 @@ export default function EnvironmentEditor({
       {actionError && <p role="alert" className="form-error">{actionError}</p>}
       {actionStatus && <p role="status">{actionStatus}</p>}
       {suggestedFields.length > 0 && !locked && <p role="status">
-        Confirmed World details suggested for: {suggestedFields.join(", ")}. Select Save Environment Sheet to persist these draft suggestions.
+        World-derived details and creative proposals suggested for: {suggestedFields.join(", ")}. Select Save Environment Sheet to persist these draft suggestions.
       </p>}
       {missingFields.length > 0 && <p className="style-muted">
         {locked ? "Approved with unspecified fields (requires an explicit revision): " : "Not specified by confirmed World; creator input needed: "}
@@ -120,7 +125,7 @@ export default function EnvironmentEditor({
           if (locked) {
             setActionStatus("Generated a revision proposal. The approved environment remains unchanged.");
           } else {
-            setSheet((current) => mergeGeneratedStyleDraft(current, proposal, "environment"));
+            setSheet((current) => mergeGeneratedStyleDraft(current, proposal, "environment", Object.keys(emptySheet).filter((field) => current[field as keyof typeof emptySheet] === initial[field as keyof typeof emptySheet] && (suggestedFields.includes(field) || initial[field as keyof typeof emptySheet].startsWith("Creative proposal:")))));
             setActionStatus("Generated missing environment descriptions. Review and save them to persist.");
           }
         }).catch((error: unknown) => {

@@ -35,6 +35,8 @@ export interface Character {
   updated_at: string;
   /** UI-only suggestions from the confirmed World, not persisted until saved. */
   suggested_world_fields?: string[];
+  /** UI-only original persisted JSON, before any proposed defaults. */
+  persisted_sheet?: Record<string, unknown>;
   /** UI-only lineage used to inherit approved reference assets in revisions. */
   revision_ancestor_ids?: string[];
 }
@@ -70,6 +72,8 @@ export interface Environment {
   updated_at: string;
   /** UI-only suggestions from the confirmed World, not persisted until saved. */
   suggested_world_fields?: string[];
+  /** UI-only original persisted JSON, before any proposed defaults. */
+  persisted_sheet?: Record<string, unknown>;
   /** UI-only lineage used to inherit approved reference assets in revisions. */
   revision_ancestor_ids?: string[];
 }
@@ -88,4 +92,12 @@ export interface EnvironmentAsset {
   supersedes_asset_id: string | null;
   created_at: string;
   signed_url?: string | null;
+}
+
+/** Exact version preconditions prevent restoring over a newer draft. */
+export interface StyleSheetSaveInput {
+  name: string;
+  sheet: Record<string, string>;
+  expectedUpdatedAt?: string;
+  restoreSheet?: Record<string, unknown>;
 }

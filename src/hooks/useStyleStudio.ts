@@ -13,6 +13,7 @@ import {
   getCreativeErrorMessage,
 } from "../lib/formatCreativeText";
 import type {
+  StyleSheetSaveInput,
   Character,
   CharacterAsset,
   Environment,
@@ -121,7 +122,7 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
     characters.push({
       name: "Central Figure",
       sheet: {
-        identity: "Primary subject derived from the confirmed World Report; refine before approval.",
+        identity: "",
         wardrobe: clothing,
         behavior: subjectBehavior,
         continuity: [keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`, motifs.length && `World motifs: ${motifs.join(", ")}`, continuityText].filter(Boolean).join("; "),
@@ -162,14 +163,7 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       style_bible_id: styleBibleId,
       name: item.name,
       status: "draft",
-      sheet: {
-        ...completeWorldDraft(world, "environment", item.name),
-        purpose: item.description || completeWorldDraft(world, "environment", item.name).purpose,
-        layout: item.description || completeWorldDraft(world, "environment", item.name).layout,
-        lighting: formatCreativeText(world.color_lighting),
-        atmosphere: formatCreativeText(world.atmosphere),
-        continuity: [continuityText, keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`].filter(Boolean).join("; "),
-      },
+      sheet: completeWorldDraft(world, "environment", item.name),
     })),
   };
 }
@@ -353,7 +347,7 @@ export function useStyleStudio(projectId: string) {
       const proposal = suggestMissingWorldFields(
         formatCreativeRecord(row.sheet), currentWorld, "character", row.name, row.status,
       );
-      return { ...row, sheet: proposal.sheet, suggested_world_fields: proposal.suggestedFields, revision_ancestor_ids: characterAncestors(row.id) };
+      return { ...row, persisted_sheet: row.sheet, sheet: proposal.sheet, suggested_world_fields: proposal.suggestedFields, revision_ancestor_ids: characterAncestors(row.id) };
     }) as Character[]);
     const environmentRows = environmentResult.data ?? [];
     const environmentParent = new Map(environmentRows.map((row) => [row.id, row.supersedes_environment_id as string | null]));
@@ -373,7 +367,7 @@ export function useStyleStudio(projectId: string) {
       const proposal = suggestMissingWorldFields(
         formatCreativeRecord(row.sheet), currentWorld, "environment", row.name, row.status,
       );
-      return { ...row, sheet: proposal.sheet, suggested_world_fields: proposal.suggestedFields, revision_ancestor_ids: environmentAncestors(row.id) };
+      return { ...row, persisted_sheet: row.sheet, sheet: proposal.sheet, suggested_world_fields: proposal.suggestedFields, revision_ancestor_ids: environmentAncestors(row.id) };
     }) as Environment[]);
     setCharacterAssets(await signAssetUrls(
       (characterAssetResult.data ?? []) as CharacterAsset[],
@@ -508,7 +502,7 @@ export function useStyleStudio(projectId: string) {
     }
   }, [styleBible]);
 
-  const saveCharacter = useCallback(async (id: string | null, input: { name: string; sheet: Record<string, string> }) => {
+  const saveCharacter = useCallback(async (id: string | null, input: StyleSheetSaveInput) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
     if (!world?.id) throw new Error("Confirmed World Report not available.");
     const worldReportId = world.id;
@@ -517,12 +511,15 @@ export function useStyleStudio(projectId: string) {
     }
     setWorking(true); setError(null);
     try {
+      const existing = id ? characters.find((row) => row.id === id) : null;
+      if (id && !existing) throw new Error("Draft is no longer loaded. Reload before saving.");
+      if (input.restoreSheet && (!id || !input.expectedUpdatedAt)) throw new Error("Restoring a draft requires its saved version.");
       const base = {
         name: input.name.trim(),
-        sheet: id ? mergeCreativeSheet(rawCharacterSheets.current.get(id), input.sheet) : input.sheet,
+        sheet: input.restoreSheet ?? (id ? mergeCreativeSheet(rawCharacterSheets.current.get(id), input.sheet) : input.sheet),
       };
       const result = id
-        ? await supabase.from("characters").update(base).eq("id", id).eq("status", "draft").select(characterFields).single()
+        ? await supabase.from("characters").update(base).eq("id", id).eq("project_id", projectId).eq("status", "draft").eq("updated_at", input.expectedUpdatedAt ?? existing!.updated_at).select(characterFields).single()
         : await supabase.from("characters").insert({
             ...base,
             project_id: projectId,
@@ -552,7 +549,7 @@ export function useStyleStudio(projectId: string) {
     } finally { setWorking(false); }
   }, [load, styleBible]);
 
-  const saveEnvironment = useCallback(async (id: string | null, input: { name: string; sheet: Record<string, string> }) => {
+  const saveEnvironment = useCallback(async (id: string | null, input: StyleSheetSaveInput) => {
     if (!styleBible) throw new Error("Create the Style Bible first.");
     if (!world?.id) throw new Error("Confirmed World Report not available.");
     const worldReportId = world.id;
@@ -561,12 +558,15 @@ export function useStyleStudio(projectId: string) {
     }
     setWorking(true); setError(null);
     try {
+      const existing = id ? environments.find((row) => row.id === id) : null;
+      if (id && !existing) throw new Error("Draft is no longer loaded. Reload before saving.");
+      if (input.restoreSheet && (!id || !input.expectedUpdatedAt)) throw new Error("Restoring a draft requires its saved version.");
       const base = {
         name: input.name.trim(),
-        sheet: id ? mergeCreativeSheet(rawEnvironmentSheets.current.get(id), input.sheet) : input.sheet,
+        sheet: input.restoreSheet ?? (id ? mergeCreativeSheet(rawEnvironmentSheets.current.get(id), input.sheet) : input.sheet),
       };
       const result = id
-        ? await supabase.from("environments").update(base).eq("id", id).eq("status", "draft").select(environmentFields).single()
+        ? await supabase.from("environments").update(base).eq("id", id).eq("project_id", projectId).eq("status", "draft").eq("updated_at", input.expectedUpdatedAt ?? existing!.updated_at).select(environmentFields).single()
         : await supabase.from("environments").insert({
             ...base,
             project_id: projectId,

@@ -13,10 +13,11 @@ export function mergeGeneratedStyleDraft<T extends Record<string, string>>(
   current: T,
   generated: Record<string, unknown>,
   kind: StyleDraftKind,
+  replaceableFields: readonly string[] = [],
 ): T {
   const result: Record<string, string> = { ...current };
   for (const field of STYLE_DRAFT_FIELDS[kind]) {
-    if (result[field]?.trim()) continue;
+    if (result[field]?.trim() && !replaceableFields.includes(field)) continue;
     const value = generated[field];
     if (typeof value === "string" && value.trim()) result[field] = value.trim();
   }

@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import type { Character, CharacterAsset } from "../../types/style";
+import type { Character, CharacterAsset, StyleSheetSaveInput } from "../../types/style";
 import AssetList from "./AssetList";
 import { formatCreativeRecord, getCreativeErrorMessage } from "../../lib/formatCreativeText";
 import { mergeGeneratedStyleDraft, pickGeneratedStyleDraft } from "../../lib/style/generatedStyleDraft";
@@ -21,7 +21,7 @@ export default function CharacterEditor({
   character: Character;
   assets: CharacterAsset[];
   working: boolean;
-  onSave: (id: string, input: { name: string; sheet: Record<string, string> }) => Promise<unknown>;
+  onSave: (id: string, input: StyleSheetSaveInput) => Promise<unknown>;
   onUpload: (file: File, label: string) => Promise<unknown>;
   onApproveAsset: (asset: CharacterAsset) => Promise<unknown>;
   onGenerate: (character: Character) => Promise<Record<string, unknown>>;
@@ -34,7 +34,7 @@ export default function CharacterEditor({
   const [sheet, setSheet] = useState(initial);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
-  const [undoSave, setUndoSave] = useState<{ name: string; sheet: Record<string, string> } | null>(null);
+  const [undoSave, setUndoSave] = useState<(StyleSheetSaveInput & { expectedUpdatedAt: string }) | null>(null);
   const [generatedProposal, setGeneratedProposal] = useState<Record<string, string> | null>(null);
   const suggestedFields = character.suggested_world_fields ?? [];
   const missingFields = Object.keys(emptySheet).filter((field) => !sheet[field as keyof typeof emptySheet]?.trim());
@@ -50,6 +50,9 @@ export default function CharacterEditor({
   }, [character.id, character.updated_at, character.status]);
 
   useEffect(() => { setUndoSave(null); }, [character.id, character.status]);
+  useEffect(() => {
+    setUndoSave((previous) => previous && previous.expectedUpdatedAt !== character.updated_at ? null : previous);
+  }, [character.updated_at]);
 
   function cancelEdits() {
     setName(character.name); setSheet(initial); setGeneratedProposal(null);
@@ -71,9 +74,11 @@ export default function CharacterEditor({
     if (locked) return;
     setActionError(null);
     setActionStatus(null);
-    const previous = { name: character.name, sheet: initial };
-    void onSave(character.id, { name, sheet }).then(() => {
-      setUndoSave(previous);
+    const savedSheet = character.persisted_sheet ?? character.sheet;
+    const previous = { name: character.name, sheet: { ...emptySheet, ...formatCreativeRecord(savedSheet) }, restoreSheet: savedSheet };
+    void onSave(character.id, { name, sheet }).then((saved) => {
+      const version = saved && typeof saved === "object" && "updated_at" in saved ? String(saved.updated_at) : "";
+      setUndoSave(version ? { ...previous, expectedUpdatedAt: version } : null);
       setActionStatus("Saved character sheet.");
     }).catch((error: unknown) => {
       setActionError(getCreativeErrorMessage(error, "Unable to save character."));
@@ -86,7 +91,7 @@ export default function CharacterEditor({
       {actionError && <p role="alert" className="form-error">{actionError}</p>}
       {actionStatus && <p role="status">{actionStatus}</p>}
       {suggestedFields.length > 0 && !locked && <p role="status">
-        Confirmed World details suggested for: {suggestedFields.join(", ")}. Select Save Character Sheet to persist these draft suggestions.
+        World-derived details and creative proposals suggested for: {suggestedFields.join(", ")}. Select Save Character Sheet to persist these draft suggestions.
       </p>}
       {missingFields.length > 0 && <p className="style-muted">
         {locked ? "Approved with unspecified fields (requires an explicit revision): " : "Not specified by confirmed World; creator input needed: "}
@@ -118,7 +123,7 @@ export default function CharacterEditor({
           if (locked) {
             setActionStatus("Generated a revision proposal. The approved character remains unchanged.");
           } else {
-            setSheet((current) => mergeGeneratedStyleDraft(current, proposal, "character"));
+            setSheet((current) => mergeGeneratedStyleDraft(current, proposal, "character", Object.keys(emptySheet).filter((field) => current[field as keyof typeof emptySheet] === initial[field as keyof typeof emptySheet] && (suggestedFields.includes(field) || initial[field as keyof typeof emptySheet].startsWith("Creative proposal:")))));
             setActionStatus("Generated missing character descriptions. Review and save them to persist.");
           }
         }).catch((error: unknown) => {
