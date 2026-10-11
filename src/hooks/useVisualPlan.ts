@@ -44,40 +44,45 @@ export function useVisualPlan(projectId: string) {
   const load = useCallback(async () => {
     setLoading(true); setError(null);
 
-    const projectResult = await supabase.from("projects").select("world_report_id").eq("id", projectId).single();
-    if (projectResult.error) { setError(projectResult.error.message); setLoading(false); return; }
+    try {
+      const projectResult = await supabase.from("projects").select("world_report_id").eq("id", projectId).single();
+      if (projectResult.error) { setError(projectResult.error.message); setLoading(false); return; }
 
-    const worldId = projectResult.data.world_report_id as string | null;
-    if (!worldId) {
-      setWorld(null); setStyleBible(null); setSong(null); setPlan(null); setScenes([]);
-      setError("The project must have a current World Report before Visual Plan can begin.");
-      setLoading(false); return;
+      const worldId = projectResult.data.world_report_id as string | null;
+      if (!worldId) {
+        setWorld(null); setStyleBible(null); setSong(null); setPlan(null); setScenes([]);
+        setError("The project must have a current World Report before Visual Plan can begin.");
+        setLoading(false); return;
+      }
+
+      const [worldResult, styleResult, songResult, planResult, lockResult] = await Promise.all([
+        supabase.from("world_reports").select("*").eq("id", worldId).eq("project_id", projectId).single(),
+        supabase.from("style_bibles").select(styleFields).eq("project_id", projectId).eq("world_report_id", worldId).maybeSingle(),
+        supabase.from("songs").select("*").eq("project_id", projectId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("visual_plans").select(planFields).eq("project_id", projectId).maybeSingle(),
+        supabase.from("vision_locks").select("id,project_id,world_report_id,style_bible_id,song_id,revision_number,status,snapshot,locked_at,created_at").eq("project_id", projectId).order("revision_number", { ascending: false }).limit(1).maybeSingle(),
+      ]);
+
+      const firstError = worldResult.error ?? styleResult.error ?? songResult.error ?? planResult.error ?? lockResult.error;
+      if (firstError) { setError(firstError.message); setLoading(false); return; }
+
+      setWorld(worldResult.data as WorldReport);
+      setStyleBible((styleResult.data ?? null) as StyleBible | null);
+      setSong((songResult.data ?? null) as Song | null);
+      setPlan((planResult.data ?? null) as VisualPlan | null);
+      setVisionLock((lockResult.data ?? null) as Record<string, unknown> | null);
+
+      if (planResult.data) {
+        const sceneResult = await supabase.from("visual_plan_scenes").select(sceneFields).eq("visual_plan_id", planResult.data.id).order("scene_number", { ascending: true });
+        if (sceneResult.error) { setError(sceneResult.error.message); setLoading(false); return; }
+        setScenes((sceneResult.data ?? []) as VisualPlanScene[]);
+      } else setScenes([]);
+
+    } catch (cause) {
+      setError(getVisualPlanErrorMessage(cause, "Unable to load Visual Plan."));
+    } finally {
+      setLoading(false);
     }
-
-    const [worldResult, styleResult, songResult, planResult, lockResult] = await Promise.all([
-      supabase.from("world_reports").select("*").eq("id", worldId).eq("project_id", projectId).single(),
-      supabase.from("style_bibles").select(styleFields).eq("project_id", projectId).eq("world_report_id", worldId).maybeSingle(),
-      supabase.from("songs").select("*").eq("project_id", projectId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("visual_plans").select(planFields).eq("project_id", projectId).maybeSingle(),
-      supabase.from("vision_locks").select("id,project_id,world_report_id,style_bible_id,song_id,revision_number,status,snapshot,locked_at,created_at").eq("project_id", projectId).order("revision_number", { ascending: false }).limit(1).maybeSingle(),
-    ]);
-
-    const firstError = worldResult.error ?? styleResult.error ?? songResult.error ?? planResult.error ?? lockResult.error;
-    if (firstError) { setError(firstError.message); setLoading(false); return; }
-
-    setWorld(worldResult.data as WorldReport);
-    setStyleBible((styleResult.data ?? null) as StyleBible | null);
-    setSong((songResult.data ?? null) as Song | null);
-    setPlan((planResult.data ?? null) as VisualPlan | null);
-    setVisionLock((lockResult.data ?? null) as Record<string, unknown> | null);
-
-    if (planResult.data) {
-      const sceneResult = await supabase.from("visual_plan_scenes").select(sceneFields).eq("visual_plan_id", planResult.data.id).order("scene_number", { ascending: true });
-      if (sceneResult.error) { setError(sceneResult.error.message); setLoading(false); return; }
-      setScenes((sceneResult.data ?? []) as VisualPlanScene[]);
-    } else setScenes([]);
-
-    setLoading(false);
   }, [projectId]);
 
   useEffect(() => { void load(); }, [load]);

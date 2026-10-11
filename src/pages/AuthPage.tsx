@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { supabase } from "../lib/supabase/client";
 import { capture } from "../lib/analytics";
+import { getCreativeErrorMessage } from "../lib/formatCreativeText";
 
 interface Props { onNavigate: (path: string) => void; }
 
@@ -19,27 +20,32 @@ export default function AuthPage({ onNavigate }: Props) {
     setError(null);
     setMessage(null);
 
-    const result = mode === "sign-in"
-      ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
-      : await supabase.auth.signUp({ email: email.trim(), password });
+    try {
+      const result = mode === "sign-in"
+        ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
+        : await supabase.auth.signUp({ email: email.trim(), password });
 
-    if (result.error) {
-      capture("auth_failed", { mode });
-      setError(result.error.message);
-    } else if (mode === "sign-up" && !result.data.session) {
-      setMessage("Account created. Check your email to confirm your account, then sign in.");
-    } else {
-      capture(mode === "sign-in" ? "signed_in" : "signed_up");
-      const next = new URLSearchParams(window.location.search).get("next");
-      const destination = next === "/projects/new"
-        ? "/projects/new"
-        : mode === "sign-in"
-          ? "/"
-          : "/projects/new";
-      onNavigate(destination);
+      if (result.error) {
+        capture("auth_failed", { mode });
+        setError(result.error.message);
+      } else if (mode === "sign-up" && !result.data.session) {
+        setMessage("Account created. Check your email to confirm your account, then sign in.");
+      } else {
+        capture(mode === "sign-in" ? "signed_in" : "signed_up");
+        const next = new URLSearchParams(window.location.search).get("next");
+        const destination = next === "/projects/new"
+          ? "/projects/new"
+          : mode === "sign-in"
+            ? "/"
+            : "/projects/new";
+        onNavigate(destination);
+      }
+
+    } catch (cause) {
+      setError(getCreativeErrorMessage(cause, "Authentication request failed."));
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
   }
 
   return (
