@@ -6,7 +6,7 @@ permissions:
   contents: read
 jobs:
   source:
-    if: github.head_ref == 'repair/production-readiness-direct-20261011'
+    if: github.head_ref == 'repair/production-readiness-direct-20261011' || github.head_ref == 'repair/storage-lineage-direct-20261012'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -27,7 +27,7 @@ jobs:
         run: npm run build
 
   canonical-replay:
-    if: github.head_ref == 'repair/production-readiness-direct-20261011'
+    if: github.head_ref == 'repair/production-readiness-direct-20261011' || github.head_ref == 'repair/storage-lineage-direct-20261012'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -69,7 +69,7 @@ jobs:
         run: supabase stop --workdir /tmp/beatvision-readiness-replay
 
   security-contracts:
-    if: github.head_ref == 'repair/production-readiness-direct-20261011'
+    if: github.head_ref == 'repair/production-readiness-direct-20261011' || github.head_ref == 'repair/storage-lineage-direct-20261012'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
