@@ -715,3 +715,19 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 **Repair:** Added only the two active PR #36 Vercel origins to the World, Style Draft, and Generation function allowlists. Arbitrary origins remain denied. Added regression coverage for preview preflight behavior.
 
 **Verification:** The new tests failed against the old allowlists, then passed after the repair. Full suite passed 83/83; production audit and production build passed. Deployed World v34, Style Draft v2, and Generation v20. A live `OPTIONS` request to World returned HTTP 200 and the exact requesting PR preview origin. The authenticated `Reveal World` POST still requires a user browser retry and is not claimed verified.
+
+## 2026-10-12 — Include nested integration tests in npm test
+
+**Objective:** Make the npm test command execute tracked nested `*.test.mjs` files and correct the integration report's test-count evidence.
+
+**Checkout:** Branch `copilot/run-nested-integration-tests`; task checkout HEAD `0188c64596be17d37ae812bcc81c82c427dd6913`, based on `9e6619f6e0b910754e55e1b88992598c05eb957f`. The working tree was clean before this task.
+
+**Reproduction:** With declared dependencies installed, `npm test` ran 97 tests and passed 97/97 (exit 0). `node --test scripts/test/integration-repair-20261011/*.test.mjs` separately ran and passed 6/6 (exit 0). Therefore the earlier report's claim that `npm test` ran 103 tests was inaccurate: the configured `scripts/test/*.test.mjs` glob omitted the nested tests.
+
+**Repair:** Updated `package.json` to run both `scripts/test/*.test.mjs` and `scripts/test/*/*.test.mjs`. Corrected `docs/integration-repair-20261011/FORENSIC_INTEGRATION_REPORT.md` to distinguish the original 97-test npm run from the separate 6-test integration run. No application source, Supabase function/migration, or test content changed.
+
+**Verification:** `npm test` — 103/103 passed, exit 0. `npm run production-audit` — PASS, exit 0. `npm run build` — PASS, exit 0 (Vite reported its existing large-chunk warning). `git diff --check` — exit 0. The tests, audit, and build ran locally; no production workflow was exercised.
+
+**Database/deployment/provider activity:** None. No data, assets, approvals, production configuration, or paid providers were accessed or changed. No deployment or merge was performed.
+
+**Status:** CODE-FIXED and locally verified. The six nested tests are now included in `npm test`. Production behavior is not applicable to this test-runner change and no deployment was attempted.
