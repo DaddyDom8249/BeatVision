@@ -40,7 +40,7 @@ function AssetCard<T extends Asset>({
           alt={`Reference preview: ${asset.label}`}
           loading="lazy"
           onError={() => setPreviewFailed(true)}
-          style={{ maxWidth: "220px", display: "block" }}
+          style={{ width: "100%", height: "160px", objectFit: "cover", borderRadius: "6px", display: "block" }}
         />
       ) : (
         isHeif ? (
@@ -49,17 +49,31 @@ function AssetCard<T extends Asset>({
           <p role="status">Reference preview unavailable or its secure link expired. The uploaded record is still saved.</p>
         )
       )}
+
       {(previewFailed || !asset.signed_url) && onRefresh && !isHeif && (
-        <button type="button" disabled={working} onClick={refresh}>
+        <button type="button" className="secondary-button" style={{ fontSize: "12px", marginTop: "8px" }} disabled={working} onClick={refresh}>
           Refresh image preview
         </button>
       )}
       {refreshError && <p role="alert" className="form-error">{refreshError}</p>}
-      <strong>{asset.label}</strong>
-      <p>Status: {asset.status}</p>
+
+      <div style={{ marginTop: "8px" }}>
+        <strong style={{ fontSize: "13px", color: "#ffffff", display: "block" }}>{asset.label}</strong>
+        <span style={{ fontSize: "11px", color: "var(--accent-gold)", fontFamily: "var(--font-mono)" }}>
+          Status: {asset.status}
+        </span>
+      </div>
+
       <details className="style-asset-storage"><summary>Storage details</summary><code>{asset.storage_path}</code></details>
+
       {asset.status !== "approved" && (
-        <button type="button" disabled={working} onClick={() => onApprove(asset)}>
+        <button
+          type="button"
+          className="secondary-button"
+          style={{ width: "100%", marginTop: "10px", fontSize: "12px" }}
+          disabled={working}
+          onClick={() => onApprove(asset)}
+        >
           Approve Asset
         </button>
       )}
@@ -78,7 +92,9 @@ export default function AssetList<T extends Asset>({
   onRefresh?: () => Promise<unknown>;
   working: boolean;
 }) {
-  if (assets.length === 0) return <p>No assets yet. New assets are appended to the record history.</p>;
+  if (assets.length === 0) {
+    return <p style={{ fontSize: "12px", color: "var(--text-dim)" }}>No reference assets uploaded yet.</p>;
+  }
 
   return (
     <div className="style-asset-list">

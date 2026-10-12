@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase/client";
 import { getCreativeErrorMessage } from "../lib/formatCreativeText";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
+import StudioHeader from "../components/navigation/StudioHeader";
 
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
@@ -89,15 +90,12 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     const result = await supabase.from("generation_jobs").select("id,status,output,error").eq("project_id", projectId).eq("visual_plan_id", planId).eq("job_type", "assembly").order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (result.error) throw result.error;
     setAssemblyJob(result.data);
-    // Show only the final output belonging to this locked plan's completed job.
     setFinalVideo(result.data?.status === "completed" ? result.data.output?.final_video ?? null : null);
   }, [projectId]);
 
   const refreshAssemblyReadiness = useCallback(async (planId: string) => {
     let status = { ready: false, message: "Unable to verify approved motion. Assembly remains unavailable." };
     try {
-      // Do not rely on the selected scene or the newest attempt: approved
-      // motion from an earlier job can remain authoritative after a retry.
       const [sceneResult, motionResult] = await Promise.all([
         supabase.from("visual_plan_scenes").select("id,status").eq("project_id", projectId).eq("visual_plan_id", planId),
         supabase.from("motion_clip_assets").select("id,scene_id,status,approved,video_url").eq("project_id", projectId).eq("visual_plan_id", planId).eq("status", "approved").eq("approved", true),
@@ -121,8 +119,6 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         status = remaining
           ? { ready: false, message: `${remaining} of ${allScenes.length} scenes still need exactly one approved real motion clip.` }
           : { ready: approved.length === allScenes.length, message: "All scene motion is approved. Final assembly is available." };
-        // Extra approved rows (including stale or wrong-scene records) must
-        // never make the UI more permissive than the server-side RPC.
         if (!remaining && approved.length !== allScenes.length) {
           status = { ready: false, message: "Motion approval records are inconsistent. Final assembly is unavailable." };
         }
@@ -164,7 +160,6 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
   useEffect(() => {
     if (!scene || !plan) return;
-    // Jobs can finish in the scheduler even when the initial browser request fails.
     const interval = pending(imageJob) || pending(motionJob) || pending(assemblyJob) ? 5000 : 50 * 60 * 1000;
     let active = true;
     const timer = window.setInterval(() => {
@@ -182,8 +177,6 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     try {
       let job = existing;
       if (!job && type === "assembly") {
-        // Recheck at click time: the rendered readiness can be stale after
-        // another browser tab revokes or supersedes a motion approval.
         const current = await refreshAssemblyReadiness(plan.id);
         if (!current.ready) throw new Error(current.message);
       }
@@ -200,8 +193,6 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       if (run.error) throw run.error;
       const result = run.data?.job;
       if (!result?.id) throw new Error("Generation controller returned no job state.");
-      // Fetch persisted assets, then retain the authoritative response if a replica
-      // has not observed the latest job write yet.
       if (type === "assembly") await refreshFinal(plan.id); else await refreshScene(sceneId);
       setJob(result);
       if (result.status === "failed") throw new Error(result.error?.message || "Generation failed.");
@@ -241,111 +232,180 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     window.setTimeout(() => setCopied(false), 1500);
   }
 
-  if (loading) return <main className="studio-main production-page"><div className="style-loading">Loading Production Workspace…</div></main>;
+  if (loading) {
+    return (
+      <div className="app-shell">
+        <StudioHeader projectId={projectId} activeStage="production" />
+        <main className="dashboard"><p>Loading Production Workspace…</p></main>
+      </div>
+    );
+  }
 
   if (!plan || !scene) {
     return (
-      <main className="studio-main production-page">
-        <header className="style-header"><div><span className="eyebrow">PHASE 5 / PRODUCTION</span><h1>Production Workspace</h1></div></header>
-        <section className="style-empty-panel"><p className="form-error" role="alert">{error ?? "No approved production scenes found."}</p><a className="secondary-button" href={`/projects/${projectId}/scenes`}>Return to Production Brief</a></section>
-      </main>
+      <div className="app-shell">
+        <StudioHeader projectId={projectId} activeStage="production" />
+        <main className="dashboard">
+          <header className="style-header"><div><span className="eyebrow">06 / PRODUCTION WORKSPACE</span><h1>Production Workspace</h1></div></header>
+          <section className="empty-state">
+            <p className="form-error" role="alert">{error ?? "No approved production scenes found."}</p>
+            <a className="secondary-button" style={{ marginTop: "16px" }} href={`/projects/${projectId}/scenes`}>← Return to Production Briefs</a>
+          </section>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className="studio-main production-page">
-      <header className="style-header">
-        <div>
-          <span className="eyebrow">PHASE 5 / PRODUCTION WORKSPACE</span>
-          <h1>Build the shots from the locked direction.</h1>
-          <p>{plan.title} is approved. Select a scene, review its production brief, and carry the locked creative direction into your production tools.</p>
+    <div className="app-shell">
+      <StudioHeader
+        projectId={projectId}
+        projectTitle={plan.title}
+        activeStage="production"
+        statusBadge="WORKSPACE ACTIVE"
+      />
+
+      <main className="dashboard" style={{ maxWidth: "1400px" }}>
+        <header className="style-header">
+          <div>
+            <span className="eyebrow">06 / PRODUCTION WORKSPACE & GENERATION</span>
+            <h1>Shot Monitor & Video Assembly</h1>
+            <p>{plan.title} is locked. Build the shots from the locked direction.</p>
+          </div>
+          <span className="status-badge status-approved">
+            PLAN LOCKED / {scenes.length} SCENES
+          </span>
+        </header>
+
+        {error && <p className="form-error" role="alert" style={{ marginBottom: "16px" }}>{error}</p>}
+        {(pending(imageJob) || pending(motionJob) || pending(assemblyJob)) && (
+          <p className="form-message" role="status" style={{ marginBottom: "16px" }}>
+            Generation is processing. Media updates automatically.
+          </p>
+        )}
+        {[imageJob, motionJob, assemblyJob].filter(job => job?.status === "failed").map(job => (
+          <p className="form-error" role="alert" key={job.id}>{job.error?.message || "Generation failed."}</p>
+        ))}
+
+        <div className="production-nav">
+          <a className="secondary-button" href={`/projects/${projectId}/visual-plan`}>← Visual Plan</a>
+          <a className="secondary-button" href={`/projects/${projectId}/scenes`}>Scene Briefs</a>
         </div>
-        <div className="style-status">PLAN LOCKED / {scenes.length} SCENES</div>
-      </header>
 
-      {error && <p className="form-error" role="alert">{error}</p>}
-      {(pending(imageJob) || pending(motionJob) || pending(assemblyJob)) && <p role="status">Generation is still processing. Status refreshes automatically; no completed media is claimed yet.</p>}
-      {[imageJob, motionJob, assemblyJob].filter(job => job?.status === "failed").map(job => <p className="form-error" role="alert" key={job.id}>{job.error?.message || "Generation failed."}</p>)}
-      <div className="production-nav">
-        <a className="secondary-button" href={`/projects/${projectId}/visual-plan`}>← Visual Plan</a>
-        <a className="secondary-button" href={`/projects/${projectId}/scenes`}>Production Briefs</a>
-      </div>
+        <section className="production-layout">
+          <aside className="production-scene-list">
+            <span className="eyebrow" style={{ fontSize: "10px", padding: "4px 8px" }}>SCENES ({scenes.length})</span>
+            {scenes.map((item, index) => (
+              <button
+                disabled={busy}
+                key={item.id}
+                className={index === selectedIndex ? "production-scene selected" : "production-scene"}
+                onClick={() => setSelectedIndex(index)}
+                type="button"
+              >
+                <span>SCENE {String(item.scene_number).padStart(2, "0")}</span>
+                <strong>{item.title}</strong>
+                <small>{time(item.start_time)} — {time(item.end_time)}</small>
+              </button>
+            ))}
+          </aside>
 
-      <section className="production-layout">
-        <aside className="production-scene-list">
-          <span className="panel-label">SCENES</span>
-          {scenes.map((item, index) => (
-            <button disabled={busy} key={item.id} className={index === selectedIndex ? "production-scene selected" : "production-scene"} onClick={() => setSelectedIndex(index)}>
-              <span>SCENE {String(item.scene_number).padStart(2, "0")}</span>
-              <strong>{item.title}</strong>
-              <small>{time(item.start_time)} — {time(item.end_time)}</small>
-            </button>
-          ))}
-        </aside>
-
-        <section className="production-detail">
-          <div className="production-detail-head">
-            <div><span className="eyebrow">SCENE {String(scene.scene_number).padStart(2, "0")}</span><h2>{scene.title}</h2><p>{time(scene.start_time)} — {time(scene.end_time)} · {scene.location}</p></div>
-            <span className="style-lock-badge">APPROVED</span>
-          </div>
-
-          <div className="production-grid">
-            <article><span>Visual</span><p>{scene.visual_direction}</p></article>
-            <article><span>Camera</span><p>{scene.camera_direction}</p></article>
-            <article><span>Movement</span><p>{scene.movement_direction}</p></article>
-            <article><span>Mood</span><p>{scene.mood}</p></article>
-            <article><span>Transition</span><p>{scene.transition_style}</p></article>
-            <article><span>Continuity</span><p>{scene.continuity_notes}</p></article>
-            <article className="production-wide"><span>Lyric / musical moment</span><p>{scene.lyric_moment || "Follow the analyzed musical section."}</p></article>
-          </div>
-
-          <div className="production-actions">
-            <button className="primary-button" onClick={() => void copyBrief()}>{copied ? "Copied" : "Copy Shot Brief"}</button>
-            <button className="secondary-button" disabled={busy || selectedIndex === 0} onClick={() => setSelectedIndex((value) => Math.max(0, value - 1))}>Previous Scene</button>
-            <button className="secondary-button" disabled={busy || selectedIndex === scenes.length - 1} onClick={() => setSelectedIndex((value) => Math.min(scenes.length - 1, value + 1))}>Next Scene</button>
-          </div>
-
-          <div className="production-provider-note">
-            <span className="panel-label">SCENE IMAGE</span>
-            {image?.image_url ? <img src={image.image_url} alt={scene.title} style={{ width: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 12 }} /> : <p>No real scene image exists yet. Generation is only enabled from the approved Scene Direction.</p>}
-            <div className="production-actions">
-              <button className="primary-button" disabled={busy || pending(imageJob) || Boolean(image)} onClick={() => void generateImage()}>{generating ? "Generating…" : image ? "Image Generated" : "Generate Scene Image"}</button>
-              {pending(imageJob) && <button className="secondary-button" disabled={busy} onClick={() => void operateJob("scene_image", imageJob)}>Check Image Status</button>}
-              {image?.status === "generated" && <button className="secondary-button" onClick={() => void approveImage()}>Approve Image</button>}
-              {image?.status === "approved" && <span className="style-lock-badge">IMAGE APPROVED</span>}
+          <section className="production-detail">
+            <div className="production-detail-head">
+              <div>
+                <span className="eyebrow">SCENE {String(scene.scene_number).padStart(2, "0")} BRIEF</span>
+                <h2>{scene.title}</h2>
+                <p>{time(scene.start_time)} — {time(scene.end_time)} · {scene.location}</p>
+              </div>
+              <span className="status-badge status-approved">APPROVED BRIEF</span>
             </div>
-          </div>
 
-          <div className="production-provider-note">
-            <span className="panel-label">MOTION</span>
-            {motion && <p>{motion.model === "image-motion" || (motionJob?.id === motion.generation_job_id && motionJob?.output?.arena_response?.result?.generation_type === "PROCEDURAL_MOTION") ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
-            {motion?.video_url ? <video src={motion.video_url} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
-            <div className="production-actions">
-              {!motion && !pending(motionJob) && <button className="primary-button" disabled={busy || image?.status !== "approved"} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
-              {pending(motionJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkMotionStatus()}>{motionGenerating ? "Checking…" : "Check Motion Status"}</button>}
-              {motion?.status === "generated" && <button className="secondary-button" onClick={() => void approveMotion()}>Approve Motion</button>}
-              {motion?.status === "approved" && <span className="style-lock-badge">MOTION APPROVED</span>}
+            <div className="production-grid">
+              <article><span>Visual Direction</span><p>{scene.visual_direction}</p></article>
+              <article><span>Camera Language</span><p>{scene.camera_direction}</p></article>
+              <article><span>Movement</span><p>{scene.movement_direction}</p></article>
+              <article><span>Mood & Tone</span><p>{scene.mood}</p></article>
+              <article><span>Transition</span><p>{scene.transition_style}</p></article>
+              <article><span>Continuity Directives</span><p>{scene.continuity_notes}</p></article>
+              <article className="production-wide"><span>Lyric / Musical Context</span><p>{scene.lyric_moment || "Follow the analyzed musical section."}</p></article>
             </div>
-          </div>
 
-          <div className="production-provider-note">
-            <span className="panel-label">FINAL ASSEMBLY</span>
-            {finalVideo?.video_url ? <video src={finalVideo.video_url} controls playsInline style={{ width: "100%", maxHeight: 600, borderRadius: 12 }} /> : <p>No completed final video exists yet. Assembly requires every approved scene to have an approved real motion clip.</p>}
-            {!finalVideo && <p role="status">{assemblyReadiness.message}</p>}
             <div className="production-actions">
-              {!finalVideo && !pending(assemblyJob) && <button className="primary-button" disabled={busy || !assemblyReadiness.ready} onClick={() => void assembleFinal()}>{assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}</button>}
-              {pending(assemblyJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkAssemblyStatus()}>{assemblyRunning ? "Checking…" : "Check Assembly Status"}</button>}
-              {finalVideo?.video_url && <span className="style-lock-badge">FINAL VIDEO COMPLETE</span>}
+              <button className="primary-button" onClick={() => void copyBrief()}>{copied ? "Brief Copied ✓" : "Copy Shot Brief"}</button>
+              <button className="secondary-button" disabled={busy || selectedIndex === 0} onClick={() => setSelectedIndex((v) => Math.max(0, v - 1))}>← Prev Scene</button>
+              <button className="secondary-button" disabled={busy || selectedIndex === scenes.length - 1} onClick={() => setSelectedIndex((v) => Math.min(scenes.length - 1, v + 1))}>Next Scene →</button>
             </div>
-          </div>
 
-          <div className="production-provider-note">
-            <span className="panel-label">GENERATION</span>
-            <h3>Provider generation is authenticated and database-authoritative.</h3>
-            <p>Scene images, motion clips, and final assembly are accepted only when real provider media is persisted against the locked project lineage. Missing provider output remains a failure.</p>
-          </div>
+            <div className="production-provider-note">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span className="eyebrow">MONITOR 01 / SCENE KEYFRAME</span>
+                {image?.status === "approved" && <span className="status-badge status-approved">IMAGE APPROVED</span>}
+              </div>
+              {image?.image_url ? (
+                <img src={image.image_url} alt={scene.title} style={{ width: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 8, border: "1px solid var(--border-subtle)" }} />
+              ) : (
+                <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>No real scene keyframe exists yet. Generation uses approved Visual Plan direction.</p>
+              )}
+              <div className="production-actions">
+                <button className="primary-button" disabled={busy || pending(imageJob) || Boolean(image)} onClick={() => void generateImage()}>
+                  {generating ? "Generating Keyframe…" : image ? "Keyframe Generated ✓" : "Generate Scene Image"}
+                </button>
+                {pending(imageJob) && <button className="secondary-button" disabled={busy} onClick={() => void operateJob("scene_image", imageJob)}>Check Image Status</button>}
+                {image?.status === "generated" && <button className="secondary-button" style={{ color: "var(--color-success)", borderColor: "var(--color-success)" }} onClick={() => void approveImage()}>Approve Image ✓</button>}
+              </div>
+            </div>
+
+            <div className="production-provider-note">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span className="eyebrow">MONITOR 02 / MOTION CLIP</span>
+                {motion?.status === "approved" && <span className="status-badge status-approved">MOTION APPROVED</span>}
+              </div>
+              {motion && <p style={{ fontSize: "12px", color: "var(--text-dim)" }}>{motion.model === "image-motion" || (motionJob?.id === motion.generation_job_id && motionJob?.output?.arena_response?.result?.generation_type === "PROCEDURAL_MOTION") ? "Procedural camera animation (pan/zoom)" : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
+              {motion?.video_url ? (
+                <video src={motion.video_url} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 8, border: "1px solid var(--border-subtle)" }} />
+              ) : (
+                <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>No real motion clip exists yet. Motion requires an approved keyframe image.</p>
+              )}
+              <div className="production-actions">
+                {!motion && !pending(motionJob) && (
+                  <button className="primary-button" disabled={busy || image?.status !== "approved"} onClick={() => void generateMotion()}>
+                    {motionGenerating ? "Starting Motion…" : "Generate Motion"}
+                  </button>
+                )}
+                {pending(motionJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkMotionStatus()}>{motionGenerating ? "Checking…" : "Check Motion Status"}</button>}
+                {motion?.status === "generated" && <button className="secondary-button" style={{ color: "var(--color-success)", borderColor: "var(--color-success)" }} onClick={() => void approveMotion()}>Approve Motion</button>}
+              </div>
+            </div>
+
+            <div className="production-provider-note">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span className="eyebrow">MONITOR 03 / FINAL VIDEO ASSEMBLY</span>
+                {finalVideo?.video_url && <span className="status-badge status-approved">VIDEO COMPLETE</span>}
+              </div>
+              {finalVideo?.video_url ? (
+                <video src={finalVideo.video_url} controls playsInline style={{ width: "100%", maxHeight: 600, borderRadius: 8, border: "1px solid var(--border-subtle)" }} />
+              ) : (
+                <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>No final assembled video exists yet. Assembly requires approved motion clips across all scenes.</p>
+              )}
+              {!finalVideo && <p role="status" style={{ fontSize: "12px", color: "var(--text-muted)" }}>{assemblyReadiness.message}</p>}
+              <div className="production-actions">
+                {!finalVideo && !pending(assemblyJob) && (
+                  <button className="primary-button large" disabled={busy || !assemblyReadiness.ready} onClick={() => void assembleFinal()}>
+                    {assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}
+                  </button>
+                )}
+                {pending(assemblyJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkAssemblyStatus()}>{assemblyRunning ? "Checking…" : "Check Assembly Status"}</button>}
+              </div>
+            </div>
+
+            <div className="production-provider-note" style={{ background: "var(--bg-surface-1)" }}>
+              <span className="eyebrow">AUTHORITATIVE PIPELINE</span>
+              <h3>Database-Authoritative Creative Execution</h3>
+              <p>Scene images, motion clips, and video assembly are validated server-side against project lineage and Vision Lock rules before approval.</p>
+            </div>
+          </section>
         </section>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }

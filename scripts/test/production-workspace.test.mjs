@@ -11,11 +11,18 @@ import { createRoot } from 'react-dom/client';
 const rootDir = fileURLToPath(new URL('../../', import.meta.url));
 const dir = await mkdtemp(join(rootDir, '.ui-test-'));
 const source = await readFile(new URL('../../src/pages/ProductionWorkspacePage.tsx', import.meta.url), 'utf8');
-const transformed = ts.transpileModule(source.replace('"../lib/supabase/client"', '"./stub.mjs"').replace('"../lib/formatCreativeText"', '"./formatCreativeText.mjs"'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+const transformed = ts.transpileModule(
+  source
+    .replace('"../lib/supabase/client"', '"./stub.mjs"')
+    .replace('"../lib/formatCreativeText"', '"./formatCreativeText.mjs"')
+    .replace('"../components/navigation/StudioHeader"', '"./header.mjs"'),
+  { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }
+).outputText;
 await writeFile(join(dir, 'page.mjs'), transformed);
 const errorHelper = await readFile(new URL('../../src/lib/formatCreativeText.ts', import.meta.url), 'utf8');
 await writeFile(join(dir, 'formatCreativeText.mjs'), ts.transpileModule(errorHelper, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText);
 await writeFile(join(dir, 'stub.mjs'), 'export const supabase = new Proxy({}, { get: (_, key) => globalThis.__uiDb[key] });');
+await writeFile(join(dir, 'header.mjs'), 'export default function StudioHeader() { return null; }');
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
@@ -81,7 +88,7 @@ test('async motion keeps the workspace and exposes status without a completed as
   const view = await mount();
   try {
     await view.click('Generate Motion');
-    assert.match(document.body.textContent, /Build the shots/);
+    assert.match(document.body.textContent, /Shot Monitor/);
     await view.click('Check Motion Status');
     assert.equal(view.calls.at(-1).jobId, 'job-1');
   } finally { await view.cleanup(); }
@@ -100,7 +107,7 @@ test('recoverable provider errors do not hide the workspace', async () => {
   try {
     await view.click('Generate Motion');
     assert.match(document.body.textContent, /Provider unavailable/);
-    assert.match(document.body.textContent, /Build the shots/);
+    assert.match(document.body.textContent, /Shot Monitor/);
   } finally { await view.cleanup(); }
 });
 
@@ -114,7 +121,7 @@ test('async assembly retains its job and exposes the status control', async () =
   const view = await mount({ approvedMotionSceneIds: ['scene-1'] });
   try {
     await view.click('Assemble Final Video');
-    assert.match(document.body.textContent, /Build the shots/);
+    assert.match(document.body.textContent, /Shot Monitor/);
     await view.click('Check Assembly Status');
     assert.equal(view.calls.at(-1).jobId, 'job-1');
   } finally { await view.cleanup(); }
@@ -126,7 +133,7 @@ test('structured missing-motion assembly errors explain the prerequisite without
     await view.click('Assemble Final Video');
     assert.match(document.querySelector('[role="alert"]').textContent, /approve.*motion clip.*every scene/i);
     assert.doesNotMatch(document.body.textContent, /\[object Object\]/);
-    assert.match(document.body.textContent, /Build the shots/);
+    assert.match(document.body.textContent, /Shot Monitor/);
     assert.equal(view.calls.length, 0);
   } finally { await view.cleanup(); }
 });

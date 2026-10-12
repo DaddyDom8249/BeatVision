@@ -36,12 +36,6 @@ function makeHarness(start = "/projects/new") {
         return [state[index], (value) => { state[index] = typeof value === "function" ? value(state[index]) : value; }];
       },
       useEffect(effect) {
-        // Route effects need to be executed so popstate is tested, too.
-        // The mock removes subscriptions between renders before re-adding them.
-        if (typeof effect === "function") {
-          // Suppress unrelated Supabase/analytics effects.
-          // The popstate subscription is explicitly simulated below.
-        }
       },
     };
   }
@@ -62,6 +56,7 @@ function makeHarness(start = "/projects/new") {
     if (name === "../lib/analytics") return { capture: () => {}, capturePageview: () => {}, identifyUser: () => {}, initAnalytics: () => {} };
     if (name === "../lib/errorDetails") return { formatFailure: () => "error" };
     if (name.startsWith("../pages/")) return { default: name.split("/").at(-1) };
+    if (name.startsWith("../components/")) return { default: () => null };
     throw new Error("Unexpected dependency " + name);
   };
   function load(path, hook) {

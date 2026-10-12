@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase/client";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
+import StudioHeader from "../components/navigation/StudioHeader";
 
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
@@ -63,53 +64,96 @@ export default function SceneProductionPage({ projectId }: { projectId: string }
     window.setTimeout(() => setCopied((current) => current === scene.id ? null : current), 1500);
   }
 
-  if (loading) return <main><p>Loading Scene Production…</p></main>;
+  if (loading) {
+    return (
+      <div className="app-shell">
+        <StudioHeader projectId={projectId} activeStage="scenes" />
+        <main className="dashboard"><p>Loading Scene Production Briefs…</p></main>
+      </div>
+    );
+  }
 
   if (error || !plan) {
-    return <main><h1>Scene Production</h1><p role="alert">{error ?? "No approved Visual Plan found."}</p><a href={"/projects/" + projectId + "/visual-plan"}>Return to Visual Plan</a></main>;
+    return (
+      <div className="app-shell">
+        <StudioHeader projectId={projectId} activeStage="scenes" />
+        <main className="dashboard">
+          <h1>Scene Production Briefs</h1>
+          <p className="form-error" role="alert">{error ?? "No approved Visual Plan found."}</p>
+          <button className="primary-button" style={{ marginTop: "16px" }} onClick={() => { window.location.href = `/projects/${projectId}/visual-plan`; }}>
+            ← Return to Visual Plan
+          </button>
+        </main>
+      </div>
+    );
   }
 
   return (
-    <main>
-      <header>
-        <span className="eyebrow">PHASE 5 / SCENE PRODUCTION</span>
-        <h1>Produce from the locked direction.</h1>
-        <p>{plan.title} is approved. These scene briefs inherit the confirmed World and locked Style Bible.</p>
-      </header>
+    <div className="app-shell">
+      <StudioHeader
+        projectId={projectId}
+        activeStage="scenes"
+        statusBadge="SCENES READY"
+      />
 
-      <section>
-        <div><span className="eyebrow">PRODUCTION STATUS</span><h2>{scenes.length} scenes ready</h2></div>
-        <p>Scene direction is read-only here. Changes belong upstream in a new Visual Plan revision.</p>
-      </section>
-
-      {scenes.map((scene) => (
-        <article key={scene.id} className="visual-plan-scene">
-          <header>
-            <div><span className="eyebrow">SCENE {String(scene.scene_number).padStart(2, "0")}</span><h2>{time(scene.start_time)} — {time(scene.end_time)} · {scene.title}</h2></div>
-            <span>Approved</span>
-          </header>
-          <div className="visual-plan-grid">
-            <div><strong>Location</strong><p>{scene.location}</p></div>
-            <div><strong>Mood</strong><p>{scene.mood}</p></div>
-            <div><strong>Visual</strong><p>{scene.visual_direction}</p></div>
-            <div><strong>Camera</strong><p>{scene.camera_direction}</p></div>
-            <div><strong>Movement</strong><p>{scene.movement_direction}</p></div>
-            <div><strong>Transition</strong><p>{scene.transition_style}</p></div>
-            <div><strong>Continuity</strong><p>{scene.continuity_notes}</p></div>
-            <div><strong>Lyric / music</strong><p>{scene.lyric_moment || "Follow the analyzed section."}</p></div>
+      <main className="dashboard" style={{ maxWidth: "1200px" }}>
+        <header className="style-header">
+          <div>
+            <span className="eyebrow">05 / SCENE PRODUCTION BRIEFS</span>
+            <h1>Produce from Locked Direction</h1>
+            <p>{plan.title} is approved. These scene briefs inherit the confirmed World and locked Style Bible.</p>
           </div>
-          <button className="secondary-button" onClick={() => void copy(scene)}>{copied === scene.id ? "Copied" : "Copy production brief"}</button>
-        </article>
-      ))}
+          <span className="status-badge status-approved">
+            {scenes.length} SCENES READY
+          </span>
+        </header>
 
-      <section className="production-handoff">
-        <div>
-          <span className="eyebrow">NEXT / PRODUCTION WORKSPACE</span>
-          <h2>Turn the locked scene briefs into production shots.</h2>
-          <p>Your approved Visual Plan is the creative source. Open the Production Workspace to move through the eight scenes and prepare each shot without changing the locked direction.</p>
-        </div>
-        <a className="primary-button" href={"/projects/" + projectId + "/production"}>Open Production Workspace →</a>
-      </section>
-    </main>
+        <section style={{ marginBottom: "28px" }}>
+          {scenes.map((scene) => (
+            <article key={scene.id} className="visual-plan-scene">
+              <header>
+                <div>
+                  <span className="eyebrow">SCENE {String(scene.scene_number).padStart(2, "0")}</span>
+                  <h2 style={{ fontSize: "20px", color: "#ffffff", margin: "4px 0" }}>
+                    {time(scene.start_time)} — {time(scene.end_time)} · {scene.title}
+                  </h2>
+                </div>
+                <span className="status-badge status-approved">APPROVED</span>
+              </header>
+
+              <div className="visual-plan-grid" style={{ marginTop: "16px" }}>
+                <div><strong style={{ color: "var(--accent-gold)", fontSize: "11px", fontFamily: "var(--font-mono)" }}>Location</strong><p style={{ marginTop: "4px", fontSize: "14px" }}>{scene.location}</p></div>
+                <div><strong style={{ color: "var(--accent-gold)", fontSize: "11px", fontFamily: "var(--font-mono)" }}>Mood</strong><p style={{ marginTop: "4px", fontSize: "14px" }}>{scene.mood}</p></div>
+                <div><strong style={{ color: "var(--accent-gold)", fontSize: "11px", fontFamily: "var(--font-mono)" }}>Visual Direction</strong><p style={{ marginTop: "4px", fontSize: "14px" }}>{scene.visual_direction}</p></div>
+                <div><strong style={{ color: "var(--accent-gold)", fontSize: "11px", fontFamily: "var(--font-mono)" }}>Camera</strong><p style={{ marginTop: "4px", fontSize: "14px" }}>{scene.camera_direction}</p></div>
+                <div><strong style={{ color: "var(--accent-gold)", fontSize: "11px", fontFamily: "var(--font-mono)" }}>Movement</strong><p style={{ marginTop: "4px", fontSize: "14px" }}>{scene.movement_direction}</p></div>
+                <div><strong style={{ color: "var(--accent-gold)", fontSize: "11px", fontFamily: "var(--font-mono)" }}>Transition</strong><p style={{ marginTop: "4px", fontSize: "14px" }}>{scene.transition_style}</p></div>
+                <div><strong style={{ color: "var(--accent-gold)", fontSize: "11px", fontFamily: "var(--font-mono)" }}>Continuity</strong><p style={{ marginTop: "4px", fontSize: "14px" }}>{scene.continuity_notes}</p></div>
+                <div><strong style={{ color: "var(--accent-gold)", fontSize: "11px", fontFamily: "var(--font-mono)" }}>Lyric / Musical Moment</strong><p style={{ marginTop: "4px", fontSize: "14px" }}>{scene.lyric_moment || "Follow the analyzed section."}</p></div>
+              </div>
+
+              <div style={{ marginTop: "16px" }}>
+                <button className="secondary-button" onClick={() => void copy(scene)}>
+                  {copied === scene.id ? "Brief Copied to Clipboard ✓" : "Copy Production Brief"}
+                </button>
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <section className="production-handoff">
+          <div>
+            <span className="eyebrow">NEXT STAGE / PRODUCTION WORKSPACE</span>
+            <h2>Generate Shots in Production Workspace</h2>
+            <p>
+              Your approved Visual Plan is the creative source. Open the Production Workspace to generate scene images, motion clips, and final video assembly.
+            </p>
+          </div>
+          <a className="primary-button large" href={`/projects/${projectId}/production`}>
+            Open Production Workspace →
+          </a>
+        </section>
+      </main>
+    </div>
   );
 }
