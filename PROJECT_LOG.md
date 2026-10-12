@@ -1,5 +1,18 @@
 # BeatVision Project Log
 
+## 2026-10-12 — Guard revised World against an earlier approved Style Bible (repair branch)
+
+**TARGET:** Stop the Ghast Style Studio lineage-error loop without rewriting existing approvals; provide an intentional path to the already approved production plan.
+
+**CONFIRMED root cause:** Read-only live database inspection: Ghast project `8faa2cd4-361f-4764-bf1e-7800b87d6292` points to newly confirmed World `b9cac7ce-0a64-4d58-b7c9-f416f8530e16`, while approved Style Bible `52f955bb-8119-4326-9ea7-7f0051630b32` is bound to earlier World `51c43d74-6909-475c-b5c3-31be0e25fcbd`. The approved Visual Plan and eight approved scenes/motion rows also reference the earlier World. `useStyleStudio.load()` previously called `ensureWorldDrafts(currentWorld, projectId, currentStyleBible)` even when their World IDs differed. That attempted to insert new-World child rows under an old-World Style Bible; the database correctly rejects invalid lineage. The old assembly job is reported `completed` with a `final_video` output reference, but playable MP4 is not verified.
+
+**CHANGE:** New branch `repair/style-world-lineage-gate-20261012`, based on `9fe720e8a202c2775477a7dbeaec76ec04334265` (PR #79 release branch, not main). `src/hooks/useStyleStudio.ts` detects the mismatch before draft reads or writes, retains the existing Style Bible in memory, clears only local derived child state and surfaces an explicit error. `src/pages/StylePage.tsx` renders a read-only World revision boundary with links to review the active World or, only for an approved earlier Style Bible, open the existing locked Production Workspace. No provider calls, approval changes, project pointer updates, new-World asset creation or database migrations. `scripts/test/style-world-lineage.test.mjs` adds callback execution and JSX-render tests for fail-closed behavior.
+
+**EVIDENCE / limitations:** Live SQL read-only queries confirmed the exact mismatched lineage; source inspection confirmed the unsafe call path. Repository regression, production-audit, TypeScript/Vite build and PR CI remain PENDING at the time of this entry. No local clone or networked Git is available in the sandbox. Do not claim source-resolved, deployed or Android-verified until checks and live observations support it. This patch deliberately does not implement creator-authorized promotion of the newer World or revisions of the approved Style Bible.
+
+**NEXT:** Run exact-head tests/build/audit and independently review CI; verify Android can reach old locked plan without editing existing approved records. A new-World creative continuation requires an intentional versioned revision design and authorization, not silent reassignment.
+
+
 ## 2026-10-10 — Automatically seed Characters and Environments from confirmed World
 
 **Objective:** Populate cast and spaces as World-backed editable drafts when the Style Bible is created or opened, without requiring manual re-entry or touching approved assets.
