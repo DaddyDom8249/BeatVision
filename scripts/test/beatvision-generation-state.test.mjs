@@ -73,7 +73,14 @@ for (const [name, owner, assetProject, expected] of [
       const filters = {};
       return { select() { return this; }, eq(k,v) { filters[k] = v; return this; }, async maybeSingle() {
         return { data: table === 'projects' ? { id: 'project-1', owner_id: owner }
-          : filters.project_id === assetProject ? { id: 'asset-1', storage_path: 'project-1/scene-images/test.jpg' } : null };
+          : filters.project_id === assetProject ? {
+            id: 'asset-1',
+            image_url: null,
+            storage_path: 'project-1/scene-images/plan-1/scene-1/job-1.jpg',
+            visual_plan_id: 'plan-1',
+            scene_id: 'scene-1',
+            generation_job_id: 'job-1',
+          } : null };
       } };
     },
     storage: { from: () => ({ createSignedUrl: async () => { signed++; return { data: { signedUrl: 'https://fresh.test/image.jpg' } }; } }) },
