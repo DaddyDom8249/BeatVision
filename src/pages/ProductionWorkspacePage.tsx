@@ -15,6 +15,16 @@ function productionErrorMessage(error: unknown) {
   return message;
 }
 
+function validMotionReference(value: unknown): boolean {
+  if (typeof value !== "string" || !/^https?:\/\//i.test(value.trim())) return false;
+  try {
+    const url = new URL(value.trim());
+    return (url.protocol === "http:" || url.protocol === "https:") && !!url.hostname;
+  } catch {
+    return false;
+  }
+}
+
 function time(seconds: number) {
   const total = Math.max(0, Math.floor(seconds));
   return String(Math.floor(total / 60)).padStart(2, "0") + ":" + String(total % 60).padStart(2, "0");
@@ -113,7 +123,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       } else {
         const counts = new Map<string, number>();
         for (const clip of approved) {
-          if (clip.status === "approved" && clip.approved === true && clip.video_url) {
+          if (clip.status === "approved" && clip.approved === true && validMotionReference(clip.video_url)) {
             counts.set(clip.scene_id, (counts.get(clip.scene_id) ?? 0) + 1);
           }
         }
