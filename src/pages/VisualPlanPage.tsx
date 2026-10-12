@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useVisualPlan } from "../hooks/useVisualPlan";
 import type { VisualPlanScene } from "../types/visualPlan";
 
@@ -9,9 +9,10 @@ function formatTime(seconds: number) {
   return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 }
 
-function SceneEditor({ scene, working, onSave }: {
+function SceneEditor({ scene, working, onSave, onDirtyChange }: {
   scene: VisualPlanScene;
   working: boolean;
+  onDirtyChange: (id: string, dirty: boolean) => void;
   onSave: (id: string, changes: Partial<Pick<VisualPlanScene, "title" | "visual_direction" | "camera_direction" | "movement_direction" | "location" | "mood" | "lyric_moment" | "transition_style" | "continuity_notes">>) => Promise<void>;
 }) {
   const [draft, setDraft] = useState(scene);
@@ -24,6 +25,11 @@ function SceneEditor({ scene, working, onSave }: {
     draft.lyric_moment !== scene.lyric_moment ||
     draft.transition_style !== scene.transition_style ||
     draft.continuity_notes !== scene.continuity_notes;
+
+  useEffect(() => {
+    onDirtyChange(scene.id, dirty);
+    return () => onDirtyChange(scene.id, false);
+  }, [scene.id, dirty, onDirtyChange]);
 
   function set(key: keyof typeof draft, value: string) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -60,6 +66,20 @@ function SceneEditor({ scene, working, onSave }: {
           lyric_moment: draft.lyric_moment.trim(),
           transition_style: draft.transition_style.trim(),
           continuity_notes: draft.continuity_notes.trim(),
+        }).then(() => {
+          // Reflect the persisted normalization only after a successful save.
+          setDraft((current) => ({
+            ...current,
+            title: current.title.trim(),
+            visual_direction: current.visual_direction.trim(),
+            camera_direction: current.camera_direction.trim(),
+            movement_direction: current.movement_direction.trim(),
+            location: current.location.trim(),
+            mood: current.mood.trim(),
+            lyric_moment: current.lyric_moment.trim(),
+            transition_style: current.transition_style.trim(),
+            continuity_notes: current.continuity_notes.trim(),
+          }));
         }).catch(() => undefined)}>
           {working ? "Saving…" : dirty ? "Save Scene Direction" : "Saved"}
         </button>
@@ -70,6 +90,16 @@ function SceneEditor({ scene, working, onSave }: {
 
 export default function VisualPlanPage({ projectId }: { projectId: string }) {
   const { world, styleBible, song, plan, scenes, loading, working, error, createPlan, saveScene, approvePlan } = useVisualPlan(projectId);
+
+  const [dirtyScenes, setDirtyScenes] = useState<Set<string>>(() => new Set());
+  const onDirtyChange = useCallback((id: string, dirty: boolean) => {
+    setDirtyScenes((current) => {
+      if (current.has(id) === dirty) return current;
+      const next = new Set(current);
+      if (dirty) next.add(id); else next.delete(id);
+      return next;
+    });
+  }, []);
 
   if (loading) return <main><p>Loading Visual Plan…</p></main>;
 
@@ -121,16 +151,17 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
               <p>{plan.status === "approved" ? "Visual Plan locked. Production must follow this approved direction." : "Draft. Edit the scene directions, then lock the plan."}</p>
             </div>
             {plan.status === "draft" && (
-              <button className="primary-button" disabled={working || scenes.length === 0} onClick={() => void approvePlan().catch(() => undefined)}>
+              <button className="primary-button" disabled={working || scenes.length === 0 || dirtyScenes.size > 0} onClick={() => void approvePlan().catch(() => undefined)}>
                 {working ? "Locking…" : "Lock Visual Plan"}
               </button>
             )}
           </section>
 
+          {plan.status === "draft" && dirtyScenes.size > 0 && <p role="status">Save each edited scene before locking the Visual Plan.</p>}
           <section>
             <h2>Timeline</h2>
             {scenes.map((scene) => (
-              <SceneEditor key={scene.id} scene={scene} working={working || plan.status === "approved"} onSave={saveScene} />
+              <SceneEditor key={scene.id} scene={scene} working={working || plan.status === "approved"} onSave={saveScene} onDirtyChange={onDirtyChange} />
             ))}
           </section>
 
