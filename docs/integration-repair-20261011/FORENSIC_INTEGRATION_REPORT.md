@@ -66,10 +66,13 @@ ok 6 - Integration 2026-10-11: Motion -> Final Assembly enabled when all scenes 
 
 ### Full Repository Verification Run (`npm test`, `npm run production-audit`, `npm run build`)
 ```
-npm test: 97 existing tests + 6 new integration tests = 103 passed, 0 failed.
+npm test (node --test scripts/test/*.test.mjs): 97 passed, 0 failed. The configured glob did not include the nested integration tests.
+Separate integration command (node --test scripts/test/integration-repair-20261011/*.test.mjs): 6 passed, 0 failed.
 npm run production-audit: PASS (Canonical production route, World CORS, generation terminal-state handling, and stub cleanup verified).
 npm run build: PASS (TypeScript compilation & Vite production bundle created successfully in 3.92s).
 ```
+
+The earlier statement that `npm test` ran 103 tests was incorrect: 97 tests ran through `npm test`, and the six nested integration tests were run separately. The two counts must not be presented as a single `npm test` result.
 
 ---
 
