@@ -15,7 +15,14 @@ export function useWorld(projectId: string) {
   const requestVersion = useRef(0);
   const mounted = useRef(true);
 
-  useEffect(() => () => { mounted.current = false; }, []);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      // Invalidate requests from the previous lifetime, including StrictMode replay.
+      requestVersion.current += 1;
+    };
+  }, []);
 
   const request = useCallback(async (method: "GET" | "POST" | "PATCH", body: unknown | undefined, version: number) => {
     const { data: sessionData } = await supabase.auth.getSession();
