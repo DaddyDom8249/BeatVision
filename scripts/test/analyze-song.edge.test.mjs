@@ -11,7 +11,7 @@
 
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile, rm, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -20,11 +20,15 @@ import { createStubClientFactory, storageBucketCalls } from "./supabase_stub.mjs
 const FUNCTION_PATH = fileURLToPath(
   new URL("../../supabase/functions/beatvision-analyze-song/index.ts", import.meta.url)
 );
+const STORAGE_PATHS_PATH = fileURLToPath(
+  new URL("../../supabase/functions/_shared/storagePaths.ts", import.meta.url)
+);
 const SUPABASE_URL = "https://stub.supabase.co";
 const USER_ID = "user-owner-1";
 const PROJECT_ID = "project-1";
 const JSR_IMPORT = 'import "jsr:@supabase/functions-js/edge-runtime.d.ts";';
 const REMOTE_IMPORT = 'from "https://esm.sh/@supabase/supabase-js@2"';
+const AUDIO_PATH = `${USER_ID}/${PROJECT_ID}/00000000-0000-0000-0000-000000000001.mp3`;
 
 const ORIGINAL_FETCH = globalThis.fetch;
 const CREATED_DIRS = [];
@@ -36,7 +40,7 @@ async function bootFunction({ authUserId = USER_ID, ownerId = USER_ID, analysis 
       {
         id: "song-1",
         project_id: PROJECT_ID,
-        audio_path: `${USER_ID}/${PROJECT_ID}/track.mp3`,
+        audio_path: AUDIO_PATH,
         analysis,
       },
     ],
@@ -54,6 +58,9 @@ async function bootFunction({ authUserId = USER_ID, ownerId = USER_ID, analysis 
 
   const dir = await mkdtemp(join(tmpdir(), "analyze-song-"));
   CREATED_DIRS.push(dir);
+  const sharedDir = join(dir, "..", "_shared");
+  await mkdir(sharedDir, { recursive: true });
+  await writeFile(join(sharedDir, "storagePaths.ts"), await readFile(STORAGE_PATHS_PATH, "utf8"));
   await writeFile(
     join(dir, "supabase_stub.mjs"),
     "const factory = globalThis.__supabaseStubFactory;\nexport function createClient(url, key) { return factory(url, key); }\n"
