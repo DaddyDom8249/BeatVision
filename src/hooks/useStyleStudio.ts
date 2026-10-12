@@ -287,6 +287,21 @@ export function useStyleStudio(projectId: string) {
     }
 
     let currentStyleBible = (styleResult.data ?? null) as StyleBible | null;
+    if (currentStyleBible && currentStyleBible.world_report_id !== currentWorld.id) {
+      // The project now points at a later World, but the approved creative
+      // lineage (Style Bible, plan, scenes, and motion) belongs to the earlier
+      // World. Never materialize new-World drafts under the old Style Bible:
+      // the database correctly rejects that cross-lineage write.
+      // Preserve the old approval and present a read-only recovery route.
+      setStyleBible(currentStyleBible);
+      setCharacters([]);
+      setCharacterAssets([]);
+      setEnvironments([]);
+      setEnvironmentAssets([]);
+      setError("The active World was revised after this Style Bible was saved. Its existing approved work is preserved under the earlier World. Review the existing production, or return to World to choose an intentional revision path.");
+      setLoading(false);
+      return;
+    }
     if (currentStyleBible) {
       try {
         // The existing Ghast draft stored "[object Object]" instead of rules.
