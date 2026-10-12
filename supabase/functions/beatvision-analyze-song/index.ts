@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { assertSongPath } from "../_shared/storagePaths.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -63,6 +64,7 @@ Deno.serve(async (req) => {
 
     // Production stores audio in the `songs` bucket (see SongPage/useSong);
     // reading `audio` fails to resolve the signed URL and breaks transcription.
+    assertSongPath(song.audio_path, userId, projectId);
     const signed = await admin.storage.from("songs").createSignedUrl(String(song.audio_path), 900);
     if (signed.error || !signed.data?.signedUrl) throw new Error(signed.error?.message || "Could not create a temporary audio URL.");
 

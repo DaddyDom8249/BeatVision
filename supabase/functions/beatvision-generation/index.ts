@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { assertSongPath, assertSceneImagePath } from "../_shared/storagePaths.ts";
 
 const ALLOWED_ORIGINS = new Set([
   "https://beat-vision-theta.vercel.app",
@@ -95,6 +96,9 @@ async function bridgePayload(db: any, job: any) {
     if (motionClips.length !== scenes.length) throw new Error("ASSEMBLY_MOTION_COVERAGE_INVALID: Approved motion does not cover every scene.");
     const audioPath = String(snapshot.audio_path || "").trim();
     if (!audioPath) throw new Error("ASSEMBLY_AUDIO_MISSING: Frozen song audio path is missing.");
+    const owner = await db.from("projects").select("owner_id").eq("id", job.project_id).single();
+    if (owner.error || !owner.data?.owner_id) throw new Error("ASSEMBLY_PROJECT_OWNER_LOOKUP_FAILED");
+    assertSongPath(audioPath, owner.data.owner_id, job.project_id);
     const signed = await db.storage.from("songs").createSignedUrl(audioPath, 3600);
     if (signed.error || !signed.data?.signedUrl) throw new Error("ASSEMBLY_AUDIO_SIGNING_FAILED: " + (signed.error?.message || "No signed URL returned."));
     return {
@@ -116,11 +120,12 @@ async function bridgePayload(db: any, job: any) {
 
   let images: { images: Array<{ image_url: string; scene_id: string; approved: boolean }> } | undefined;
   if (job.job_type === "scene_motion") {
-    const imageResult = await db.from("scene_image_assets").select("id,image_url,storage_path,scene_id,status,approved,created_at").eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("scene_id", job.visual_plan_scene_id).eq("approved", true).eq("status", "approved").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const imageResult = await db.from("scene_image_assets").select("id,image_url,storage_path,scene_id,generation_job_id,status,approved,created_at").eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("scene_id", job.visual_plan_scene_id).eq("approved", true).eq("status", "approved").order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (imageResult.error) throw new Error("APPROVED_SCENE_IMAGE_LOOKUP_FAILED: " + imageResult.error.message);
     if (!imageResult.data) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion requires an approved real scene image.");
     let motionImageUrl = String(imageResult.data.image_url || "").trim();
     if (imageResult.data.storage_path) {
+      assertSceneImagePath(imageResult.data.storage_path, job.project_id, job.visual_plan_id, job.visual_plan_scene_id, imageResult.data.generation_job_id);
       const signed = await db.storage.from("visual-assets").createSignedUrl(String(imageResult.data.storage_path), 3600);
       if (signed.error || !signed.data?.signedUrl) throw new Error("APPROVED_SCENE_IMAGE_SIGNING_FAILED: " + (signed.error?.message || "No signed URL returned."));
       motionImageUrl = String(signed.data.signedUrl);
@@ -245,6 +250,7 @@ async function persistSceneImage(db: any, job: any, responseData: any) {
     }
 
     storagePath = `${job.project_id}/scene-images/${job.visual_plan_id}/${job.visual_plan_scene_id}/${job.id}.jpg`;
+    assertSceneImagePath(storagePath, job.project_id, job.visual_plan_id, job.visual_plan_scene_id, job.id);
     const upload = await db.storage.from("visual-assets").upload(storagePath, binary, {
       contentType: "image/jpeg",
       cacheControl: "31536000",
@@ -601,11 +607,12 @@ Deno.serve(async (req) => {
     // Re-sign only an asset belonging to the authenticated owner's project.
     // Generated paths begin with project ID; user-upload storage policies use user ID.
     if (action === "image_url") {
-      const asset = await db.from("scene_image_assets").select("id,image_url,storage_path")
+      const asset = await db.from("scene_image_assets").select("id,image_url,storage_path,visual_plan_id,scene_id,generation_job_id")
         .eq("id", String(body.assetId || "")).eq("project_id", projectId).maybeSingle();
       if (asset.error) throw new Error(asset.error.message);
       if (!asset.data) return json(req, { error: { code: "NOT_FOUND", message: "Image asset not found." } }, 404);
       if (!asset.data.storage_path) return json(req, { image_url: asset.data.image_url });
+      assertSceneImagePath(asset.data.storage_path, projectId, asset.data.visual_plan_id, asset.data.scene_id, asset.data.generation_job_id);
       const signed = await db.storage.from("visual-assets").createSignedUrl(asset.data.storage_path, 3600);
       if (signed.error || !signed.data?.signedUrl) throw new Error("IMAGE_SIGNING_FAILED: " + (signed.error?.message || "No signed URL returned."));
       return json(req, { image_url: signed.data.signedUrl });
