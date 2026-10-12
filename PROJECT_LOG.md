@@ -715,3 +715,11 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 **Repair:** Added only the two active PR #36 Vercel origins to the World, Style Draft, and Generation function allowlists. Arbitrary origins remain denied. Added regression coverage for preview preflight behavior.
 
 **Verification:** The new tests failed against the old allowlists, then passed after the repair. Full suite passed 83/83; production audit and production build passed. Deployed World v34, Style Draft v2, and Generation v20. A live `OPTIONS` request to World returned HTTP 200 and the exact requesting PR preview origin. The authenticated `Reveal World` POST still requires a user browser retry and is not claimed verified.
+
+
+## 2026-10-11 — Direct assembly media-reference regression repair (PR #68)
+CONFIRMED: Exact-head baseline e0e8c11da9cac444c57c3be80eb0a6cd7da28072, Actions 38123188838 / job 114421988399, ran 21 actual React page checks: 18 PASS, 3 FAILED. Whitespace, arbitrary text and an unsupported URI scheme incorrectly enabled assembly. Controlled source-function execution reproduced the same defect before authoring regressions.
+ROOT CAUSE: The readiness counter treated any truthy video_url as real media, unlike the generation controller's existing HTTP(S) predicate.
+CHANGES: Use the same string/trim/HTTP(S) predicate when counting approved clips. Added 11 regressions covering invalid references, exact approved coverage without mutations, full-coverage conflicts, wrong-scene extras, unapproved attempts, draft scenes and denied reads. Isolated exact-head public standard-runner CI uses read-only permissions and disabled npm lifecycle scripts. Branch-specific Vercel deployment is disabled before publishing the tests.
+TESTS: Post-patch exact-head focused/full test, source audit and build outcomes pending; NOT VERIFIED until CI logs confirm. Prior tests remain intact. No Jules, Skyvern, live generation, creative approvals, database writes, main merge or deployment.
+LIMITS: An HTTP(S) reference alone does not establish live accessibility, playable content or truthful provenance. Real authenticated/media verification remains outside this source check.
