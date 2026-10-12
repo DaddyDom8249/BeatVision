@@ -9,7 +9,8 @@
     "deploymentEnabled": {
       "repair/world-lifecycle-direct-20261011": false,
       "repair/style-mobile-continue-20261010": false,
-      "repair/project-context-direct-20261011": false
+      "repair/project-context-direct-20261011": false,
+      "repair/production-readiness-direct-20261011": false
     }
   }
 }

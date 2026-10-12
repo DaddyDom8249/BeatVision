@@ -1,0 +1,117 @@
+name: Production readiness exact-head verification
+on:
+  pull_request:
+    branches: [repair/project-context-direct-20261011]
+permissions:
+  contents: read
+jobs:
+  source:
+    if: github.head_ref == 'repair/production-readiness-direct-20261011'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install without dependency lifecycle scripts
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Complete repository regressions
+        run: npm test
+      - name: Production source audit
+        run: npm run production-audit
+      - name: TypeScript and Vite build
+        run: npm run build
+
+  canonical-replay:
+    if: github.head_ref == 'repair/production-readiness-direct-20261011'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - name: Start disposable local PostgreSQL
+        run: |
+          supabase init --workdir /tmp/beatvision-readiness-replay
+          supabase db start --workdir /tmp/beatvision-readiness-replay
+          readiness_db=$(docker ps --filter name=supabase_db_ --format '{{.Names}}')
+          test -n "$readiness_db"
+          test "$(printf '%s\n' "$readiness_db" | wc -l)" = 1
+          echo "READINESS_DB=$readiness_db" >> "$GITHUB_ENV"
+      - name: Isolate database network and disable scheduled jobs
+        run: |
+          for readiness_network in $(docker inspect --format '{{range $key, $value := .NetworkSettings.Networks}}{{$key}} {{end}}' "$READINESS_DB"); do
+            docker network disconnect "$readiness_network" "$READINESS_DB"
+          done
+          test "$(docker inspect --format '{{len .NetworkSettings.Networks}}' "$READINESS_DB")" = 0
+          docker exec "$READINESS_DB" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c "ALTER SYSTEM SET cron.launch_active_jobs = 'off'"
+          docker exec "$READINESS_DB" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_reload_conf()"
+          test "$(docker exec "$READINESS_DB" psql -U supabase_admin -d postgres -At -c 'SHOW cron.launch_active_jobs')" = off
+      - name: Replay canonical migrations on empty application database
+        run: |
+          docker exec -i "$READINESS_DB" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f - < scripts/test/sql/platform-replay-fixture.sql
+          for migration in supabase/migrations/*.sql; do
+            echo "REPLAYING $migration"
+            docker exec -i "$READINESS_DB" psql -U supabase_admin -d postgres --single-transaction -v ON_ERROR_STOP=1 -f - < "$migration"
+          done
+      - name: Fresh application contracts, Vision Lock and owner isolation
+        run: docker exec -i "$READINESS_DB" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f - < scripts/test/sql/fresh-install-contract.sql
+      - name: Stop disposable database
+        if: always()
+        run: supabase stop --workdir /tmp/beatvision-readiness-replay
+
+  security-contracts:
+    if: github.head_ref == 'repair/production-readiness-direct-20261011'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        contract: [generation-enqueue, legacy-storage]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: fixture-only
+          POSTGRES_DB: readiness_fixture
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: fixture-only
+      PGDATABASE: readiness_fixture
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Owner enqueue, isolation, idempotency and immutable provenance
+        if: matrix.contract == 'generation-enqueue'
+        run: |
+          psql -v ON_ERROR_STOP=1 -f scripts/test/sql/generation-enqueue-fixture.sql
+          psql -v ON_ERROR_STOP=1 -f scripts/test/sql/generation-enqueue-baseline.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261010053000_owner_checked_generation_enqueue.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261010054500_allow_canonical_assembly_job_type.sql
+          psql -v ON_ERROR_STOP=1 -f scripts/test/sql/generation-enqueue-security.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261010070000_assembly_motion_provenance.sql
+          psql -v ON_ERROR_STOP=1 -f scripts/test/sql/assembly-motion-provenance.sql
+      - name: Legacy storage owner writes and protected existing assets
+        if: matrix.contract == 'legacy-storage'
+        run: |
+          psql -v ON_ERROR_STOP=1 -f scripts/test/sql/legacy-storage-fixture.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261010061000_legacy_storage_owner_writes.sql
+          psql -v ON_ERROR_STOP=1 -f scripts/test/sql/legacy-storage-security.sql
