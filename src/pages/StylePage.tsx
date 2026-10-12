@@ -86,6 +86,31 @@ export default function StylePage({ projectId }: { projectId: string }) {
     );
   }
 
+  if (world?.id && styleBible.world_report_id !== world.id) {
+    // This is an intentional revision boundary, not a missing Style Bible.
+    // Do not expose creation, editing, approvals or provider controls against
+    // an approved Style Bible that belongs to an earlier World.
+    return (
+      <main className="studio-main style-page">
+        <header className="style-header"><div>
+          <span className="eyebrow">PHASE 3 / WORLD REVISION</span>
+          <h1>Style Bible belongs to an earlier World</h1>
+          <p>The currently selected World differs from the World used to approve this Style Bible. Its approved characters, environments, Visual Plan and motion remain preserved.</p>
+        </div></header>
+        <section className="style-empty-panel">
+          <p className="form-error" role="alert">{error || "A World revision needs an explicit creative decision before changing approved assets."}</p>
+          <nav className="style-actions style-stage-navigation" aria-label="World revision recovery">
+            <a className="secondary-button" href={`/projects/${projectId}/world`}>Review current World</a>
+            {styleBible.status === "approved" && (
+              <a className="primary-button" href={`/projects/${projectId}/production`}>Open preserved approved production →</a>
+            )}
+          </nav>
+          <p>Returning to production uses the existing locked plan. It does not attach the newer World to previously approved scenes.</p>
+        </section>
+      </main>
+    );
+  }
+
   function saveStyle(event: FormEvent) {
     event.preventDefault();
     void saveStyleBible({
