@@ -64,7 +64,7 @@ export default function App() {
   const sceneProductionMatch = path.match(/^\/projects\/([^/]+)\/scenes\/?$/);
   if (sceneProductionMatch) return <SceneProductionPage projectId={sceneProductionMatch[1]} />;
 
-  const productionMatch = path.match(/^\/projects\/([^/]+)\/production\/?$/);
+  const productionMatch = path.match(/^\/projects\/([^/]+)\/(?:production|motion)\/?$/);
   if (productionMatch) return <ProductionWorkspacePage projectId={productionMatch[1]} />;
 
   const styleMatch = path.match(/^\/projects\/([^/]+)\/style\/?$/);

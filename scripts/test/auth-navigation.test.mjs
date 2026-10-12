@@ -137,6 +137,8 @@ test("direct /auth?next path and other existing routes retain correct component 
     ["/projects/new", "CreateProjectPage"],
     ["/projects/123/song", "SongPage"],
     ["/projects/123/world", "WorldPage"],
+    ["/projects/123/motion", "ProductionWorkspacePage"],
+    ["/projects/123/motion/", "ProductionWorkspacePage"],
     ["/", "DashboardPage"],
   ]) {
     const { renderApp } = makeHarness(route);
