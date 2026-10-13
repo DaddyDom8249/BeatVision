@@ -1,0 +1,27 @@
+name: BeatVision Free Motion Pilot CI
+on:
+  push:
+    branches: [feature/free-wan-motion-pilot-20261013]
+  pull_request:
+    branches: [repair/production-reconcile-20261012]
+permissions:
+  contents: read
+jobs:
+  free-motion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm test
+      - run: node --test scripts/test/*/*.test.mjs
+      - run: npm run production-audit
+      - run: npm run build
+      - name: Explicit no-live-provider-no-charge gate
+        run: |
+          echo "Tests use local mocks. No Groq, Pixazo, Hugging Face, or Shotstack generation invoked."

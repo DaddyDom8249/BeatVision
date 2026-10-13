@@ -46,6 +46,10 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [generating, setGenerating] = useState(false);
   const [motion, setMotion] = useState<any>(null);
   const [motionGenerating, setMotionGenerating] = useState(false);
+  const [freePilotBusy, setFreePilotBusy] = useState(false);
+  const [freePilotUrl, setFreePilotUrl] = useState<string | null>(null);
+  const [freePilotJob, setFreePilotJob] = useState<{ token: string; sceneId: string } | null>(null);
+  const [freePilotError, setFreePilotError] = useState<string | null>(null);
   const [finalVideo, setFinalVideo] = useState<any>(null);
   const [assemblyJob, setAssemblyJob] = useState<any>(null);
   const [assemblyRunning, setAssemblyRunning] = useState(false);
@@ -198,6 +202,72 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
   const generateImage = () => operateJob("scene_image");
   const generateMotion = () => operateJob("scene_motion");
+  useEffect(() => {
+    setFreePilotUrl(null);
+    setFreePilotJob(null);
+    setFreePilotError(null);
+  }, [projectId, scene?.id]);
+
+  async function generateFreePilot() {
+    if (!scene || image?.status !== "approved" || busy || freePilotBusy || freePilotJob) return;
+    const targetScene = scene.id;
+    setFreePilotBusy(true);
+    setFreePilotUrl(null);
+    setFreePilotError(null);
+    try {
+      const result = await supabase.functions.invoke("beatvision-free-motion-pilot", {
+        body: { action: "start", project_id: projectId, scene_id: targetScene },
+      });
+      if (result.error) throw result.error;
+      const data = result.data;
+      if (!data?.ok || data?.status !== "submitted" || !data?.job_token)
+        throw new Error(String(data?.error || "Free ZeroGPU job was not accepted."));
+      if (selectedSceneId.current === targetScene)
+        setFreePilotJob({ token: String(data.job_token), sceneId: targetScene });
+    } catch (reason) {
+      if (selectedSceneId.current === targetScene) setFreePilotError(productionErrorMessage(reason));
+    } finally {
+      setFreePilotBusy(false);
+    }
+  }
+
+  async function checkFreePilotStatus(job: { token: string; sceneId: string }): Promise<"processing" | "done" | "failed"> {
+    if (selectedSceneId.current !== job.sceneId) return "failed";
+    try {
+      const result = await supabase.functions.invoke("beatvision-free-motion-pilot", {
+        body: { action: "poll", project_id: projectId, scene_id: job.sceneId, job_token: job.token },
+      });
+      if (result.error) throw result.error;
+      const data = result.data;
+      if (data?.ok && data?.status === "processing") return "processing";
+      const media = String(data?.video_url || "");
+      const trusted = /^https:\/\/zerogpu-aoti-wan2-2-fp8da-aoti-faster\.hf\.space\//.test(media);
+      if (!data?.ok || data?.status !== "pilot_ready" || data?.generation_type !== "GENERATIVE_VIDEO" || !trusted)
+        throw new Error(String(data?.error || "Free provider has not returned verified AI video."));
+      if (selectedSceneId.current === job.sceneId) {
+        setFreePilotUrl(media);
+        setFreePilotJob(null);
+        setFreePilotError(null);
+      }
+      return "done";
+    } catch (reason) {
+      if (selectedSceneId.current === job.sceneId) setFreePilotError(productionErrorMessage(reason));
+      return "failed";
+    }
+  }
+
+  useEffect(() => {
+    if (!freePilotJob || freePilotJob.sceneId !== scene?.id) return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const poll = async () => {
+      const status = await checkFreePilotStatus(freePilotJob);
+      if (active && status === "processing") timer = window.setTimeout(() => void poll(), 7000);
+    };
+    timer = window.setTimeout(() => void poll(), 5000);
+    return () => { active = false; if (timer) window.clearTimeout(timer); };
+  }, [freePilotJob?.token, scene?.id, projectId]);
+
   const checkMotionStatus = () => operateJob("scene_motion", motionJob);
   const assembleFinal = () => operateJob("assembly");
   const checkAssemblyStatus = () => operateJob("assembly", assemblyJob);
@@ -332,6 +402,26 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
               {motion?.status === "generated" && <button className="secondary-button" onClick={() => void approveMotion()}>Approve Motion</button>}
               {motion?.status === "approved" && <span className="style-lock-badge">MOTION APPROVED</span>}
             </div>
+          </div>
+
+          <div className="production-provider-note">
+            <span className="panel-label">FREE AI MOVEMENT PREVIEW</span>
+            <p>Wan 2.2 image-to-video on Hugging Face Free ZeroGPU. Requires an approved image and available free-account daily GPU quota. The preview covers up to 3 seconds. No paid fallback, no automatic approval, and no replacement of your saved motion.</p>
+            <div className="production-actions">
+              <button className="secondary-button" disabled={busy || freePilotBusy || Boolean(freePilotJob) || image?.status !== "approved"} onClick={() => void generateFreePilot()}>
+                {freePilotBusy ? "Submitting free GPU preview…" : freePilotJob ? "Preview queued (no resubmission)" : "Generate free 3-second AI movement"}
+              </button>
+              {freePilotJob && <button className="secondary-button" disabled={freePilotBusy} onClick={() => void checkFreePilotStatus(freePilotJob)}>Check Preview Status</button>}
+            </div>
+            {freePilotJob && <p role="status">Free ZeroGPU preview submitted; checking every 7 seconds. The job is not resubmitted.</p>}
+            {freePilotError && <p className="form-error" role="alert">{freePilotError}</p>}
+            {freePilotUrl && (
+              <div>
+                <video src={freePilotUrl} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} />
+                <p>AI-generated subject movement preview only. The result has not been approved and does not cover the full scene.</p>
+                <a className="secondary-button" href={freePilotUrl} target="_blank" rel="noopener noreferrer">Open free AI motion preview</a>
+              </div>
+            )}
           </div>
 
           <div className="production-provider-note">
