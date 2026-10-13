@@ -95,3 +95,19 @@ test('HF completion stores immutable private video and pins the generating image
     assert.equal(imageFilters.id,'source-approved');assert.equal(imageFilters.project_id,'project-1');assert.equal(inserted.scene_image_id,'source-approved');assert.equal(inserted.approved,false);assert.equal(inserted.provider,'huggingface-zerogpu');
   } finally { globalThis.fetch=original;await runtime.cleanup(); }
 });
+
+for (const approvedPlan of [true,false]) test('HF enqueue '+(approvedPlan?'reuses immutable attempt without writes':'rejects an unapproved plan before a job write'),async()=>{
+  const f=metadata();const original=globalThis.fetch;globalThis.fetch=f.request;let writes=0;const filters=[];
+  const existing={id:'already-enqueued',status:'completed'};
+  const client={from(table){const where={};filters.push({table,where});return{
+    select(){return this},eq(k,v){where[k]=v;return this},order(){return this},limit(){return this},insert(){writes++;throw Error('must not insert')},
+    async maybeSingle(){return{data:table==='visual_plan_scenes'?{id:'scene-1',visual_plan_id:'plan-1'}:table==='visual_plans'?(approvedPlan?{vision_lock_id:'lock-1'}:null):table==='scene_image_assets'?{id:'image-1',storage_path:'project-1/image.jpg',generation_job_id:'image-job'}:existing}},
+    async single(){return{data:{id:'image-job',project_id:'project-1',status:'completed',vision_lock_id:'lock-1',visual_plan_id:'plan-1',input_snapshot:{scene:{id:'scene-1'}}}}},
+  }}};
+  const runtime=await loadGeneration(client);globalThis.Deno.env.get=()=> 'test-secret';
+  try {
+    if(approvedPlan){assert.deepEqual(await runtime.enqueueHfMotion(client,'project-1','scene-1',true),existing);assert.equal(filters.find(x=>x.table==='scene_image_assets').where.approved,true)}
+    else await assert.rejects(runtime.enqueueHfMotion(client,'project-1','scene-1',true),/approved locked Visual Plan/);
+    assert.equal(writes,0);assert.equal(f.calls.filter(c=>c.init.method==='POST').length,0);
+  }finally{globalThis.fetch=original;await runtime.cleanup()}
+});
