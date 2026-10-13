@@ -41,3 +41,19 @@ After a real motion proof succeeds: verify exact dependency licenses; identify a
 ## Local release evidence
 
 Baseline: npm install exit0; npm test161/161 exit0; build/audit exit0. npm ci failed because this repository intentionally excludes its lockfile; no reproducible locked-install claim. Candidate: npm test183/183 exit0; build/audit/diff-check exit0; Edge TypeScript check exit0 with platform type declarations substituted only. Tests mock provider boundaries and do not prove real video generation. Remote CI, credential eligibility, actual endpoint generation, storage output, decoding/motion inspection and browser playback remain separate release checks.
+
+## Actual free proof — 2026-10-13 22:02 UTC
+
+Release code efe521b90c057e2974459875b4255a5ecee625e3 passed GitHub Actions38474638776/job115562212504: 185 tests passed, 0 failed, audit/build success. Controller deployed as Generationv30; retrieved index.ts/hf-motion.ts match tested source exactly, custom authentication/verify_jwt=false unchanged. Serving Vercel frontend remains03b84e9; frontend changes are in PR84 and are not claimed production-verified.
+
+Live motion_eligibility returned HTTP200 using HF_VIDEO_TOKEN: actual DaddyDom8249 personal free identity, pinned LTX revision, running ZeroGPU and exact public API contract. Submitted one approved-image-derived Ghast jobdf41237f-4086-41d3-bf57-95ab23d3501c. Exactly1 attempt; accepted Gradio eventcf40339be8a94f89b72b0b08c9051b4c; existing scheduler polled completion. Actual tested endpoint https://lightricks-ltx-video-distilled.hf.space/gradio_api/call/image_to_video. No other video model, paid provider, purchase, card, deposit or subscription was invoked.
+
+Result assetea264d01-a303-4ec2-9494-c4e88aba266b: huggingface-zerogpu /ltxv-13b-0.9.8-distilled, source image9df4678a-4118-4eaa-b9ef-daec00e7ff3b; statusgenerated/approvedfalse. Stored privately at visual-assets/8faa2cd4-361f-4764-bf1e-7800b87d6292/scene-motion/a6cb12eb-be4d-4982-9e28-2b29e3332af0/09fc53ca-ab92-4a66-8f85-c92fb86a5708/df41237f-4086-41d3-bf57-95ab23d3501c.mp4. Stored bytes121314; SHA256c853d23d5cc61fb451c8e49bb29e3a39e9067cfb43283a85c4a01790e9209914. No temporary HF URL is the durable source.
+
+Independent ffprobe: H.264High/yuv420p,704x512,30fps,57frames,1.900000seconds, no audio. Requested2seconds is rounded to model's valid57frames; do not report exactly2seconds. ffmpeg full57-frame decode exit0 with no errors. Eight sampled frames inspected: character's head turns relative to torso/corridor, face orientation and clothing change over time; this is generated subject motion, not a global still-image pan/zoom. Creative identity/quality approval remains the creator's decision.
+
+Direct Chrome playback of saved private object: readyState4,duration1.9,width704,height512,errornull; autoplay reachedended/currentTime1.9. Explicit replay observedcurrentTime0.149688,pausedfalse,endedfalse,errornull. This proves saved-object playback, not an authenticated Studio button workflow. No mouth synchronization/audio claim.
+
+Approved image/motion hashes after generation equal the pretest hashes exactly. Old8approvedclips remain intact; newclip is unapproved. GPU success, durable storage, decoding, observed subject motion and saved-object playback: VERIFIED for this single proof. Full-scene durations, final music video and singing lip sync: UNVERIFIED.
+
+After motion success, inspected Ghast song28f8bbdb-11a3-4794-8d66-856410dda185 (Loyalties unmatched,249.126908314s). No songs columns or project-scoped stored files identify vocal stems. MuseTalk1.5 public contract is prepared; upstream explicitly warns that lip shape/mustache/identity details can drift and jitter can occur. VAE model card and face-parser code reportMIT, but precise auxiliary checkpoint permission and accurate singing results remain unverified. No MuseTalk request submitted and no mixed-song mouth animation substituted for isolated-vocal synchronization.
