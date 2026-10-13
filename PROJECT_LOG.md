@@ -715,3 +715,16 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 **Repair:** Added only the two active PR #36 Vercel origins to the World, Style Draft, and Generation function allowlists. Arbitrary origins remain denied. Added regression coverage for preview preflight behavior.
 
 **Verification:** The new tests failed against the old allowlists, then passed after the repair. Full suite passed 83/83; production audit and production build passed. Deployed World v34, Style Draft v2, and Generation v20. A live `OPTIONS` request to World returned HTTP 200 and the exact requesting PR preview origin. The authenticated `Reveal World` POST still requires a user browser retry and is not claimed verified.
+
+
+## 2026-10-13T16:59:39.244Z — Read-only PR automation implementation (scoped repair branch)
+
+**Objective:** Automate PR intake, unresolved-review checking, production source lineage comparison, nested regression discovery and factual evidence formatting without unauthorized releases.
+
+**Baseline:** GitHub main 9e6619f6e0b910754e55e1b88992598c05eb957f; read-only Vercel production alias reported 03b84e920c66ef0418be96fe7e1c202db901d137. AGENTS.md and full existing PROJECT_LOG were inspected. Existing PR #77 separately addresses test discovery; do not duplicate its package.json modification.
+
+**Scope:** New scripts/automation/review-gate-core.mjs, pr-preflight.mjs, evidence-report.mjs and focused tests; read-only PR workflow; production CI nested-test coverage; timestamped production-source snapshot; dedicated branch preview disable entry in vercel.json; docs/automation-preflight.md.
+
+**Safety:** GitHub token read-only; stale/unavailable comparison, unresolved review and draft PRs block release. No automatic approvals, new Jules task, Skyvern schedule, database changes, provider calls, main merge, or production deployment. CI never declares release authorized.
+
+**Verification:** Source implementation prepared; exact-head GitHub CI tests, production audit, build and live browser verification pending. Source-level implementation is not deployment or production proof. Next: publish draft PR, review the exact diff and test results; resolve any check failures before future releases.

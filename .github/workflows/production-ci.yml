@@ -4,16 +4,23 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+permissions:
+  contents: read
 jobs:
   audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm install --ignore-scripts --no-audit --no-fund
       - run: npm test
+      - name: Run nested regression and integration tests excluded by current npm test
+        run: node --test scripts/test/*/*.test.mjs
       - run: npm run production-audit
       - run: npm run build
       - run: test -f README.md && test -d src && test -d supabase

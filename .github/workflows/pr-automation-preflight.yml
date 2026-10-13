@@ -1,0 +1,35 @@
+name: BeatVision PR automation preflight
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Existing PR number to inspect (read-only)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: beatvision-preflight-${{ github.event.pull_request.number || inputs.pr_number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Checkout the workflow commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Read-only release lineage and review gate
+        id: preflight
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+        run: node scripts/automation/pr-preflight.mjs
