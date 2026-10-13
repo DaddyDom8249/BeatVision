@@ -1,0 +1,8 @@
+{
+  "repository": "DaddyDom8249/BeatVision",
+  "domain": "beat-vision-theta.vercel.app",
+  "commit_sha": "03b84e920c66ef0418be96fe7e1c202db901d137",
+  "observed_at": "2026-10-13T16:58:43.090Z",
+  "source": "Read-only Vercel deployment check verified production alias and git commit SHA. Snapshot; not a live CI verification.",
+  "require_refresh": "Reinspect live Vercel and update this observation before it is 72h old; otherwise preflight must block."
+}
