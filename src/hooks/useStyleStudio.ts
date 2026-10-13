@@ -215,6 +215,9 @@ export function useStyleStudio(projectId: string) {
   const hasStartedLoad = useRef(false);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A newly confirmed World may differ from the approved immutable Style Bible.
+  // Never attempt cross-world child inserts or silently relink creator approvals.
+  const [lineageConflict, setLineageConflict] = useState<{ activeWorldId: string; styleWorldId: string; styleStatus: string } | null>(null);
 
   const load = useCallback(async () => {
     // Retain mounted editor forms on save/upload/approval refreshes.
@@ -224,6 +227,7 @@ export function useStyleStudio(projectId: string) {
       setLoading(true);
     }
     setError(null);
+    setLineageConflict(null);
 
     const projectResult = await supabase
       .from("projects")
@@ -287,6 +291,23 @@ export function useStyleStudio(projectId: string) {
     }
 
     let currentStyleBible = (styleResult.data ?? null) as StyleBible | null;
+    // The Bible, cast, and scene approvals remain attached to the World revision
+    // from which they were created. Showing a review gate is safer than inserting
+    // rows with incompatible foreign-key lineage or changing a locked Bible.
+    if (currentStyleBible && currentStyleBible.world_report_id !== currentWorld.id) {
+      setStyleBible(currentStyleBible);
+      setCharacters([]);
+      setCharacterAssets([]);
+      setEnvironments([]);
+      setEnvironmentAssets([]);
+      setLineageConflict({
+        activeWorldId: currentWorld.id,
+        styleWorldId: currentStyleBible.world_report_id,
+        styleStatus: currentStyleBible.status,
+      });
+      setLoading(false);
+      return;
+    }
     if (currentStyleBible) {
       try {
         // The existing Ghast draft stored "[object Object]" instead of rules.
@@ -419,6 +440,49 @@ export function useStyleStudio(projectId: string) {
       setLoading(false);
     });
   }, [styleBible?.id, load]);
+
+  const restoreApprovedStyleWorld = useCallback(async () => {
+    // This changes only the active project World pointer after the owner
+    // explicitly confirms the action in StylePage. Both World revisions and
+    // every Style/character/environment/scene/approved asset are preserved.
+    if (!lineageConflict || !styleBible || !world ||
+      styleBible.status !== "approved" ||
+      styleBible.world_report_id !== lineageConflict.styleWorldId ||
+      world.id !== lineageConflict.activeWorldId) {
+      throw new Error("The World conflict changed. Refresh before choosing a revision.");
+    }
+    setWorking(true);
+    setError(null);
+    try {
+      const ownerId = await getUserId();
+      const prior = await supabase.from("world_reports")
+        .select("id,project_id,status,confirmed_at")
+        .eq("id", lineageConflict.styleWorldId)
+        .eq("project_id", projectId)
+        .single();
+      if (prior.error) throw prior.error;
+      if (prior.data?.status !== "completed" || !prior.data.confirmed_at)
+        throw new Error("The approved Style Bible's World is not confirmed; nothing changed.");
+
+      // Optimistic guard: do not overwrite a World selected in another tab.
+      // Supabase RLS additionally restricts this write to its owner.
+      const switched = await supabase.from("projects")
+        .update({ world_report_id: prior.data.id })
+        .eq("id", projectId)
+        .eq("owner_id", ownerId)
+        .eq("world_report_id", lineageConflict.activeWorldId)
+        .select("id,world_report_id")
+        .maybeSingle();
+      if (switched.error) throw switched.error;
+      if (!switched.data) throw new Error("Project World changed elsewhere. Refresh and review it again.");
+      await load();
+    } catch (cause) {
+      setError(getCreativeErrorMessage(cause, "Unable to restore the approved Style Bible's World."));
+      throw cause;
+    } finally {
+      setWorking(false);
+    }
+  }, [projectId, world, styleBible, lineageConflict, load]);
 
   const createStyleBible = useCallback(async () => {
     if (!world || world.status !== "completed" || !world.confirmed_at) throw new Error("Confirm the Visual World Report before creating the Style Bible.");
@@ -766,6 +830,8 @@ export function useStyleStudio(projectId: string) {
     loading,
     working,
     error,
+    lineageConflict,
+    restoreApprovedStyleWorld,
     locked: styleBible?.status === "approved",
     createStyleBible,
     saveStyleBible,
