@@ -177,7 +177,7 @@ test("confirmed World without Style Bible shows creation gate and never queries 
       };
     },
   };
-  const setters = ["setLoading", "setError", "setWorld", "setStyleBible",
+  const setters = ["setLoading", "setError", "setWorld", "setStyleBible", "setLineageConflict",
     "setCharacters", "setCharacterAssets", "setEnvironments", "setEnvironmentAssets"];
   const construct = new Function(
     "useCallback", "supabase", "projectId", "hasStartedLoad", "styleFields", ...setters,
