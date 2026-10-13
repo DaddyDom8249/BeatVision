@@ -27,3 +27,23 @@ test("Studio includes real-motion pilot with explicit limit",()=>{
   assert.match(studio,/does not cover the full scene/);
   assert.match(studio,/freePilotUrl/);
 });
+
+test("queued ZeroGPU work is polled, never resubmitted by timeout",()=>{
+  assert.match(edge,/action==="poll"/);
+  assert.match(edge,/\/v1\/video\/wan-zero\/jobs\//);
+  assert.match(edge,/return respond\(req,\{ok:true,status:"submitted"/);
+  assert.match(studio,/status === "processing"/);
+  assert.match(studio,/freePilotJob\?\.token/);
+  assert.match(studio,/Preview queued \(no resubmission\)/);
+});
+test("poll job tickets are HMAC scoped to owner project and scene",()=>{
+  assert.match(edge,/crypto\.subtle\.sign\("HMAC"/);
+  assert.match(edge,/crypto\.subtle\.verify\("HMAC"/);
+  assert.match(edge,/ticket\.p!==projectId\|\|ticket\.s!==sceneId\|\|ticket\.u!==ownerId/);
+  assert.match(edge,/ticket\.x<Date\.now\(\)/);
+});
+test("provider MP4 is unapproved and never written to database",()=>{
+  assert.match(edge,/clip\.generation_type!=="GENERATIVE_VIDEO"/);
+  assert.match(edge,/safeURL\(clip\.video_url\)/);
+  assert.doesNotMatch(edge,/\.insert\(|\.upsert\(|\.update\(/);
+});

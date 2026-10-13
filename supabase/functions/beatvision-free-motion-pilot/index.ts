@@ -22,6 +22,50 @@ function safeURL(value:unknown) {
     &&v.pathname.includes("/file=");}
   catch {return false;}
 }
+function b64(bytes:Uint8Array) {
+  let result="";for(const byte of bytes)result+=String.fromCharCode(byte);
+  return btoa(result).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function fromB64(value:string) {
+  const padded=value.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-value.length%4)%4);
+  return Uint8Array.from(atob(padded),c=>c.charCodeAt(0));
+}
+async function signingKey(secret:string) {
+  return crypto.subtle.importKey("raw",new TextEncoder().encode(secret),
+    {name:"HMAC",hash:"SHA-256"},false,["sign","verify"]);
+}
+async function signedTicket(secret:string,projectId:string,sceneId:string,ownerId:string,eventId:string) {
+  const data={p:projectId,s:sceneId,u:ownerId,e:eventId,x:Date.now()+20*60*1000};
+  const payload=b64(new TextEncoder().encode(JSON.stringify(data)));
+  const sig=await crypto.subtle.sign("HMAC",await signingKey(secret),new TextEncoder().encode(payload));
+  return payload+"."+b64(new Uint8Array(sig));
+}
+async function verifiedTicket(secret:string,value:string,projectId:string,sceneId:string,ownerId:string) {
+  const parts=String(value).split(".");
+  if(parts.length!==2||parts[0].length>700||parts[1].length>120)throw Error("Invalid motion preview ticket.");
+  const ok=await crypto.subtle.verify("HMAC",await signingKey(secret),fromB64(parts[1]),new TextEncoder().encode(parts[0]));
+  if(!ok)throw Error("Invalid motion preview ticket.");
+  let ticket:any;
+  try{ticket=JSON.parse(new TextDecoder().decode(fromB64(parts[0])))}catch{throw Error("Invalid motion preview ticket.")}
+  if(ticket.p!==projectId||ticket.s!==sceneId||ticket.u!==ownerId
+    ||typeof ticket.x!=="number"||ticket.x<Date.now()
+    ||!/^[a-zA-Z0-9_-]{8,130}$/.test(String(ticket.e||"")))throw Error("Expired or incorrect motion preview ticket.");
+  return String(ticket.e);
+}
+async function gateway(req:Request,arenaURL:URL,secret:string,path:string,method:"GET"|"POST",payload?:unknown) {
+  let response:Response;
+  try{response=await fetch(new URL(path,arenaURL),{
+    method,headers:{"Authorization":"Bearer "+secret,...(payload?{"Content-Type":"application/json"}:{})},
+    ...(payload?{body:JSON.stringify(payload)}:{}),
+    signal:AbortSignal.timeout(method==="POST"?95000:20000)
+  })}catch{return {ok:false,error:"Free video queue is unavailable or timed out.",status:503}}
+  let data:any;
+  try{data=await response.json()}catch{return {ok:false,error:"Free provider returned invalid response.",status:503}}
+  if(!response.ok&&response.status!==202)return {ok:false,error:String(data?.error||data?.status||"Free provider unavailable.").slice(0,400),status:503};
+  if(data?.ok!==true)return {ok:false,error:String(data?.error||"Free provider rejected request.").slice(0,400),status:503};
+  return {ok:true,data,status:response.status};
+}
+
 async function handler(req:Request) {
   if(req.method==="OPTIONS")return new Response(null,{status:204,headers:headers(req)});
   if(req.method!=="POST")return respond(req,{ok:false,error:"POST required."},405);
@@ -49,6 +93,24 @@ async function handler(req:Request) {
     .select("id,project_id,visual_plan_id,scene_number,start_time,end_time,visual_direction,camera_direction,movement_direction,status")
     .eq("project_id",projectId).eq("id",sceneId).eq("status","approved").maybeSingle();
   if(scene.error||!scene.data)return respond(req,{ok:false,error:"An approved storyboard scene is required."},409);
+  const action=String(body?.action||"start");
+  if(action==="poll") {
+    let eventId:string;
+    try{eventId=await verifiedTicket(secret,String(body?.job_token||""),projectId,sceneId,identity.data.user.id)}
+    catch(error){return respond(req,{ok:false,error:String(error instanceof Error?error.message:error)},403)}
+    const response=await gateway(req,arenaURL,secret,"/v1/video/wan-zero/jobs/"+encodeURIComponent(eventId),"GET");
+    if(!response.ok)return respond(req,{ok:false,status:"free_provider_unavailable",error:response.error},503);
+    if(response.data?.status==="processing")
+      return respond(req,{ok:true,status:"processing",job_token:body.job_token,scene_id:sceneId});
+    const clip=response.data?.result?.clips?.[0];
+    if(response.data?.status!=="completed"||!clip||clip.generation_type!=="GENERATIVE_VIDEO"||!safeURL(clip.video_url))
+      return respond(req,{ok:false,error:"No verified AI-video result available."},502);
+    return respond(req,{ok:true,status:"pilot_ready",scene_id:sceneId,video_url:clip.video_url,
+      model:"wan2.2-zerogpu",provider:"hf-zerogpu",generation_type:"GENERATIVE_VIDEO",approved:false,
+      note:"Short AI-motion preview only; does not approve or replace existing motion."});
+  }
+  if(action!=="start")return respond(req,{ok:false,error:"Only start or poll is supported."},422);
+
   const asset=await db.from("scene_image_assets")
     .select("id,project_id,visual_plan_id,scene_id,storage_path,approved,status")
     .eq("project_id",projectId).eq("visual_plan_id",scene.data.visual_plan_id)
@@ -70,24 +132,16 @@ async function handler(req:Request) {
         startTime:0,endTime:pilotDuration,visual_direction:scene.data.visual_direction,
         movement_direction:scene.data.movement_direction,camera_direction:scene.data.camera_direction}]},
       images:{images:[{image_url:signed.data.signedUrl,approved:true,scene_id:sceneId,asset_id:asset.data.id}]}}};
-  let response:Response;
-  try {response=await fetch(new URL("/v1/video/wan-zero",arenaURL),{
-    method:"POST",headers:{"Authorization":"Bearer "+secret,"Content-Type":"application/json"},
-    body:JSON.stringify(requestBody),signal:AbortSignal.timeout(125000)});
-  }catch{return respond(req,{ok:false,error:"Free video queue is unavailable or timed out; no paid fallback was used."},503);}
-  let data:any;
-  try {data=await response.json();}catch{return respond(req,{ok:false,error:"Free video provider returned invalid output."},503);}
-  if(!response.ok||data?.ok!==true)return respond(req,{ok:false,status:"free_provider_unavailable",
-    error:String(data?.error||data?.status||"Free ZeroGPU request refused.").slice(0,400)},503);
-  const clip=data?.result?.clips?.[0];
-  if(!clip||!safeURL(clip.video_url)||clip.generation_type!=="GENERATIVE_VIDEO")
-    return respond(req,{ok:false,error:"A verified AI motion MP4 URL was not returned."},502);
-  return respond(req,{ok:true,status:"pilot_ready",scene_id:sceneId,
-    video_url:clip.video_url,source_image_id:asset.data.id,
-    model:"wan2.2-zerogpu",provider:"hf-zerogpu",
+  const result=await gateway(req,arenaURL,secret,"/v1/video/wan-zero","POST",requestBody);
+  if(!result.ok)return respond(req,{ok:false,status:"free_provider_unavailable",error:result.error},503);
+  if(result.data?.status!=="submitted"||!/^[a-zA-Z0-9_-]{8,130}$/.test(String(result.data?.event_id||"")))
+    return respond(req,{ok:false,error:"Free provider failed to confirm job submission."},502);
+  const ticket=await signedTicket(secret,projectId,sceneId,identity.data.user.id,result.data.event_id);
+  return respond(req,{ok:true,status:"submitted",scene_id:sceneId,
+    job_token:ticket,model:"wan2.2-zerogpu",provider:"hf-zerogpu",
     preview_duration_seconds:pilotDuration,original_scene_duration_seconds:originalDuration,
-    generation_type:"GENERATIVE_VIDEO",approved:false,
-    note:"Temporary free-quota AI motion preview only; never replaces approved motion or final assembly."});
+    approved:false,note:"AI video request submitted once; check status without resubmitting."});
+
 }
 Deno.serve(async(req:Request)=>{
   try{return await handler(req);}

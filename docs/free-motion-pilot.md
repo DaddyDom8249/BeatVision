@@ -25,3 +25,9 @@ Source regression tests should pass at exact branch HEAD. Live Hugging Face Zero
 Do not merge either draft, deploy production, auto-approve creative assets, replace Ghast's approved motion, or invoke any paid provider without a separate verified release gate. Existing production code is on a different lineage from GitHub main; the app PR deliberately targets its actual production branch.
 
 Successful three-second motion preview is not a 249-second music video. More free capacity and full-scene duration alignment are required before final assembly.
+
+## Job status and timeout correction (2026-10-13)
+
+The pilot is asynchronous. One POST creates a Gradio event after uploading the single approved image. The server returns an HMAC-signed ticket restricted to creator, project, scene, and a 20-minute expiry. GET status polls complete/error SSE under a bounded timeout; timeouts report processing, never start a new GPU generation. The Studio previews returned media only after confirmed completion. Tickets do not persist in the database and are intentionally lost on browser reload. No second job may be automatically submitted.
+
+Backend activation remains blocked until the reviewed Arena PR #38 is deployed safely and the existing Supabase runtime configuration is verified. The source works only where the free HF token and approved source image exist; no credit spending or billed provider fallback is possible in this flow.

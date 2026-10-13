@@ -969,3 +969,10 @@ Release result: published exact tested tree 27f9c88c6383d1af94acfc4fb33c6463e29a
 **Verification:** New regression tests added to the frontend/source and Worker; exact-HEAD CI and actual public Space end-to-end MP4 generation NOT VERIFIED at source creation. No production deploy, Supabase migration, media spend, asset mutation, or GitHub merge performed.
 
 **Next:** Run exact HEAD GitHub CI, reconcile free Space API schema/limits and account entitlement; if safely verified then deploy reviewed Worker and Edge Function with separate production approval, test a single approved three-second pilot, validate actual playable MP4. Full 249-second Ghast AI-video coverage still requires extended free capacity.
+
+
+## 2026-10-13 — ZeroGPU Gradio upload and queued preview continuation
+
+**Change:** Align Studio and owner-scoped Supabase Edge Function with Arena Gradio upload+submit and bounded status polling. Start creates exactly one provider job; an HMAC-signed 20-minute ticket binds the Gradio event to authenticated project owner and approved scene. React tracks the ticket in transient state and automatically polls every seven seconds without resubmitting generation. A manual status check remains available after a transient read failure.
+
+**Validation:** No database inserts, updates, or approvals; signing key remains server side, existing approved Ghast images reused, returning MP4 must match trusted HF Space host and generative provenance. Real HF ZeroGPU output remains pending live testing; source-level tests and CI are required. Do not claim a full-song render, production deployment or provider acceptance from mock tests.
