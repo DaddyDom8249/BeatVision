@@ -15,6 +15,27 @@ function productionErrorMessage(error: unknown) {
   return message;
 }
 
+/** Read the Edge Function's JSON error instead of hiding it behind FunctionsHttpError. */
+async function motionPilotErrorMessage(reason: unknown): Promise<string> {
+  const context = (reason as { context?: { json?: () => Promise<unknown>; status?: number } } | null)?.context;
+  if (context && typeof context.json === "function") {
+    try {
+      const json = await context.json();
+      if (json && typeof json === "object") {
+        const data = json as Record<string, unknown>;
+        const detail = typeof data.error === "string" ? data.error :
+          typeof data.message === "string" ? data.message : "";
+        if (detail) return detail.slice(0, 400);
+      }
+    } catch { /* Non-JSON responses still receive a useful status message. */ }
+  }
+  if (context?.status === 401) return "Motion session expired or unauthorized. Sign in again and retry.";
+  if (context?.status === 403) return "The selected scene is not owned by this signed-in account.";
+  if (context?.status === 429) return "The free ZeroGPU queue is currently limited. Try again after the free quota resets.";
+  if (context?.status === 503) return "The free AI motion service is unavailable. No paid fallback was attempted.";
+  return productionErrorMessage(reason);
+}
+
 function time(seconds: number) {
   const total = Math.max(0, Math.floor(seconds));
   return String(Math.floor(total / 60)).padStart(2, "0") + ":" + String(total % 60).padStart(2, "0");
@@ -218,7 +239,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       const result = await supabase.functions.invoke("beatvision-free-motion-pilot", {
         body: { action: "start", project_id: projectId, scene_id: targetScene },
       });
-      if (result.error) throw result.error;
+      if (result.error) throw new Error(await motionPilotErrorMessage(result.error));
       const data = result.data;
       if (!data?.ok || data?.status !== "submitted" || !data?.job_token)
         throw new Error(String(data?.error || "Free ZeroGPU job was not accepted."));
@@ -237,7 +258,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       const result = await supabase.functions.invoke("beatvision-free-motion-pilot", {
         body: { action: "poll", project_id: projectId, scene_id: job.sceneId, job_token: job.token },
       });
-      if (result.error) throw result.error;
+      if (result.error) throw new Error(await motionPilotErrorMessage(result.error));
       const data = result.data;
       if (data?.ok && data?.status === "processing") return "processing";
       const media = String(data?.video_url || "");

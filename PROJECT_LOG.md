@@ -985,3 +985,14 @@ Release result: published exact tested tree 27f9c88c6383d1af94acfc4fb33c6463e29a
 **Repair:** Stop cross-world auto-inserts before any draft creation, retain the older approved Bible unchanged, and show creator-owned conflict UI with current/referenced world. Option A: review newest World without changing approved work. Option B: owner explicitly confirms restoring earlier completed World as active project pointer, with a verified ownership-scoped optimistic-concurrency update; both World versions and all approved assets remain saved. Do not auto-rollback or silently re-parent immutable media. Tests assert conflict short-circuit, ownership, confirmation and non-overwrite behavior.
 
 **Verification:** Pending CI, production deployment, and authenticated screenshot retest. No database edits performed by this code change.
+
+
+## 2026-10-13 — Free AI movement button HTTP non-2xx (Android production evidence)
+
+**Observed:** Screenshot of Production Workspace shows \"Edge Function returned a non-2xx status code\" after tapping \"Generate free 3-second AI movement\". Ghast's eight storyboard scenes are approved, each linked to one approved scene image. Actual HF queued MP4 is still unverified.
+
+**Root-cause class:** Deployed free-motion Edge version 1 had legacy verify_jwt=true while project uses asymmetric ES256 JWTs and modern publishable key. Supabase documents disabling legacy gateway JWT check when custom Auth verification is implemented; backend has explicit Bearer + auth.getUser and owner-scoped project, approved scene, approved asset checks. Applied function v2 with verify_jwt=false and unchanged body to avoid legacy gateway rejecting valid auth. An authenticated live start has not yet been replayed, so further config/provider errors may remain.
+
+**Observability:** Source now defers missing Arena config details until after user token is verified. The Studio parses FunctionsHttpError.context JSON for accurate messages on submit and poll instead of generic SDK text. No keys, media assets, RLS, or approved work are exposed/modified. All video GPU tests remain gated by verified free eligibility.
+
+**Verification:** CI/preview pending; do not claim actual generated AI video. Recommended test: signed-in user taps once; inspect specific provider failure and no charged queue calls.
