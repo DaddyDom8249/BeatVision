@@ -24,6 +24,8 @@ export default function StylePage({ projectId }: { projectId: string }) {
     working,
     error,
     locked,
+    lineageConflict,
+    restoreApprovedStyleWorld,
     createStyleBible,
     saveStyleBible,
     saveCharacter,
@@ -57,6 +59,38 @@ export default function StylePage({ projectId }: { projectId: string }) {
   }, [styleBible?.id, styleBible?.updated_at, styleBible?.status]);
 
   if (loading) return <main className="studio-main style-page"><div className="style-loading">Loading Style Studio…</div></main>;
+
+  if (lineageConflict) {
+    // A confirmed World revision cannot reuse an older approved Bible's children.
+    // No automatic changes; the creator decides which World version is active.
+    return (
+      <main className="studio-main style-page">
+        <header className="style-header"><div>
+          <span className="eyebrow">PHASE 3 / STYLE BIBLE</span>
+          <h1>Choose the World for your Style Bible</h1>
+          <p>Your project has a newer confirmed World, but your saved Style Bible and its approved creative assets belong to the previous World revision.</p>
+        </div></header>
+        <section className="style-empty-panel">
+          <p role="status">Your approved Style Bible is preserved. BeatVision has stopped automatic character and environment creation until the World versions agree.</p>
+          <p>Active World: {lineageConflict.activeWorldId.slice(0, 8)}…</p>
+          <p>Approved Style World: {lineageConflict.styleWorldId.slice(0, 8)}…</p>
+          {error && <p className="form-error" role="alert">{error}</p>}
+          <div className="style-actions">
+            <a className="secondary-button" href={`/projects/${projectId}/world`}>Review newer World</a>
+            {lineageConflict.styleStatus === "approved" && (
+              <button type="button" disabled={working} onClick={() => {
+                if (window.confirm("Restore the earlier confirmed World associated with your approved Style Bible? Your newer World revision stays saved. No Style Bible, characters, environments, storyboards or media will be overwritten.")) {
+                  void restoreApprovedStyleWorld().catch(() => { /* Hook shows error. */ });
+                }
+              }}>{working ? "Restoring approved World…" : "Restore World used by approved Style Bible"}</button>
+            )}
+            <button type="button" disabled={working} onClick={() => void reload().catch(() => { /* Hook shows error. */ })}>Recheck World versions</button>
+          </div>
+          <p>To keep the newer World instead, leave it selected. A new Style Bible revision must be created before generating downstream assets for that World. This page will not silently rebind existing approvals.</p>
+        </section>
+      </main>
+    );
+  }
 
   if (!styleBible) {
     // A failed load is NOT evidence of a missing Style Bible. Never offer

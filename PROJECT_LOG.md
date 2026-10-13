@@ -976,3 +976,12 @@ Release result: published exact tested tree 27f9c88c6383d1af94acfc4fb33c6463e29a
 **Change:** Align Studio and owner-scoped Supabase Edge Function with Arena Gradio upload+submit and bounded status polling. Start creates exactly one provider job; an HMAC-signed 20-minute ticket binds the Gradio event to authenticated project owner and approved scene. React tracks the ticket in transient state and automatically polls every seven seconds without resubmitting generation. A manual status check remains available after a transient read failure.
 
 **Validation:** No database inserts, updates, or approvals; signing key remains server side, existing approved Ghast images reused, returning MP4 must match trusted HF Space host and generative provenance. Real HF ZeroGPU output remains pending live testing; source-level tests and CI are required. Do not claim a full-song render, production deployment or provider acceptance from mock tests.
+
+
+## 2026-10-13 — Fix Style Studio world-version mismatch (creator choice)
+
+**Live evidence:** Ghast current confirmed World revision 2 (b9cac7ce…), but its approved Style Bible (52f955bb…) and 3 characters, 6 environments, 8 visual-plan scenes remain bound to revision 1 (51c43d74…). Existing hook automatically called ensureWorldDrafts(revision2, oldStyleBible), hitting DB constraint STYLE_WORLD_LINEAGE_MISMATCH. This is a real upstream revision mismatch, unrelated to provider motion.
+
+**Repair:** Stop cross-world auto-inserts before any draft creation, retain the older approved Bible unchanged, and show creator-owned conflict UI with current/referenced world. Option A: review newest World without changing approved work. Option B: owner explicitly confirms restoring earlier completed World as active project pointer, with a verified ownership-scoped optimistic-concurrency update; both World versions and all approved assets remain saved. Do not auto-rollback or silently re-parent immutable media. Tests assert conflict short-circuit, ownership, confirmation and non-overwrite behavior.
+
+**Verification:** Pending CI, production deployment, and authenticated screenshot retest. No database edits performed by this code change.
