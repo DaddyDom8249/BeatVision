@@ -46,6 +46,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [generating, setGenerating] = useState(false);
   const [motion, setMotion] = useState<any>(null);
   const [motionGenerating, setMotionGenerating] = useState(false);
+  const [freePilotBusy, setFreePilotBusy] = useState(false);
+  const [freePilotUrl, setFreePilotUrl] = useState<string | null>(null);
+  const [freePilotError, setFreePilotError] = useState<string | null>(null);
   const [finalVideo, setFinalVideo] = useState<any>(null);
   const [assemblyJob, setAssemblyJob] = useState<any>(null);
   const [assemblyRunning, setAssemblyRunning] = useState(false);
@@ -198,6 +201,35 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
   const generateImage = () => operateJob("scene_image");
   const generateMotion = () => operateJob("scene_motion");
+  useEffect(() => {
+    setFreePilotUrl(null);
+    setFreePilotError(null);
+  }, [projectId, scene?.id]);
+
+  async function generateFreePilot() {
+    if (!scene || image?.status !== "approved" || busy || freePilotBusy) return;
+    const targetScene = scene.id;
+    setFreePilotBusy(true);
+    setFreePilotUrl(null);
+    setFreePilotError(null);
+    try {
+      const result = await supabase.functions.invoke("beatvision-free-motion-pilot", {
+        body: { project_id: projectId, scene_id: targetScene },
+      });
+      if (result.error) throw result.error;
+      const data = result.data;
+      const media = String(data?.video_url || "");
+      const trusted = /^https:\/\/zerogpu-aoti-wan2-2-fp8da-aoti-faster\.hf\.space\//.test(media);
+      if (!data?.ok || data?.generation_type !== "GENERATIVE_VIDEO" || !trusted) {
+        throw new Error(String(data?.error || "Free AI motion provider unavailable; no paid fallback was used."));
+      }
+      if (selectedSceneId.current === targetScene) setFreePilotUrl(media);
+    } catch (reason) {
+      if (selectedSceneId.current === targetScene) setFreePilotError(productionErrorMessage(reason));
+    } finally {
+      setFreePilotBusy(false);
+    }
+  }
   const checkMotionStatus = () => operateJob("scene_motion", motionJob);
   const assembleFinal = () => operateJob("assembly");
   const checkAssemblyStatus = () => operateJob("assembly", assemblyJob);
@@ -332,6 +364,24 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
               {motion?.status === "generated" && <button className="secondary-button" onClick={() => void approveMotion()}>Approve Motion</button>}
               {motion?.status === "approved" && <span className="style-lock-badge">MOTION APPROVED</span>}
             </div>
+          </div>
+
+          <div className="production-provider-note">
+            <span className="panel-label">FREE AI MOVEMENT PREVIEW</span>
+            <p>Wan 2.2 image-to-video on Hugging Face Free ZeroGPU. Requires an approved image and available free-account daily GPU quota. The preview covers up to 3 seconds. No paid fallback, no automatic approval, and no replacement of your saved motion.</p>
+            <div className="production-actions">
+              <button className="secondary-button" disabled={busy || freePilotBusy || image?.status !== "approved"} onClick={() => void generateFreePilot()}>
+                {freePilotBusy ? "Checking free GPU and animating…" : "Generate free 3-second AI movement"}
+              </button>
+            </div>
+            {freePilotError && <p className="form-error" role="alert">{freePilotError}</p>}
+            {freePilotUrl && (
+              <div>
+                <video src={freePilotUrl} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} />
+                <p>AI-generated subject movement preview only. The result has not been approved and does not cover the full scene.</p>
+                <a className="secondary-button" href={freePilotUrl} target="_blank" rel="noopener noreferrer">Open free AI motion preview</a>
+              </div>
+            )}
           </div>
 
           <div className="production-provider-note">
