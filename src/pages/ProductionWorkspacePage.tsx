@@ -55,6 +55,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [motionJob, setMotionJob] = useState<any>(null);
   const [motionAssetJob, setMotionAssetJob] = useState<any>(null);
   const [assetLoading, setAssetLoading] = useState(false);
+  const [motionTermsAccepted, setMotionTermsAccepted] = useState(false);
   const scene = scenes[selectedIndex] ?? null;
   const selectedSceneId = useRef<string | undefined>(scene?.id);
   selectedSceneId.current = scene?.id;
@@ -113,7 +114,14 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       }
     }
     if (selectedSceneId.current !== sceneId) return;
-    setMotion(motions.data); setImageJob(imageJobs.data); setMotionJob(motionJobs.data);
+    let freshMotion = motions.data;
+    if (freshMotion?.provider === "huggingface-zerogpu") {
+      const signed = await supabase.functions.invoke("beatvision-generation", { body: { action: "motion_url", projectId, assetId: freshMotion.id } });
+      if (signed.error || !signed.data?.video_url) throw signed.error || new Error("Motion playback URL unavailable.");
+      freshMotion = { ...freshMotion, video_url: signed.data.video_url };
+    }
+    if (selectedSceneId.current !== sceneId) return;
+    setMotion(freshMotion); setImageJob(imageJobs.data); setMotionJob(motionJobs.data);
     setMotionAssetJob(sourceJob);
     const freshImage = await displayImage(images.data);
     if (selectedSceneId.current === sceneId) setImage(freshImage);
@@ -174,11 +182,14 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     try {
       let job = existing;
       if (!job) {
+        if (type === "scene_motion" && !motionTermsAccepted) throw new Error("Accept the LTX model use restrictions before AI motion.");
         const queued = type === "assembly"
           ? await supabase.rpc("enqueue_assembly_generation", { p_project_id: projectId, p_visual_plan_id: plan.id })
-          : await supabase.rpc("enqueue_scene_generation", { p_project_id: projectId, p_scene_id: sceneId, p_job_type: type });
+          : type === "scene_motion"
+            ? await supabase.functions.invoke("beatvision-generation", { body: { action: "enqueue_ai_motion", projectId, sceneId, acceptedTerms: motionTermsAccepted } })
+            : await supabase.rpc("enqueue_scene_generation", { p_project_id: projectId, p_scene_id: sceneId, p_job_type: type });
         if (queued.error) throw queued.error;
-        job = queued.data;
+        job = type === "scene_motion" ? queued.data?.job : queued.data;
       }
       if (!job?.id) throw new Error("No generation job was returned.");
       setJob(job);
@@ -324,10 +335,13 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-provider-note">
             <span className="panel-label">MOTION</span>
+            {motion?.provider === "huggingface-zerogpu" && <p>AI-generated video · LTX 0.9.8 distilled · 2-second preview. Singing lip sync is not verified.</p>}
             {motion && <p>{isProceduralMotion ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
             {motion?.video_url ? <video src={motion.video_url} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
             <div className="production-actions">
-              {!motion && !pending(motionJob) && <button className="primary-button" disabled={busy || image?.status !== "approved"} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
+              {(!motion || isProceduralMotion) && !pending(motionJob) && <label><input type="checkbox" checked={motionTermsAccepted} onChange={event => setMotionTermsAccepted(event.target.checked)} /> I agree to the <a href="https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt" target="_blank" rel="noreferrer">LTX model license and use restrictions</a>, including AI disclosure.</label>}
+              {(!motion || isProceduralMotion) && !pending(motionJob) && <p>Generate a 2-second AI motion preview. Existing approved clips remain saved; this preview is not full-scene coverage.</p>}
+              {(!motion || isProceduralMotion) && !pending(motionJob) && <button className="primary-button" disabled={busy || image?.status !== "approved" || !motionTermsAccepted} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
               {pending(motionJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkMotionStatus()}>{motionGenerating ? "Checking…" : "Check Motion Status"}</button>}
               {motion?.status === "generated" && <button className="secondary-button" onClick={() => void approveMotion()}>Approve Motion</button>}
               {motion?.status === "approved" && <span className="style-lock-badge">MOTION APPROVED</span>}

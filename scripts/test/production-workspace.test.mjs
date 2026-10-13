@@ -49,6 +49,8 @@ async function mount({ motionJob = null, imageJob = null, assemblyJob = null, mo
     rpc: async (_name, args) => { rpcCalls.push({ name: _name, args }); return { data: rpcError ? null : { id: 'job-1', status: 'queued', job_type: args.p_job_type }, error: rpcError }; },
     functions: { invoke: async (_name, { body }) => {
       calls.push(body);
+      if (body.action === 'enqueue_ai_motion') return { data: { job: { id: 'job-1', status: 'queued', job_type: 'scene_motion' } }, error: runError ? new Error(runError) : null };
+      if (body.action === 'motion_url') return { data: { video_url: 'https://fresh.test/motion.mp4' }, error: null };
       if (body.action === 'image_url') return { data: { image_url: 'https://fresh.test/image.jpg' }, error: null };
       return { data: { job: runJob ?? { id: 'job-1', status: 'processing', job_type: 'scene_motion' } }, error: runError ? new Error(runError) : null };
     } },
@@ -60,6 +62,7 @@ async function mount({ motionJob = null, imageJob = null, assemblyJob = null, mo
     rpcCalls,
     historicalQueries,
     click: async text => {
+      if (text === 'Generate Motion') { const box = document.querySelector('input[type=checkbox]'); if (box && !box.checked) await act(async () => { box.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); }); }
       const button = [...document.querySelectorAll('button')].find(b => b.textContent === text);
       assert.ok(button, `Missing button: ${text}`);
       await act(async () => { button.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); });
@@ -143,7 +146,9 @@ test('a new motion job still dispatches once with run', async () => {
   try {
     await view.click('Generate Motion');
     assert.equal(view.calls.at(-1).action, 'run');
-    assert.equal(view.rpcCalls.length, 1);
+    assert.equal(view.rpcCalls.length, 0);
+    assert.equal(view.calls.filter(call => call.action === 'enqueue_ai_motion').length, 1);
+    assert.equal(view.calls[0].acceptedTerms, true);
   } finally { await view.cleanup(); }
 });
 
@@ -229,4 +234,28 @@ for(const [label,response] of [
 test('pending assembly cannot download an uncompleted provider URL',async()=>{
  const view=await mount({assemblyJob:{id:'assembly-1',status:'processing',output:{final_video:{video_url:'https://media.test/final.mp4'}}}});
  try{assert.ok(![...document.querySelectorAll('button')].some(b=>b.textContent==='Download Video'))}finally{await view.cleanup()}
+});
+
+test('AI motion requires model terms and appends beside an approved procedural clip', async () => {
+  const view = await mount({ motionAsset: { id: 'old-motion', generation_job_id: 'old-job', provider: 'shotstack', model: 'image-motion', status: 'approved', approved: true, video_url: 'https://original.test/approved.mp4' }, historicalJob: { id: 'old-job', status: 'completed' } });
+  try {
+    const button = [...document.querySelectorAll('button')].find(b => b.textContent === 'Generate Motion');
+    assert.ok(button); assert.equal(button.disabled, true);
+    assert.match(document.body.textContent, /2-second AI motion preview/);
+    await view.click('Generate Motion');
+    assert.equal(view.calls[0].action, 'enqueue_ai_motion');
+    assert.equal(view.calls[0].acceptedTerms, true);
+    assert.equal(view.rpcCalls.length, 0);
+    assert.equal(view.calls.filter(c => c.action === 'run').length, 1);
+  } finally { await view.cleanup(); }
+});
+
+test('HF motion refresh uses owner-authorized private playback URL', async () => {
+  const view = await mount({ motionAsset: { id: 'hf-motion', generation_job_id: 'hf-job', provider: 'huggingface-zerogpu', model: 'ltxv-13b-0.9.8-distilled', status: 'generated', video_url: 'https://expired.test/video.mp4' }, historicalJob: { id: 'hf-job', status: 'completed' } });
+  try {
+    assert.equal(document.querySelector('video').getAttribute('src'), 'https://fresh.test/motion.mp4');
+    const call = view.calls.find(c => c.action === 'motion_url');
+    assert.equal(call.projectId, 'project-1'); assert.equal(call.assetId, 'hf-motion');
+    assert.match(document.body.textContent, /Singing lip sync is not verified/);
+  } finally { await view.cleanup(); }
 });
