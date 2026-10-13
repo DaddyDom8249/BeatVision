@@ -72,12 +72,9 @@ async function handler(req:Request) {
   const auth=req.headers.get("Authorization")||"";
   if(!auth.startsWith("Bearer "))return respond(req,{ok:false,error:"Authenticated creator required."},401);
   const url=env("SUPABASE_URL"),anon=env("SUPABASE_ANON_KEY")||env("SUPABASE_PUBLISHABLE_KEY");
-  const service=env("SUPABASE_SERVICE_ROLE_KEY"),arena=env("ARENA_GATEWAY_URL"),secret=env("ARENA_GATEWAY_TOKEN");
-  if(!url||!anon||!service||!arena||!secret)return respond(req,{ok:false,error:"Free motion bridge unavailable: missing server configuration."},503);
-  let arenaURL:URL;
-  try {arenaURL=new URL(arena);}catch{return respond(req,{ok:false,error:"Invalid Arena configuration."},503);}
-  if(arenaURL.protocol!=="https:"||!arenaURL.hostname.endsWith(".workers.dev"))
-    return respond(req,{ok:false,error:"Arena endpoint is not an approved Worker host."},503);
+  // New signing-key projects require application-level JWT verification rather
+  // than Supabase's legacy HS256-only Edge gateway check. No bearer means no access.
+  if(!url||!anon)return respond(req,{ok:false,error:"Free motion authentication is not configured."},503);
   let body:any;
   try {body=await req.json();}catch{return respond(req,{ok:false,error:"Invalid JSON request."},400);}
   const projectId=String(body?.project_id||""),sceneId=String(body?.scene_id||"");
@@ -85,6 +82,15 @@ async function handler(req:Request) {
   const access=createClient(url,anon,{global:{headers:{Authorization:auth}}});
   const identity=await access.auth.getUser(auth.slice(7));
   if(identity.error||!identity.data.user?.id)return respond(req,{ok:false,error:"Authenticated creator required."},401);
+  // Only an authenticated creator can see which *names* need configuring. Values
+  // are never read into a response or exposed to the browser.
+  const service=env("SUPABASE_SERVICE_ROLE_KEY"),arena=env("ARENA_GATEWAY_URL"),secret=env("ARENA_GATEWAY_TOKEN");
+  const missing=[!service&&"SUPABASE_SERVICE_ROLE_KEY",!arena&&"ARENA_GATEWAY_URL",!secret&&"ARENA_GATEWAY_TOKEN"].filter(Boolean);
+  if(missing.length)return respond(req,{ok:false,error:"Free motion server configuration missing: "+missing.join(", ")},503);
+  let arenaURL:URL;
+  try {arenaURL=new URL(arena);}catch{return respond(req,{ok:false,error:"Invalid Arena configuration."},503);}
+  if(arenaURL.protocol!=="https:"||!arenaURL.hostname.endsWith(".workers.dev"))
+    return respond(req,{ok:false,error:"Arena endpoint is not an approved Worker host."},503);
   // Service role is strictly server-side; every query below is explicitly owner/project-scoped.
   const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
   const project=await db.from("projects").select("id,owner_id").eq("id",projectId).eq("owner_id",identity.data.user.id).maybeSingle();
