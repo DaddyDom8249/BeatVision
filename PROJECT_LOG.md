@@ -1,5 +1,17 @@
 # BeatVision Project Log
 
+## 2026-10-13 — Live Groq toolbox & production provenance audit (report-only branch)
+
+**Scope:** Tested configured Microfn Groq toolbox using a real `openai/gpt-oss-120b` response and 2 source-review calls; verified main commit `9e6619f6`, successful main CI, deployed primary Vercel alias at branch commit `03b84e92`, and live Supabase database aggregates/policies without generation or mutations.
+
+**VERIFIED:** Groq tool works. Production branch diverges from main by 75 ahead / 6 behind commits. Live Supabase has 17 completed image jobs, 17 completed motion jobs, 1 completed assembly job, and one eight-segment final video row. All 17 completed motion results are Shotstack `PROCEDURAL_MOTION`; this does not satisfy real AI subject animation or singing lip sync.
+
+**NOT VERIFIED:** Real singing lip sync, zero-cost production motion provider availability, final MP4 playback, authenticated end-to-end device workflow. Groq code-review suggestions were inspected but not blindly accepted or applied.
+
+**Changes:** New audit report `docs/audits/2026-10-13-groq-toolbox-production-audit.md` on report-only branch; this log entry. No production/code/schema/asset changes, paid calls, merges or deployments.
+
+**Next blocker:** Establish a strictly free, licensed, API-callable real motion + lip-sync path; implement provider adapters with fail-closed cost checks, then reconcile branch divergence before any new production release.
+
 ## 2026-10-10 — Gate final assembly on every scene's persisted approved motion (repair branch)
 
 **Objective:** Motion → Final Assembly (P0) only. Baseline main HEAD: `7dbea8b8009c68ba2e806a467790cc7d5d75141a`. AGENTS.md and current Project Log reviewed; source and recent assembly PRs inspected.
