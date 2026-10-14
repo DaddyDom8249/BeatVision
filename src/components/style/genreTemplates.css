@@ -1,0 +1,8 @@
+.genre-templates{display:grid;gap:10px;margin:16px 0}
+.genre-templates-head{display:grid;gap:4px;color:#c8c3b8}
+.genre-templates-grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.genre-template-card{display:grid;gap:4px;text-align:left;border:1px solid #37342c;background:#11110f;color:#f3f0e8;padding:12px;border-radius:2px;cursor:pointer}
+.genre-template-card:hover:not(:disabled){border-color:#8e754a}
+.genre-template-card span{font-size:12px;color:#c8c3b8}
+.genre-template-swatches{font-style:italic}
+.genre-templates-note{font-size:12px;color:#c8c3b8}
