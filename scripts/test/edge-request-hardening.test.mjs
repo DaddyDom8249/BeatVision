@@ -65,3 +65,36 @@ for (const [fn, limit] of [["beatvision-style-draft", 64 * 1024], ["beatvision-w
     assert.ok(!text.includes("secret_table") && !text.includes("service_role"), text);
   });
 }
+
+test("byte-counted streaming requests abort early even with no Content-Length",async()=>{
+ for(const [fn,limit] of [["beatvision-style-draft",64*1024],["beatvision-world",256*1024]]){
+  const {handler,providerCalls}=await boot(fn);
+  let pulls=0,cancelled=false;
+  const stream=new ReadableStream({
+    pull(controller){
+      pulls++;
+      controller.enqueue(new Uint8Array(4096).fill(97));
+    },
+    cancel(){cancelled=true;}
+  });
+  const req=new Request(`https://stub.supabase.co/functions/v1/${fn}`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json",Origin:ORIGIN,Authorization:"Bearer t"},
+    body:stream,duplex:"half"
+  });
+  const response=await handler(req);
+  assert.equal(response.status,413);
+  assert.equal((await response.json()).error.code,"REQUEST_TOO_LARGE");
+  assert.equal(providerCalls(),0);
+  assert.equal(cancelled,true);
+  assert.ok(pulls<=Math.ceil(limit/4096)+3,`stream read too far (${pulls})`);
+ }
+});
+test("multibyte UTF-8 streaming size counts bytes not JS characters",async()=>{
+ const fn="beatvision-style-draft", {handler}=await boot(fn);
+ const payload=JSON.stringify({projectId:"p",pad:"é".repeat(34000)});
+ const raw=new TextEncoder().encode(payload);
+ assert.ok(payload.length<64*1024 && raw.byteLength>64*1024);
+ const res=await post(handler,fn,payload);
+ assert.equal(res.status,413);
+});
