@@ -31,6 +31,8 @@ export function createClient() {
 `.replace("authenticated", JSON.stringify(authenticated));
 
   await writeFile(join(dir, "supabase_stub.mjs"), supabaseStub);
+  await writeFile(join(dir, "hf-motion.ts"), await readFile(new URL("../../supabase/functions/beatvision-generation/hf-motion.ts", import.meta.url), "utf8"));
+  await writeFile(join(dir, "final-media.ts"), await readFile(new URL("../../supabase/functions/beatvision-generation/final-media.ts", import.meta.url), "utf8"));
 
   const transformed = source
     .replace('import "jsr:@supabase/functions-js/edge-runtime.d.ts";', "")

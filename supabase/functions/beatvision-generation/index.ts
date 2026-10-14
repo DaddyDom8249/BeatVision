@@ -1,6 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { verifyFinalMedia } from "./final-media.ts";
+import { HF_MOTION, hfEligibility, hfSubmit, hfPoll, hfDownload, HfMotionError } from "./hf-motion.ts";
+
 const ALLOWED_ORIGINS = new Set([
   "https://beat-vision-theta.vercel.app",
   "https://beat-vision-beat-vision.vercel.app",
@@ -287,7 +290,8 @@ async function persistFinalVideo(db: any, job: any, responseData: any) {
   if (existing.error) throw new Error("FINAL_VIDEO_CHECK_FAILED: " + existing.error.message);
   if (existing.data) return existing.data;
 
-  const duration = Number(responseData?.result?.duration_seconds || responseData?.duration_seconds || job.input_snapshot?.plan?.duration_seconds || 0);
+  const media = await verifyFinalMedia(videoUrl, job.input_snapshot?.plan?.duration_seconds);
+  const duration = media.video_duration_seconds;
   const finalInsert = await db.from("final_videos").upsert({
     project_id: job.project_id,
     generation_job_id: job.id,
@@ -321,7 +325,9 @@ async function persistMotionClip(db: any, job: any, responseData: any) {
   const videoUrl = extractVideoUrl(responseData);
   if (!videoUrl) throw new Error("ARENA_MOTION_OUTPUT_MISSING: Arena completed without a real video URL.");
   if (!job.visual_plan_scene_id) throw new Error("ARENA_MOTION_SCENE_MISSING: scene_motion job has no approved scene.");
-  const imageResult = await db.from("scene_image_assets").select("id").eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("scene_id", job.visual_plan_scene_id).eq("approved", true).eq("status", "approved").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  let imageQuery = db.from("scene_image_assets").select("id").eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("scene_id", job.visual_plan_scene_id).eq("approved", true).eq("status", "approved");
+  if (job.input_snapshot?.hf_motion) imageQuery = imageQuery.eq("id", job.input_snapshot.hf_motion.source_image_id);
+  const imageResult = await imageQuery.order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (imageResult.error) throw new Error("APPROVED_SCENE_IMAGE_LOOKUP_FAILED: " + imageResult.error.message);
   if (!imageResult.data?.id) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion completed without an approved source image.");
   const insert = await db.from("motion_clip_assets").insert({ project_id: job.project_id, visual_plan_id: job.visual_plan_id, scene_id: job.visual_plan_scene_id, generation_job_id: job.id, scene_image_id: imageResult.data.id, provider: String(responseData?.provider || responseData?.result?.clips?.[0]?.provider || "unknown"), model: String(responseData?.model || responseData?.result?.clips?.[0]?.model || "unknown"), video_url: videoUrl, status: "generated", approved: false }).select("id,project_id,visual_plan_id,scene_id,generation_job_id,scene_image_id,provider,model,video_url,status,approved,created_at,updated_at").single();
@@ -384,6 +390,95 @@ async function setFailed(db: any, id: string, message: string, detail?: unknown)
   }
 }
 
+// Append a model-specific attempt; reuse the canonical RPC's frozen lineage.
+// Existing approved procedural assets/jobs are never edited or deleted.
+async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acceptedTerms: boolean) {
+  if (!acceptedTerms) throw new HttpError(400, "HF_TERMS_REQUIRED", "Accept the LTX model use restrictions before AI motion.");
+  await hfEligibility(env("HF_VIDEO_TOKEN"));
+  const scene = await db.from("visual_plan_scenes").select("id,visual_plan_id,status").eq("id", sceneId).eq("project_id", projectId).eq("status", "approved").maybeSingle();
+  if (scene.error || !scene.data) throw new HttpError(409, "APPROVED_SCENE_REQUIRED", "Motion requires an approved scene.");
+  const plan = await db.from("visual_plans").select("id,vision_lock_id,status").eq("id", scene.data.visual_plan_id).eq("project_id", projectId).eq("status", "approved").maybeSingle();
+  if (plan.error || !plan.data?.vision_lock_id) throw new HttpError(409, "APPROVED_PLAN_REQUIRED", "Motion requires an approved locked Visual Plan.");
+  const image = await db.from("scene_image_assets").select("id,storage_path,image_url,generation_job_id").eq("project_id", projectId).eq("visual_plan_id", scene.data.visual_plan_id).eq("scene_id", sceneId).eq("status", "approved").eq("approved", true).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (image.error || !image.data?.storage_path) throw new HttpError(409, "APPROVED_IMAGE_REQUIRED", "Motion requires an approved privately stored source image.");
+  const template = await db.from("generation_jobs").select("*").eq("project_id", projectId).eq("visual_plan_id", scene.data.visual_plan_id).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_image").eq("id", image.data.generation_job_id).single();
+  if (template.error || template.data?.status !== "completed" || template.data?.input_snapshot?.scene?.id !== sceneId || template.data.vision_lock_id !== plan.data.vision_lock_id) throw new HttpError(409, "FROZEN_LINEAGE_REQUIRED", "Approved image must have its original generation snapshot.");
+  const base = template.data;
+  const key = "hf-motion:" + sceneId + ":" + image.data.id + ":" + HF_MOTION.revision;
+  const existing = await db.from("generation_jobs").select("*").eq("project_id", projectId).eq("idempotency_key", key).maybeSingle();
+  if (existing.error) throw new Error("HF_JOB_LOOKUP_FAILED");
+  if (existing.data) return existing.data;
+  const inserted = await db.from("generation_jobs").insert({
+    project_id: projectId, vision_lock_id: base.vision_lock_id, visual_plan_id: base.visual_plan_id,
+    visual_plan_scene_id: sceneId, job_type: "scene_motion", idempotency_key: key,
+    input_snapshot: { ...base.input_snapshot, hf_motion: { source_image_id: image.data.id, space: HF_MOTION.space, revision: HF_MOTION.revision, duration_seconds: HF_MOTION.duration, terms_accepted_at: new Date().toISOString() } },
+  }).select("*").single();
+  if (inserted.error) {
+    if (inserted.error.code !== "23505") throw new Error("HF_JOB_INSERT_FAILED");
+    const winner = await db.from("generation_jobs").select("*").eq("project_id", projectId).eq("idempotency_key", key).single();
+    if (winner.error) throw new Error("HF_JOB_INSERT_FAILED");
+    return winner.data;
+  }
+  return inserted.data;
+}
+
+async function hfBridgeSubmit(db: any, job: any) {
+  const frozen = job.input_snapshot.hf_motion;
+  const image = await db.from("scene_image_assets").select("id,storage_path,status,approved").eq("id", frozen.source_image_id).eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("scene_id", job.visual_plan_scene_id).eq("approved", true).eq("status", "approved").single();
+  if (image.error || !image.data?.storage_path) throw new Error("HF_APPROVED_SOURCE_UNAVAILABLE");
+  if (frozen.revision !== HF_MOTION.revision) throw new Error("HF_SPACE_REVISION_UNAVAILABLE");
+  const signed = await db.storage.from("visual-assets").createSignedUrl(image.data.storage_path, 3600);
+  if (signed.error || !signed.data?.signedUrl) throw new Error("HF_SOURCE_SIGNING_FAILED");
+  const scene = job.input_snapshot.scene;
+  const prompt = [scene.title, scene.visual_direction, scene.movement_direction, scene.location, scene.mood, scene.continuity_notes].filter(value => typeof value === "string" && value.trim()).join(". ");
+  const data = await hfSubmit(env("HF_VIDEO_TOKEN"), signed.data.signedUrl,
+    prompt + ". The character moves naturally, breathes and turns their head. Fixed camera. Preserve the approved character, face, wardrobe and setting. AI-generated video.");
+  return { response: new Response(null, { status: 200 }), data: { ...data, source_image_id: image.data.id } };
+}
+
+async function hfBridgePoll(db: any, job: any) {
+  const accepted = Date.parse(job.output?.arena_response?.eligibility?.checked_at || job.created_at || "");
+  if (!Number.isFinite(accepted) || Date.now() - accepted > 30 * 60 * 1000) throw new Error("HF_POLL_DEADLINE_EXCEEDED: No automatic resubmission.");
+  const data: any = await hfPoll(env("HF_VIDEO_TOKEN"), job.output.upstream_job_id);
+  if (data.status !== "completed") return { response: new Response(null), data };
+  const path = job.project_id + "/scene-motion/" + job.visual_plan_id + "/" + job.visual_plan_scene_id + "/" + job.id + ".mp4";
+  // Immutable, deterministic object: concurrent pollers reuse it, never overwrite.
+  let verification: any = null;
+  const existing = await db.storage.from("visual-assets").download(path);
+  if (!existing.error && existing.data) {
+    const { validateMp4 } = await import("./hf-motion.ts");
+    verification = validateMp4(new Uint8Array(await existing.data.arrayBuffer()));
+  } else {
+    const downloaded = await hfDownload(data.result.video_url, env("HF_VIDEO_TOKEN"));
+    verification = downloaded.verification;
+    const saved = await db.storage.from("visual-assets").upload(path, downloaded.bytes, { contentType: "video/mp4", upsert: false });
+    if (saved.error) {
+      // A concurrent first upload is acceptable only if its real bytes validate.
+      const winner = await db.storage.from("visual-assets").download(path);
+      if (winner.error || !winner.data) throw new Error("HF_VIDEO_STORAGE_FAILED");
+      const { validateMp4 } = await import("./hf-motion.ts");
+      verification = validateMp4(new Uint8Array(await winner.data.arrayBuffer()));
+    }
+  }
+  const signed = await db.storage.from("visual-assets").createSignedUrl(path, 3600);
+  if (signed.error || !signed.data?.signedUrl) throw new Error("HF_VIDEO_SIGNING_FAILED");
+  return { response: new Response(null), data: { ...data, source_image_id: job.input_snapshot.hf_motion.source_image_id,
+    result: { ...data.result, video_url: signed.data.signedUrl, storage_path: path, verification, ai_generated: true } } };
+}
+
+async function motionUrl(db: any, projectId: string, assetId: string) {
+  const asset = await db.from("motion_clip_assets").select("id,video_url,generation_job_id,scene_id,visual_plan_id").eq("id", assetId).eq("project_id", projectId).maybeSingle();
+  if (asset.error || !asset.data) throw new HttpError(404, "NOT_FOUND", "Motion asset not found.");
+  const job = await db.from("generation_jobs").select("output").eq("id", asset.data.generation_job_id).eq("project_id", projectId).eq("visual_plan_scene_id", asset.data.scene_id).eq("visual_plan_id", asset.data.visual_plan_id).eq("job_type", "scene_motion").maybeSingle();
+  if (job.error) throw new Error("HF_VIDEO_JOB_LOOKUP_FAILED");
+  const path = job.data?.output?.arena_status_response?.result?.storage_path;
+  if (!path) return asset.data.video_url;
+  if (path !== projectId + "/scene-motion/" + asset.data.visual_plan_id + "/" + asset.data.scene_id + "/" + asset.data.generation_job_id + ".mp4") throw new Error("HF_VIDEO_PATH_INVALID");
+  const signed = await db.storage.from("visual-assets").createSignedUrl(path, 3600);
+  if (signed.error || !signed.data?.signedUrl) throw new Error("HF_VIDEO_SIGNING_FAILED");
+  return signed.data.signedUrl;
+}
+
 async function run(db: any, job: any) {
   if (!["scene_image", "scene_motion", "assembly"].includes(String(job.job_type))) {
     throw new Error("GENERATION_JOB_TYPE_NOT_SUPPORTED: only scene_image, scene_motion, and assembly are controller-backed.");
@@ -418,7 +513,9 @@ async function run(db: any, job: any) {
 
   try {
     const path = job.job_type === "scene_image" ? "/v2/scene-image" : job.job_type === "scene_motion" ? "/v2/animate" : "/v2/assemble";
-    const result = await arena(path, "POST", await bridgePayload(db, job), requestId);
+    const result = job.job_type === "scene_motion"
+      ? job.input_snapshot?.hf_motion ? await hfBridgeSubmit(db, job) : (() => { throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions."); })()
+      : await arena(path, "POST", await bridgePayload(db, job), requestId);
     const state = terminalState(result.response, result.data, job.job_type);
 
     if (state === "failed") {
@@ -526,7 +623,9 @@ async function poll(db: any, job: any) {
 
   try {
     const pollPayload = job.job_type === "assembly" ? { target_duration_seconds: Number(job.input_snapshot?.plan?.duration_seconds || 0) } : null;
-    const result = await arena(path, job.job_type === "assembly" ? "POST" : "GET", pollPayload, "beatvision:" + job.id + ":poll");
+    const result = job.job_type === "scene_motion" && job.input_snapshot?.hf_motion
+      ? await hfBridgePoll(db, job)
+      : await arena(path, job.job_type === "assembly" ? "POST" : "GET", pollPayload, "beatvision:" + job.id + ":poll");
     const state = terminalState(result.response, result.data);
     if (state === "failed") {
       await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena provider job failed."), result.data);
@@ -556,6 +655,16 @@ async function poll(db: any, job: any) {
       const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
       if (latest.error) throw new Error(latest.error.message);
       return latest.data;
+    }
+    if (job.input_snapshot?.hf_motion && (error instanceof HfMotionError && error.retryable || error instanceof TypeError)) {
+      const retries = Number(job.output?.hf_poll_errors || 0) + 1;
+      if (retries <= 3) {
+        const updated = await db.from("generation_jobs").update({ output: { ...job.output, hf_poll_errors: retries, last_polled_at: new Date().toISOString() } }).eq("id", job.id).eq("status", "processing").eq("updated_at", job.updated_at).select("id");
+        if (updated.error) throw new Error("HF_RETRY_STATE_PERSIST_FAILED");
+        const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+        if (latest.error) throw new Error("HF_RETRY_STATE_READ_FAILED");
+        return latest.data;
+      }
     }
     await setFailed(db, job.id, error instanceof Error ? error.message : String(error));
   }
@@ -592,11 +701,19 @@ Deno.serve(async (req) => {
       return json(req, { ok: true, scanned: (pending.data || []).length, results });
     }
 
-    if (!projectId || (action !== "image_url" && !jobId)) return json(req, { error: { code: "JOB_REQUIRED", message: "projectId and jobId are required." } }, 400);
-    if (!["run", "poll", "image_url"].includes(action)) return json(req, { error: { code: "INVALID_ACTION", message: "action must be run, poll, image_url, or drain." } }, 400);
+    if (!projectId || (!["image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility"].includes(action) && !jobId)) return json(req, { error: { code: "JOB_REQUIRED", message: "projectId and jobId are required." } }, 400);
+    if (!["run", "poll", "image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility"].includes(action)) return json(req, { error: { code: "INVALID_ACTION", message: "action must be run, poll, image_url, or drain." } }, 400);
     const project = await db.from("projects").select("id,owner_id").eq("id", projectId).maybeSingle();
     if (project.error) throw new Error(project.error.message);
     if (!project.data || (uid.kind !== "system" && project.data.owner_id !== uid.userId)) return json(req, { error: { code: "NOT_FOUND", message: "Project not found." } }, 404);
+
+    if (action === "motion_eligibility") return json(req, { eligibility: await hfEligibility(env("HF_VIDEO_TOKEN")) });
+    if (action === "enqueue_ai_motion") {
+      // Same project-owner gate above applies; system is the private scheduler.
+      const job = await enqueueHfMotion(db, projectId, String(body.sceneId || ""), body.acceptedTerms === true);
+      return json(req, { job });
+    }
+    if (action === "motion_url") return json(req, { video_url: await motionUrl(db, projectId, String(body.assetId || "")) });
 
     // Re-sign only an asset belonging to the authenticated owner's project.
     // Generated paths begin with project ID; user-upload storage policies use user ID.
