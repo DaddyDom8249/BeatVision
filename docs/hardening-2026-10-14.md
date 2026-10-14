@@ -88,3 +88,20 @@ that exercise row deletion and cascades ran against an isolated database only.
 PR #103 remains unmerged to main and its Edge function source remains undeployed.
 The earlier "NOT applied" instructions above are retained as historical
 pre-release guidance and are superseded by this section.
+
+
+## World and Style Draft Edge release — 2026-10-14
+
+Pre-deployment retrieval established that World v40 and Style Draft v8 matched
+GitHub `main` exactly; the proposed files differed only by the tested
+hardening patch. Both deployed versions are now ACTIVE:
+
+- `beatvision-world` v41, with existing `verify_jwt=false` custom-auth setting
+  preserved
+- `beatvision-style-draft` v9, with existing `verify_jwt=true` preserved
+
+Both deployed source files were retrieved after deploy and matched the tested
+PR #103 source byte-for-byte, including streaming-body byte guards and 413 error
+handling. This supersedes the earlier "Edge source not deployed" note.
+**No authenticated production Edge request or creator workflow was performed**;
+active versions plus exact source do not establish end-to-end behavior.
