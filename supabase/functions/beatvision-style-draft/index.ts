@@ -27,16 +27,39 @@ class HttpError extends Error {
 
 
 const MAX_BODY_BYTES = 64 * 1024;
-// Hardening 2026-10-14: bound request bodies before parsing.
+// Enforce actual wire-byte bounds while consuming the body, including
+// chunked uploads without Content-Length. Never buffer over maxBytes.
 async function readJsonBody(req: Request, maxBytes: number): Promise<Record<string, any>> {
-  const declared = Number(req.headers.get("Content-Length") || "0");
-  if (Number.isFinite(declared) && declared > maxBytes) {
+  const header = req.headers.get("Content-Length");
+  const declared = header === null ? null : Number(header);
+  if (declared !== null && (!Number.isSafeInteger(declared) || declared < 0 || declared > maxBytes)) {
     throw new HttpError("REQUEST_TOO_LARGE", 413, "Request body is too large.");
   }
-  const text = await req.text().catch(() => "");
-  if (new TextEncoder().encode(text).length > maxBytes) {
-    throw new HttpError("REQUEST_TOO_LARGE", 413, "Request body is too large.");
+  if (!req.body) return {};
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => {});
+        throw new HttpError("REQUEST_TOO_LARGE", 413, "Request body is too large.");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
   }
+  const data = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    data.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  const text = new TextDecoder().decode(data);
   if (!text.trim()) return {};
   try {
     const value = JSON.parse(text);
