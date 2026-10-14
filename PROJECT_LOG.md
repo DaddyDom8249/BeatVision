@@ -1099,3 +1099,7 @@ GitHub main (9e6619f) diverged from deployed production/recovery (7b77f329): 105
 Wan 2.2 new job submission is disabled in deployed Edge (WAN_ELIGIBILITY_UNVERIFIED), but its Studio button was enabled and guaranteed a 503. Reconciliation UI now marks it unavailable, keeps existing ticket polling available, and preserves verified free LTX Generate Motion. No new provider calls, paid services, or database mutations. Backend v32 is unchanged.
 
 Verification: source branch CI, production user checks pending. Do not claim full music-video assembly without validated playable MP4 and owner-authenticated end-to-end evidence.
+
+## 2026-10-14 — Hardening pass (branch repair/hardening-2026-10-14, not merged/deployed)
+
+Added top-level UI error boundary; edge body-size caps and non-leaking 500s for style-draft and world; additive migration making generated asset media immutable and approved assets undeletable (NOT applied); Vercel security headers; client-secret regression tests; .ui-test-* gitignore. Arena: 8 MB request-size cap (separate PR). Full report and per-PR findings in the PR description. No production data change, no deploy, no paid calls.

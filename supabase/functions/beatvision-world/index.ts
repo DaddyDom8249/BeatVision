@@ -205,12 +205,30 @@ function mergeWorldForValidation(existing: Record<string, any>, edits: Record<st
   return merged;
 }
 
+const MAX_BODY_BYTES = 256 * 1024;
+// Hardening 2026-10-14: bound request bodies before parsing.
+async function readJsonBody(req: Request, maxBytes: number): Promise<Record<string, any>> {
+  const declared = Number(req.headers.get("Content-Length") || "0");
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    throw new HttpError("REQUEST_TOO_LARGE", 413, "Request body is too large.");
+  }
+  const text = await req.text().catch(() => "");
+  if (new TextEncoder().encode(text).length > maxBytes) {
+    throw new HttpError("REQUEST_TOO_LARGE", 413, "Request body is too large.");
+  }
+  if (!text.trim()) return {};
+  try {
+    const value = JSON.parse(text);
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch { return {}; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   try {
     const userId = await getUser(req);
-    const body = req.method === "GET" ? {} : await req.json().catch(() => ({}));
+    const body = req.method === "GET" ? {} : await readJsonBody(req, MAX_BODY_BYTES);
     const projectId =
       String(body.projectId || body.project_id || "") ||
       new URL(req.url).searchParams.get("projectId") ||
@@ -788,10 +806,12 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
     if (error instanceof HttpError) {
       return json(req, { error: { code: error.code, message: error.message } }, error.status);
     }
+    // Log internals server-side only; never return raw database/runtime text.
+    console.error("beatvision-world failed", String(error instanceof Error ? error.message : error).slice(0, 800));
     return json(req, {
       error: {
         code: "WORLD_REQUEST_FAILED",
-        message: error instanceof Error ? error.message : String(error),
+        message: "The World request failed. Please try again.",
       },
     }, 500);
   }

@@ -18,3 +18,7 @@ package-lock.json
 *.log
 .DS_Store
 .vite/
+
+# Temporary UI-test harness output (stray copies were committed in PR #95)
+.ui-test-*/
+scripts/test/.tmp-*/

@@ -25,6 +25,25 @@ class HttpError extends Error {
   }
 }
 
+
+const MAX_BODY_BYTES = 64 * 1024;
+// Hardening 2026-10-14: bound request bodies before parsing.
+async function readJsonBody(req: Request, maxBytes: number): Promise<Record<string, any>> {
+  const declared = Number(req.headers.get("Content-Length") || "0");
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    throw new HttpError("REQUEST_TOO_LARGE", 413, "Request body is too large.");
+  }
+  const text = await req.text().catch(() => "");
+  if (new TextEncoder().encode(text).length > maxBytes) {
+    throw new HttpError("REQUEST_TOO_LARGE", 413, "Request body is too large.");
+  }
+  if (!text.trim()) return {};
+  try {
+    const value = JSON.parse(text);
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch { return {}; }
+}
+
 const env = (name: string) => String(Deno.env.get(name) || "").trim();
 
 function corsHeaders(req: Request) {
@@ -101,7 +120,7 @@ Deno.serve(async (req) => {
 
   try {
     const userId = await getUser(req);
-    const body = await req.json().catch(() => ({}));
+    const body = await readJsonBody(req, MAX_BODY_BYTES);
     const projectId = String(body.projectId || body.project_id || "").trim();
     const recordId = String(body.recordId || body.record_id || "").trim();
     const kind = String(body.kind || "").trim() as DraftKind;
@@ -197,7 +216,8 @@ Every field must be non-empty, concise, production-useful, and mutually consiste
     try { data = raw ? JSON.parse(raw) : null; } catch { data = { raw }; }
     if (!response.ok) {
       const message = String(data?.error?.message || data?.message || raw).slice(0, 800);
-      throw new HttpError("STYLE_MODEL_FAILED", 502, "Groq description generation failed (" + response.status + "): " + message);
+      console.error("beatvision-style-draft upstream", response.status, message);
+      throw new HttpError("STYLE_MODEL_FAILED", 502, "Description generation provider failed (HTTP " + response.status + ").");
     }
     const content = data?.choices?.[0]?.message?.content;
     if (typeof content !== "string" || !content.trim()) {
@@ -217,8 +237,10 @@ Every field must be non-empty, concise, production-useful, and mutually consiste
   } catch (error) {
     const status = error instanceof HttpError ? error.status : 500;
     const code = error instanceof HttpError ? error.code : "STYLE_DRAFT_FAILED";
-    const message = error instanceof Error ? error.message : "Unable to generate the description proposal.";
-    console.error("beatvision-style-draft failed", JSON.stringify({ code, status, message: message.slice(0, 800) }));
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error("beatvision-style-draft failed", JSON.stringify({ code, status, message: detail.slice(0, 800) }));
+    // Never return internal (database/runtime) error text to the client.
+    const message = error instanceof HttpError ? error.message : "Unable to generate the description proposal.";
     return json(req, { error: { code, message } }, status);
   }
 });
