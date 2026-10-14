@@ -66,7 +66,7 @@ export interface SceneTiming {
 const MIN_BPM = 40;
 const MAX_BPM = 250;
 const MAX_ACCENTS = 64;
-const round3 = (n: number) => Math.round(n * 1000) / 1000;
+const round3 = (n: number) => Math.round(n * 1000) / 1000 + 0; // + 0 normalizes -0
 
 export function clampSceneRange(start: number, end: number, songDuration: number) {
   if (!Number.isFinite(songDuration) || songDuration <= 0) throw new Error("CAMERA_TIMING_DURATION_MISSING: real song duration is required.");
