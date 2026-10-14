@@ -112,3 +112,48 @@ begin
   return case when tg_op = 'DELETE' then old else new end;
 end;
 $$;
+
+
+-- Cascade compatibility: approved Phase 3 objects have three independent
+-- legacy delete guards. Preserve their denial of direct delete/update.
+create or replace function public.prevent_approved_phase3_record_mutation()
+returns trigger language plpgsql set search_path = public, pg_temp as $$
+begin
+  if tg_op = 'DELETE' and not exists (select 1 from public.projects p where p.id = old.project_id) then
+    return old;
+  end if;
+  if old.status = 'approved' then
+    raise exception 'PHASE3_APPROVED_IMMUTABLE'
+      using errcode='55000', detail='Approved Phase 3 records are immutable.';
+  end if;
+  return case when tg_op = 'DELETE' then old else new end;
+end;
+$$;
+
+create or replace function public.prevent_approved_phase3_delete()
+returns trigger language plpgsql set search_path = public, pg_temp as $$
+begin
+  if tg_op = 'DELETE' and not exists (select 1 from public.projects p where p.id = old.project_id) then
+    return old;
+  end if;
+  if old.status = 'approved' then
+    raise exception 'APPROVED_RECORD_IMMUTABLE'
+      using errcode='55000', detail=tg_table_name || ' approval is immutable and cannot be deleted.';
+  end if;
+  return old;
+end;
+$$;
+
+create or replace function public.prevent_approved_asset_delete()
+returns trigger language plpgsql set search_path = public, pg_temp as $$
+begin
+  if tg_op = 'DELETE' and not exists (select 1 from public.projects p where p.id = old.project_id) then
+    return old;
+  end if;
+  if old.status = 'approved' then
+    raise exception 'APPROVED_ASSET_IMMUTABLE'
+      using errcode='23514', detail='Approved Phase 3 assets cannot be deleted.';
+  end if;
+  return old;
+end;
+$$;
