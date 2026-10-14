@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import CharacterEditor from "../components/style/CharacterEditor";
 import EnvironmentEditor from "../components/style/EnvironmentEditor";
+import GenreTemplateGallery from "../components/style/GenreTemplateGallery";
+import { applyGenreTemplate } from "../lib/style/genreTemplates";
+import type { GenreTemplate } from "../lib/style/genreTemplates";
 import { useStyleStudio } from "../hooks/useStyleStudio";
 import { formatCreativeLines } from "../lib/formatCreativeText";
 
@@ -86,6 +89,23 @@ export default function StylePage({ projectId }: { projectId: string }) {
     );
   }
 
+  function applyTemplate(template: GenreTemplate): string {
+    const result = applyGenreTemplate(
+      { visualRules, continuityRules, referenceAssets },
+      template,
+      { styleBibleStatus: styleBible?.status },
+    );
+    if (result.status === "refused") return result.reason ?? "Template refused.";
+    setVisualRules(result.draft.visualRules);
+    setContinuityRules(result.draft.continuityRules);
+    const label = (f: string) => (f === "visualRules" ? "visual rules" : "continuity rules");
+    const parts = [
+      result.applied.length ? `Pre-filled ${result.applied.map(label).join(" and ")} from ${template.genre}. Review and save when ready.` : "",
+      result.skipped.length ? `Kept your existing ${result.skipped.map(label).join(" and ")} (not overwritten).` : "",
+    ].filter(Boolean);
+    return parts.join(" ");
+  }
+
   function saveStyle(event: FormEvent) {
     event.preventDefault();
     void saveStyleBible({
@@ -145,6 +165,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
       <section className="style-section">
         <div className="style-section-heading"><div><span className="panel-label">01 / SOURCE</span><h2>World Foundation</h2></div><span className="style-lineage">World: {world?.id ? `${world.id.slice(0, 8)}…` : "Unavailable"}</span></div>
         <p className="style-section-copy">These fields come from the confirmed World Report. They are reference data for this stage, not an editable replacement for the World.</p><div className="style-foundation-grid">{Object.entries(styleBible.world_basis ?? {}).map(([key, value]) => <article className="style-foundation-card" key={key}><span className="style-card-label">{key.replace(/_/g, " ")}</span><StyleValue value={value} /></article>)}</div>
+        <GenreTemplateGallery locked={locked} disabled={working} onApply={applyTemplate} />
         <form className="style-form" onSubmit={saveStyle}>
           <label>Visual rules, one per line
             <textarea rows={8} value={visualRules} readOnly={locked} onChange={(e) => setVisualRules(e.target.value)} />
