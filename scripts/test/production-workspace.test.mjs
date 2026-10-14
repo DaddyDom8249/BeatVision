@@ -19,7 +19,7 @@ await writeFile(join(dir, 'stub.mjs'), 'export const supabase = new Proxy({}, { 
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, stored = false, rpcError = null, runJob = null } = {}) {
+async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, stored = false, rpcError = null, runJob = null } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
@@ -37,8 +37,8 @@ async function mount({ motionJob = null, imageJob = null, assemblyJob = null, mo
         then(resolve) {
           const data = table === 'visual_plans' ? { id: 'plan-1', status: 'approved', title: 'Locked plan' }
             : table === 'visual_plan_scenes' ? [{ id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved' }]
-            : table === 'scene_image_assets' ? image
-            : table === 'motion_clip_assets' ? motionAsset
+            : table === 'scene_image_assets' ? imageAssets ?? image
+            : table === 'motion_clip_assets' ? motionAssets ?? motionAsset
             : table === 'generation_jobs' && filters.id ? (historicalQueries.push({ ...filters }), historicalJob?.id === filters.id ? historicalJob : null)
             : table === 'generation_jobs' ? (filters.job_type === 'scene_motion' ? motionJob : filters.job_type === 'scene_image' ? imageJob : assemblyJob) : null;
           return Promise.resolve({ data, error: null }).then(resolve);
@@ -258,4 +258,25 @@ test('HF motion refresh uses owner-authorized private playback URL', async () =>
     assert.equal(call.projectId, 'project-1'); assert.equal(call.assetId, 'hf-motion');
     assert.match(document.body.textContent, /Singing lip sync is not verified/);
   } finally { await view.cleanup(); }
+});
+
+test('saved history defaults to approved imagery and allows reviewing a newer variant',async()=>{
+ const assets=[{id:'new',image_url:'https://media.test/new.jpg',status:'generated',approved:false},{id:'approved',image_url:'https://media.test/approved.jpg',status:'approved',approved:true}];
+ const view=await mount({imageAssets:assets});
+ try {
+  assert.equal(document.querySelector('img').src,'https://media.test/approved.jpg');
+  const select=document.querySelector('[aria-label="Saved image variants"]');assert.equal(select.options.length,2);
+  await act(async()=>{select.value='new';select.dispatchEvent(new window.Event('change',{bubbles:true}));});
+  assert.equal(document.querySelector('img').src,'https://media.test/new.jpg');
+  assert.match(document.body.textContent,/Reject Image/);
+  assert.equal(assets[1].approved,true);
+ }finally{await view.cleanup()}
+});
+test('Generate Another Variant requests an append-only idempotent image attempt',async()=>{
+ const view=await mount();try {
+  await view.click('Generate Another Variant');
+  assert.equal(view.rpcCalls[0].name,'enqueue_scene_image_variant');
+  assert.equal(view.rpcCalls[0].args.p_project_id,'project-1');
+  assert.match(view.rpcCalls[0].args.p_request_id,/^[0-9a-f-]{36}$/);
+ }finally{await view.cleanup()}
 });

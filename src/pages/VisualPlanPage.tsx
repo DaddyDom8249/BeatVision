@@ -12,10 +12,10 @@ function formatTime(seconds: number) {
 function SceneEditor({ scene, working, onSave }: {
   scene: VisualPlanScene;
   working: boolean;
-  onSave: (id: string, changes: Partial<Pick<VisualPlanScene, "title" | "visual_direction" | "camera_direction" | "movement_direction" | "location" | "mood" | "lyric_moment" | "transition_style" | "continuity_notes">>) => Promise<void>;
+  onSave: (id: string, changes: Partial<Pick<VisualPlanScene, "start_time" | "end_time" | "title" | "visual_direction" | "camera_direction" | "movement_direction" | "location" | "mood" | "lyric_moment" | "transition_style" | "continuity_notes">>) => Promise<void>;
 }) {
   const [draft, setDraft] = useState(scene);
-  const dirty = draft.title !== scene.title ||
+  const dirty = draft.start_time !== scene.start_time || draft.end_time !== scene.end_time || draft.title !== scene.title ||
     draft.visual_direction !== scene.visual_direction ||
     draft.camera_direction !== scene.camera_direction ||
     draft.movement_direction !== scene.movement_direction ||
@@ -25,7 +25,7 @@ function SceneEditor({ scene, working, onSave }: {
     draft.transition_style !== scene.transition_style ||
     draft.continuity_notes !== scene.continuity_notes;
 
-  function set(key: keyof typeof draft, value: string) {
+  function set(key: keyof typeof draft, value: string | number) {
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
@@ -39,6 +39,8 @@ function SceneEditor({ scene, working, onSave }: {
         <span>{scene.status === "approved" ? "Locked" : "Draft"}</span>
       </header>
       <div className="visual-plan-grid">
+        <label>Start time (seconds)<input type="number" step="0.01" min="0" value={draft.start_time} disabled={working} onChange={e => set("start_time", Number(e.target.value))} /></label>
+        <label>End time (seconds)<input type="number" step="0.01" min="0" value={draft.end_time} disabled={working} onChange={e => set("end_time", Number(e.target.value))} /></label>
         <label>Scene title<input value={draft.title} disabled={working} onChange={(e) => set("title", e.target.value)} /></label>
         <label>Location<input value={draft.location} disabled={working} onChange={(e) => set("location", e.target.value)} /></label>
         <label>Mood<input value={draft.mood} disabled={working} onChange={(e) => set("mood", e.target.value)} /></label>
@@ -51,6 +53,7 @@ function SceneEditor({ scene, working, onSave }: {
       </div>
       {scene.status === "draft" && (
         <button className="secondary-button" disabled={working || !dirty} onClick={() => void onSave(scene.id, {
+          start_time: draft.start_time, end_time: draft.end_time,
           title: draft.title.trim(),
           visual_direction: draft.visual_direction.trim(),
           camera_direction: draft.camera_direction.trim(),
@@ -69,7 +72,7 @@ function SceneEditor({ scene, working, onSave }: {
 }
 
 export default function VisualPlanPage({ projectId }: { projectId: string }) {
-  const { world, styleBible, song, plan, scenes, loading, working, error, createPlan, saveScene, approvePlan } = useVisualPlan(projectId);
+  const { world, styleBible, song, plan, planHistory, scenes, loading, working, error, createPlan, revisePlan, saveScene, approvePlan } = useVisualPlan(projectId);
 
   if (loading) return <main><p>Loading Visual Plan…</p></main>;
 
@@ -102,6 +105,7 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
         <p>Translate the locked World and Style Bible into a scene-by-scene production plan.</p>
       </header>
 
+      {planHistory.length > 1 && <nav aria-label="Plan revisions">{planHistory.map(saved => <a key={saved.id} className="secondary-button" href={`/projects/${projectId}/visual-plan?plan=${saved.id}`}>Revision {saved.revision_number} · {saved.status}</a>)}</nav>}
       {error && <div role="alert"><p>{error}</p><a href={`/projects/${projectId}/style`}>Return to Style Bible</a></div>}
 
       {!plan ? (
@@ -117,9 +121,10 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
           <section>
             <div>
               <span className="eyebrow">PLAN STATUS</span>
-              <h2>{plan.title}</h2>
+              <h2>{plan.title} · Revision {plan.revision_number ?? 1}</h2>
               <p>{plan.status === "approved" ? "Visual Plan locked. Production must follow this approved direction." : "Draft. Edit the scene directions, then lock the plan."}</p>
             </div>
+            {plan.status === "approved" && plan.id === planHistory[0]?.id && <button className="secondary-button" disabled={working} onClick={() => void revisePlan().catch(() => undefined)}>Create Editable Revision</button>}
             {plan.status === "draft" && (
               <button className="primary-button" disabled={working || scenes.length === 0} onClick={() => void approvePlan().catch(() => undefined)}>
                 {working ? "Locking…" : "Lock Visual Plan"}
@@ -138,7 +143,7 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
             <section>
               <h2>Phase 4 Complete</h2>
               <p>The Visual Plan is locked and ready for the next production stage.</p>
-              <a className="primary-button" href={`/projects/${projectId}/scenes`}>Continue to Scene Production</a>
+              <a className="primary-button" href={`/projects/${projectId}/scenes?plan=${plan.id}`}>Continue to Scene Production</a>
             </section>
           )}
         </>

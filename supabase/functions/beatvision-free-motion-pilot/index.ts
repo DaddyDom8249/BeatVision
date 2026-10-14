@@ -125,6 +125,11 @@ async function handler(req:Request) {
   }
   if(action!=="start")return respond(req,{ok:false,error:"Only start or poll is supported."},422);
 
+  // Retain read-only polling of previously accepted tickets; reject new GPU work.
+  // Exact Arena/Wan execution, derivative weights and account eligibility are unverified.
+  return respond(req,{ok:false,status:"free_provider_unavailable",error_code:"WAN_ELIGIBILITY_UNVERIFIED",
+    error:"New Wan previews are unavailable until this execution path and model permissions are verified. Use the verified LTX motion controller.",retry_automatically:false},503);
+
   const asset=await db.from("scene_image_assets")
     .select("id,project_id,visual_plan_id,scene_id,storage_path,approved,status")
     .eq("project_id",projectId).eq("visual_plan_id",scene.data.visual_plan_id)

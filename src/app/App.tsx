@@ -58,13 +58,13 @@ export default function App() {
   const worldMatch = path.match(/^\/projects\/([^/]+)\/world\/?$/);
   if (worldMatch) return <WorldPage projectId={worldMatch[1]} onNavigate={navigate} />;
 
-  const visualPlanMatch = path.match(/^\/projects\/([^/]+)\/visual-plan\/?$/);
+  const visualPlanMatch = path.match(/^\/projects\/([^/]+)\/(?:visual-plan|story)\/?$/);
   if (visualPlanMatch) return <VisualPlanPage projectId={visualPlanMatch[1]} />;
 
   const sceneProductionMatch = path.match(/^\/projects\/([^/]+)\/scenes\/?$/);
   if (sceneProductionMatch) return <SceneProductionPage projectId={sceneProductionMatch[1]} />;
 
-  const productionMatch = path.match(/^\/projects\/([^/]+)\/(?:production|motion)\/?$/);
+  const productionMatch = path.match(/^\/projects\/([^/]+)\/(?:production|motion|video)\/?$/);
   if (productionMatch) return <ProductionWorkspacePage projectId={productionMatch[1]} />;
 
   const styleMatch = path.match(/^\/projects\/([^/]+)\/style\/?$/);

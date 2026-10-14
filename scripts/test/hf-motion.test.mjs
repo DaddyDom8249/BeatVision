@@ -111,3 +111,16 @@ for (const approvedPlan of [true,false]) test('HF enqueue '+(approvedPlan?'reuse
     assert.equal(writes,0);assert.equal(f.calls.filter(c=>c.init.method==='POST').length,0);
   }finally{globalThis.fetch=original;await runtime.cleanup()}
 });
+
+for(const type of ['scene_image','assembly']) test(type+' refuses unknown-cost inference before any network request',async()=>{
+ let job={id:'cost-job',job_type:type,status:'queued',input_snapshot:{}};let requests=0;
+ const db={from(){let change;return{select(){return this},eq(){return this},in(){return this},update(row){change=row;return this},async maybeSingle(){job={...job,...change};return{data:job}},async single(){if(change)job={...job,...change};return{data:job}},then(resolve){job={...job,...change};return Promise.resolve({data:[{id:job.id}]}).then(resolve)}}}};
+ const original=globalThis.fetch;const runtime=await loadGeneration(db);globalThis.fetch=async()=>{requests++;throw Error('unexpected network')};
+ try{const result=await runtime.run(db,job);assert.equal(result.status,'failed');assert.equal(result.error.code,'PROVIDER_COST_UNVERIFIED');assert.equal(requests,0)}finally{globalThis.fetch=original;await runtime.cleanup()}
+});
+test('stale provider work fails from acceptance age despite recent poll timestamp',async()=>{
+ let job={id:'stale-job',job_type:'assembly',status:'processing',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),output:{upstream_job_id:'existing',dispatch_started_at:new Date(Date.now()-31*60*1000).toISOString()}};let calls=0;
+ const db={from(){return {select(){return this},eq(){return this},in(){return this},update(row){job={...job,...row};return this},async single(){return{data:job}},then(resolve){return Promise.resolve({data:[{id:job.id}]}).then(resolve)}}}};
+ const original=globalThis.fetch;const runtime=await loadGeneration(db);globalThis.fetch=async()=>{calls++;throw Error('unexpected network')};
+ try{const result=await runtime.poll(db,job);assert.equal(result.status,'failed');assert.equal(result.error.code,'PROVIDER_TIMEOUT');assert.equal(calls,0)}finally{globalThis.fetch=original;await runtime.cleanup()}
+});

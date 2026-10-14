@@ -50,7 +50,7 @@ test('stale terminal failure poll returns concurrent completion instead of casca
   } finally { globalThis.fetch = originalFetch; await runtime.cleanup(); }
 });
 
-test('synchronous submission losing completion write returns winning persisted job', async () => {
+test('cost refusal losing failure write returns winning persisted job', async () => {
   const base = { id: 'job-run-race', status: 'queued', job_type: 'scene_image', input_snapshot: { scene: {}, vision_snapshot: { song: { analysis: { duration_seconds: 60 } } } } };
   const winner = { ...base, status: 'completed', output: { scene_image_asset: { id: 'winning-image', approved: true } } };
   let failureWrites = 0;
@@ -71,6 +71,6 @@ test('synchronous submission losing completion write returns winning persisted j
   globalThis.fetch = async () => new Response(JSON.stringify({ image_url: 'https://example.test/image.jpg' }), { status: 200 });
   try {
     assert.deepEqual(await runtime.run(client, base), winner);
-    assert.equal(failureWrites, 0);
+    assert.equal(failureWrites, 1);
   } finally { globalThis.fetch = originalFetch; await runtime.cleanup(); }
 });

@@ -61,6 +61,10 @@ Deno.serve(async (req) => {
     const groqKey = env("GROQ_API_KEY");
     if (!groqKey) return json({ error: "GROQ_API_KEY is not configured." }, 503);
 
+    // Browser DSP and manual lyrics remain usable without paid/unknown inference.
+    const freeAccountVerified = false;
+    if (!freeAccountVerified) return json({error:"PROVIDER_COST_UNVERIFIED: Transcription is unavailable until this Groq account's free eligibility is verified."},503);
+
     // Production stores audio in the `songs` bucket (see SongPage/useSong);
     // reading `audio` fails to resolve the signed URL and breaks transcription.
     const signed = await admin.storage.from("songs").createSignedUrl(String(song.audio_path), 900);

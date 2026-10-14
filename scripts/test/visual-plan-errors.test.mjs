@@ -50,7 +50,7 @@ test("a real PostgREST environment approval failure tells the artist what to app
   assert.equal(state[7], false);
   assert.equal(state[3], null);
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].name, "create_vision_lock");
+  assert.equal(calls[0].name, "create_visual_plan");
   assert.equal(calls[0].args.p_project_id, "project");
 });
 

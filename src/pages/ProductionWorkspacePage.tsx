@@ -116,18 +116,30 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     return { ...asset, image_url: result.data.image_url };
   }
 
+  const [imageHistory, setImageHistory] = useState<any[]>([]);
+  const [motionHistory, setMotionHistory] = useState<any[]>([]);
+  const assetChoice = useRef<{sceneId: string; imageId?: string; motionId?: string}>({sceneId: ''});
+  const attemptId = useRef<string | null>(null);
+  const rows = (data: any) => Array.isArray(data) ? data : data ? [data] : [];
+
   const refreshScene = useCallback(async (sceneId: string) => {
     const [images, motions, imageJobs, motionJobs] = await Promise.all([
-      supabase.from("scene_image_assets").select(imageFields).eq("scene_id", sceneId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("motion_clip_assets").select("*").eq("scene_id", sceneId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("scene_image_assets").select(imageFields).eq("project_id", projectId).eq("visual_plan_id", plan?.id).eq("scene_id", sceneId).order("created_at", { ascending: false }),
+      supabase.from("motion_clip_assets").select("*").eq("project_id", projectId).eq("visual_plan_id", plan?.id).eq("scene_id", sceneId).order("created_at", { ascending: false }),
       supabase.from("generation_jobs").select("id,status,error,job_type,output").eq("project_id", projectId).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_image").order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("generation_jobs").select("id,status,error,job_type,output").eq("project_id", projectId).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_motion").order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
     for (const result of [images, motions, imageJobs, motionJobs]) if (result.error) throw result.error;
     if (selectedSceneId.current !== sceneId) return;
+    if (assetChoice.current.sceneId !== sceneId) assetChoice.current = {sceneId};
+    const imageRows = rows(images.data), motionRows = rows(motions.data);
+    const choose = (all: any[], id?: string) => all.find(a => a.id === id) ?? all.find(a => a.approved && a.status === 'approved') ?? all.find(a => a.status !== 'rejected') ?? all[0] ?? null;
+    const selectedImage = choose(imageRows, assetChoice.current.imageId);
+    const selectedMotion = choose(motionRows, assetChoice.current.motionId);
+    setImageHistory(imageRows); setMotionHistory(motionRows);
     let sourceJob: any = null;
-    if (motions.data?.generation_job_id) {
-      if (motionJobs.data?.id === motions.data.generation_job_id) {
+    if (selectedMotion?.generation_job_id) {
+      if (motionJobs.data?.id === selectedMotion.generation_job_id) {
         sourceJob = motionJobs.data;
       } else {
         const relatedJob = await supabase.from("generation_jobs")
@@ -135,14 +147,14 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
           .eq("project_id", projectId)
           .eq("visual_plan_scene_id", sceneId)
           .eq("job_type", "scene_motion")
-          .eq("id", motions.data.generation_job_id)
+          .eq("id", selectedMotion.generation_job_id)
           .maybeSingle();
         if (relatedJob.error) throw relatedJob.error;
         sourceJob = relatedJob.data;
       }
     }
     if (selectedSceneId.current !== sceneId) return;
-    let freshMotion = motions.data;
+    let freshMotion = selectedMotion;
     if (freshMotion?.provider === "huggingface-zerogpu") {
       const signed = await supabase.functions.invoke("beatvision-generation", { body: { action: "motion_url", projectId, assetId: freshMotion.id } });
       if (signed.error || !signed.data?.video_url) throw signed.error || new Error("Motion playback URL unavailable.");
@@ -151,9 +163,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     if (selectedSceneId.current !== sceneId) return;
     setMotion(freshMotion); setImageJob(imageJobs.data); setMotionJob(motionJobs.data);
     setMotionAssetJob(sourceJob);
-    const freshImage = await displayImage(images.data);
+    const freshImage = await displayImage(selectedImage);
     if (selectedSceneId.current === sceneId) setImage(freshImage);
-  }, [projectId]);
+  }, [projectId, plan?.id]);
 
   const refreshFinal = useCallback(async (planId: string) => {
     const result = await supabase.from("generation_jobs").select("id,status,output,error").eq("project_id", projectId).eq("visual_plan_id", planId).eq("job_type", "assembly").order("created_at", { ascending: false }).limit(1).maybeSingle();
@@ -168,7 +180,10 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     setLoading(true); setError(null); setPlan(null); setScenes([]); setSelectedIndex(0);
     (async () => {
       try {
-        const result = await supabase.from("visual_plans").select(planFields).eq("project_id", projectId).eq("status", "approved").single();
+        const requestedPlan = new URLSearchParams(window.location.search).get('plan');
+        let query = supabase.from("visual_plans").select(planFields).eq("project_id", projectId).eq("status", "approved");
+        if (requestedPlan) query = query.eq("id", requestedPlan);
+        const result = await query.order("revision_number", {ascending:false}).limit(1).single();
         if (result.error) throw new Error("Lock the Visual Plan before entering Production.");
         const sceneResult = await supabase.from("visual_plan_scenes").select(sceneFields).eq("visual_plan_id", result.data.id).eq("status", "approved").order("scene_number", { ascending: true });
         if (sceneResult.error) throw sceneResult.error;
@@ -211,16 +226,18 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       let job = existing;
       if (!job) {
         if (type === "scene_motion" && !motionTermsAccepted) throw new Error("Accept the LTX model use restrictions before AI motion.");
+        attemptId.current ??= crypto.randomUUID();
         const queued = type === "assembly"
           ? await supabase.rpc("enqueue_assembly_generation", { p_project_id: projectId, p_visual_plan_id: plan.id })
           : type === "scene_motion"
-            ? await supabase.functions.invoke("beatvision-generation", { body: { action: "enqueue_ai_motion", projectId, sceneId, acceptedTerms: motionTermsAccepted } })
-            : await supabase.rpc("enqueue_scene_generation", { p_project_id: projectId, p_scene_id: sceneId, p_job_type: type });
+            ? await supabase.functions.invoke("beatvision-generation", { body: { action: "enqueue_ai_motion", projectId, sceneId, sourceImageId: image?.id, requestId: attemptId.current, acceptedTerms: motionTermsAccepted } })
+            : await supabase.rpc("enqueue_scene_image_variant", { p_project_id: projectId, p_scene_id: sceneId, p_request_id: attemptId.current });
         if (queued.error) throw queued.error;
         job = type === "scene_motion" ? queued.data?.job : queued.data;
       }
       if (!job?.id) throw new Error("No generation job was returned.");
       setJob(job);
+      attemptId.current = null;
       const run = await supabase.functions.invoke("beatvision-generation", { body: { projectId, jobId: job.id, action: ["submitted", "processing"].includes(job.status) ? "poll" : "run" } });
       if (run.error) throw run.error;
       const result = run.data?.job;
@@ -366,6 +383,15 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     finally { setDownloading(false); }
   }
 
+  async function rejectAsset(type: string, id: string) {
+    if (!scene) return;
+    setError(null);
+    const result = await supabase.rpc('reject_scene_asset', {p_asset_type: type, p_asset_id: id});
+    if (result.error) { setError(productionErrorMessage(result.error)); return; }
+    if (type === 'scene_image') assetChoice.current.imageId = undefined; else assetChoice.current.motionId = undefined;
+    await refreshScene(scene.id).catch(e => setError(productionErrorMessage(e)));
+  }
+
   async function approveMotion() {
     if (!motion || motion.status !== "generated" || !motion.video_url) return;
     setError(null);
@@ -453,33 +479,37 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-provider-note">
             <span className="panel-label">SCENE IMAGE</span>
+            {imageHistory.length > 1 && <label>Saved image variants<select aria-label="Saved image variants" value={image?.id ?? ''} onChange={event => { assetChoice.current.imageId = event.target.value; void refreshScene(scene.id).catch(e => setError(productionErrorMessage(e))); }}>{imageHistory.map((asset, index) => <option key={asset.id} value={asset.id}>Variant {imageHistory.length - index} · {asset.status}</option>)}</select></label>}
             {image?.image_url ? <img src={image.image_url} alt={scene.title} style={{ width: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 12 }} /> : <p>No real scene image exists yet. Generation is only enabled from the approved Scene Direction.</p>}
             <div className="production-actions">
-              <button className="primary-button" disabled={busy || pending(imageJob) || Boolean(image)} onClick={() => void generateImage()}>{generating ? "Generating…" : image ? "Image Generated" : "Generate Scene Image"}</button>
+              <button className="primary-button" disabled={busy || pending(imageJob)} onClick={() => void generateImage()}>{generating ? "Generating…" : image ? "Generate Another Variant" : "Generate Scene Image"}</button>
               {pending(imageJob) && <button className="secondary-button" disabled={busy} onClick={() => void operateJob("scene_image", imageJob)}>Check Image Status</button>}
               {image?.status === "generated" && <button className="secondary-button" onClick={() => void approveImage()}>Approve Image</button>}
+              {image?.status === "generated" && <button className="secondary-button" disabled={busy} onClick={() => void rejectAsset("scene_image", image.id)}>Reject Image</button>}
               {image?.status === "approved" && <span className="style-lock-badge">IMAGE APPROVED</span>}
             </div>
           </div>
 
           <div className="production-provider-note">
             <span className="panel-label">MOTION</span>
+            {motionHistory.length > 1 && <label>Saved motion variants<select aria-label="Saved motion variants" value={motion?.id ?? ''} onChange={event => { assetChoice.current.motionId = event.target.value; void refreshScene(scene.id).catch(e => setError(productionErrorMessage(e))); }}>{motionHistory.map((asset, index) => <option key={asset.id} value={asset.id}>Variant {motionHistory.length - index} · {asset.status}</option>)}</select></label>}
             {motion?.provider === "huggingface-zerogpu" && <p>AI-generated video · LTX 0.9.8 distilled · 2-second preview. Singing lip sync is not verified.</p>}
             {motion && <p>{isProceduralMotion ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
             {motion?.video_url ? <video src={motion.video_url} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
             <div className="production-actions">
-              {(!motion || isProceduralMotion) && !pending(motionJob) && <label><input type="checkbox" checked={motionTermsAccepted} onChange={event => setMotionTermsAccepted(event.target.checked)} /> I agree to the <a href="https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt" target="_blank" rel="noreferrer">LTX model license and use restrictions</a>, including AI disclosure.</label>}
-              {(!motion || isProceduralMotion) && !pending(motionJob) && <p>Generate a 2-second AI motion preview. Existing approved clips remain saved; this preview is not full-scene coverage.</p>}
-              {(!motion || isProceduralMotion) && !pending(motionJob) && <button className="primary-button" disabled={busy || image?.status !== "approved" || !motionTermsAccepted} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
+              {!pending(motionJob) && <label><input type="checkbox" checked={motionTermsAccepted} onChange={event => setMotionTermsAccepted(event.target.checked)} /> I agree to the <a href="https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt" target="_blank" rel="noreferrer">LTX model license and use restrictions</a>, including AI disclosure.</label>}
+              {!pending(motionJob) && <p>Generate a 2-second AI motion preview. Existing approved clips remain saved; this preview is not full-scene coverage.</p>}
+              {!pending(motionJob) && <button className="primary-button" disabled={busy || image?.status !== "approved" || !motionTermsAccepted} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
               {pending(motionJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkMotionStatus()}>{motionGenerating ? "Checking…" : "Check Motion Status"}</button>}
               {motion?.status === "generated" && <button className="secondary-button" onClick={() => void approveMotion()}>Approve Motion</button>}
+              {motion?.status === "generated" && <button className="secondary-button" disabled={busy} onClick={() => void rejectAsset("scene_motion", motion.id)}>Reject Motion</button>}
               {motion?.status === "approved" && <span className="style-lock-badge">MOTION APPROVED</span>}
             </div>
           </div>
 
           <div className="production-provider-note">
             <span className="panel-label">FREE AI MOVEMENT PREVIEW</span>
-            <p>Wan 2.2 image-to-video on Hugging Face Free ZeroGPU. Requires an approved image and available free-account daily GPU quota. The preview covers up to 3 seconds. No paid fallback, no automatic approval, and no replacement of your saved motion.</p>
+            <p>New Wan previews are unavailable while account eligibility and model permissions are unverified. Generate Motion uses the verified LTX controller. Existing Wan tickets can still be checked.</p>
             <div className="production-actions">
               <button className="secondary-button" disabled={busy || freePilotBusy || Boolean(freePilotJob) || image?.status !== "approved"} onClick={() => void generateFreePilot()}>
                 {freePilotBusy ? "Submitting free GPU preview…" : freePilotJob ? "Preview queued (no resubmission)" : "Generate free 3-second AI movement"}

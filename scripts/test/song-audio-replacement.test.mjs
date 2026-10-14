@@ -66,3 +66,13 @@ test('failed metadata save never removes the current song audio', async () => {
   assert.deepEqual(state.events, ['db-save']);
   assert.equal(state.error, 'database save failed');
 });
+
+test('failed mobile decode and unavailable transcription release the analyzing state for retry',async()=>{
+ const begin=source.indexOf('  async function analyzeAudio()');const finish=source.indexOf('\n  function continueToWorld',begin);
+ const action=ts.transpileModule(source.slice(begin,finish),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+ const calls=[];let reloaded=false;
+ const supabase={rpc:async(name,args)=>{calls.push({name,...args});return{error:null}},functions:{invoke:async()=>({error:new Error('PROVIDER_COST_UNVERIFIED')})}};
+ const analyze=new Function('supabase','song','projectId','analyzeAudioLocally','formatFailure','setError','setSaved','setSaving','reload',action+'\nreturn analyzeAudio;')(
+ supabase,{id:'song',audio_url:'https://private.test/song.mp3',audio_revision:'revision'},'project',async()=>{throw Error('decode failed')},(_,error)=>error.message,()=>{},()=>{},()=>{},async()=>{reloaded=true});
+ await analyze();assert.deepEqual(calls.map(call=>call.p_status),['analyzing','failed']);assert.equal(calls.at(-1).p_audio_revision,'revision');assert.equal(reloaded,true);
+});

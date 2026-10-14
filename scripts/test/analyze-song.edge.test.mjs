@@ -128,34 +128,17 @@ after(async () => {
   }
 });
 
-test("reads audio from the `songs` bucket production actually uses", async () => {
-  storageBucketCalls.length = 0;
-  const { handler } = await bootFunction();
-  const response = await call(handler, { projectId: PROJECT_ID });
-
-  assert.equal(response.status, 200);
-  const body = await response.json();
-  assert.equal(body.status, "completed");
-
-  assert.equal(storageBucketCalls.length, 1, "expected exactly one signed-url request");
-  assert.equal(
-    storageBucketCalls[0].bucket,
-    "songs",
-    "transcription must read the bucket the frontend uploads to"
-  );
-  assert.ok(
-    storageBucketCalls.every((entry) => entry.bucket !== "audio"),
-    "the stale `audio` bucket must not be referenced"
-  );
+test("unverified account is refused before signed storage access or inference", async () => {
+ storageBucketCalls.length=0;
+ const {handler,db}=await bootFunction(); const before=structuredClone(db.songs);
+ const response=await call(handler,{projectId:PROJECT_ID});
+ assert.equal(response.status,503);assert.match((await response.json()).error,/PROVIDER_COST_UNVERIFIED/);
+ assert.equal(storageBucketCalls.length,0);assert.deepEqual(db.songs,before);
 });
 
-test("successful transcription persists Groq provenance", async () => {
-  const { handler } = await bootFunction();
-  const response = await call(handler, { projectId: PROJECT_ID });
-  const body = await response.json();
-
-  assert.equal(response.status, 200);
-  assert.equal(body.analysis.transcription_provider, "groq");
+test("unverified account cannot write fabricated transcription provenance",async()=>{
+ const {handler,db}=await bootFunction();const before=structuredClone(db.songs);
+ const response=await call(handler,{projectId:PROJECT_ID});assert.equal(response.status,503);assert.deepEqual(db.songs,before);
 });
 
 test("missing Authorization header returns 401, not 500", async () => {
@@ -190,50 +173,13 @@ test("non-POST requests are rejected", async () => {
   assert.equal(response.status, 405);
 });
 
-test("Groq transcription preserves the decoded song duration and musical timecodes", async () => {
-  const analysis = { analysis_method: "browser_audio_decode", duration_seconds: 249.126908314, sections: [{ start: 0, end: 249.126908314 }], bpm: 84 };
-  const { handler, db } = await bootFunction({ analysis, songDuration: analysis.duration_seconds, groqData: { text: "transcribed lyrics", duration: 240, segments: [], words: [] } });
-  const response = await call(handler, { projectId: PROJECT_ID });
-  assert.equal(response.status, 200);
-  const body = await response.json();
-  assert.equal(body.analysis.duration_seconds, analysis.duration_seconds);
-  assert.equal(db.projects[0].song_duration, analysis.duration_seconds);
-  assert.deepEqual(body.analysis.sections, analysis.sections);
-  assert.equal(body.analysis.bpm, 84);
-  assert.equal(body.analysis.transcript, "transcribed lyrics");
-});
-
-test("server-only analysis can obtain song duration from Groq when browser decoding is unavailable", async () => {
-  const { handler, db } = await bootFunction({ analysis: null, songDuration: null, groqData: { text: "lyrics", duration: 249.126908314 } });
-  const response = await call(handler, { projectId: PROJECT_ID });
-  assert.equal(response.status, 200);
-  assert.equal((await response.json()).analysis.duration_seconds, 249.126908314);
-  assert.equal(db.projects[0].song_duration, 249.126908314);
-});
-
-test("invalid duration metadata falls back to the persisted song duration", async () => {
-  const { handler } = await bootFunction({ analysis: { duration_seconds: -1 }, songDuration: 249.126908314, groqData: { text: "lyrics", duration: 0 } });
-  const response = await call(handler, { projectId: PROJECT_ID });
-  assert.equal(response.status, 200);
-  assert.equal((await response.json()).analysis.duration_seconds, 249.126908314);
-});
-
-test("analysis without any valid song duration cannot be marked completed", async () => {
-  const { handler, db } = await bootFunction({ analysis: null, songDuration: null, groqData: { text: "lyrics" } });
-  const response = await call(handler, { projectId: PROJECT_ID });
-  assert.equal(response.status, 422);
-  assert.equal((await response.json()).code, "AUDIO_DURATION_UNAVAILABLE");
-  assert.notEqual(db.songs[0].analysis_status, "completed");
-  assert.equal(db.songs[0].analysis, null);
-  assert.equal(db.projects[0].song_duration, null);
-});
-
-test("failed Groq transcription preserves the saved local analysis", async () => {
-  const analysis = { analysis_method: "browser_audio_decode", duration_seconds: 249.126908314, bpm: 84 };
-  const { handler, db } = await bootFunction({ analysis, groqStatus: 503, groqData: { error: { message: "Provider unavailable" } } });
-  const response = await call(handler, { projectId: PROJECT_ID });
-  assert.equal(response.status, 500);
-  assert.match((await response.json()).error, /Provider unavailable/);
-  assert.deepEqual(db.songs[0].analysis, analysis);
-  assert.notEqual(db.songs[0].analysis_status, "completed");
+for (const analysis of [
+ {duration_seconds:60,sections:[{index:0,start_time:0,end_time:60}]},
+ null,
+ {duration_seconds:0},
+ {duration_seconds:60,transcription_status:'failed'}
+]) test('unverified transcription preserves prior duration/sections and cannot claim completion: '+JSON.stringify(analysis),async()=>{
+ const {handler,db}=await bootFunction({analysis});const before=structuredClone(db.songs);
+ const response=await call(handler,{projectId:PROJECT_ID});assert.equal(response.status,503);
+ assert.match((await response.json()).error,/PROVIDER_COST_UNVERIFIED/);assert.deepEqual(db.songs,before);
 });

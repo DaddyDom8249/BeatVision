@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { validateImage, readImage } from "./image-media.ts";
 import { verifyFinalMedia } from "./final-media.ts";
 import { HF_MOTION, hfEligibility, hfSubmit, hfPoll, hfDownload, HfMotionError } from "./hf-motion.ts";
 
@@ -240,6 +241,7 @@ async function persistSceneImage(db: any, job: any, responseData: any) {
   if (!persistedUrl && imageBase64) {
     const encoded = imageBase64.includes(",") ? imageBase64.slice(imageBase64.indexOf(",") + 1) : imageBase64;
     let binary: Uint8Array;
+    if (encoded.length > 12 * 1024 * 1024) throw new Error("SCENE_IMAGE_SIZE_INVALID");
     try {
       const raw = atob(encoded);
       binary = Uint8Array.from(raw, (char) => char.charCodeAt(0));
@@ -247,9 +249,10 @@ async function persistSceneImage(db: any, job: any, responseData: any) {
       throw new Error("SCENE_IMAGE_BASE64_INVALID: Arena returned invalid base64 image data.");
     }
 
-    storagePath = `${job.project_id}/scene-images/${job.visual_plan_id}/${job.visual_plan_scene_id}/${job.id}.jpg`;
+    const imageMedia = validateImage(binary);
+    storagePath = `${job.project_id}/scene-images/${job.visual_plan_id}/${job.visual_plan_scene_id}/${job.id}.${imageMedia.extension}`;
     const upload = await db.storage.from("visual-assets").upload(storagePath, binary, {
-      contentType: "image/jpeg",
+      contentType: imageMedia.contentType,
       cacheControl: "31536000",
       upsert: false,
     });
@@ -382,7 +385,7 @@ function terminalState(response: Response, data: any, jobType?: string) {
 async function setFailed(db: any, id: string, message: string, detail?: unknown) {
   const res = await db.from("generation_jobs").update({
     status: "failed",
-    error: { code: "ARENA_GENERATION_FAILED", message: message.slice(0, 1200), detail },
+    error: { code: message.startsWith("PROVIDER_COST_UNVERIFIED:") ? "PROVIDER_COST_UNVERIFIED" : message.startsWith("PROVIDER_TIMEOUT:") ? "PROVIDER_TIMEOUT" : "ARENA_GENERATION_FAILED", message: message.slice(0, 1200), detail },
   }).eq("id", id).in("status", ["queued", "submitted", "processing"]).select("id");
   if (res.error) throw new Error("SET_FAILED_PERSIST_FAILED: " + res.error.message);
   if (!res.data || res.data.length === 0) {
@@ -390,21 +393,37 @@ async function setFailed(db: any, id: string, message: string, detail?: unknown)
   }
 }
 
+// Read-only input preflight: no upload, approval, enqueue or GPU submission.
+async function inspectApprovedImage(db: any,projectId: string,assetId: string) {
+  const image=await db.from('scene_image_assets').select('id,storage_path').eq('id',assetId).eq('project_id',projectId).eq('approved',true).eq('status','approved').maybeSingle();
+  const path=String(image.data?.storage_path||'');
+  if(image.error || !image.data || !path.startsWith(projectId+'/scene-images/') || path.includes('..')) throw new HttpError(409,'APPROVED_STORED_IMAGE_REQUIRED','An approved privately stored image is required.');
+  const signed=await db.storage.from('visual-assets').createSignedUrl(path,300);
+  if(signed.error || !signed.data?.signedUrl) throw new Error('SCENE_IMAGE_SIGNING_FAILED');
+  const url=new URL(signed.data.signedUrl);
+  if(url.protocol!=='https:' || url.origin!==new URL(env('SUPABASE_URL')).origin) throw new Error('SCENE_IMAGE_HOST_INVALID');
+  return {source_image_id: image.data.id, ...await readImage(url.href)};
+}
+
 // Append a model-specific attempt; reuse the canonical RPC's frozen lineage.
 // Existing approved procedural assets/jobs are never edited or deleted.
-async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acceptedTerms: boolean) {
+async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acceptedTerms: boolean, sourceImageId?: string, requestId?: string) {
   if (!acceptedTerms) throw new HttpError(400, "HF_TERMS_REQUIRED", "Accept the LTX model use restrictions before AI motion.");
   await hfEligibility(env("HF_VIDEO_TOKEN"));
   const scene = await db.from("visual_plan_scenes").select("id,visual_plan_id,status").eq("id", sceneId).eq("project_id", projectId).eq("status", "approved").maybeSingle();
   if (scene.error || !scene.data) throw new HttpError(409, "APPROVED_SCENE_REQUIRED", "Motion requires an approved scene.");
   const plan = await db.from("visual_plans").select("id,vision_lock_id,status").eq("id", scene.data.visual_plan_id).eq("project_id", projectId).eq("status", "approved").maybeSingle();
   if (plan.error || !plan.data?.vision_lock_id) throw new HttpError(409, "APPROVED_PLAN_REQUIRED", "Motion requires an approved locked Visual Plan.");
-  const image = await db.from("scene_image_assets").select("id,storage_path,image_url,generation_job_id").eq("project_id", projectId).eq("visual_plan_id", scene.data.visual_plan_id).eq("scene_id", sceneId).eq("status", "approved").eq("approved", true).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  let imageQuery = db.from("scene_image_assets").select("id,storage_path,image_url,generation_job_id", {count:"exact"}).eq("project_id", projectId).eq("visual_plan_id", scene.data.visual_plan_id).eq("scene_id", sceneId).eq("status", "approved").eq("approved", true);
+  if (sourceImageId) imageQuery = imageQuery.eq("id", sourceImageId);
+  const image = await imageQuery.order("created_at", {ascending:false}).limit(1).maybeSingle();
+  if (!sourceImageId && image.count > 1) throw new HttpError(409,"SOURCE_IMAGE_CHOICE_REQUIRED","Choose the approved source image explicitly.");
   if (image.error || !image.data?.storage_path) throw new HttpError(409, "APPROVED_IMAGE_REQUIRED", "Motion requires an approved privately stored source image.");
   const template = await db.from("generation_jobs").select("*").eq("project_id", projectId).eq("visual_plan_id", scene.data.visual_plan_id).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_image").eq("id", image.data.generation_job_id).single();
   if (template.error || template.data?.status !== "completed" || template.data?.input_snapshot?.scene?.id !== sceneId || template.data.vision_lock_id !== plan.data.vision_lock_id) throw new HttpError(409, "FROZEN_LINEAGE_REQUIRED", "Approved image must have its original generation snapshot.");
   const base = template.data;
-  const key = "hf-motion:" + sceneId + ":" + image.data.id + ":" + HF_MOTION.revision;
+  if (requestId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) throw new HttpError(400,"GENERATION_REQUEST_ID_INVALID","Invalid request ID.");
+  const key = "hf-motion:" + sceneId + ":" + image.data.id + ":" + HF_MOTION.revision + (requestId ? ":variant:" + requestId : "");
   const existing = await db.from("generation_jobs").select("*").eq("project_id", projectId).eq("idempotency_key", key).maybeSingle();
   if (existing.error) throw new Error("HF_JOB_LOOKUP_FAILED");
   if (existing.data) return existing.data;
@@ -489,8 +508,10 @@ async function run(db: any, job: any) {
   const claim = await db.from("generation_jobs")
     .update({
       status: "submitted",
-      provider: "arena",
+      provider: job.input_snapshot?.hf_motion ? "huggingface-zerogpu" : "arena",
+      model: job.input_snapshot?.hf_motion ? HF_MOTION.model : job.model,
       provider_job_id: requestId,
+      output: {...job.output, dispatch_started_at: new Date().toISOString()},
       attempts: Number(job.attempts || 0) + 1,
     })
     .eq("id", job.id)
@@ -513,6 +534,10 @@ async function run(db: any, job: any) {
 
   try {
     const path = job.job_type === "scene_image" ? "/v2/scene-image" : job.job_type === "scene_motion" ? "/v2/animate" : "/v2/assemble";
+    if (job.job_type === "scene_motion" && !job.input_snapshot?.hf_motion) throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions.");
+    if (job.job_type !== "scene_motion") {
+      throw new Error("PROVIDER_COST_UNVERIFIED: New image and assembly submissions are unavailable until their exact execution path is verified free.");
+    }
     const result = job.job_type === "scene_motion"
       ? job.input_snapshot?.hf_motion ? await hfBridgeSubmit(db, job) : (() => { throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions."); })()
       : await arena(path, "POST", await bridgePayload(db, job), requestId);
@@ -523,13 +548,13 @@ async function run(db: any, job: any) {
     } else if (state === "completed") {
       if (job.job_type === "assembly") {
         const finalVideo = await persistFinalVideo(db, job, result.data);
-        const updateRes = await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: compactArenaResponse(result.data, job.job_type), bridge_contract: "2.0", final_video: finalVideo } }).eq("id", job.id).eq("status", "processing").select("id");
+        const updateRes = await db.from("generation_jobs").update({ status: "completed", output: { ...job.output, arena_request_id: requestId, arena_response: compactArenaResponse(result.data, job.job_type), bridge_contract: "2.0", final_video: finalVideo } }).eq("id", job.id).eq("status", "processing").select("id");
         if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
         if (!updateRes.data || updateRes.data.length === 0) throw new Error("GENERATION_JOB_RACE_LOST: Job was modified concurrently.");
       } else {
         const persistedImage = await persistSceneImage(db, job, result.data);
         const persistedMotion = await persistMotionClip(db, job, result.data);
-        const updateRes = await db.from("generation_jobs").update({ status: "completed", output: { arena_request_id: requestId, arena_response: compactArenaResponse(result.data, job.job_type), bridge_contract: "2.0", scene_image_asset: persistedImage || null, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing").select("id");
+        const updateRes = await db.from("generation_jobs").update({ status: "completed", output: { ...job.output, arena_request_id: requestId, arena_response: compactArenaResponse(result.data, job.job_type), bridge_contract: "2.0", scene_image_asset: persistedImage || null, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing").select("id");
         if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
         if (!updateRes.data || updateRes.data.length === 0) throw new Error("GENERATION_JOB_RACE_LOST: Job was modified concurrently.");
       }
@@ -545,6 +570,7 @@ async function run(db: any, job: any) {
       } else {
         const updateRes = await db.from("generation_jobs").update({
           output: {
+            ...job.output,
             arena_request_id: requestId,
             upstream_job_id: upstreamJobId,
             arena_response: compactArenaResponse(result.data, job.job_type),
@@ -563,7 +589,13 @@ async function run(db: any, job: any) {
       if (latest.error) throw new Error(latest.error.message);
       return latest.data;
     }
-    await setFailed(db, job.id, error instanceof Error ? error.message : String(error));
+    try { await setFailed(db, job.id, error instanceof Error ? error.message : String(error)); }
+    catch (failure) {
+      if (!(failure instanceof Error) || !failure.message.startsWith("SET_FAILED_ZERO_ROWS_AFFECTED")) throw failure;
+      const winner = await db.from("generation_jobs").select("*").eq("id",job.id).single();
+      if (winner.error || !winner.data || !["completed","failed"].includes(winner.data.status)) throw failure;
+      return winner.data;
+    }
   }
 
   const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
@@ -605,6 +637,13 @@ async function recoverDispatch(db: any, job: any) {
 async function poll(db: any, job: any) {
   if (job.status === "submitted") return await recoverDispatch(db, job);
   if (job.status !== "processing") return job;
+  const accepted = Date.parse(job.output?.dispatch_started_at || job.created_at || "");
+  if (Number.isFinite(accepted) && Date.now() - accepted > 30 * 60 * 1000) {
+    await setFailed(db,job.id,"PROVIDER_TIMEOUT: Maximum generation age exceeded; no new provider request was made.",job.output);
+    const latest = await db.from("generation_jobs").select("*").eq("id",job.id).single();
+    if(latest.error) throw new Error(latest.error.message);
+    return latest.data;
+  }
   const upstream = String(job.output?.upstream_job_id || "").trim();
   if (!upstream) return await recoverDispatch(db, job);
 
@@ -666,7 +705,13 @@ async function poll(db: any, job: any) {
         return latest.data;
       }
     }
-    await setFailed(db, job.id, error instanceof Error ? error.message : String(error));
+    try { await setFailed(db, job.id, error instanceof Error ? error.message : String(error)); }
+    catch (failure) {
+      if (!(failure instanceof Error) || !failure.message.startsWith("SET_FAILED_ZERO_ROWS_AFFECTED")) throw failure;
+      const winner = await db.from("generation_jobs").select("*").eq("id",job.id).single();
+      if (winner.error || !winner.data || !["completed","failed"].includes(winner.data.status)) throw failure;
+      return winner.data;
+    }
   }
 
   const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
@@ -707,10 +752,13 @@ Deno.serve(async (req) => {
     if (project.error) throw new Error(project.error.message);
     if (!project.data || (uid.kind !== "system" && project.data.owner_id !== uid.userId)) return json(req, { error: { code: "NOT_FOUND", message: "Project not found." } }, 404);
 
-    if (action === "motion_eligibility") return json(req, { eligibility: await hfEligibility(env("HF_VIDEO_TOKEN")) });
+    if (action === "motion_eligibility") return json(req, {
+      eligibility: await hfEligibility(env("HF_VIDEO_TOKEN")),
+      source_image: body.assetId ? await inspectApprovedImage(db,projectId,String(body.assetId)) : undefined,
+    });
     if (action === "enqueue_ai_motion") {
       // Same project-owner gate above applies; system is the private scheduler.
-      const job = await enqueueHfMotion(db, projectId, String(body.sceneId || ""), body.acceptedTerms === true);
+      const job = await enqueueHfMotion(db, projectId, String(body.sceneId || ""), body.acceptedTerms === true, body.sourceImageId, body.requestId);
       return json(req, { job });
     }
     if (action === "motion_url") return json(req, { video_url: await motionUrl(db, projectId, String(body.assetId || "")) });

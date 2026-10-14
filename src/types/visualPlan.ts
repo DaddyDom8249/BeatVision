@@ -8,6 +8,8 @@ export interface VisualPlan {
   song_id: string;
   vision_lock_id: string | null;
   status: VisualPlanStatus;
+  revision_number?: number;
+  parent_plan_id?: string | null;
   title: string;
   duration_seconds: number | null;
   creative_thesis: string | null;
