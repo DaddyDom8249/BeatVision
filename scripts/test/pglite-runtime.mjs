@@ -1,6 +1,6 @@
 import { PGlite } from '@electric-sql/pglite';
 import { readFile } from 'node:fs/promises';
-export async function readMigration(name) { return readFile(new URL('../../supabase/migrations/' + name, import.meta.url), 'utf8'); }
+export async function readMigration(name) { return (await readFile(new URL('../../supabase/migrations/' + name, import.meta.url), 'utf8')).replace(/^begin;\s*$/gmi,'').replace(/^commit;\s*$/gmi,''); }
 export async function database() {
  const db = new PGlite();
  await db.exec(`create role authenticated; create role anon; create role service_role bypassrls;

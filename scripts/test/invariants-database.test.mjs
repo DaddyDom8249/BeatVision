@@ -106,7 +106,7 @@ test('missing auth subject cannot approve even through authenticated RPC privile
 });
 test('final rows are server-only, while owner-scoped SELECT survives',async()=>{
  await db.exec(await readMigration('20261008160000_final_videos_baseline.sql'));
- await db.exec(await readMigration('20261014021000_lock_final_video_writes.sql'));
+ await db.exec(await readMigration('20261013224500_lock_final_video_writes.sql'));
  await db.exec('set local role authenticated');
  await db.query('select id from final_videos');
  await assert.rejects(db.query('insert into final_videos(project_id) values($1)',[ids.project]),/permission denied/);
