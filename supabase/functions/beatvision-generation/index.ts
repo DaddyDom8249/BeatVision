@@ -35,13 +35,29 @@ function admin() {
   return createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"));
 }
 
+// Use fixed-size digests to avoid early-return/length-dependent token checks.
+async function timingSafeEqualText(a: string, b: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  const [ha, hb] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode(a)),
+    crypto.subtle.digest("SHA-256", enc.encode(b)),
+  ]);
+  const x = new Uint8Array(ha), y = new Uint8Array(hb);
+  let difference = 0;
+  for (let i = 0; i < x.length; i++) difference |= x[i] ^ y[i];
+  return difference === 0;
+}
+
 async function authenticate(req: Request) {
   const queueSecret = String(req.headers.get("X-BeatVision-Queue-Secret") || "").trim();
   if (queueSecret) {
     const db = admin();
     const config = await db.rpc("get_generation_scheduler_secret");
-    if (config.error) throw new HttpError(500, "SCHEDULER_CONFIG_FAILED", config.error.message);
-    if (config.data && queueSecret === String(config.data)) return { kind: "system" as const, userId: null };
+    if (config.error) throw new HttpError(500, "SCHEDULER_CONFIG_FAILED", "Scheduler configuration is unavailable.");
+    const expected = String(config.data || "");
+    if (expected && await timingSafeEqualText(queueSecret, expected))
+      return { kind: "system" as const, userId: null };
+    throw new HttpError(401, "UNAUTHORIZED_SCHEDULER", "Invalid scheduler credential.");
   }
 
   const token = req.headers.get("Authorization") || "";
