@@ -10,5 +10,6 @@ export const routes = {
   scenes: "/projects/:projectId/scenes",
   motion: "/projects/:projectId/motion",
   video: "/projects/:projectId/video",
+  canvas: "/projects/:projectId/canvas",
   settings: "/settings",
 } as const;

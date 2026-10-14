@@ -8,6 +8,7 @@ import StylePage from "../pages/StylePage";
 import VisualPlanPage from "../pages/VisualPlanPage";
 import SceneProductionPage from "../pages/SceneProductionPage";
 import ProductionWorkspacePage from "../pages/ProductionWorkspacePage";
+import PipelineCanvasPage from "../pages/PipelineCanvasPage";
 import { capturePageview, identifyUser, initAnalytics } from "../lib/analytics";
 import { supabase } from "../lib/supabase/client";
 
@@ -66,6 +67,9 @@ export default function App() {
 
   const productionMatch = path.match(/^\/projects\/([^/]+)\/production\/?$/);
   if (productionMatch) return <ProductionWorkspacePage projectId={productionMatch[1]} />;
+
+  const canvasMatch = path.match(/^\/projects\/([^/]+)\/canvas\/?$/);
+  if (canvasMatch) return <PipelineCanvasPage projectId={canvasMatch[1]} />;
 
   const styleMatch = path.match(/^\/projects\/([^/]+)\/style\/?$/);
   if (styleMatch) return <StylePage projectId={styleMatch[1]} />;
