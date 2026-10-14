@@ -7,9 +7,21 @@ values ('00000000-0000-0000-0000-000000000100','00000000-0000-0000-0000-00000000
 insert into public.songs(project_id,title,artist,audio_path)
 values ('00000000-0000-0000-0000-000000000100','Fixture song','Fixture artist','00000000-0000-0000-0000-000000000001/song.mp3');
 select id,project_id,title,artist,audio_path,audio_revision,lyrics,creative_direction,notes,analysis_status,analysis,analyzed_at,created_at,updated_at from public.songs;
--- Exercise persisted creator gates through the real owner-scoped functions.
+-- Direct AI-analysis updates must fail for authenticated creators.
+-- Analysis is written only by a trusted server, never by browser role grants.
+do $test$ begin
+  begin
+    update public.songs set analysis_status='completed'
+    where project_id='00000000-0000-0000-0000-000000000100';
+    raise exception 'CLIENT_SONG_ANALYSIS_WRITE_ALLOWED';
+  exception when insufficient_privilege then null;
+  end;
+end $test$;
+reset role;
+-- The isolated fixture administrator stands in for server-side analysis writes.
 update public.songs set analysis_status='completed',analysis='{"duration_seconds":4}',analysis_audio_revision=audio_revision,analyzed_at=now()
 where project_id='00000000-0000-0000-0000-000000000100';
+set role authenticated;
 insert into public.world_reports(id,project_id,status)
 values ('00000000-0000-0000-0000-000000000500','00000000-0000-0000-0000-000000000100','completed');
 select public.confirm_world_atomic('00000000-0000-0000-0000-000000000100');
