@@ -66,6 +66,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [image, setImage] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
   const [motion, setMotion] = useState<any>(null);
+  const [motionMeasured, setMotionMeasured] = useState<{ assetId: string; seconds: number } | null>(null);
+  const [pilotMeasured, setPilotMeasured] = useState<{ url: string; seconds: number } | null>(null);
   const [motionGenerating, setMotionGenerating] = useState(false);
   const [freePilotBusy, setFreePilotBusy] = useState(false);
   const [freePilotChecking, setFreePilotChecking] = useState(false);
@@ -87,6 +89,12 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const selectedSceneId = useRef<string | undefined>(scene?.id);
   selectedSceneId.current = scene?.id;
   const busy = generating || motionGenerating || assemblyRunning || assetLoading;
+  const sceneSeconds = scene ? Math.max(0, Number(scene.end_time) - Number(scene.start_time)) : 0;
+  const storedMotionSeconds = Number(motionAssetJob?.output?.arena_status_response?.result?.verification?.measured_duration_seconds);
+  const motionDuration = motionMeasured && motion && motionMeasured.assetId === motion.id ? motionMeasured.seconds
+    : Number.isFinite(storedMotionSeconds) && storedMotionSeconds > 0 ? storedMotionSeconds : null;
+  const motionRemaining = motionDuration === null ? null : Math.max(0, sceneSeconds - motionDuration);
+  const pilotDuration = pilotMeasured && freePilotUrl && pilotMeasured.url === freePilotUrl ? pilotMeasured.seconds : null;
   const pending = (job: any) => ["queued", "submitted", "processing"].includes(job?.status);
   const productionText = useMemo(() => scene ? prompt(scene) : "", [scene]);
 
@@ -119,8 +127,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     const [images, motions, imageJobs, motionJobs] = await Promise.all([
       supabase.from("scene_image_assets").select(imageFields).eq("scene_id", sceneId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("motion_clip_assets").select("*").eq("scene_id", sceneId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("generation_jobs").select("id,status,error,job_type,output").eq("project_id", projectId).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_image").order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("generation_jobs").select("id,status,error,job_type,output").eq("project_id", projectId).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_motion").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("generation_jobs").select("id,status,error,job_type,output,input_snapshot").eq("project_id", projectId).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_image").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("generation_jobs").select("id,status,error,job_type,output,input_snapshot").eq("project_id", projectId).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_motion").order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
     for (const result of [images, motions, imageJobs, motionJobs]) if (result.error) throw result.error;
     if (selectedSceneId.current !== sceneId) return;
@@ -130,7 +138,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         sourceJob = motionJobs.data;
       } else {
         const relatedJob = await supabase.from("generation_jobs")
-          .select("id,status,error,job_type,output")
+          .select("id,status,error,job_type,output,input_snapshot")
           .eq("project_id", projectId)
           .eq("visual_plan_scene_id", sceneId)
           .eq("job_type", "scene_motion")
@@ -228,6 +236,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const generateMotion = () => operateJob("scene_motion");
   useEffect(() => {
     setFreePilotUrl(null);
+    setPilotMeasured(null);
+    setMotionMeasured(null);
     setFreePilotJob(null);
     setFreePilotError(null);
     setFreePilotStatusMessage(null);
@@ -238,6 +248,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     const targetScene = scene.id;
     setFreePilotBusy(true);
     setFreePilotUrl(null);
+    setPilotMeasured(null);
     setFreePilotError(null);
     setFreePilotStatusMessage("Submitting one free AI video request...");
     try {
@@ -453,8 +464,21 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-provider-note">
             <span className="panel-label">MOTION</span>
-            {motion && <p>{isProceduralMotion ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
-            {motion?.video_url ? <video src={motion.video_url} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
+            {motion && <p>{isProceduralMotion ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Saved generative motion · Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
+            {motion?.video_url ? <video key={motion.id} src={motion.video_url} controls playsInline
+  onLoadedMetadata={event => {
+    const seconds = event.currentTarget.duration;
+    if (Number.isFinite(seconds) && seconds > 0) setMotionMeasured({ assetId: motion.id, seconds });
+  }}
+  style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
+            {motion && <p role="status">
+              {motionAssetJob?.input_snapshot?.hf_motion?.duration_seconds
+                ? "LTX requested " + Number(motionAssetJob.input_snapshot.hf_motion.duration_seconds).toFixed(2) + "s. " : ""}
+              {motionDuration === null ? "Actual media duration not loaded yet."
+                : "Decoded clip " + motionDuration.toFixed(2) + "s of scene " + sceneSeconds.toFixed(2) + "s."}
+              {motionRemaining !== null && motionRemaining > 0.05
+                ? " Remaining uncovered scene time: " + motionRemaining.toFixed(2) + "s. Additional approved AI clips required." : ""}
+            </p>}
             <div className="production-actions">
               {!motion && !pending(motionJob) && <button className="primary-button" disabled={busy || image?.status !== "approved"} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
               {pending(motionJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkMotionStatus()}>{motionGenerating ? "Checking…" : "Check Motion Status"}</button>}
@@ -465,7 +489,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-provider-note">
             <span className="panel-label">FREE AI MOVEMENT PREVIEW</span>
-            <p>Wan 2.2 image-to-video on Hugging Face Free ZeroGPU. Requires an approved image and available free-account daily GPU quota. The preview covers up to 3 seconds. No paid fallback, no automatic approval, and no replacement of your saved motion.</p>
+            <p>Separate Wan 2.2 image-to-video preview (not the saved LTX motion clip). Requires an approved image and available Hugging Face free GPU quota. Requests up to 3 seconds, but actual output may be shorter. No paid fallback, automatic approval, or replacement of your saved motion.</p>
             <div className="production-actions">
               <button className="secondary-button" disabled={busy || freePilotBusy || Boolean(freePilotJob) || image?.status !== "approved"} onClick={() => void generateFreePilot()}>
                 {freePilotBusy ? "Submitting free GPU preview…" : freePilotJob ? "Preview queued (no resubmission)" : "Generate free 3-second AI movement"}
@@ -479,7 +503,13 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             {freePilotError && <p className="form-error" role="alert">{freePilotError}</p>}
             {freePilotUrl && (
               <div>
-                <video src={freePilotUrl} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} />
+                <video key={freePilotUrl} src={freePilotUrl} controls playsInline
+                  onLoadedMetadata={event => {
+                    const seconds = event.currentTarget.duration;
+                    if (Number.isFinite(seconds) && seconds > 0) setPilotMeasured({ url: freePilotUrl, seconds });
+                  }} style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} />
+                <p role="status">Model: wan2.2-zerogpu · {pilotDuration === null
+                  ? "Loading actual media duration." : "Decoded preview duration: " + pilotDuration.toFixed(2) + "s."}</p>
                 <p>AI-generated subject movement preview only. The result has not been approved and does not cover the full scene.</p>
                 <a className="secondary-button" href={freePilotUrl} target="_blank" rel="noopener noreferrer">Open free AI motion preview</a>
               </div>

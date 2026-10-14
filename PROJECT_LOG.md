@@ -1015,3 +1015,10 @@ RELEASE BLOCKERS: Depends on Arena draft PR #42. The additional Shotstack media-
 ## 2026-10-13 — Exact-source reconciliation of live generation Edge v30
 
 Compared deployed Supabase beatvision-generation version 30, consisting of index.ts (44,886 bytes) and hf-motion.ts (10,816 bytes), with existing GitHub PR #84 (repair/hf-real-motion-20261013). Both files match PR #84 byte-for-byte. Replaced the older index.ts in this DRAFT final-video hardening branch with the exact deployed index.ts plus only the guarded persistFinalVideo change, and added the exact deployed hf-motion.ts. The PR #84 test harness, generation-auth fixture and free-HF tests are included. The frontend was not rolled back to PR #84; newer production UI fixes remain untouched. Neither live Supabase functions nor existing creator data were modified. No GPU/media provider calls were made. Source-level reconciliation and CI pending; deployment still requires strict zero-cost proof.
+
+
+## 2026-10-13 — Phase 1 only: show decoded AI-motion length and scene coverage (safe frontend release)
+
+The owner's video was independently verified as H.264 704x512, 57 frames at 30 fps, 1.900 seconds. Saved Hugging Face LTX output model was confused with the distinct Wan 2.2 three-second-max preview. Studio now identifies the saved provider/model and original request duration, reads exact browser metadata for existing and temporary preview videos, and displays uncovered approved-scene time. Does not generate new clips, overwrite approved assets, imply extended continuity, or add paid API calls.
+
+**Concurrent production reconciliation blocker:** While developing, beatvision-generation advanced from v31 (two source files) to v32 (four source files) which matches PR #91. Therefore the proposed server-side MP4 track-duration extraction commit cannot be safely deployed from the earlier v31 branch. This PR deliberately resets backend code/test edits to baseline and is frontend-only. Backend parsing changes remain in previous branch commits for a future PR atop the v32 authoritative source. No generator changes will be deployed from this PR. All existing browser tests and build must pass.
