@@ -1136,3 +1136,12 @@ Added top-level UI error boundary; edge body-size caps and non-leaking 500s for 
 Read-only retrieval of active Supabase source confirmed `beatvision-world` v40 (`verify_jwt=false`, 799 lines) and `beatvision-style-draft` v8 (`verify_jwt=true`, 225 lines). PR #103 candidate source is respectively 842 and 270 lines. Both differ materially from deployed production source and the deployed functions have no streamed body cap. Blindly replacing the deployed functions with the PR files could roll back production-only logic or alter authentication; **Edge deployment intentionally blocked pending exact-source reconciliation and tests**. No Edge redeployment performed.
 
 Post-migration Supabase verification additionally confirmed both generated asset tables retain RLS enabled, and neither authenticated nor anon roles have direct DELETE; authenticated direct UPDATE remains denied. Asset SQL hardening is LIVE; streaming body hardening remains source-tested only.
+
+
+## 2026-10-14 — World/Style hardening Edge release: exact-source verification
+
+**Corrected provenance investigation:** Comparing deployed World v40 and Style Draft v8 directly with GitHub `main` a02f746 showed both files were byte-for-byte identical. The earlier concern about undocumented production-only source drift was therefore disproven; the line differences were only the deliberately reviewed PR #103/#104 hardening changes. This new evidence supersedes the preceding temporary deployment blocker.
+
+**Production deployment:** Deployed the exact PR #103 candidate Edge `index.ts` files from tested commit `40c2e1ea44483c40ac753eb8a638102125a6b9ca` using the connected Supabase deployment tool. `beatvision-world` advanced from v40 to v41 ACTIVE with original `verify_jwt=false` custom-auth setting preserved. `beatvision-style-draft` advanced from v8 to v9 ACTIVE with original `verify_jwt=true` setting preserved. No provider, generation, upload, approval, data mutation or paid request invoked.
+
+**Read-back verification:** Retrieved both deployed Edge files after deployment; each matches the exact GitHub candidate text, has a bounded streaming reader and `REQUEST_TOO_LARGE` handling. Live source/configuration verification SUCCESS; actual authenticated function calls, adverse chunked-body overlimit responses, full creator workflow and model-provider behavior NOT VERIFIED in production. No Vercel or Cloudflare deploy, main merge or creative asset replacement. Existing JWT settings unchanged.
