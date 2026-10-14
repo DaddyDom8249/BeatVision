@@ -93,6 +93,10 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { Authorization: "Bearer " + groqKey },
       body: form,
+      signal: AbortSignal.timeout(120_000),
+    }).catch((error) => {
+      if (error?.name === "TimeoutError" || error?.name === "AbortError") throw new Error("GROQ_TIMEOUT: transcription did not respond within 120s.");
+      throw error;
     });
     const raw = await response.text();
     let data: any;

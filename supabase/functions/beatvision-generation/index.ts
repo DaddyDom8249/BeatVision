@@ -191,9 +191,14 @@ function sniffImage(b: Uint8Array): { type: string; ext: string } | null {
   return null;
 }
 
+const ARENA_TIMEOUT_MS = { GET: 30_000, POST: 90_000 } as const;
+
 async function arena(path: string, method: "GET" | "POST", payload: unknown, requestId: string) {
+  // Bounded wait: a hung provider must surface as an explicit failure instead of
+  // pinning the job (and every later job in a drain loop) until the platform kills us.
   const response = await fetch(arenaBase() + path, {
     method,
+    signal: AbortSignal.timeout(ARENA_TIMEOUT_MS[method]),
     headers: {
       Authorization: "Bearer " + arenaToken(),
       "Content-Type": "application/json",
@@ -201,6 +206,11 @@ async function arena(path: string, method: "GET" | "POST", payload: unknown, req
       "X-BeatVision-Request": requestId,
     },
     body: method === "POST" ? JSON.stringify({ payload }) : undefined,
+  }).catch((error) => {
+    if (error?.name === "TimeoutError" || error?.name === "AbortError") {
+      throw new Error(`ARENA_TIMEOUT: Arena ${method} ${path} did not respond within ${ARENA_TIMEOUT_MS[method] / 1000}s.`);
+    }
+    throw error;
   });
   const raw = await response.text();
   let data: any;
