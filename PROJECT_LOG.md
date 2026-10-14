@@ -1099,3 +1099,14 @@ GitHub main (9e6619f) diverged from deployed production/recovery (7b77f329): 105
 Wan 2.2 new job submission is disabled in deployed Edge (WAN_ELIGIBILITY_UNVERIFIED), but its Studio button was enabled and guaranteed a 503. Reconciliation UI now marks it unavailable, keeps existing ticket polling available, and preserves verified free LTX Generate Motion. No new provider calls, paid services, or database mutations. Backend v32 is unchanged.
 
 Verification: source branch CI, production user checks pending. Do not claim full music-video assembly without validated playable MP4 and owner-authenticated end-to-end evidence.
+
+
+## 2026-10-14 — Reconcile live songs storage owner policies in migration history (PR #105; draft)
+
+**Baseline:** GitHub main `a02f74602a49a12a3d7c6414bc5cb08bc3c1cfcf`. Read-only production SQL confirmed four existing `storage.objects` policies for `songs`: authenticated SELECT, INSERT, UPDATE and DELETE scoped to `auth.uid()/...` paths. Repository migrations do not recreate these same named policies, leaving fresh database replay at risk. This is a repository migration gap, not evidence of a live upload outage.
+
+**Source repair:** `supabase/migrations/20261014190000_replay_songs_storage_owner_policies.sql` creates each missing policy conditionally with its existing live name and UID-prefix behavior. It never drops/replaces live policies and preserves ownership semantics; future project-specific tightening is a separate decision. Added `scripts/test/songs-storage-owner-policy.test.mjs` exercising RLS defaults, policy replay twice, owner upload/read/delete and unauthorized other-user/bucket INSERT, UPDATE and DELETE.
+
+**Evidence (first PR branch SHA `f490990b713e4de5600488d9d5069369f999bc0c`):** GitHub Production CI run 38573753196 SUCCESS (`npm install`, `npm test`, `npm run production-audit`, `npm run build` exit 0); isolated PostgreSQL migration replay run 38573753129 SUCCESS; generation enqueue security 38573753156 SUCCESS; legacy storage ownership security 38573753183 SUCCESS. This is repository/CI evidence, not authenticated production upload E2E evidence.
+
+**Release:** PR #105 is DRAFT and unmerged. No live migration, service changes, paid calls, production data writes or creator asset updates. Live production `songs` policies already exist, so applying the idempotent migration should be behavior-preserving, but remains unapplied. Higher-priority P1 approved-media deletion bypass in PR #103 remains a separate release blocker.
