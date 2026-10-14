@@ -137,6 +137,21 @@ function consistencyDirectives(selected: { characters: any[]; environments: any[
   return lines;
 }
 
+// Downscaled copy (<512px each side) uploaded next to the original by the
+// Style Studio and recorded in asset metadata.reference_copy. Signed when
+// present and valid; any absence or signing error falls back to the original.
+const REFERENCE_COPY_MAX_SIDE = 511;
+async function signReferenceCopy(db: any, asset: any): Promise<string | null> {
+  const copy = asset?.metadata?.reference_copy;
+  const path = typeof copy?.storage_path === "string" ? copy.storage_path : "";
+  if (!path || path === String(asset.storage_path)) return null;
+  if (!(Number(copy.width) > 0 && Number(copy.width) <= REFERENCE_COPY_MAX_SIDE && Number(copy.height) > 0 && Number(copy.height) <= REFERENCE_COPY_MAX_SIDE)) return null;
+  try {
+    const signed = await db.storage.from("visual-assets").createSignedUrl(path, 3600);
+    return !signed?.error && signed?.data?.signedUrl ? String(signed.data.signedUrl) : null;
+  } catch { return null; }
+}
+
 async function resolveSceneReferences(db: any, job: any, scene: any, styleBibleId: unknown) {
   const scoped = (table: string, columns: string) => {
     let query = db.from(table).select(columns).eq("project_id", job.project_id);
@@ -152,13 +167,15 @@ async function resolveSceneReferences(db: any, job: any, scene: any, styleBibleI
   const selected = selectSceneReferences(scene, characters.data || [], environments.data || []);
 
   async function images(table: string, ownerKey: string, lineage: string[]) {
-    const result = await db.from(table).select("id,label,storage_path,status,created_at").eq("project_id", job.project_id).in(ownerKey, lineage).eq("status", "approved").order("created_at", { ascending: false }).limit(MAX_REFERENCE_IMAGES_PER_SUBJECT);
+    const result = await db.from(table).select("id,label,storage_path,status,created_at,metadata").eq("project_id", job.project_id).in(ownerKey, lineage).eq("status", "approved").order("created_at", { ascending: false }).limit(MAX_REFERENCE_IMAGES_PER_SUBJECT);
     if (result.error) throw new Error("REFERENCE_LOOKUP_FAILED: " + result.error.message);
     const out = [];
     for (const asset of result.data || []) {
+      const small = await signReferenceCopy(db, asset);
+      if (small) { out.push({ asset_id: String(asset.id), label: String(asset.label || ""), image_url: small, image_variant: "reference_copy" }); continue; }
       const signed = await db.storage.from("visual-assets").createSignedUrl(String(asset.storage_path), 3600);
       if (signed.error || !signed.data?.signedUrl) throw new Error("REFERENCE_IMAGE_SIGNING_FAILED: " + (signed.error?.message || "No signed URL returned."));
-      out.push({ asset_id: String(asset.id), label: String(asset.label || ""), image_url: String(signed.data.signedUrl) });
+      out.push({ asset_id: String(asset.id), label: String(asset.label || ""), image_url: String(signed.data.signedUrl), image_variant: "original" });
     }
     return out;
   }

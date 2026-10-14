@@ -75,7 +75,7 @@ test('scene image payload carries approved reference images and directives', asy
     const payload = await rt.bridgePayload(db, job());
     assert.equal(payload.references.characters.length, 1);
     assert.equal(payload.references.characters[0].name, 'Mara');
-    assert.deepEqual(payload.references.characters[0].images, [{ asset_id: 'a1', label: 'mara.png', image_url: 'https://signed.test/u/mara.png' }]);
+    assert.deepEqual(payload.references.characters[0].images, [{ asset_id: 'a1', label: 'mara.png', image_url: 'https://signed.test/u/mara.png', image_variant: 'original' }]);
     assert.equal(payload.references.environments[0].images[0].image_url, 'https://signed.test/u/pier.png');
     assert.match(payload.scene.consistency_directives.join('\n'), /Mara.*silver braid, scar/);
     assert.match(payload.scene.consistency_directives.join('\n'), /Neon Pier.*magenta signage/);
