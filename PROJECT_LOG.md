@@ -1103,3 +1103,20 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 ## 2026-10-14 — Hardening pass (branch repair/hardening-2026-10-14, not merged/deployed)
 
 Added top-level UI error boundary; edge body-size caps and non-leaking 500s for style-draft and world; additive migration making generated asset media immutable and approved assets undeletable (NOT applied); Vercel security headers; client-secret regression tests; .ui-test-* gitignore. Arena: 8 MB request-size cap (separate PR). Full report and per-PR findings in the PR description. No production data change, no deploy, no paid calls.
+
+
+## 2026-10-14 — Approved-media deletion and project cascade security repair
+
+**Repository baseline:** `main` a02f74602a49a12a3d7c6414bc5cb08bc3c1cfcf. Existing hardening PR #103 head 2bf75192d6c4b3ad987c75764c7ce9ed6fa9df34. All source edits are on repair/hardening-2026-10-14, not main.
+
+**Confirmed P1 bypass:** Existing proposed generated-media trigger denied DELETE only while status/approved was currently true. Privileged updater could demote approved -> generated and delete the row. Table-level TRUNCATE was granted to service_role and bypassed row triggers. Prior PGlite regression reproduced the row's deletion before patch; existing production grants were verified read-only (no live deletion attempted).
+
+**Fix:** `20261014180000_approved_asset_media_immutability.sql` now forbids direct deletion of all generated image/motion asset rows while their owning project exists, regardless of approval status. This preserves retired approved takes. REVOKE TRUNCATE removes the non-row-trigger bypass for app roles, without revoking service_role UPDATE/DELETE needed by legitimate backend operations. Original immutable media and lineage fields remain guarded. Original approval status transitions still work. Privileged PostgreSQL owners retain inherent DDL authority; control them via access restrictions.
+
+**Database compatibility defect, reproduced:** In real isolated PostgreSQL, valid project cascade failed first at confirmed World (Actions 38620324234), then at approved Style (38620798868). These were pre-existing unconditional immutable DELETE triggers, independent of media changes. The same unapplied migration now conditionally permits DELETE only when the project's parent record is already absent, across confirmed World, approved Phase 3, Vision Lock, approved Visual Plans/scenes. Direct asset/World/Style/Plan/lock deletion remains guarded while the project exists; owner checks/RLS and historical data are unchanged.
+
+**Dependent PR:** Streaming request byte guard PR #104 was merged to this repair branch (merge SHA 09793e1f2423f45128b54335ccad01128d8834c2), NOT to main. PR #103 now includes both the original hardening and streamed request caps.
+
+**Regression:** Added source test of the demote/delete bypass and PGlite FK cascade; added `scripts/test/sql/approved-asset-real-postgres.sql` to the isolated database-replay workflow. It validates actual service_role privileges, TRUNCATE denial, approved/demoted DELETE failure, take preservation, direct immutability, real parent-project cascade, with fixture operations wrapped in ROLLBACK. Final tested code SHA 29013c751c000f5c22dfb9726e2629e0cc2aa99a: Production CI 38621247888 SUCCESS (`npm test`: 265 tests/264 passed/1 skipped/0 failed; `npm run production-audit` and `npm run build` successful); isolated PostgreSQL replay 38621247460 SUCCESS; generation enqueue security 38621247852 SUCCESS; legacy storage ownership security 38621247812 SUCCESS.
+
+**Production state:** No live migration, deletion, asset replacement, provider request, paid action, Edge deployment or main merge. Full authenticated browser pipeline and live migration application NOT VERIFIED. Release requires confirming no production-only triggers/grants differ from the tested repository before any apply.
