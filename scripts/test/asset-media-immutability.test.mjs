@@ -25,6 +25,12 @@ test('baseline (before migration): service role can silently swap approved media
  await db.query("update scene_image_assets set image_url='https://evil.test/x.jpg'");
  assert.equal((await db.query('select image_url from scene_image_assets')).rows[0].image_url,'https://evil.test/x.jpg');
 });
+
+test('baseline: approval can be cleared and then row erased before migration', async () => {
+  await db.query("update motion_clip_assets set status='generated', approved=false");
+  await db.query('delete from motion_clip_assets');
+  assert.equal((await db.query('select count(*)::int as n from motion_clip_assets')).rows[0].n,0);
+});
 test('migration blocks media rewrite and deletes, allows status transitions',async()=>{
  await db.exec(await readMigration('20261014180000_approved_asset_media_immutability.sql'));
  await db.exec('savepoint a');
