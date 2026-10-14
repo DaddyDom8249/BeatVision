@@ -1,5 +1,9 @@
 # BeatVision Project Log
 
+## 2026-10-14 — Sub-512px reference copies for consistency references (PR #94, not deployed)
+
+**Change:** Style Studio uploads of character/environment reference images now also store a canvas-downscaled PNG copy (longest side 511px, aspect ratio preserved, strictly under 512x512 per Cloudflare flux-2-klein-4b) at `<original path>.ref511.png` in `visual-assets`, recorded in the asset row's existing `metadata.reference_copy` jsonb. The original upload is untouched (`upsert: false`, separate path). Copy creation is best effort; failure leaves the original only. `beatvision-generation` signs the copy when metadata records a valid one and falls back to the original otherwise (legacy assets, missing object, signing error), recording `image_variant: "reference_copy" | "original"` per image. No migration. Images already ≤511px get no copy. Existing approved assets are not backfilled. Not verified live; edge function not deployed.
+
 ## 2026-10-10 — Gate final assembly on every scene's persisted approved motion (repair branch)
 
 **Objective:** Motion → Final Assembly (P0) only. Baseline main HEAD: `7dbea8b8009c68ba2e806a467790cc7d5d75141a`. AGENTS.md and current Project Log reviewed; source and recent assembly PRs inspected.
@@ -715,3 +719,8 @@ Follow-up: user explicitly authorized GitHub publication and frontend deployment
 **Repair:** Added only the two active PR #36 Vercel origins to the World, Style Draft, and Generation function allowlists. Arbitrary origins remain denied. Added regression coverage for preview preflight behavior.
 
 **Verification:** The new tests failed against the old allowlists, then passed after the repair. Full suite passed 83/83; production audit and production build passed. Deployed World v34, Style Draft v2, and Generation v20. A live `OPTIONS` request to World returned HTTP 200 and the exact requesting PR preview origin. The authenticated `Reveal World` POST still requires a user browser retry and is not claimed verified.
+
+## 2026-10-14 — Phase 1 consistency references (feature/consistency-references)
+- scene_image jobs now resolve approved characters/environments (latest approved revision, scoped to the frozen style bible) whose names appear in the frozen scene direction, and send their approved reference images (signed `visual-assets` URLs, max 3 per subject) as `payload.references` plus text `scene.consistency_directives`.
+- Draft records/assets are never used; lookup/signing failures fail the job with REFERENCE_LOOKUP_FAILED / REFERENCE_IMAGE_SIGNING_FAILED. No migration. Frozen snapshot not mutated.
+- NOT VERIFIED: Arena gateway consumption of `references` (flux-schnell is text-to-image; directives reach the prompt only if the gateway serializes `scene`). Edge function not deployed.

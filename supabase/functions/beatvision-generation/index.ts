@@ -77,6 +77,116 @@ function modelFor(type: string) {
   return type === "scene_image" ? "flux-schnell" : type === "scene_motion" ? "ltx-video" : null;
 }
 
+// ---- Consistency references (Phase 1) ----
+// Approved characters/environments whose names appear in a scene's direction
+// are attached to that scene's generation payload, together with their
+// approved reference images, so recurring subjects and locations stay
+// consistent across shots. Only approved records/assets are used; nothing is
+// modified, and lookup/signing failures fail the job explicitly.
+const REFERENCE_SCENE_FIELDS = ["title", "visual_direction", "camera_direction", "movement_direction", "location", "mood", "lyric_moment", "continuity_notes"];
+const MAX_REFERENCE_IMAGES_PER_SUBJECT = 3;
+
+function normalizeForMatch(value: unknown) {
+  return " " + String(value ?? "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim() + " ";
+}
+
+function sceneMentions(scene: any, name: unknown, fields = REFERENCE_SCENE_FIELDS) {
+  const needle = normalizeForMatch(name).trim();
+  if (!needle || !scene || typeof scene !== "object") return false;
+  return fields.some((field) => normalizeForMatch(scene[field]).includes(" " + needle + " "));
+}
+
+// Latest approved revision per lineage, with every ancestor id so approved
+// assets uploaded to earlier revisions are inherited.
+function currentApprovedSubjects(rows: any[], parentKey: string) {
+  const byId = new Map(rows.map((row) => [String(row.id), row]));
+  const superseded = new Set(rows.filter((row) => row[parentKey] && row.status === "approved").map((row) => String(row[parentKey])));
+  return rows.filter((row) => row.status === "approved" && !superseded.has(String(row.id))).map((row) => {
+    const lineage: string[] = [];
+    let cursor: any = row;
+    while (cursor && !lineage.includes(String(cursor.id))) {
+      lineage.push(String(cursor.id));
+      cursor = cursor[parentKey] ? byId.get(String(cursor[parentKey])) : null;
+    }
+    return { ...row, lineage };
+  });
+}
+
+function selectSceneReferences(scene: any, characters: any[], environments: any[]) {
+  const chars = currentApprovedSubjects(characters, "supersedes_character_id").filter((row) => sceneMentions(scene, row.name));
+  const envs = currentApprovedSubjects(environments, "supersedes_environment_id").filter((row) =>
+    sceneMentions(scene, row.name, ["location"]) || sceneMentions(scene, row.name));
+  return { characters: chars, environments: envs };
+}
+
+function sheetSummary(sheet: any, fields: string[]) {
+  if (!sheet || typeof sheet !== "object") return "";
+  return fields.map((field) => String(sheet[field] ?? "").trim() ? field + ": " + String(sheet[field]).trim() : "").filter(Boolean).join("; ").slice(0, 600);
+}
+
+function consistencyDirectives(selected: { characters: any[]; environments: any[] }) {
+  const lines: string[] = [];
+  for (const row of selected.characters) {
+    const summary = sheetSummary(row.sheet, ["appearance", "wardrobe", "continuity"]);
+    lines.push("Character \"" + row.name + "\" must match the approved character sheet" + (summary ? " (" + summary + ")" : "") + ".");
+  }
+  for (const row of selected.environments) {
+    const summary = sheetSummary(row.sheet, ["architecture", "surfaces", "lighting", "atmosphere", "continuity"]);
+    lines.push("Location \"" + row.name + "\" must match the approved environment sheet" + (summary ? " (" + summary + ")" : "") + ".");
+  }
+  return lines;
+}
+
+// Downscaled copy (<512px each side) uploaded next to the original by the
+// Style Studio and recorded in asset metadata.reference_copy. Signed when
+// present and valid; any absence or signing error falls back to the original.
+const REFERENCE_COPY_MAX_SIDE = 511;
+async function signReferenceCopy(db: any, asset: any): Promise<string | null> {
+  const copy = asset?.metadata?.reference_copy;
+  const path = typeof copy?.storage_path === "string" ? copy.storage_path : "";
+  if (!path || path === String(asset.storage_path)) return null;
+  if (!(Number(copy.width) > 0 && Number(copy.width) <= REFERENCE_COPY_MAX_SIDE && Number(copy.height) > 0 && Number(copy.height) <= REFERENCE_COPY_MAX_SIDE)) return null;
+  try {
+    const signed = await db.storage.from("visual-assets").createSignedUrl(path, 3600);
+    return !signed?.error && signed?.data?.signedUrl ? String(signed.data.signedUrl) : null;
+  } catch { return null; }
+}
+
+async function resolveSceneReferences(db: any, job: any, scene: any, styleBibleId: unknown) {
+  const scoped = (table: string, columns: string) => {
+    let query = db.from(table).select(columns).eq("project_id", job.project_id);
+    if (styleBibleId) query = query.eq("style_bible_id", String(styleBibleId));
+    return query;
+  };
+  const [characters, environments] = await Promise.all([
+    scoped("characters", "id,name,status,sheet,supersedes_character_id"),
+    scoped("environments", "id,name,status,sheet,supersedes_environment_id"),
+  ]);
+  if (characters.error) throw new Error("REFERENCE_LOOKUP_FAILED: " + characters.error.message);
+  if (environments.error) throw new Error("REFERENCE_LOOKUP_FAILED: " + environments.error.message);
+  const selected = selectSceneReferences(scene, characters.data || [], environments.data || []);
+
+  async function images(table: string, ownerKey: string, lineage: string[]) {
+    const result = await db.from(table).select("id,label,storage_path,status,created_at,metadata").eq("project_id", job.project_id).in(ownerKey, lineage).eq("status", "approved").order("created_at", { ascending: false }).limit(MAX_REFERENCE_IMAGES_PER_SUBJECT);
+    if (result.error) throw new Error("REFERENCE_LOOKUP_FAILED: " + result.error.message);
+    const out = [];
+    for (const asset of result.data || []) {
+      const small = await signReferenceCopy(db, asset);
+      if (small) { out.push({ asset_id: String(asset.id), label: String(asset.label || ""), image_url: small, image_variant: "reference_copy" }); continue; }
+      const signed = await db.storage.from("visual-assets").createSignedUrl(String(asset.storage_path), 3600);
+      if (signed.error || !signed.data?.signedUrl) throw new Error("REFERENCE_IMAGE_SIGNING_FAILED: " + (signed.error?.message || "No signed URL returned."));
+      out.push({ asset_id: String(asset.id), label: String(asset.label || ""), image_url: String(signed.data.signedUrl), image_variant: "original" });
+    }
+    return out;
+  }
+
+  const characterRefs = [];
+  for (const row of selected.characters) characterRefs.push({ id: String(row.id), name: String(row.name), images: await images("character_assets", "character_id", row.lineage) });
+  const environmentRefs = [];
+  for (const row of selected.environments) environmentRefs.push({ id: String(row.id), name: String(row.name), images: await images("environment_assets", "environment_id", row.lineage) });
+  return { characters: characterRefs, environments: environmentRefs, directives: consistencyDirectives(selected) };
+}
+
 async function bridgePayload(db: any, job: any) {
   const snapshot = job.input_snapshot || {};
   const lock = snapshot.vision_snapshot || {};
@@ -128,6 +238,11 @@ async function bridgePayload(db: any, job: any) {
     if (!/^https?:\/\//i.test(motionImageUrl)) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion requires an approved real scene image.");
     images = { images: [{ image_url: motionImageUrl, scene_id: String(imageResult.data.scene_id), approved: true }] };
   }
+  let references: Awaited<ReturnType<typeof resolveSceneReferences>> | undefined;
+  if (job.job_type === "scene_image") references = await resolveSceneReferences(db, job, scene, lock.style_bible_id || style.id);
+  const sceneForPayload = references && references.directives.length
+    ? { ...scene, consistency_directives: references.directives }
+    : scene;
   return {
     source: { application: "beatvision", contract: "2.0" },
     project: { id: job.project_id },
@@ -152,8 +267,9 @@ async function bridgePayload(db: any, job: any) {
       locked: true,
       version: String(lock.id || job.vision_lock_id),
     },
-    scene,
+    scene: sceneForPayload,
     images,
+    references: references ? { characters: references.characters, environments: references.environments } : undefined,
     generation: {
       cost_class: "free",
       model: modelFor(job.job_type),

@@ -122,6 +122,7 @@ export default function EnvironmentEditor({
         });
       }}>{environment.status === "approved" ? "Environment Approved" : "Approve Environment"}</button>
       <h4>Environment Assets</h4>
+      <p className="style-muted">Approved reference images of an approved environment are sent with every scene image generation whose scene location or direction mentions “{environment.name}”.</p>
       <input
         type="file"
         accept="image/*"

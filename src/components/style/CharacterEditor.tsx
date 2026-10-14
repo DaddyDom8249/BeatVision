@@ -120,6 +120,7 @@ export default function CharacterEditor({
         });
       }}>{character.status === "approved" ? "Character Approved" : "Approve Character"}</button>
       <h4>Character Assets</h4>
+      <p className="style-muted">Approved reference images of an approved character are sent with every scene image generation whose scene direction mentions “{character.name}”.</p>
       <input
         type="file"
         accept="image/*"
