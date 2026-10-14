@@ -21,7 +21,9 @@ test('Actual saved and Wan durations are decoded from the media rather than a re
 test('Missing scene coverage is explicit and no extra generation is launched',()=>{
   assert.match(page,/Remaining uncovered scene time:/);
   assert.match(page,/Additional approved AI clips required\./);
-  assert.doesNotMatch(page,/setInterval\([^]*?generateFreePilot\(/);
+  assert.match(page,/Only the existing job is polled; no new generation is submitted/);
+  const statusEffect=page.slice(page.indexOf('if (!freePilotJob || freePilotJob.sceneId !== scene?.id)'),page.indexOf('const checkMotionStatus ='));
+  assert.doesNotMatch(statusEffect,/generateFreePilot\(/);
   assert.match(gen,/requested_duration_seconds: HF_MOTION\.duration/);
   assert.match(gen,/duration_seconds: verification\.measured_duration_seconds/);
 });

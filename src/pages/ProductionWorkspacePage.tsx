@@ -91,10 +91,10 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const busy = generating || motionGenerating || assemblyRunning || assetLoading;
   const sceneSeconds = scene ? Math.max(0, Number(scene.end_time) - Number(scene.start_time)) : 0;
   const storedMotionSeconds = Number(motionAssetJob?.output?.arena_status_response?.result?.verification?.measured_duration_seconds);
-  const motionDuration = motionMeasured?.assetId === motion?.id ? motionMeasured.seconds
+  const motionDuration = motionMeasured && motion && motionMeasured.assetId === motion.id ? motionMeasured.seconds
     : Number.isFinite(storedMotionSeconds) && storedMotionSeconds > 0 ? storedMotionSeconds : null;
   const motionRemaining = motionDuration === null ? null : Math.max(0, sceneSeconds - motionDuration);
-  const pilotDuration = pilotMeasured?.url === freePilotUrl ? pilotMeasured.seconds : null;
+  const pilotDuration = pilotMeasured && freePilotUrl && pilotMeasured.url === freePilotUrl ? pilotMeasured.seconds : null;
   const pending = (job: any) => ["queued", "submitted", "processing"].includes(job?.status);
   const productionText = useMemo(() => scene ? prompt(scene) : "", [scene]);
 
