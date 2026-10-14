@@ -30,6 +30,7 @@ export default function SceneProductionPage({ projectId }: { projectId: string }
   const [scenes, setScenes] = useState<VisualPlanScene[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [takeSummary, setTakeSummary] = useState<Record<string, { takes: number; approved: number }>>({});
   const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,7 +49,18 @@ export default function SceneProductionPage({ projectId }: { projectId: string }
         .order("scene_number", { ascending: true });
       if (sceneResult.error) { if (active) { setError(sceneResult.error.message); setLoading(false); } return; }
 
+      // Read-only take summary; retakes and approvals happen in the Production Workspace.
+      const takeResult = await supabase.from("scene_image_assets").select("scene_id,approved,status")
+        .eq("project_id", projectId).eq("visual_plan_id", planResult.data.id);
+      const summary: Record<string, { takes: number; approved: number }> = {};
+      for (const row of (takeResult.error ? [] : takeResult.data ?? []) as Array<{ scene_id: string; approved: boolean; status: string }>) {
+        const entry = summary[row.scene_id] ??= { takes: 0, approved: 0 };
+        entry.takes += 1;
+        if (row.approved && row.status === "approved") entry.approved += 1;
+      }
+
       if (active) {
+        setTakeSummary(summary);
         setPlan(planResult.data as VisualPlan);
         setScenes((sceneResult.data ?? []) as VisualPlanScene[]);
         setLoading(false);
@@ -98,6 +110,12 @@ export default function SceneProductionPage({ projectId }: { projectId: string }
             <div><strong>Continuity</strong><p>{scene.continuity_notes}</p></div>
             <div><strong>Lyric / music</strong><p>{scene.lyric_moment || "Follow the analyzed section."}</p></div>
           </div>
+          <p data-testid="take-summary">{(() => {
+            const entry = takeSummary[scene.id];
+            if (!entry?.takes) return "No image takes yet.";
+            const state = entry.approved === 1 ? "1 approved" : entry.approved === 0 ? "none approved" : "approval conflict";
+            return entry.takes + " image take" + (entry.takes === 1 ? "" : "s") + " · " + state;
+          })()}</p>
           <button className="secondary-button" onClick={() => void copy(scene)}>{copied === scene.id ? "Copied" : "Copy production brief"}</button>
         </article>
       ))}
