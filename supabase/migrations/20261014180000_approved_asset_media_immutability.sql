@@ -42,3 +42,30 @@ revoke all on function public.prevent_generated_asset_media_mutation() from publ
 -- this closes the application-service-role bypass, not trusted DBA access.
 revoke truncate on public.scene_image_assets, public.motion_clip_assets
   from public, anon, authenticated, service_role;
+
+
+-- Pre-existing compatibility defect exposed by the real PostgreSQL cascade
+-- regression: a project DELETE cascades to its confirmed World revisions, but
+-- their BEFORE DELETE trigger unconditionally rejects those child deletions.
+-- Retain the existing confirmed-World immutability message and UPDATE guard.
+-- A direct World DELETE still fails while its parent project exists.
+create or replace function public.prevent_confirmed_world_mutation()
+returns trigger language plpgsql set search_path = public, pg_temp as $$
+begin
+  if tg_op = 'DELETE' and not exists (
+    select 1 from public.projects p where p.id = old.project_id
+  ) then
+    return old;
+  end if;
+
+  if old.confirmed_at is not null then
+    raise exception using
+      errcode = '55000',
+      message = 'Confirmed World revisions are immutable. Create a new revision instead.',
+      detail = 'world_report_id=' || old.id::text ||
+               ', world_id=' || old.world_id::text ||
+               ', revision_number=' || old.revision_number::text;
+  end if;
+  return case when tg_op = 'DELETE' then old else new end;
+end;
+$$;
