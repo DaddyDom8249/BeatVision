@@ -21,8 +21,10 @@ test("pilot truncates preview without claiming scene length",()=>{
   assert.match(edge,/Math\.min\(MAX_SECONDS,originalDuration\)/);
   assert.match(edge,/original_scene_duration_seconds:originalDuration/);
 });
-test("Studio includes real-motion pilot with explicit limit",()=>{
-  assert.match(studio,/Generate free 3-second AI movement/);
+test("Studio shows disabled Wan new submission and keeps existing status polling",()=>{
+  assert.match(studio,/Wan AI preview unavailable/);
+  assert.match(studio,/const wanPreviewEligibilityVerified = false/);
+  assert.match(studio,/disabled=\{!wanPreviewEligibilityVerified/);
   assert.match(studio,/beatvision-free-motion-pilot/);
   assert.match(studio,/does not cover the full scene/);
   assert.match(studio,/freePilotUrl/);

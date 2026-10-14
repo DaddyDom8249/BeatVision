@@ -19,7 +19,7 @@ await writeFile(join(dir, 'stub.mjs'), 'export const supabase = new Proxy({}, { 
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, stored = false, rpcError = null, runJob = null } = {}) {
+async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, stored = false, rpcError = null, runJob = null, approvedMotionSceneIds = ['scene-1'] } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
@@ -38,7 +38,7 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
           const data = table === 'visual_plans' ? { id: 'plan-1', status: 'approved', title: 'Locked plan' }
             : table === 'visual_plan_scenes' ? [{ id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved' }]
             : table === 'scene_image_assets' ? imageAssets ?? image
-            : table === 'motion_clip_assets' ? motionAssets ?? motionAsset
+            : table === 'motion_clip_assets' ? (filters.approved === true ? approvedMotionSceneIds.map((scene_id,i)=>({id:'approved-'+i,scene_id,status:'approved',approved:true,video_url:'https://fixture.test/'+i+'.mp4'})) : motionAssets ?? motionAsset)
             : table === 'generation_jobs' && filters.id ? (historicalQueries.push({ ...filters }), historicalJob?.id === filters.id ? historicalJob : null)
             : table === 'generation_jobs' ? (filters.job_type === 'scene_motion' ? motionJob : filters.job_type === 'scene_image' ? imageJob : assemblyJob) : null;
           return Promise.resolve({ data, error: null }).then(resolve);
@@ -61,6 +61,7 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
     calls,
     rpcCalls,
     historicalQueries,
+    button: text => [...document.querySelectorAll('button')].find(b=>b.textContent === text),
     click: async text => {
       if (text === 'Generate Motion') { const box = document.querySelector('input[type=checkbox]'); if (box && !box.checked) await act(async () => { box.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); }); }
       const button = [...document.querySelectorAll('button')].find(b => b.textContent === text);
@@ -279,4 +280,31 @@ test('Generate Another Variant requests an append-only idempotent image attempt'
   assert.equal(view.rpcCalls[0].args.p_project_id,'project-1');
   assert.match(view.rpcCalls[0].args.p_request_id,/^[0-9a-f-]{36}$/);
  }finally{await view.cleanup()}
+});
+
+test('final assembly stays disabled if the plan has no approved motion',async()=>{
+ const view=await mount({approvedMotionSceneIds:[]});
+ try{
+   assert.equal(view.button('Assemble Final Video')?.disabled,true);
+   assert.match(document.body.textContent,/1 of 1 scenes still need exactly one approved real motion clip/);
+   assert.equal(view.rpcCalls.length,0);
+ } finally {await view.cleanup();}
+});
+test('extra approved clips for a scene do not satisfy exactly-one constraint',async()=>{
+ const view=await mount({approvedMotionSceneIds:['scene-1','scene-1']});
+ try{
+   assert.equal(view.button('Assemble Final Video')?.disabled,true);
+   assert.equal(view.rpcCalls.length,0);
+ } finally {await view.cleanup();}
+});
+test('approval revoked after initial render is rechecked before enqueue',async()=>{
+ const approvedMotionSceneIds=['scene-1'];
+ const view=await mount({approvedMotionSceneIds});
+ try{
+   assert.equal(view.button('Assemble Final Video')?.disabled,false);
+   approvedMotionSceneIds.length=0;
+   await view.click('Assemble Final Video');
+   assert.equal(view.rpcCalls.length,0);
+   assert.match(document.body.textContent,/1 of 1 scenes still need exactly one approved real motion clip/);
+ } finally {await view.cleanup();}
 });
