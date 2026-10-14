@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { DEFAULT_MODEL, MODEL_CATALOG, PRICING_VERSION, estimateCost, findModel, missingEnv, requiresApproval } from "../_shared/model-catalog.ts";
 
 const ALLOWED_ORIGINS = new Set([
   "https://beat-vision-theta.vercel.app",
@@ -77,7 +78,7 @@ function modelFor(type: string) {
   return type === "scene_image" ? "flux-schnell" : type === "scene_motion" ? "ltx-video" : null;
 }
 
-async function bridgePayload(db: any, job: any) {
+async function bridgePayload(db: any, job: any, providerModel: string | null = modelFor(job.job_type)) {
   const snapshot = job.input_snapshot || {};
   const lock = snapshot.vision_snapshot || {};
   const song = lock.song || {};
@@ -108,7 +109,7 @@ async function bridgePayload(db: any, job: any) {
       storyboard: { songDuration: duration, song_duration: duration, scenes: scenes.map((item: any) => ({ ...item, scene: Number(item.scene_number), startTime: Number(item.start_time), endTime: Number(item.end_time) })), visual_beats: scenes.map((item: any) => ({ ...item, scene: Number(item.scene_number), startTime: Number(item.start_time), endTime: Number(item.end_time) })) },
       motion: { clips: motionClips },
       audio_data: signed.data.signedUrl,
-      generation: { cost_class: "free", model: null, idempotency_key: job.idempotency_key, job_id: job.id },
+      generation: { cost_class: "approved", model: providerModel, idempotency_key: job.idempotency_key, job_id: job.id },
     };
   }
 
@@ -155,8 +156,8 @@ async function bridgePayload(db: any, job: any) {
     scene,
     images,
     generation: {
-      cost_class: "free",
-      model: modelFor(job.job_type),
+      cost_class: "approved",
+      model: providerModel,
       idempotency_key: job.idempotency_key,
       job_id: job.id,
     },
@@ -361,10 +362,10 @@ function terminalState(response: Response, data: any, jobType?: string) {
   return "processing";
 }
 
-async function setFailed(db: any, id: string, message: string, detail?: unknown) {
+async function setFailed(db: any, id: string, message: string, detail?: unknown, code = "ARENA_GENERATION_FAILED") {
   const res = await db.from("generation_jobs").update({
     status: "failed",
-    error: { code: "ARENA_GENERATION_FAILED", message: message.slice(0, 1200), detail },
+    error: { code, message: message.slice(0, 1200), detail },
   }).eq("id", id).in("status", ["queued", "submitted", "processing"]).select("id");
   if (res.error) throw new Error("SET_FAILED_PERSIST_FAILED: " + res.error.message);
   if (!res.data || res.data.length === 0) {
@@ -372,11 +373,65 @@ async function setFailed(db: any, id: string, message: string, detail?: unknown)
   }
 }
 
+class CostGateError extends Error {
+  code: string;
+  constructor(code: string, message: string) { super(code + ": " + message); this.code = code; }
+}
+
+// Server-side enforcement of the cost gate. A provider is only called when
+// the job's model is in the catalog, its server-side credentials exist, and
+// (unless the model is verifiably free) the owner recorded an unexpired
+// approval for this exact job target at the current pricing version. The
+// approval is consumed once, atomically, and linked to the job.
+async function resolveApprovedModel(db: any, job: any) {
+  const linked = await db.from("generation_cost_approvals").select("*").eq("consumed_by_job_id", job.id).maybeSingle();
+  if (linked.error) throw new CostGateError("COST_APPROVAL_LOOKUP_FAILED", linked.error.message);
+  let approval = linked.data;
+  if (!approval) {
+    let query = db.from("generation_cost_approvals").select("*")
+      .eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("job_type", job.job_type)
+      .is("consumed_by_job_id", null).gt("expires_at", new Date().toISOString());
+    query = job.job_type === "assembly" ? query.is("scene_id", null) : query.eq("scene_id", job.visual_plan_scene_id);
+    const found = await query.order("approved_at", { ascending: false }).limit(1).maybeSingle();
+    if (found.error) throw new CostGateError("COST_APPROVAL_LOOKUP_FAILED", found.error.message);
+    approval = found.data;
+  }
+
+  const model = findModel(approval ? approval.model_id : DEFAULT_MODEL[job.job_type as keyof typeof DEFAULT_MODEL]);
+  if (!model || model.jobType !== job.job_type) throw new CostGateError("MODEL_NOT_SUPPORTED", `Model '${approval?.model_id ?? ""}' is not available for ${job.job_type}.`);
+  const missing = missingEnv(model, env);
+  if (missing.length) throw new CostGateError("PROVIDER_UNAVAILABLE", `${model.label} is not configured on the server (missing ${missing.join(", ")}).`);
+  if (!approval) {
+    if (requiresApproval(model)) throw new CostGateError("COST_APPROVAL_REQUIRED", `${model.label} is not verifiably free; an explicit cost approval is required before rendering.`);
+    return { model, approval: null };
+  }
+  if (approval.pricing_version !== PRICING_VERSION) throw new CostGateError("COST_APPROVAL_STALE", "Pricing changed after approval; review the new estimate and approve again.");
+  if (!approval.consumed_by_job_id) {
+    const consumed = await db.from("generation_cost_approvals").update({ consumed_by_job_id: job.id, consumed_at: new Date().toISOString() })
+      .eq("id", approval.id).is("consumed_by_job_id", null).select("*").maybeSingle();
+    if (consumed.error) throw new CostGateError("COST_APPROVAL_CONSUME_FAILED", consumed.error.message);
+    if (!consumed.data) throw new CostGateError("COST_APPROVAL_REQUIRED", "The approval was already used by another job; approve this render again.");
+    approval = consumed.data;
+  }
+  return { model, approval };
+}
+
 async function run(db: any, job: any) {
   if (!["scene_image", "scene_motion", "assembly"].includes(String(job.job_type))) {
     throw new Error("GENERATION_JOB_TYPE_NOT_SUPPORTED: only scene_image, scene_motion, and assembly are controller-backed.");
   }
   if (job.status !== "queued") return job;
+
+  let gated: Awaited<ReturnType<typeof resolveApprovedModel>>;
+  try {
+    gated = await resolveApprovedModel(db, job);
+  } catch (error) {
+    const code = error instanceof CostGateError ? error.code : "COST_GATE_FAILED";
+    await setFailed(db, job.id, error instanceof Error ? error.message : String(error), undefined, code);
+    const failed = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+    if (failed.error) throw new Error(failed.error.message);
+    return failed.data;
+  }
 
   const requestId = "beatvision:" + job.id;
   const claim = await db.from("generation_jobs")
@@ -406,7 +461,7 @@ async function run(db: any, job: any) {
 
   try {
     const path = job.job_type === "scene_image" ? "/v2/scene-image" : job.job_type === "scene_motion" ? "/v2/animate" : "/v2/assemble";
-    const result = await arena(path, "POST", await bridgePayload(db, job), requestId);
+    const result = await arena(path, "POST", await bridgePayload(db, job, gated.model.providerModel), requestId);
     const state = terminalState(result.response, result.data, job.job_type);
 
     if (state === "failed") {
@@ -539,8 +594,18 @@ Deno.serve(async (req) => {
       return json(req, { ok: true, scanned: (pending.data || []).length, results });
     }
 
+    if (action === "models") {
+      // Availability is derived from server-side configuration only; secret
+      // values never leave the function, only which variables are missing.
+      const models = MODEL_CATALOG.map((model) => {
+        const missing = missingEnv(model, env);
+        return { id: model.id, available: missing.length === 0, unavailable_reason: missing.length ? `Not configured on the server (missing ${missing.join(", ")}).` : null, requires_approval: requiresApproval(model), estimate: estimateCost(model) };
+      });
+      return json(req, { pricing_version: PRICING_VERSION, models });
+    }
+
     if (!projectId || (action !== "image_url" && !jobId)) return json(req, { error: { code: "JOB_REQUIRED", message: "projectId and jobId are required." } }, 400);
-    if (!["run", "poll", "image_url"].includes(action)) return json(req, { error: { code: "INVALID_ACTION", message: "action must be run, poll, image_url, or drain." } }, 400);
+    if (!["run", "poll", "image_url"].includes(action)) return json(req, { error: { code: "INVALID_ACTION", message: "action must be run, poll, image_url, models, or drain." } }, 400);
     const project = await db.from("projects").select("id,owner_id").eq("id", projectId).maybeSingle();
     if (project.error) throw new Error(project.error.message);
     if (!project.data || (uid.kind !== "system" && project.data.owner_id !== uid.userId)) return json(req, { error: { code: "NOT_FOUND", message: "Project not found." } }, 404);
