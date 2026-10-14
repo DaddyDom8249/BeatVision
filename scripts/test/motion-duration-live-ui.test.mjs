@@ -9,6 +9,7 @@ test('Saved LTX clip duration is measured and distinct from its requested durati
   assert.match(page,/event\.currentTarget\.duration/);
   assert.match(page,/setMotionMeasured\(\{ assetId: motion\.id, seconds \}\)/);
   assert.match(page,/Remaining uncovered scene time:/);
+  assert.match(page,/savedProof\?\.video_duration_seconds/);
 });
 test('Original approved variant remains selected and reported rather than newer failed retry',()=>{
   assert.match(page,/selectedMotion\?\.generation_job_id/);

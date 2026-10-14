@@ -1066,3 +1066,8 @@ Release reconciliation update: discovered Vercel get_git_deployment_context, whi
 ## 2026-10-13 — Measured duration overlay adapted to deployed PR91 UI (frontend-only)
 
 The uploaded MP4 has 57 H.264 frames at 30fps, independently measured 1.900 seconds (704×512). User sees LTX source model (2.00s requested), but actual clip may be shorter. Current deployed Vercel commit matches draft PR91 (`5802b18`), while the earlier PR92 base branch is older; deploying it would roll back important PR91 features. This hotfix branch builds on exact PR91 source and changes only ProductionWorkspacePage + source tests. Original source-job provenance, variants, creator approval controls, and history remain intact. Both saved LTX clips and temporary Wan previews reveal decoded HTML video duration. Remaining scene time is explicitly not claimed as complete footage. No paid API/GPU request or production data mutation is part of the patch. No backend redeployment from old v31 source. CI/live verification pending.
+
+
+### 2026-10-13 — Existing backend metadata compatibility
+
+Deployed Supabase `beatvision-generation` v32 already validates MP4 and records `verification.video_duration_seconds` (plus audio metadata). Frontend now reads that field as server-verified fallback when browser metadata is not loaded, while still accepting `measured_duration_seconds` if a future adapter uses it. No backend patch, provider call or approved asset mutation.

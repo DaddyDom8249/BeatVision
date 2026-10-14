@@ -91,7 +91,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   selectedSceneId.current = scene?.id;
   const busy = generating || motionGenerating || assemblyRunning || assetLoading;
   const sceneSeconds = scene ? Math.max(0, Number(scene.end_time) - Number(scene.start_time)) : 0;
-  const savedProofSeconds = Number(motionAssetJob?.output?.arena_status_response?.result?.verification?.measured_duration_seconds);
+  const savedProof = motionAssetJob?.output?.arena_status_response?.result?.verification;
+  const savedProofSeconds = Number(savedProof?.measured_duration_seconds ?? savedProof?.video_duration_seconds);
   const motionDuration = motionMeasured && motion && motionMeasured.assetId === motion.id ? motionMeasured.seconds
     : Number.isFinite(savedProofSeconds) && savedProofSeconds > 0 ? savedProofSeconds : null;
   const remainingMotionSeconds = motionDuration === null ? null : Math.max(0, sceneSeconds - motionDuration);
