@@ -70,3 +70,21 @@ error text to the browser (details are logged server-side). Not deployed by this
 `Content-Security-Policy: frame-ancestors 'none'; object-src 'none'; base-uri 'self'`,
 `Referrer-Policy`, `Permissions-Policy`. A full script/connect-src CSP was intentionally not added
 (Supabase, PostHog and provider media hosts would need an audited allowlist).
+
+
+## Production database release — 2026-10-14
+
+The migration documented above **was applied** after the isolated PostgreSQL tests
+and read-only live-function compatibility checks passed. Supabase project
+`mdofsinyofqbeapzfygu` returned `success:true`. Migration ledger entry:
+`20261014191504 / approved_asset_media_immutability_20261014`.
+
+Read-only post-apply verification found both asset media triggers enabled, both
+service-role TRUNCATE privileges revoked, service-role UPDATE/DELETE rights
+preserved, and expected project-cascade exceptions installed on seven legacy
+immutability functions. The migration contained no DML that rewrites/deletes
+assets. **No live destructive/creator approval test** was performed; tests
+that exercise row deletion and cascades ran against an isolated database only.
+PR #103 remains unmerged to main and its Edge function source remains undeployed.
+The earlier "NOT applied" instructions above are retained as historical
+pre-release guidance and are superseded by this section.
