@@ -106,6 +106,13 @@ test('poll fails processing job cleanly when upstream_job_id is missing', async 
   } finally { await runtime.cleanup(); }
 });
 
+function validatedFinalVideo(url,duration) {
+  return { ok:true, status:'done', result:{ status:'done', video_url:url,
+    duration_seconds:duration, render_integrity:'PASS',
+    media_validation:{probed:true,probe_provider:'shotstack',format:'mp4',
+      has_video_stream:true,has_audio_stream:true,duration_seconds:duration} } };
+}
+
 test('persistFinalVideo scopes final videos to generation_job_id and prevents duplicate creation', async () => {
   const dbRows = [];
   const client = {
@@ -143,11 +150,11 @@ test('persistFinalVideo scopes final videos to generation_job_id and prevents du
 
   const runtime = await loadGeneration();
   try {
-    const job1 = { id: 'assembly-job-1', job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan A' } } };
-    const res1 = await runtime.persistFinalVideo(client, job1, { video_url: 'https://example.test/plan_a.mp4' });
+    const job1 = { id: 'assembly-job-1', job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan A', duration_seconds:15 } } };
+    const res1 = await runtime.persistFinalVideo(client, job1, validatedFinalVideo('https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/plan_a.mp4',15));
 
-    const job2 = { id: 'assembly-job-2', job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan B' } } };
-    const res2 = await runtime.persistFinalVideo(client, job2, { video_url: 'https://example.test/plan_b.mp4' });
+    const job2 = { id: 'assembly-job-2', job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan B', duration_seconds:15 } } };
+    const res2 = await runtime.persistFinalVideo(client, job2, validatedFinalVideo('https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/plan_b.mp4',15));
 
     assert.notEqual(res1.id, res2.id);
     assert.equal(res1.generation_job_id, 'assembly-job-1');
@@ -155,7 +162,7 @@ test('persistFinalVideo scopes final videos to generation_job_id and prevents du
     assert.equal(dbRows.length, 2);
 
     // Re-persisting job2 reuses res2 by generation_job_id without creating a duplicate row
-    const res2Retry = await runtime.persistFinalVideo(client, job2, { video_url: 'https://example.test/plan_b.mp4' });
+    const res2Retry = await runtime.persistFinalVideo(client, job2, validatedFinalVideo('https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/plan_b.mp4',15));
     assert.equal(res2Retry.id, res2.id);
     assert.equal(dbRows.length, 2);
   } finally {
@@ -332,12 +339,12 @@ test('poll persists a nested done assembly once and completes its existing job',
   globalThis.fetch = async url => {
     requests++;
     assert.match(String(url), /assemble\/status\/render-1/);
-    return new Response(JSON.stringify({ ok:true, result:{ status:'done', video_url:'https://example.test/final.mp4', duration_seconds:249.13, render_integrity:'PASS' } }), {status:200});
+    return new Response(JSON.stringify({ ok:true, result:{ status:'done', video_url:'https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/final.mp4', duration_seconds:249.13, render_integrity:'PASS', media_validation:{probed:true,probe_provider:'shotstack',format:'mp4',has_video_stream:true,has_audio_stream:true,duration_seconds:249.13} } }), {status:200});
   };
   try {
     const result=await runtime.poll(client,job);
     assert.equal(result.status,'completed');
-    assert.equal(result.output.final_video.video_url,'https://example.test/final.mp4');
+    assert.equal(result.output.final_video.video_url,'https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/final.mp4');
     assert.equal(result.output.final_video.duration,249.13);
     await runtime.poll(client,result);
     assert.equal(inserts,1);

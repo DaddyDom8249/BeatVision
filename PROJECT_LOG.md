@@ -1001,3 +1001,17 @@ Release result: published exact tested tree 27f9c88c6383d1af94acfc4fb33c6463e29a
 ## 2026-10-13 — End stuck ZeroGPU preview on provider SSE error
 
 Supabase now explicitly forwards a terminal Arena `status:failed` to the authorized job owner without any job insert or retry. Studio shows a checking spinner, prevents concurrent status polls, clears finished failed job tickets, displays safe categorized failure text, and stops automatic polling; temporary network errors still permit manual checks on the same ticket. No approved assets are modified and no GPU jobs are created while checking status.
+
+
+## 2026-10-13 — Verified MP4 final-video persistence and read-only creator rows (draft)
+
+CONFIRMED: The source generation controller marks final videos complete from an arbitrary https URL plus reported/planned duration, with no media probe. Live Supabase final_videos permits direct owner INSERT/UPDATE/DELETE. The live generation Edge v30 is larger than GitHub source, but contains the same vulnerable persistFinalVideo subroutine.
+
+SOURCE CHANGE NOT DEPLOYED: Persist only verified Shotstack-hosted MP4 with explicit Arena probe proof of video and song-audio streams and measured duration aligned to the authoritative timeline. Historic records remain untouched. A new SQL migration revokes client mutations and changes final_videos owner-ALL RLS to owner-SELECT, preserving service-role writes.
+
+RELEASE BLOCKERS: Depends on Arena draft PR #42. The additional Shotstack media-probe billing eligibility is unknown; no provider requests were made. Live Edge function source has significant runtime changes outside GitHub, so do not overwrite it with the repository function without reconciliation. Migration needs separate production authorization. CI pending.
+
+
+## 2026-10-13 — Exact-source reconciliation of live generation Edge v30
+
+Compared deployed Supabase beatvision-generation version 30, consisting of index.ts (44,886 bytes) and hf-motion.ts (10,816 bytes), with existing GitHub PR #84 (repair/hf-real-motion-20261013). Both files match PR #84 byte-for-byte. Replaced the older index.ts in this DRAFT final-video hardening branch with the exact deployed index.ts plus only the guarded persistFinalVideo change, and added the exact deployed hf-motion.ts. The PR #84 test harness, generation-auth fixture and free-HF tests are included. The frontend was not rolled back to PR #84; newer production UI fixes remain untouched. Neither live Supabase functions nor existing creator data were modified. No GPU/media provider calls were made. Source-level reconciliation and CI pending; deployment still requires strict zero-cost proof.
