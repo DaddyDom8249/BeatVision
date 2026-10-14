@@ -164,7 +164,19 @@ test("missing Authorization header returns 401, not 500", async () => {
 
   assert.equal(response.status, 401);
   assert.equal((await response.json()).code, "UNAUTHENTICATED");
-  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "*");
+  assert.notEqual(response.headers.get("Access-Control-Allow-Origin"), "*");
+});
+
+test("CORS reflects only allowlisted origins, never a wildcard", async () => {
+  const { handler } = await bootFunction();
+  const preflight = (origin) => handler(new Request(`${SUPABASE_URL}/functions/v1/beatvision-analyze-song`, {
+    method: "OPTIONS", headers: { Origin: origin },
+  }));
+  const evil = await preflight("https://evil.example");
+  assert.equal(evil.headers.get("Access-Control-Allow-Origin"), null);
+  const good = await preflight("https://beat-vision-beat-vision.vercel.app");
+  assert.equal(good.headers.get("Access-Control-Allow-Origin"), "https://beat-vision-beat-vision.vercel.app");
+  assert.equal(good.headers.get("Vary"), "Origin");
 });
 
 test("rejected session returns 401, not 500", async () => {
@@ -188,4 +200,25 @@ test("non-POST requests are rejected", async () => {
   const { handler } = await bootFunction();
   const response = await call(handler, { projectId: PROJECT_ID }, { method: "GET" });
   assert.equal(response.status, 405);
+});
+test("provider failure detail is not leaked to the client", async () => {
+  const { handler } = await bootFunction();
+  const authFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (String(input).includes("api.groq.com")) {
+      return new Response(JSON.stringify({ error: { message: "SECRET_MARKER internal detail" } }), { status: 500 });
+    }
+    return authFetch(input, init);
+  };
+  try {
+    const response = await call(handler, { projectId: PROJECT_ID });
+    const text = await response.text();
+    assert.equal(response.status, 500);
+    assert.ok(!text.includes("SECRET_MARKER"), "provider body must not reach the browser");
+    const body = JSON.parse(text);
+    assert.equal(body.code, "GROQ_TRANSCRIPTION_FAILED");
+    assert.ok(body.ref);
+  } finally {
+    globalThis.fetch = authFetch;
+  }
 });

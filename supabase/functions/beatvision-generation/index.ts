@@ -31,13 +31,34 @@ function admin() {
   return createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"));
 }
 
+// Constant-time comparison: hash both values so length and early-exit timing
+// cannot leak the scheduler secret (which grants cross-tenant "system" identity).
+async function timingSafeEqualText(a: string, b: string) {
+  const enc = new TextEncoder();
+  const [ha, hb] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode(a)),
+    crypto.subtle.digest("SHA-256", enc.encode(b)),
+  ]);
+  const x = new Uint8Array(ha), y = new Uint8Array(hb);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
 async function authenticate(req: Request) {
   const queueSecret = String(req.headers.get("X-BeatVision-Queue-Secret") || "").trim();
   if (queueSecret) {
     const db = admin();
     const config = await db.rpc("get_generation_scheduler_secret");
-    if (config.error) throw new HttpError(500, "SCHEDULER_CONFIG_FAILED", config.error.message);
-    if (config.data && queueSecret === String(config.data)) return { kind: "system" as const, userId: null };
+    if (config.error) {
+      console.error("scheduler secret lookup failed", config.error);
+      throw new HttpError(500, "SCHEDULER_CONFIG_FAILED", "Scheduler configuration is unavailable.");
+    }
+    const expected = String(config.data || "");
+    if (expected && await timingSafeEqualText(queueSecret, expected)) return { kind: "system" as const, userId: null };
+    // A presented-but-wrong scheduler credential is an explicit auth failure,
+    // never a silent fall-through to another identity.
+    throw new HttpError(401, "UNAUTHORIZED_SCHEDULER", "Invalid scheduler credential.");
   }
 
   const token = req.headers.get("Authorization") || "";
@@ -163,9 +184,21 @@ async function bridgePayload(db: any, job: any) {
   };
 }
 
+function sniffImage(b: Uint8Array): { type: string; ext: string } | null {
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { type: "image/jpeg", ext: "jpg" };
+  if (b.length >= 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 && b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a) return { type: "image/png", ext: "png" };
+  if (b.length >= 12 && String.fromCharCode(...b.slice(0, 4)) === "RIFF" && String.fromCharCode(...b.slice(8, 12)) === "WEBP") return { type: "image/webp", ext: "webp" };
+  return null;
+}
+
+const ARENA_TIMEOUT_MS = { GET: 30_000, POST: 90_000 } as const;
+
 async function arena(path: string, method: "GET" | "POST", payload: unknown, requestId: string) {
+  // Bounded wait: a hung provider must surface as an explicit failure instead of
+  // pinning the job (and every later job in a drain loop) until the platform kills us.
   const response = await fetch(arenaBase() + path, {
     method,
+    signal: AbortSignal.timeout(ARENA_TIMEOUT_MS[method]),
     headers: {
       Authorization: "Bearer " + arenaToken(),
       "Content-Type": "application/json",
@@ -173,6 +206,11 @@ async function arena(path: string, method: "GET" | "POST", payload: unknown, req
       "X-BeatVision-Request": requestId,
     },
     body: method === "POST" ? JSON.stringify({ payload }) : undefined,
+  }).catch((error) => {
+    if (error?.name === "TimeoutError" || error?.name === "AbortError") {
+      throw new Error(`ARENA_TIMEOUT: Arena ${method} ${path} did not respond within ${ARENA_TIMEOUT_MS[method] / 1000}s.`);
+    }
+    throw error;
   });
   const raw = await response.text();
   let data: any;
@@ -243,10 +281,14 @@ async function persistSceneImage(db: any, job: any, responseData: any) {
     } catch {
       throw new Error("SCENE_IMAGE_BASE64_INVALID: Arena returned invalid base64 image data.");
     }
+    // Never store arbitrary bytes as a "real" scene image: require a genuine
+    // JPEG/PNG/WebP signature and record its true content type.
+    const media = sniffImage(binary);
+    if (!media) throw new Error("SCENE_IMAGE_NOT_IMAGE: Arena base64 data is not a JPEG, PNG or WebP image.");
 
-    storagePath = `${job.project_id}/scene-images/${job.visual_plan_id}/${job.visual_plan_scene_id}/${job.id}.jpg`;
+    storagePath = `${job.project_id}/scene-images/${job.visual_plan_id}/${job.visual_plan_scene_id}/${job.id}.${media.ext}`;
     const upload = await db.storage.from("visual-assets").upload(storagePath, binary, {
-      contentType: "image/jpeg",
+      contentType: media.type,
       cacheControl: "31536000",
       upsert: false,
     });
@@ -568,6 +610,12 @@ Deno.serve(async (req) => {
     if (error instanceof HttpError) {
       return json(req, { error: { code: error.code, message: error.message } }, error.status);
     }
-    return json(req, { error: { code: "GENERATION_CONTROLLER_FAILED", message: error instanceof Error ? error.message : String(error) } }, 500);
+    // Log full detail server-side; return only a stable code + reference so DB,
+    // storage and provider internals never reach the browser.
+    const ref = crypto.randomUUID();
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error("beatvision-generation failed", ref, detail);
+    const code = /^([A-Z][A-Z0-9_]{2,63}):/.exec(detail)?.[1] || "GENERATION_CONTROLLER_FAILED";
+    return json(req, { error: { code, message: "Generation request failed. Reference " + ref + ".", ref } }, 500);
   }
 });

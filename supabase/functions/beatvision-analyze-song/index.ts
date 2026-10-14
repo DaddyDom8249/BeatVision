@@ -1,16 +1,30 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Content-Type": "application/json",
-};
+// Same production allowlist as beatvision-generation. This endpoint spends a
+// provider (Groq) quota, so arbitrary web origins must not be able to drive it.
+const ALLOWED_ORIGINS = new Set([
+  "https://beat-vision-theta.vercel.app",
+  "https://beat-vision-beat-vision.vercel.app",
+  "https://beat-vision-git-main-beat-vision.vercel.app",
+  "https://beat-vision-git-fix-style-description-genera-790bfa-beat-vision.vercel.app",
+  "https://beat-vision-f8nn-git-fix-style-description-g-a4cacb-beat-vision.vercel.app",
+]);
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Content-Type": "application/json",
+    "Cache-Control": "no-store",
+    "Vary": "Origin",
+  };
+  if (ALLOWED_ORIGINS.has(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  return headers;
+}
 
 function env(name: string) { return String(Deno.env.get(name) || "").trim(); }
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: cors });
-}
 
 // Auth failures must surface as 401, not fall through to the generic 500.
 class AuthError extends Error {
@@ -39,7 +53,8 @@ function adminClient() {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: corsHeaders(req) });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
   try {
     if (req.method !== "POST") return json({ error: "POST required." }, 405);
     const userId = await getUser(req);
@@ -78,11 +93,18 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { Authorization: "Bearer " + groqKey },
       body: form,
+      signal: AbortSignal.timeout(120_000),
+    }).catch((error) => {
+      if (error?.name === "TimeoutError" || error?.name === "AbortError") throw new Error("GROQ_TIMEOUT: transcription did not respond within 120s.");
+      throw error;
     });
     const raw = await response.text();
     let data: any;
     try { data = raw ? JSON.parse(raw) : null; } catch { data = { raw }; }
-    if (!response.ok) throw new Error("Groq transcription failed (" + response.status + "): " + String(data?.error?.message || data?.message || raw).slice(0, 800));
+    if (!response.ok) {
+      console.error("groq transcription failed", response.status, String(data?.error?.message || data?.message || raw).slice(0, 800));
+      throw new Error("GROQ_TRANSCRIPTION_FAILED: HTTP " + response.status);
+    }
 
     const existing = song.analysis && typeof song.analysis === "object" ? song.analysis as Record<string, unknown> : {};
     const transcriptionDuration = Number(data?.duration);
@@ -123,6 +145,10 @@ Deno.serve(async (req) => {
     if (error instanceof AuthError) {
       return json({ error: error.message, code: "UNAUTHENTICATED" }, error.status);
     }
-    return json({ error: error instanceof Error ? error.message : String(error) }, 500);
+    const ref = crypto.randomUUID();
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error("beatvision-analyze-song failed", ref, detail);
+    const code = /^([A-Z][A-Z0-9_]{2,63}):/.exec(detail)?.[1] || "ANALYZE_FAILED";
+    return json({ error: "Song analysis failed. Reference " + ref + ".", code, ref }, 500);
   }
 });
