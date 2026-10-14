@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { computeSceneTiming, isCameraPresetId, presetToDirective } from "../_shared/camera-presets.ts";
 
 const ALLOWED_ORIGINS = new Set([
   "https://beat-vision-theta.vercel.app",
@@ -77,6 +78,18 @@ function modelFor(type: string) {
   return type === "scene_image" ? "flux-schnell" : type === "scene_motion" ? "ltx-video" : null;
 }
 
+// Optional per-scene camera preset (scene_camera_presets, REQUIRES MANUAL APPLY).
+// Absent row or not-yet-applied table => no directive; motion proceeds unchanged.
+async function sceneCameraMotion(db: any, job: any, scene: any, analysis: any, duration: number) {
+  const result = await db.from("scene_camera_presets").select("preset").eq("project_id", job.project_id).eq("scene_id", job.visual_plan_scene_id).maybeSingle();
+  if (result.error) {
+    if (["42P01", "PGRST205"].includes(String(result.error.code))) return null;
+    throw new Error("CAMERA_PRESET_LOOKUP_FAILED: " + result.error.message);
+  }
+  if (!result.data || !isCameraPresetId(result.data.preset)) return null;
+  return presetToDirective(result.data.preset, computeSceneTiming({ start_time: Number(scene.start_time), end_time: Number(scene.end_time) }, analysis, duration));
+}
+
 async function bridgePayload(db: any, job: any) {
   const snapshot = job.input_snapshot || {};
   const lock = snapshot.vision_snapshot || {};
@@ -115,6 +128,7 @@ async function bridgePayload(db: any, job: any) {
   if (!scene) throw new Error("Frozen Scene Direction is missing.");
 
   let images: { images: Array<{ image_url: string; scene_id: string; approved: boolean }> } | undefined;
+  let cameraMotion: ReturnType<typeof presetToDirective> | null = null;
   if (job.job_type === "scene_motion") {
     const imageResult = await db.from("scene_image_assets").select("id,image_url,storage_path,scene_id,status,approved,created_at").eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("scene_id", job.visual_plan_scene_id).eq("approved", true).eq("status", "approved").order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (imageResult.error) throw new Error("APPROVED_SCENE_IMAGE_LOOKUP_FAILED: " + imageResult.error.message);
@@ -127,6 +141,7 @@ async function bridgePayload(db: any, job: any) {
     }
     if (!/^https?:\/\//i.test(motionImageUrl)) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion requires an approved real scene image.");
     images = { images: [{ image_url: motionImageUrl, scene_id: String(imageResult.data.scene_id), approved: true }] };
+    cameraMotion = await sceneCameraMotion(db, job, scene, analysis, duration);
   }
   return {
     source: { application: "beatvision", contract: "2.0" },
@@ -152,8 +167,9 @@ async function bridgePayload(db: any, job: any) {
       locked: true,
       version: String(lock.id || job.vision_lock_id),
     },
-    scene,
+    scene: cameraMotion ? { ...scene, camera_motion_directive: cameraMotion.prompt_directive } : scene,
     images,
+    ...(cameraMotion ? { camera_motion: cameraMotion } : {}),
     generation: {
       cost_class: "free",
       model: modelFor(job.job_type),
