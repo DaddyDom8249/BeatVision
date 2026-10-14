@@ -34,7 +34,8 @@ export function createClient() {
 
   const transformed = source
     .replace('import "jsr:@supabase/functions-js/edge-runtime.d.ts";', "")
-    .replace('from "https://esm.sh/@supabase/supabase-js@2"', 'from "./supabase_stub.mjs"');
+    .replace('from "https://esm.sh/@supabase/supabase-js@2"', 'from "./supabase_stub.mjs"')
+    .replace('from "../_shared/camera-presets.ts"', 'from ' + JSON.stringify(new URL("../../supabase/functions/_shared/camera-presets.ts", import.meta.url).href));
   await writeFile(join(dir, "function.ts"), transformed);
 
   let handler = null;

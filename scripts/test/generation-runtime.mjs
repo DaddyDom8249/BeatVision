@@ -15,7 +15,8 @@ export async function loadGeneration(client = {}) {
     await writeFile(join(dir, 'function.ts'), source
       .replace('import "jsr:@supabase/functions-js/edge-runtime.d.ts";', '')
       .replace('from "https://esm.sh/@supabase/supabase-js@2"', 'from "./stub.mjs"')
-      + '\nexport { terminalState, persistMotionClip, persistSceneImage, persistFinalVideo, poll, run, setFailed };\n');
+      .replace('from "../_shared/camera-presets.ts"', 'from ' + JSON.stringify(new URL('../../supabase/functions/_shared/camera-presets.ts', import.meta.url).href))
+      + '\nexport { bridgePayload, terminalState, persistMotionClip, persistSceneImage, persistFinalVideo, poll, run, setFailed };\n');
     const module = await import(pathToFileURL(join(dir, 'function.ts')).href);
     return { ...module, handler, cleanup: async () => { globalThis.Deno = original; delete globalThis.__generationTestClient; await rm(dir, { recursive: true, force: true }); } };
   } catch (error) { globalThis.Deno = original; await rm(dir, { recursive: true, force: true }); throw error; }
