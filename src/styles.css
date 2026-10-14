@@ -58,3 +58,15 @@
 .style-asset-storage summary{cursor:pointer;color:#c9a66b}
 .style-asset-storage code{display:block;margin-top:8px;overflow-wrap:anywhere;word-break:break-word;white-space:normal;font-size:11px;line-height:1.5}
 @media(max-width:700px){.style-record-card{padding:16px}.style-record-card>form{grid-template-columns:minmax(0,1fr)}.style-record-card>form>button{justify-self:stretch}.style-record-card>button{display:block;width:100%;text-align:center}.style-asset-card{padding:12px}}
+
+/* Model choice and render cost approval */
+.model-picker { display: grid; gap: 6px; margin: 12px 0; }
+.model-picker select { max-width: 100%; padding: 8px 10px; border-radius: 10px; font: inherit; }
+.model-unavailable { color: #ff8a8a; font-size: 0.9em; }
+.cost-approval-dialog {
+  position: fixed; inset: auto 16px 16px 16px; z-index: 50; max-width: 640px; margin: 0 auto;
+  max-height: 80vh; overflow: auto; padding: 20px; border-radius: 16px;
+  background: #15151b; color: #f4f4f6; border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+}
+.cost-approval-dialog a { color: inherit; word-break: break-all; }

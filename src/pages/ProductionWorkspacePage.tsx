@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase/client";
 import { getCreativeErrorMessage } from "../lib/formatCreativeText";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
+import { CostApprovalDialog, ModelPicker } from "../components/generation/ModelCostGate";
+import { DEFAULT_MODEL, PRICING_VERSION, estimateCost, findModel, parseAvailability } from "../lib/generation/models";
+import type { AvailabilityState, GenerationJobType } from "../lib/generation/models";
 
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
@@ -59,6 +62,16 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   selectedSceneId.current = scene?.id;
   const busy = generating || motionGenerating || assemblyRunning || assetLoading;
   const pending = (job: any) => ["queued", "submitted", "processing"].includes(job?.status);
+  const [availability, setAvailability] = useState<AvailabilityState>({ status: "loading" });
+  // Per-scene model choice. Defaults come from the latest recorded approval
+  // for the scene (database), then the catalog default.
+  const [modelChoice, setModelChoice] = useState<Record<string, Partial<Record<GenerationJobType, string>>>>({});
+  const [approvalRequest, setApprovalRequest] = useState<{ type: GenerationJobType; modelId: string } | null>(null);
+  const chosenModel = (type: GenerationJobType, sceneId = scene?.id) => (type !== "assembly" && sceneId ? modelChoice[sceneId]?.[type] : modelChoice.__plan?.[type]) || DEFAULT_MODEL[type];
+  const chooseModel = (type: GenerationJobType, id: string) => {
+    const key = type === "assembly" ? "__plan" : scene?.id;
+    if (key) setModelChoice((current) => ({ ...current, [key]: { ...current[key], [type]: id } }));
+  };
   const productionText = useMemo(() => scene ? prompt(scene) : "", [scene]);
 
   async function displayImage(asset: any) {
@@ -173,7 +186,38 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     return () => { active = false; window.clearInterval(timer); };
   }, [scene?.id, plan?.id, imageJob?.status, motionJob?.status, assemblyJob?.status, refreshScene, refreshFinal]);
 
-  async function operateJob(type: "scene_image" | "scene_motion" | "assembly", existing?: any) {
+  useEffect(() => {
+    let active = true;
+    supabase.functions.invoke("beatvision-generation", { body: { action: "models" } })
+      .then((result: any) => { if (active) setAvailability(result.error ? { status: "error", message: "Model availability could not be loaded from the server." } : parseAvailability(result.data)); })
+      .catch(() => { if (active) setAvailability({ status: "error", message: "Model availability could not be loaded from the server." }); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!scene?.id || !plan?.id || modelChoice[scene.id]) return;
+    const sceneId = scene.id;
+    let active = true;
+    Promise.resolve(supabase.from("generation_cost_approvals").select("job_type,model_id,approved_at").eq("project_id", projectId).eq("scene_id", sceneId).order("approved_at", { ascending: false }).limit(20))
+      .then((result: any) => {
+        if (!active || result?.error || !Array.isArray(result?.data)) return;
+        const latest: Partial<Record<GenerationJobType, string>> = {};
+        for (const row of result.data) {
+          const model = findModel(row?.model_id);
+          if (model && model.jobType === row.job_type && !latest[model.jobType]) latest[model.jobType] = model.id;
+        }
+        setModelChoice((current) => current[sceneId] ? current : { ...current, [sceneId]: latest });
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [scene?.id, plan?.id, projectId, modelChoice]);
+
+  function requestRender(type: GenerationJobType) {
+    setError(null);
+    setApprovalRequest({ type, modelId: chosenModel(type) });
+  }
+
+  async function operateJob(type: "scene_image" | "scene_motion" | "assembly", existing?: any, approvedModelId?: string) {
     if (!scene || !plan) return;
     const sceneId = scene.id;
     const setBusy = type === "scene_image" ? setGenerating : type === "scene_motion" ? setMotionGenerating : setAssemblyRunning;
@@ -188,6 +232,20 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         if (!current.ready) throw new Error(current.message);
       }
       if (!job) {
+        // The server refuses provider calls without this recorded approval;
+        // it is created only from the explicit approval dialog.
+        const model = findModel(approvedModelId);
+        if (!model || model.jobType !== type) throw new Error("Choose a model and approve the render cost before generating.");
+        const approval = await supabase.rpc("approve_generation_cost", {
+          p_project_id: projectId,
+          p_visual_plan_id: plan.id,
+          p_scene_id: type === "assembly" ? null : sceneId,
+          p_job_type: type,
+          p_model_id: model.id,
+          p_pricing_version: PRICING_VERSION,
+          p_estimate: estimateCost(model),
+        });
+        if (approval.error) throw approval.error;
         const queued = type === "assembly"
           ? await supabase.rpc("enqueue_assembly_generation", { p_project_id: projectId, p_visual_plan_id: plan.id })
           : await supabase.rpc("enqueue_scene_generation", { p_project_id: projectId, p_scene_id: sceneId, p_job_type: type });
@@ -210,10 +268,15 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     finally { setBusy(false); }
   }
 
-  const generateImage = () => operateJob("scene_image");
-  const generateMotion = () => operateJob("scene_motion");
+  const generateImage = () => requestRender("scene_image");
+  const generateMotion = () => requestRender("scene_motion");
   const checkMotionStatus = () => operateJob("scene_motion", motionJob);
-  const assembleFinal = () => operateJob("assembly");
+  const assembleFinal = () => requestRender("assembly");
+  const approveRender = () => {
+    const request = approvalRequest;
+    setApprovalRequest(null);
+    if (request) void operateJob(request.type, undefined, request.modelId);
+  };
   const checkAssemblyStatus = () => operateJob("assembly", assemblyJob);
 
   async function approveMotion() {
@@ -308,6 +371,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
           <div className="production-provider-note">
             <span className="panel-label">SCENE IMAGE</span>
             {image?.image_url ? <img src={image.image_url} alt={scene.title} style={{ width: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 12 }} /> : <p>No real scene image exists yet. Generation is only enabled from the approved Scene Direction.</p>}
+            {!image && <ModelPicker jobType="scene_image" value={chosenModel("scene_image")} onChange={(id) => chooseModel("scene_image", id)} availability={availability} disabled={busy || pending(imageJob)} />}
             <div className="production-actions">
               <button className="primary-button" disabled={busy || pending(imageJob) || Boolean(image)} onClick={() => void generateImage()}>{generating ? "Generating…" : image ? "Image Generated" : "Generate Scene Image"}</button>
               {pending(imageJob) && <button className="secondary-button" disabled={busy} onClick={() => void operateJob("scene_image", imageJob)}>Check Image Status</button>}
@@ -320,6 +384,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             <span className="panel-label">MOTION</span>
             {motion && <p>{motion.model === "image-motion" || (motionJob?.id === motion.generation_job_id && motionJob?.output?.arena_response?.result?.generation_type === "PROCEDURAL_MOTION") ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
             {motion?.video_url ? <video src={motion.video_url} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
+            {!motion && <ModelPicker jobType="scene_motion" value={chosenModel("scene_motion")} onChange={(id) => chooseModel("scene_motion", id)} availability={availability} disabled={busy || pending(motionJob)} />}
             <div className="production-actions">
               {!motion && !pending(motionJob) && <button className="primary-button" disabled={busy || image?.status !== "approved"} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
               {pending(motionJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkMotionStatus()}>{motionGenerating ? "Checking…" : "Check Motion Status"}</button>}
@@ -338,6 +403,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
               {finalVideo?.video_url && <span className="style-lock-badge">FINAL VIDEO COMPLETE</span>}
             </div>
           </div>
+
+          {approvalRequest && <CostApprovalDialog jobType={approvalRequest.type} modelId={approvalRequest.modelId} availability={availability} onApprove={approveRender} onCancel={() => setApprovalRequest(null)} />}
 
           <div className="production-provider-note">
             <span className="panel-label">GENERATION</span>
