@@ -25,15 +25,16 @@ test('baseline (before migration): service role can silently swap approved media
  await db.query("update scene_image_assets set image_url='https://evil.test/x.jpg'");
  assert.equal((await db.query('select image_url from scene_image_assets')).rows[0].image_url,'https://evil.test/x.jpg');
 });
-test('migration blocks media rewrite and approved delete, allows status transitions',async()=>{
+test('migration blocks media rewrite and deletes, allows status transitions',async()=>{
  await db.exec(await readMigration('20261014180000_approved_asset_media_immutability.sql'));
  await db.exec('savepoint a');
  await assert.rejects(db.query("update scene_image_assets set image_url='https://evil.test/x.jpg'"),/GENERATED_ASSET_MEDIA_IMMUTABLE/);
  await db.exec('rollback to savepoint a');
  await assert.rejects(db.query("update motion_clip_assets set video_url='https://evil.test/x.mp4'"),/GENERATED_ASSET_MEDIA_IMMUTABLE/);
  await db.exec('rollback to savepoint a');
- await assert.rejects(db.query('delete from motion_clip_assets'),/APPROVED_ASSET_DELETE_FORBIDDEN/);
+ await assert.rejects(db.query('delete from motion_clip_assets'),/GENERATED_ASSET_DELETE_FORBIDDEN/);
  await db.exec('rollback to savepoint a');
  await db.query("update motion_clip_assets set status='generated',approved=false");
  assert.equal((await db.query('select approved from motion_clip_assets')).rows[0].approved,false);
+ await assert.rejects(db.query('delete from motion_clip_assets'),/GENERATED_ASSET_DELETE_FORBIDDEN/);
 });
