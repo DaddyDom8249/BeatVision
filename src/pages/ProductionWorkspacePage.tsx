@@ -69,6 +69,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [motionMeasured, setMotionMeasured] = useState<{ assetId: string; seconds: number } | null>(null);
   const [pilotMeasured, setPilotMeasured] = useState<{ url: string; seconds: number } | null>(null);
   const [motionGenerating, setMotionGenerating] = useState(false);
+  // Wan ZeroGPU start returns WAN_ELIGIBILITY_UNVERIFIED. Do not submit.
+  const wanPreviewEligibilityVerified = false;
   const [freePilotBusy, setFreePilotBusy] = useState(false);
   const [freePilotChecking, setFreePilotChecking] = useState(false);
   const freePilotPollingRef = useRef(false);
@@ -79,6 +81,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [finalVideo, setFinalVideo] = useState<any>(null);
   const [assemblyJob, setAssemblyJob] = useState<any>(null);
   const [assemblyRunning, setAssemblyRunning] = useState(false);
+  const [assemblyReadiness, setAssemblyReadiness] = useState({ ready: false, message: "Checking approved motion clips…" });
   const [downloading, setDownloading] = useState(false);
 
   const [imageJob, setImageJob] = useState<any>(null);
@@ -184,9 +187,47 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     setFinalVideo(result.data?.status === "completed" ? result.data.output?.final_video ?? null : null);
   }, [projectId]);
 
+  // Project/plan-wide authoritative eligibility, not latest attempt or selected
+  // asset. More than one approved clip per scene must fail closed.
+  const refreshAssemblyReadiness = useCallback(async (planId: string) => {
+    let status = { ready: false, message: "Unable to verify approved motion. Assembly remains unavailable." };
+    try {
+      const [sceneResult, motionResult] = await Promise.all([
+        supabase.from("visual_plan_scenes").select("id,status").eq("project_id", projectId).eq("visual_plan_id", planId),
+        supabase.from("motion_clip_assets").select("id,scene_id,status,approved,video_url").eq("project_id", projectId).eq("visual_plan_id", planId).eq("status", "approved").eq("approved", true),
+      ]);
+      if (sceneResult.error) throw sceneResult.error;
+      if (motionResult.error) throw motionResult.error;
+      const allScenes = sceneResult.data ?? [];
+      const approved = motionResult.data ?? [];
+      if (!allScenes.length) {
+        status = { ready: false, message: "No approved scenes are available for final assembly." };
+      } else if (allScenes.some(row => row.status !== "approved")) {
+        status = { ready: false, message: "Approve every scene before final assembly." };
+      } else {
+        const counts = new Map<string, number>();
+        for (const clip of approved) {
+          if (clip.status === "approved" && clip.approved === true && clip.video_url)
+            counts.set(clip.scene_id, (counts.get(clip.scene_id) ?? 0) + 1);
+        }
+        const remaining = allScenes.filter(row => counts.get(row.id) !== 1).length;
+        status = remaining
+          ? { ready: false, message: String(remaining) + " of " + String(allScenes.length) + " scenes still need exactly one approved real motion clip." }
+          : { ready: approved.length === allScenes.length, message: "All scene motion is approved. Final assembly is available." };
+        if (!remaining && approved.length !== allScenes.length)
+          status = { ready: false, message: "Motion approval records are inconsistent. Final assembly is unavailable." };
+      }
+    } catch (reason) {
+      status = { ready: false, message: "Could not check approved motion: " + productionErrorMessage(reason) };
+    }
+    setAssemblyReadiness(status);
+    return status;
+  }, [projectId]);
+
   useEffect(() => {
     let active = true;
     setLoading(true); setError(null); setPlan(null); setScenes([]); setSelectedIndex(0);
+    setAssemblyReadiness({ ready: false, message: "Checking approved motion clips…" });
     (async () => {
       try {
         const requestedPlan = new URLSearchParams(window.location.search).get('plan');
@@ -198,12 +239,12 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         if (sceneResult.error) throw sceneResult.error;
         if (!active) return;
         setPlan(result.data as VisualPlan); setScenes((sceneResult.data ?? []) as VisualPlanScene[]);
-        await refreshFinal(result.data.id);
+        await Promise.all([refreshFinal(result.data.id), refreshAssemblyReadiness(result.data.id)]);
       } catch (e) { if (active) setError(productionErrorMessage(e)); }
       finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
-  }, [projectId, refreshFinal]);
+  }, [projectId, refreshFinal, refreshAssemblyReadiness]);
 
   useEffect(() => {
     let active = true;
@@ -233,6 +274,10 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     setBusy(true); setError(null);
     try {
       let job = existing;
+      if (!job && type === "assembly") {
+        const check = await refreshAssemblyReadiness(plan.id);
+        if (!check.ready) throw new Error(check.message);
+      }
       if (!job) {
         if (type === "scene_motion" && !motionTermsAccepted) throw new Error("Accept the LTX model use restrictions before AI motion.");
         attemptId.current ??= crypto.randomUUID();
@@ -273,7 +318,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   }, [projectId, scene?.id]);
 
   async function generateFreePilot() {
-    if (!scene || image?.status !== "approved" || busy || freePilotBusy || freePilotJob) return;
+    if (!wanPreviewEligibilityVerified || !scene || image?.status !== "approved" || busy || freePilotBusy || freePilotJob) return;
     const targetScene = scene.id;
     setFreePilotBusy(true);
     setFreePilotUrl(null);
@@ -408,7 +453,11 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     if (!motion || motion.status !== "generated" || !motion.video_url) return;
     setError(null);
     const result = await supabase.rpc("approve_motion_clip_asset", { p_asset_id: motion.id });
-    if (result.error) setError(productionErrorMessage(result.error)); else setMotion(result.data);
+    if (result.error) setError(productionErrorMessage(result.error));
+    else {
+      setMotion(result.data);
+      if (plan) await refreshAssemblyReadiness(plan.id);
+    }
   }
 
   async function approveImage() {
@@ -534,8 +583,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             <span className="panel-label">FREE AI MOVEMENT PREVIEW</span>
             <p>New Wan previews are unavailable while account eligibility and model permissions are unverified. Generate Motion uses the verified LTX controller. Existing Wan tickets can still be checked.</p>
             <div className="production-actions">
-              <button className="secondary-button" disabled={busy || freePilotBusy || Boolean(freePilotJob) || image?.status !== "approved"} onClick={() => void generateFreePilot()}>
-                {freePilotBusy ? "Submitting free GPU preview…" : freePilotJob ? "Preview queued (no resubmission)" : "Generate free 3-second AI movement"}
+              <button className="secondary-button" disabled={!wanPreviewEligibilityVerified || busy || freePilotBusy || Boolean(freePilotJob) || image?.status !== "approved"} onClick={() => void generateFreePilot()}>
+                {freePilotBusy ? "Submitting free GPU preview…" : freePilotJob ? "Preview queued (no resubmission)" : "Wan AI preview unavailable"}
               </button>
               {freePilotJob && <button className="secondary-button" disabled={freePilotBusy || freePilotChecking} onClick={() => void checkFreePilotStatus(freePilotJob)}>
                 {freePilotChecking ? "Checking Preview Status..." : "Check Preview Status"}
@@ -567,8 +616,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
               {" "}Last checked: {assemblyJob.output?.last_polled_at ?? "Not checked yet"}.
             </p>}
             {finalVideo?.video_url ? <video src={finalVideo.video_url} controls playsInline style={{ width: "100%", maxHeight: 600, borderRadius: 12 }} /> : <p>No completed final video exists yet. Assembly requires every approved scene to have an approved real motion clip.</p>}
+            {!finalVideo && <p role="status">{assemblyReadiness.message}</p>}
             <div className="production-actions">
-              {!finalVideo && !pending(assemblyJob) && <button className="primary-button" disabled={busy} onClick={() => void assembleFinal()}>{assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}</button>}
+              {!finalVideo && !pending(assemblyJob) && <button className="primary-button" disabled={busy || !assemblyReadiness.ready} onClick={() => void assembleFinal()}>{assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}</button>}
               {pending(assemblyJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkAssemblyStatus()}>{assemblyRunning ? "Checking…" : "Check Assembly Status"}</button>}
               {finalVideo?.video_url && <button className="secondary-button" disabled={downloading} onClick={() => void downloadFinalVideo()}>{downloading ? "Downloading…" : "Download Video"}</button>}
               {finalVideo?.video_url && <span className="style-lock-badge">FINAL VIDEO COMPLETE</span>}

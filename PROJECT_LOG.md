@@ -1090,3 +1090,12 @@ Read-only deployed source preflight request8985 HTTP200 at 03:55:23UTC: actual H
 Concurrent frontend dpl_3mCCGcuddVuVFEQTWt1H25rQGY1B/eda1d2b858b8fb34b2ca04e67e075a7683992a4e now serves production, adding only measured-duration UI/test/log changes atop5802b18. Production repair branch advanced separately to122eb286bf39e33c44aed3bf078e63c45707ac93. Preserved both histories, adapted the old duration test's labels to the current LTX/paused-Wan UI, and retained the latest v32 video_duration_seconds fallback. Reconciled243/243 tests, build and production audit pass. No older frontend/backend redeployed over it.
 
 Public browser renders the live app. Secure sign-in request was interrupted; subsequent canonical homepage still reports Auth session missing. Authenticated Studio controls/end-to-end creator workflow remain UNVERIFIED; no credential retry/bypass. Original real1.9-second LTX Ghast asset/playback proof remains intact; no new GPU/render/transcription/creative approval this cycle. Unknown-cost providers remain unavailable; full final assembly and accurate singing lip sync remain blocked/unverified. PR91 remains draft/unmerged; main unchanged9e6619f.
+
+
+## 2026-10-14 — Source-of-truth reconciliation gate and Wan disabled state
+
+GitHub main (9e6619f) diverged from deployed production/recovery (7b77f329): 105 commits ahead / 6 behind with main-only PR #74 changes. The only functional main-only feature missing in production was the plan-wide final-assembly readiness guard; it was ported onto the current ProductionWorkspace with fresh click-time checks, exact one approved motion per scene, and duplicate/missing clip refusal. Existing creator-approved rows are not changed. Main-only integration report and nested test assets are carried forward unchanged in the reconciliation tree. Both parents retained in Git history.
+
+Wan 2.2 new job submission is disabled in deployed Edge (WAN_ELIGIBILITY_UNVERIFIED), but its Studio button was enabled and guaranteed a 503. Reconciliation UI now marks it unavailable, keeps existing ticket polling available, and preserves verified free LTX Generate Motion. No new provider calls, paid services, or database mutations. Backend v32 is unchanged.
+
+Verification: source branch CI, production user checks pending. Do not claim full music-video assembly without validated playable MP4 and owner-authenticated end-to-end evidence.
