@@ -2,9 +2,11 @@
 
 Source: supplied `beatvision-invariants-audit.md`, whose checkout does not record an exact commit or live database inspection.
 
+This document preserves each investigation stage. The latest release evidence below supersedes earlier candidate-only or pending-release status.
+
 ## Preserved production
 
-Production frontend currently serves bc75c8748db340bb448edeef88b9ff1e6d8defad (`repair/production-reconcile-20261012`, deployment dpl_8HpBmEbsVU1ge3wuhNFmEux2yGYw). This includes PRs 85–87 (style/world lineage, authenticated failure diagnostics, terminal ZeroGPU ticket handling), newer than the original LTX repair. Controller remains version 30. This repair combines that production branch with PR 84; the sole merge conflict was append-only PROJECT_LOG history, both sides retained. No main merge, production deployment, migration, approval change or provider generation request.
+At the initial audit, production frontend served bc75c8748db340bb448edeef88b9ff1e6d8defad (`repair/production-reconcile-20261012`, deployment dpl_8HpBmEbsVU1ge3wuhNFmEux2yGYw). This includes PRs 85–87 (style/world lineage, authenticated failure diagnostics, terminal ZeroGPU ticket handling), newer than the original LTX repair. Controller was version 30. That repair combined the production branch with PR 84; the sole merge conflict was append-only PROJECT_LOG history, both sides retained. No main merge, deployment, migration, approval change or provider generation request occurred at that initial stage.
 
 ## Findings and disposition
 
@@ -56,3 +58,25 @@ Jules: reused only sessions/11067167063386264554 for scoped retry implementation
 
 
 Release reconciliation update: discovered Vercel get_git_deployment_context, which confirms the primary team/project on Hobby (free, hard limits rather than automatic paid overage). Hosting eligibility is now established for this existing personal project. Groq account tier remains unverified. Concurrent production PR89 advanced the repair branch to ead934c and controller31; preserved its probe/host/duration requirements, imported tests and original RLS migration, and combined with independent downloaded-byte validation and measured probe/byte agreement. Removed only our redundant unapplied RLS migration. Reconciled candidate passes 237/237 tests, build and production audit; no main merge. Coupled plan/analysis migration and frontend release can proceed after this exact candidate's checks; actual deployment/proof recorded next.
+
+## Latest release evidence — 2026-10-14 UTC
+
+Source commit 5802b18fe9d70dca53f87d7a77e84ce7df80cae7 (tested tree aab257d4baa1d2644783926bf2100adb13dbae90) passed 237 tests, build, production audit, separate Edge TypeScript and exact-commit GitHub CI (runs38507845691,38507844766,38507844755). Production deployment dpl_9tbJ6np8ykwBi21GgVcrM7SeaGfQ became READY and received the canonical production alias. Supabase deployed Generation32, World40, StyleDraft8, AnalyzeSong19 and FreeMotionPilot5; all eight retrieved files match tested source. Existing auth/ownership and verify_jwt settings retained.
+
+| Applied migration | Live version |
+| --- | --- |
+| assembly_retry_attempts | 20261014035229 |
+| creator_asset_choices | 20261014035230 |
+| validate_visual_plan_timeline | 20261014035231 |
+| atomic_visual_plan_revisions | 20261014035414 |
+| owner_checked_analysis_writes | 20261014035415 |
+
+Original final-video write restriction20261014021402 remained applied. The first atomic migration attempt collided with a migration-ledger timestamp; verified rollback left its columns/RPC absent, and the individual retry succeeded. A preview-target request400 and promotion422 did not deploy production; a separately created pinned production build succeeded.
+
+Live request8985 (motion_eligibility with the existing approved image, no upload/enqueue/GPU) returned HTTP200 at2026-10-14T03:55:23.309Z: actual HF_VIDEO_TOKEN account DaddyDom8249, free LTX eligibility, JPEG1024×1024 decoded from private storage. Anonymous requests9009–9013 returned401 for all five repaired functions. Missing-owner variant RPC denied42501 before any insert. Authenticated client grants now deny analysis UPDATE, plan INSERT and final-video INSERT/UPDATE while preserving final-video SELECT.
+
+Ghast retains eight approved images and approved plana6cb12eb…; existing approval-row hashes matched baseline (images ee10eadfbfefd5023e9f1c7771fb3959; plans80e68d516bc82e8063c4411feb2d9c42; motionfd1b2c5c19d389ec00499917e6865b44). Another project's approval additions occurred at03:39 before our migrations at03:52; they were preserved and excluded only when comparing the pre-existing-row baseline. This repair did not approve, reject or delete creator work.
+
+While sign-in verification was pending, another session deployed frontend eda1d2b858b8fb34b2ca04e67e075a7683992a4e/dpl_3mCCGcuddVuVFEQTWt1H25rQGY1B, a descendant of5802b18 adding only motion-duration UI/test/log changes. The production repair branch also advanced to122eb286bf39e33c44aed3bf078e63c45707ac93. Both histories and measured-duration behavior are preserved in this candidate, with the older duration test's labels adapted to the current LTX/paused-Wan UI. Latest combined source passes243/243 tests, build and production audit. No backend rollback or redundant frontend deployment. Main remains9e6619f; PR91 remains draft/unmerged.
+
+Public browser rendering verified. Secure sign-in was interrupted; the subsequent canonical homepage still shows Auth session missing. Authenticated creator controls and end-to-end workflow remain UNVERIFIED. The previously verified real1.9-second LTX Ghast clip is preserved; no new GPU/render request occurred during this repair. Final MP4 guard remains structural rather than a decoder/content proof; full assembly, unknown-cost provider paths and accurate singing lip sync remain unavailable/unverified as documented above.
