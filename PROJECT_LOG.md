@@ -1001,3 +1001,12 @@ Release result: published exact tested tree 27f9c88c6383d1af94acfc4fb33c6463e29a
 ## 2026-10-13 — End stuck ZeroGPU preview on provider SSE error
 
 Supabase now explicitly forwards a terminal Arena `status:failed` to the authorized job owner without any job insert or retry. Studio shows a checking spinner, prevents concurrent status polls, clears finished failed job tickets, displays safe categorized failure text, and stops automatic polling; temporary network errors still permit manual checks on the same ticket. No approved assets are modified and no GPU jobs are created while checking status.
+
+
+## 2026-10-13 — Verified MP4 final-video persistence and read-only creator rows (draft)
+
+CONFIRMED: The source generation controller marks final videos complete from an arbitrary https URL plus reported/planned duration, with no media probe. Live Supabase final_videos permits direct owner INSERT/UPDATE/DELETE. The live generation Edge v30 is larger than GitHub source, but contains the same vulnerable persistFinalVideo subroutine.
+
+SOURCE CHANGE NOT DEPLOYED: Persist only verified Shotstack-hosted MP4 with explicit Arena probe proof of video and song-audio streams and measured duration aligned to the authoritative timeline. Historic records remain untouched. A new SQL migration revokes client mutations and changes final_videos owner-ALL RLS to owner-SELECT, preserving service-role writes.
+
+RELEASE BLOCKERS: Depends on Arena draft PR #42. The additional Shotstack media-probe billing eligibility is unknown; no provider requests were made. Live Edge function source has significant runtime changes outside GitHub, so do not overwrite it with the repository function without reconciliation. Migration needs separate production authorization. CI pending.

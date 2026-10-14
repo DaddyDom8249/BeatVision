@@ -287,7 +287,28 @@ async function persistFinalVideo(db: any, job: any, responseData: any) {
   if (existing.error) throw new Error("FINAL_VIDEO_CHECK_FAILED: " + existing.error.message);
   if (existing.data) return existing.data;
 
-  const duration = Number(responseData?.result?.duration_seconds || responseData?.duration_seconds || job.input_snapshot?.plan?.duration_seconds || 0);
+  // Arena must probe the actual output media before we mark the final video complete.
+  const result = responseData?.result || {};
+  const proof = result.media_validation || {};
+  let output: URL;
+  try { output = new URL(videoUrl); }
+  catch { throw new Error("FINAL_VIDEO_OUTPUT_URL_INVALID"); }
+  if (output.protocol !== "https:" ||
+      output.hostname !== "shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com" ||
+      Boolean(output.username) || Boolean(output.password))
+    throw new Error("FINAL_VIDEO_OUTPUT_HOST_UNTRUSTED");
+  if (result.render_integrity !== "PASS" || proof.probed !== true ||
+      proof.probe_provider !== "shotstack" || proof.format !== "mp4" ||
+      proof.has_video_stream !== true || proof.has_audio_stream !== true)
+    throw new Error("FINAL_VIDEO_MEDIA_NOT_VERIFIED: missing probed MP4 video/audio evidence.");
+  const expected = Number(job.input_snapshot?.plan?.duration_seconds);
+  const actual = Number(proof.duration_seconds);
+  const reported = Number(result.duration_seconds);
+  if (!(expected > 0) || !(actual > 0) || !Number.isFinite(actual) ||
+      !(reported > 0) || Math.abs(actual - expected) > 0.35 ||
+      Math.abs(actual - reported) > 0.05)
+    throw new Error("FINAL_VIDEO_DURATION_UNVERIFIED: media length differs from the approved song.");
+  const duration = actual;
   const finalInsert = await db.from("final_videos").upsert({
     project_id: job.project_id,
     generation_job_id: job.id,
