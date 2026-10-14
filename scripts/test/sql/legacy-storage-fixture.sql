@@ -1,0 +1,16 @@
+create role authenticated; create role anon;
+create schema auth; create schema storage;
+create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+grant usage on schema public,auth,storage to authenticated,anon;
+create table storage.objects(id text primary key,bucket_id text,name text,owner_id text,payload text);
+alter table storage.objects enable row level security;
+grant select,insert,update,delete on storage.objects to authenticated;
+grant select on storage.objects to anon;
+create policy public_read on storage.objects for select to public using(bucket_id in ('scene-images','render-manifests'));
+create policy "BeatVision authenticated upload non-song storage" on storage.objects for insert to authenticated  with check(bucket_id in ('scene-images','render-manifests'));
+create policy "BeatVision authenticated update non-song storage" on storage.objects for update to authenticated using(bucket_id in ('scene-images','render-manifests')) with check(bucket_id in ('scene-images','render-manifests'));
+create policy "BeatVision authenticated delete non-song storage" on storage.objects for delete to authenticated using(bucket_id in ('scene-images','render-manifests')) ;
+create policy "BeatVision authenticated upload scene images" on storage.objects for insert to authenticated  with check(bucket_id='scene-images');
+create policy "BeatVision authenticated update scene images" on storage.objects for update to authenticated using(bucket_id='scene-images') with check(bucket_id='scene-images');
+create policy "BeatVision authenticated delete scene images" on storage.objects for delete to authenticated using(bucket_id='scene-images') ;
+insert into storage.objects values ('other-image','scene-images','project/image.jpg','00000000-0000-0000-0000-000000000002','approved'),('other-manifest','render-manifests','browser-renders/other.json','00000000-0000-0000-0000-000000000002','approved');

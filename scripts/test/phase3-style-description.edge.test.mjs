@@ -106,22 +106,21 @@ after(async () => {
   for (const dir of CREATED_DIRS.splice(0)) await rm(dir, { recursive: true, force: true });
 });
 
-test("owner receives an editable proposal and the function does not persist it", async () => {
+test("owner receives explicit unavailable status without inference or persistence when free eligibility is unknown", async () => {
   const { handler, db, groqCalls } = await bootFunction();
   const before = structuredClone(db.characters[0]);
   const response = await request(handler);
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 503);
   const body = await response.json();
-  assert.equal(body.persisted, false);
-  assert.ok(body.draft.appearance);
+  assert.equal(body.error.code, "PROVIDER_COST_UNVERIFIED");
   assert.deepEqual(db.characters[0], before);
-  assert.equal(groqCalls(), 1);
+  assert.equal(groqCalls(), 0);
 });
 
-test("approved owner record may generate a proposal without mutating the approval", async () => {
+test("unverified inference cannot mutate an approved owner record", async () => {
   const { handler, db } = await bootFunction({ status: "approved" });
   const response = await request(handler);
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 503);
   assert.equal(db.characters[0].status, "approved");
   assert.equal(db.characters[0].sheet.appearance, "");
 });

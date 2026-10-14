@@ -423,6 +423,11 @@ Deno.serve(async (req) => {
       }, 503);
     }
 
+    // Account billing/usage eligibility for these configured providers is not verified.
+    // Existing World reads, edits, confirmation and revisions do not invoke inference.
+    const freeAccountVerified = false;
+    if (!freeAccountVerified) return json(req, {error:{code:"PROVIDER_COST_UNVERIFIED",message:"New World generation is unavailable until a language-provider execution path is verified free."}, report:{...(existing || {}),status:"unavailable",error_code:"PROVIDER_COST_UNVERIFIED",error_message:"Language-provider free eligibility is unverified."}}, 503);
+
     const { data: song, error: songError } = await admin
       .from("songs")
       .select("id,title,artist,lyrics,creative_direction,notes,analysis,analysis_status")

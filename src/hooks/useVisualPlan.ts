@@ -1,34 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase/client";
 import { getVisualPlanErrorMessage } from "../lib/visualPlanErrors";
-import { formatCreativeText } from "../lib/formatCreativeText";
 import type { StyleBible } from "../types/style";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 import type { WorldReport } from "../types/world";
-import type { Song, SongAnalysis } from "../types/song";
+import type { Song } from "../types/song";
 
-const planFields = "id,project_id,world_report_id,style_bible_id,song_id,vision_lock_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
+const planFields = "id,project_id,world_report_id,style_bible_id,song_id,vision_lock_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,revision_number,parent_plan_id,created_at,updated_at";
 const styleFields = "id,project_id,world_report_id,status,world_basis,visual_language,cinematography,color_lighting,atmosphere,movement,continuity_rules,visual_rules,reference_assets,approved_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
-
-function firstText(value: unknown): string {
-  const text = formatCreativeText(value);
-  return typeof value === "string" ? text : text.replace(/\n+/g, ", ");
-}
-
-function sectionWindows(analysis: SongAnalysis, duration: number) {
-  const sections = Array.isArray(analysis.sections) && analysis.sections.length
-    ? analysis.sections.map((section) => ({ section_index: section.index, start_time: Math.max(0, Number(section.start_time)), end_time: Math.min(duration, Number(section.end_time)) }))
-      .filter((section) => Number.isFinite(section.start_time) && Number.isFinite(section.end_time) && section.end_time > section.start_time)
-    : [];
-  if (sections.length) return sections;
-
-  const regions = Array.isArray(analysis.energy_region_candidates)
-    ? analysis.energy_region_candidates.map((region, index) => ({ section_index: index, start_time: Math.max(0, Number(region.start_time)), end_time: Math.min(duration, Number(region.end_time)) }))
-      .filter((region) => Number.isFinite(region.start_time) && Number.isFinite(region.end_time) && region.end_time > region.start_time)
-    : [];
-  return regions.length ? regions : [{ section_index: 0, start_time: 0, end_time: duration }];
-}
 
 export function useVisualPlan(projectId: string) {
   const [world, setWorld] = useState<WorldReport | null>(null);
@@ -40,6 +20,7 @@ export function useVisualPlan(projectId: string) {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [planHistory, setPlanHistory] = useState<VisualPlan[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -58,21 +39,25 @@ export function useVisualPlan(projectId: string) {
       supabase.from("world_reports").select("*").eq("id", worldId).eq("project_id", projectId).single(),
       supabase.from("style_bibles").select(styleFields).eq("project_id", projectId).eq("world_report_id", worldId).maybeSingle(),
       supabase.from("songs").select("*").eq("project_id", projectId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("visual_plans").select(planFields).eq("project_id", projectId).maybeSingle(),
+      supabase.from("visual_plans").select(planFields).eq("project_id", projectId).order("revision_number", {ascending:false}),
       supabase.from("vision_locks").select("id,project_id,world_report_id,style_bible_id,song_id,revision_number,status,snapshot,locked_at,created_at").eq("project_id", projectId).order("revision_number", { ascending: false }).limit(1).maybeSingle(),
     ]);
 
     const firstError = worldResult.error ?? styleResult.error ?? songResult.error ?? planResult.error ?? lockResult.error;
     if (firstError) { setError(firstError.message); setLoading(false); return; }
 
+    const history = Array.isArray(planResult.data) ? planResult.data : planResult.data ? [planResult.data] : [];
+    const selectedPlanId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('plan') : null;
+    const selectedPlan = history.find(row => row.id === selectedPlanId) ?? history[0] ?? null;
+    setPlanHistory(history as VisualPlan[]);
     setWorld(worldResult.data as WorldReport);
     setStyleBible((styleResult.data ?? null) as StyleBible | null);
     setSong((songResult.data ?? null) as Song | null);
-    setPlan((planResult.data ?? null) as VisualPlan | null);
+    setPlan(selectedPlan as VisualPlan | null);
     setVisionLock((lockResult.data ?? null) as Record<string, unknown> | null);
 
-    if (planResult.data) {
-      const sceneResult = await supabase.from("visual_plan_scenes").select(sceneFields).eq("visual_plan_id", planResult.data.id).order("scene_number", { ascending: true });
+    if (selectedPlan) {
+      const sceneResult = await supabase.from("visual_plan_scenes").select(sceneFields).eq("visual_plan_id", selectedPlan.id).order("scene_number", { ascending: true });
       if (sceneResult.error) { setError(sceneResult.error.message); setLoading(false); return; }
       setScenes((sceneResult.data ?? []) as VisualPlanScene[]);
     } else setScenes([]);
@@ -87,69 +72,27 @@ export function useVisualPlan(projectId: string) {
     if (!styleBible || styleBible.status !== "approved" || !styleBible.approved_at) throw new Error("The Style Bible must be locked before creating a Visual Plan.");
     if (!song || song.analysis_status !== "completed" || !song.analysis) throw new Error("The song analysis must be completed before creating a Visual Plan.");
     if (plan) throw new Error("A Visual Plan already exists for this project.");
-    let lock = visionLock;
-
     setWorking(true); setError(null);
-    let createdPlanId: string | null = null;
     try {
-      if (!lock) {
-        const lockResult = await supabase.rpc("create_vision_lock", { p_project_id: projectId });
-        if (lockResult.error) throw lockResult.error;
-        lock = lockResult.data as Record<string, unknown>;
-        setVisionLock(lock);
-      }
-      const duration = Number(song.analysis.duration_seconds);
-      if (!Number.isFinite(duration) || duration <= 0) throw new Error("Song analysis does not contain a valid duration.");
-      const windows = sectionWindows(song.analysis, duration);
-      const globalDirection = {
-        visual_language: world.visual_language ?? styleBible.visual_language,
-        cinematography: styleBible.cinematography ?? world.cinematography,
-        color_lighting: styleBible.color_lighting ?? world.color_lighting,
-        atmosphere: styleBible.atmosphere ?? world.atmosphere,
-        movement: styleBible.movement ?? world.movement,
-        continuity_rules: styleBible.continuity_rules ?? world.continuity_rules,
-      };
+      const result = await supabase.rpc('create_visual_plan', {p_project_id: projectId});
+      if (result.error) throw result.error;
+      await load();
+    } catch (e) { setError(getVisualPlanErrorMessage(e, 'Unable to create Visual Plan.')); throw e; }
+    finally { setWorking(false); }
+  }, [projectId, world, styleBible, song, plan, load]);
 
-      const planResult = await supabase.from("visual_plans").insert({
-        project_id: projectId, world_report_id: world.id, style_bible_id: styleBible.id, song_id: song.id, vision_lock_id: String(lock.id),
-        title: "Visual Plan", duration_seconds: duration,
-        creative_thesis: firstText(world.emotional_arc) || firstText(world.mood),
-        global_direction: globalDirection,
-      }).select(planFields).single();
-      if (planResult.error) throw planResult.error;
-      createdPlanId = planResult.data.id;
+  const revisePlan = useCallback(async () => {
+    if (!plan || plan.status !== 'approved') throw new Error('Only a locked plan can be revised.');
+    setWorking(true); setError(null);
+    try {
+      const result = await supabase.rpc('create_visual_plan_revision', {p_plan_id: plan.id});
+      if (result.error) throw result.error;
+      await load();
+    } catch (e) { setError(getVisualPlanErrorMessage(e, 'Unable to revise Visual Plan.')); throw e; }
+    finally { setWorking(false); }
+  }, [plan, load]);
 
-      const defaultLocation = firstText(world.environments) || firstText(world.atmosphere) || "World-defined environment";
-      const defaultMood = firstText(world.mood) || "World-defined emotional state";
-      const defaultCamera = firstText(styleBible.cinematography) || firstText(world.cinematography) || "Follow the locked cinematography rules.";
-      const defaultMovement = firstText(styleBible.movement) || firstText(world.movement) || "Follow the locked movement language.";
-      const defaultContinuity = firstText(styleBible.continuity_rules) || firstText(world.continuity_rules) || "Preserve all locked World and Style continuity.";
-
-      const rows = windows.map((window, index) => ({
-        visual_plan_id: planResult.data.id, project_id: projectId, world_report_id: world.id,
-        style_bible_id: styleBible.id, song_id: song.id, scene_number: index + 1,
-        section_index: window.section_index, start_time: window.start_time, end_time: window.end_time,
-        title: `Section ${index + 1}`,
-        visual_direction: "Translate this musical section into the confirmed World without introducing a new visual language.",
-        camera_direction: defaultCamera, movement_direction: defaultMovement, location: defaultLocation,
-        mood: defaultMood, lyric_moment: "",
-        transition_style: index === 0 ? "Opening transition" : "Match the musical transition.",
-        continuity_notes: defaultContinuity,
-      }));
-
-      const sceneResult = await supabase.from("visual_plan_scenes").insert(rows).select(sceneFields);
-      if (sceneResult.error) throw sceneResult.error;
-      setPlan(planResult.data as VisualPlan);
-      setScenes((sceneResult.data ?? []) as VisualPlanScene[]);
-    } catch (e) {
-      const message = getVisualPlanErrorMessage(e, "Unable to create Visual Plan.");
-      setError(message);
-      if (createdPlanId) await supabase.from("visual_plans").delete().eq("id", createdPlanId);
-      throw e;
-    } finally { setWorking(false); }
-  }, [projectId, world, styleBible, song, plan, visionLock]);
-
-  const saveScene = useCallback(async (sceneId: string, changes: Partial<Pick<VisualPlanScene, "title" | "visual_direction" | "camera_direction" | "movement_direction" | "location" | "mood" | "lyric_moment" | "transition_style" | "continuity_notes">>) => {
+  const saveScene = useCallback(async (sceneId: string, changes: Partial<Pick<VisualPlanScene, "start_time" | "end_time" | "title" | "visual_direction" | "camera_direction" | "movement_direction" | "location" | "mood" | "lyric_moment" | "transition_style" | "continuity_notes">>) => {
     if (!plan || plan.status !== "draft") throw new Error("The Visual Plan is locked.");
     setWorking(true); setError(null);
     try {
@@ -177,5 +120,5 @@ export function useVisualPlan(projectId: string) {
     } finally { setWorking(false); }
   }, [plan, scenes.length]);
 
-  return { world, styleBible, song, visionLock, plan, scenes, loading, working, error, createPlan, saveScene, approvePlan, reload: load };
+  return { world, styleBible, song, visionLock, plan, planHistory, scenes, loading, working, error, createPlan, revisePlan, saveScene, approvePlan, reload: load };
 }

@@ -29,15 +29,15 @@ const REMOTE_IMPORT = 'from "https://esm.sh/@supabase/supabase-js@2"';
 const ORIGINAL_FETCH = globalThis.fetch;
 const CREATED_DIRS = [];
 
-async function bootFunction({ authUserId = USER_ID, ownerId = USER_ID } = {}) {
+async function bootFunction({ authUserId = USER_ID, ownerId = USER_ID, analysis = null, songDuration = 249.126908314, groqData = { text: 'hello world', segments: [], words: [] }, groqStatus = 200 } = {}) {
   const db = {
-    projects: [{ id: PROJECT_ID, owner_id: ownerId }],
+    projects: [{ id: PROJECT_ID, owner_id: ownerId, song_duration: songDuration }],
     songs: [
       {
         id: "song-1",
         project_id: PROJECT_ID,
         audio_path: `${USER_ID}/${PROJECT_ID}/track.mp3`,
-        analysis: null,
+        analysis,
       },
     ],
   };
@@ -86,8 +86,8 @@ async function bootFunction({ authUserId = USER_ID, ownerId = USER_ID } = {}) {
       return new Response(JSON.stringify({ id: authUserId }), { status: 200 });
     }
     if (url.includes("api.groq.com")) {
-      return new Response(JSON.stringify({ text: "hello world", segments: [], words: [] }), {
-        status: 200,
+      return new Response(JSON.stringify(groqData), {
+        status: groqStatus,
       });
     }
     throw new Error(`unexpected network call: ${url}`);
@@ -128,34 +128,17 @@ after(async () => {
   }
 });
 
-test("reads audio from the `songs` bucket production actually uses", async () => {
-  storageBucketCalls.length = 0;
-  const { handler } = await bootFunction();
-  const response = await call(handler, { projectId: PROJECT_ID });
-
-  assert.equal(response.status, 200);
-  const body = await response.json();
-  assert.equal(body.status, "completed");
-
-  assert.equal(storageBucketCalls.length, 1, "expected exactly one signed-url request");
-  assert.equal(
-    storageBucketCalls[0].bucket,
-    "songs",
-    "transcription must read the bucket the frontend uploads to"
-  );
-  assert.ok(
-    storageBucketCalls.every((entry) => entry.bucket !== "audio"),
-    "the stale `audio` bucket must not be referenced"
-  );
+test("unverified account is refused before signed storage access or inference", async () => {
+ storageBucketCalls.length=0;
+ const {handler,db}=await bootFunction(); const before=structuredClone(db.songs);
+ const response=await call(handler,{projectId:PROJECT_ID});
+ assert.equal(response.status,503);assert.match((await response.json()).error,/PROVIDER_COST_UNVERIFIED/);
+ assert.equal(storageBucketCalls.length,0);assert.deepEqual(db.songs,before);
 });
 
-test("failed transcription still leaves local analysis intact and reports the error", async () => {
-  const { handler } = await bootFunction();
-  const response = await call(handler, { projectId: PROJECT_ID });
-  const body = await response.json();
-
-  assert.equal(response.status, 200);
-  assert.equal(body.analysis.transcription_provider, "groq");
+test("unverified account cannot write fabricated transcription provenance",async()=>{
+ const {handler,db}=await bootFunction();const before=structuredClone(db.songs);
+ const response=await call(handler,{projectId:PROJECT_ID});assert.equal(response.status,503);assert.deepEqual(db.songs,before);
 });
 
 test("missing Authorization header returns 401, not 500", async () => {
@@ -188,4 +171,15 @@ test("non-POST requests are rejected", async () => {
   const { handler } = await bootFunction();
   const response = await call(handler, { projectId: PROJECT_ID }, { method: "GET" });
   assert.equal(response.status, 405);
+});
+
+for (const analysis of [
+ {duration_seconds:60,sections:[{index:0,start_time:0,end_time:60}]},
+ null,
+ {duration_seconds:0},
+ {duration_seconds:60,transcription_status:'failed'}
+]) test('unverified transcription preserves prior duration/sections and cannot claim completion: '+JSON.stringify(analysis),async()=>{
+ const {handler,db}=await bootFunction({analysis});const before=structuredClone(db.songs);
+ const response=await call(handler,{projectId:PROJECT_ID});assert.equal(response.status,503);
+ assert.match((await response.json()).error,/PROVIDER_COST_UNVERIFIED/);assert.deepEqual(db.songs,before);
 });

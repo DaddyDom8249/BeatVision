@@ -24,6 +24,8 @@ export default function StylePage({ projectId }: { projectId: string }) {
     working,
     error,
     locked,
+    lineageConflict,
+    restoreApprovedStyleWorld,
     createStyleBible,
     saveStyleBible,
     saveCharacter,
@@ -57,6 +59,38 @@ export default function StylePage({ projectId }: { projectId: string }) {
   }, [styleBible?.id, styleBible?.updated_at, styleBible?.status]);
 
   if (loading) return <main className="studio-main style-page"><div className="style-loading">Loading Style Studio…</div></main>;
+
+  if (lineageConflict) {
+    // A confirmed World revision cannot reuse an older approved Bible's children.
+    // No automatic changes; the creator decides which World version is active.
+    return (
+      <main className="studio-main style-page">
+        <header className="style-header"><div>
+          <span className="eyebrow">PHASE 3 / STYLE BIBLE</span>
+          <h1>Choose the World for your Style Bible</h1>
+          <p>Your project has a newer confirmed World, but your saved Style Bible and its approved creative assets belong to the previous World revision.</p>
+        </div></header>
+        <section className="style-empty-panel">
+          <p role="status">Your approved Style Bible is preserved. BeatVision has stopped automatic character and environment creation until the World versions agree.</p>
+          <p>Active World: {lineageConflict.activeWorldId.slice(0, 8)}…</p>
+          <p>Approved Style World: {lineageConflict.styleWorldId.slice(0, 8)}…</p>
+          {error && <p className="form-error" role="alert">{error}</p>}
+          <div className="style-actions">
+            <a className="secondary-button" href={`/projects/${projectId}/world`}>Review newer World</a>
+            {lineageConflict.styleStatus === "approved" && (
+              <button type="button" disabled={working} onClick={() => {
+                if (window.confirm("Restore the earlier confirmed World associated with your approved Style Bible? Your newer World revision stays saved. No Style Bible, characters, environments, storyboards or media will be overwritten.")) {
+                  void restoreApprovedStyleWorld().catch(() => { /* Hook shows error. */ });
+                }
+              }}>{working ? "Restoring approved World…" : "Restore World used by approved Style Bible"}</button>
+            )}
+            <button type="button" disabled={working} onClick={() => void reload().catch(() => { /* Hook shows error. */ })}>Recheck World versions</button>
+          </div>
+          <p>To keep the newer World instead, leave it selected. A new Style Bible revision must be created before generating downstream assets for that World. This page will not silently rebind existing approvals.</p>
+        </section>
+      </main>
+    );
+  }
 
   if (!styleBible) {
     // A failed load is NOT evidence of a missing Style Bible. Never offer
@@ -142,6 +176,15 @@ export default function StylePage({ projectId }: { projectId: string }) {
       {error && <p className="form-error style-error" role="alert">{error}</p>}
       <header className="style-header"><div><span className="eyebrow">PHASE 3 / STYLE BIBLE</span><h1>Style Bible</h1><p>{locked ? "The approved Style Bible is immutable. Character and environment drafts continue from this locked creative source." : "Translate the confirmed World into repeatable visual rules, character continuity, environments, and reference language."}</p></div><div className="style-status">{locked ? "APPROVED / DOWNSTREAM ASSETS" : "DRAFT / WORLD BOUND"}</div></header>
 
+      <nav className="style-actions style-stage-navigation" aria-label="Style stage navigation">
+        <a className="secondary-button" href={`/projects/${projectId}/world`}>← Return to World</a>
+        {locked ? (
+          <a className="primary-button" href={`/projects/${projectId}/visual-plan`}>Continue to Visual Plan →</a>
+        ) : (
+          <p role="status">Lock the Style Bible to continue to Visual Plan.</p>
+        )}
+      </nav>
+
       <section className="style-section">
         <div className="style-section-heading"><div><span className="panel-label">01 / SOURCE</span><h2>World Foundation</h2></div><span className="style-lineage">World: {world?.id ? `${world.id.slice(0, 8)}…` : "Unavailable"}</span></div>
         <p className="style-section-copy">These fields come from the confirmed World Report. They are reference data for this stage, not an editable replacement for the World.</p><div className="style-foundation-grid">{Object.entries(styleBible.world_basis ?? {}).map(([key, value]) => <article className="style-foundation-card" key={key}><span className="style-card-label">{key.replace(/_/g, " ")}</span><StyleValue value={value} /></article>)}</div>
@@ -226,6 +269,11 @@ export default function StylePage({ projectId }: { projectId: string }) {
           />
         ))}
       </section>
+      {locked && (
+        <nav className="style-actions style-stage-navigation" aria-label="Continue after Style Studio">
+          <a className="primary-button" href={`/projects/${projectId}/visual-plan`}>Continue to Visual Plan →</a>
+        </nav>
+      )}
     </main>
   );
 }

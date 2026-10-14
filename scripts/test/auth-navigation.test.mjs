@@ -61,6 +61,7 @@ function makeHarness(start = "/projects/new") {
     if (name === "../lib/supabase/client") return { supabase: api };
     if (name === "../lib/analytics") return { capture: () => {}, capturePageview: () => {}, identifyUser: () => {}, initAnalytics: () => {} };
     if (name === "../lib/errorDetails") return { formatFailure: () => "error" };
+    if (name === "../lib/formatCreativeText") return { getCreativeErrorMessage: () => "error" };
     if (name.startsWith("../pages/")) return { default: name.split("/").at(-1) };
     throw new Error("Unexpected dependency " + name);
   };
@@ -84,14 +85,18 @@ function makeHarness(start = "/projects/new") {
   }
   const appHooks = hooks();
   const App = load("app/App.tsx", appHooks);
-  const CreateProjectPage = load("pages/CreateProjectPage.tsx", hooks());
+  const createHooks = hooks();
+  const CreateProjectPage = load("pages/CreateProjectPage.tsx", createHooks);
   const AuthPage = load("pages/AuthPage.tsx", hooks());
+  const DashboardPage = load("pages/DashboardPage.tsx", hooks());
   function renderApp() { appHooks.render(); return App(); }
-  return { browser, renderApp, CreateProjectPage, AuthPage };
+  const navigated = [];
+  function renderCreate() { createHooks.render(); return CreateProjectPage({onNavigate: path => navigated.push(path)}); }
+  return { browser, renderApp, CreateProjectPage, AuthPage, DashboardPage, api, renderCreate, navigated };
 }
 
 function walk(tree, predicate) {
-  if (tree == null || typeof tree === "string") return null;
+  if (tree == null || (typeof tree !== "object" && !Array.isArray(tree))) return null;
   if (Array.isArray(tree)) {
     for (const child of tree) { const found = walk(child, predicate); if (found) return found; }
     return null;
@@ -132,9 +137,89 @@ test("direct /auth?next path and other existing routes retain correct component 
     ["/projects/new", "CreateProjectPage"],
     ["/projects/123/song", "SongPage"],
     ["/projects/123/world", "WorldPage"],
+    ["/projects/123/motion", "ProductionWorkspacePage"],
+    ["/projects/123/motion/", "ProductionWorkspacePage"],
     ["/", "DashboardPage"],
   ]) {
     const { renderApp } = makeHarness(route);
     assert.equal(renderApp().type, expected, route);
   }
+});
+
+test("project creation surfaces rejected authentication and leaves the form retryable", async () => {
+  const view=makeHarness();
+  let requests=0;
+  view.api.auth.getUser=async()=>{throw new Error("Authentication transport unavailable")};
+  view.api.from=()=>{requests++;throw new Error("Must not query after auth failure")};
+  const tree=view.renderCreate();
+  const form=walk(tree,node=>node.type==="form");
+  await assert.doesNotReject(form.props.onSubmit({preventDefault(){}}));
+  const result=view.renderCreate();
+  assert.equal(walk(result,node=>node.type==="button"&&node.props.disabled!==undefined).props.disabled,false);
+  assert.ok(walk(result,node=>node.props.role==="alert"));
+  assert.equal(requests,0);
+  assert.deepEqual(view.navigated,[]);
+});
+test("project creation stops on an auth error even when stale user data is present", async () => {
+  const view=makeHarness();
+  let requests=0;
+  view.api.auth.getUser=async()=>({data:{user:{id:"user-1"}},error:{message:"Session validation unavailable"}});
+  view.api.from=()=>{requests++;return {insert(){return this},select(){return this},single:async()=>({data:{id:"project-1"},error:null})}};
+  await walk(view.renderCreate(),node=>node.type==="form").props.onSubmit({preventDefault(){}});
+  const result=view.renderCreate();
+  assert.equal(requests,0);
+  assert.ok(walk(result,node=>node.props.role==="alert"));
+  assert.deepEqual(view.navigated,[]);
+});
+test("project creation catches a rejected save and retries with the original title and owner", async () => {
+  const view=makeHarness();
+  view.api.auth.getUser=async()=>({data:{user:{id:"user-1"}},error:null});
+  let fail=true;
+  const writes=[];
+  view.api.from=(table)=>{assert.equal(table,"projects");return {
+    insert(payload){writes.push(payload);return this},
+    select(){return this},
+    single:async()=>{if(fail)throw new Error("Database transport unavailable");return {data:{id:"project-1"},error:null}}
+  }};
+  walk(view.renderCreate(),node=>node.type==="input").props.onChange({target:{value:"Ghast draft"}});
+  await assert.doesNotReject(walk(view.renderCreate(),node=>node.type==="form").props.onSubmit({preventDefault(){}}));
+  const failed=view.renderCreate();
+  assert.ok(walk(failed,node=>node.props.role==="alert"));
+  assert.equal(walk(failed,node=>node.type==="button"&&node.props.disabled!==undefined).props.disabled,false);
+  fail=false;
+  await walk(view.renderCreate(),node=>node.type==="form").props.onSubmit({preventDefault(){}});
+  assert.equal(writes.length,2);
+  assert.deepEqual(JSON.parse(JSON.stringify(writes[1])),{owner_id:"user-1",title:"Ghast draft",status:"Draft",stage:"song"});
+  assert.deepEqual(view.navigated,["/projects/project-1/song"]);
+  assert.equal(walk(view.renderCreate(),node=>node.props.role==="alert"),null);
+});
+
+
+test("signed-in Start with a song opens creation, not the login screen", () => {
+  const view = makeHarness("/");
+  view.api.auth.getUser = async () => ({ data: { user: { id: "owner-1" } }, error: null });
+  const dashboardRoute = view.renderApp();
+  assert.equal(dashboardRoute.type, "DashboardPage");
+  const home = view.DashboardPage({ onNavigate: dashboardRoute.props.onNavigate });
+  const start = walk(home, node => node.type === "button" && JSON.stringify(node.props.children ?? "").includes("Start with a song"));
+  assert.ok(start, "dashboard CTA is present");
+  start.props.onClick();
+  assert.equal(view.browser.location.pathname, "/projects/new", "must not navigate to /auth");
+  assert.equal(view.renderApp().type, "CreateProjectPage", "signed-in user lands on real creation form");
+});
+
+test("signed-in user clicking the legacy account link stays on the create form", async () => {
+  const view = makeHarness("/projects/new");
+  view.api.auth.getUser = async () => ({ data: { user: { id: "owner-1" } }, error: null });
+  const create = view.renderCreate();
+  const account = walk(create, node => node.type === "button" &&
+    String(node.props.children).includes("Sign in or create an account"));
+  assert.ok(account, "account CTA exists until session status is checked");
+  await account.props.onClick();
+  assert.deepEqual(view.navigated, [], "existing session must never redirect home or back to auth");
+  const after = view.renderCreate();
+  assert.equal(walk(after, node => node.type === "button" &&
+    String(node.props.children).includes("Sign in or create an account")), null,
+    "session-verified users are not told to sign in again");
+  assert.ok(walk(after, node => node.type === "form"), "new-project form remains usable");
 });

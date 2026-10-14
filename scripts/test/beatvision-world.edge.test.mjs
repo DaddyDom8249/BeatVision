@@ -439,3 +439,10 @@ test("the same edit can fill an empty field in one request", async () => {
   assert.equal(db.world_reports[0].atmosphere, "wet neon haze");
   assert.deepEqual(db.world_reports[0].mood, { tone: "warm" });
 });
+
+test('unverified language account cannot submit inference or overwrite existing World',async()=>{
+ const {handler,db}=await bootFunction();const before=structuredClone(db.world_reports);
+ const response=await request(handler,{method:'POST',body:{projectId:PROJECT_ID}});
+ assert.equal(response.status,503);assert.equal((await response.json()).error.code,'PROVIDER_COST_UNVERIFIED');
+ assert.deepEqual(db.world_reports,before);
+});

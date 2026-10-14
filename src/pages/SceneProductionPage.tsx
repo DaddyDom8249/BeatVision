@@ -36,8 +36,10 @@ export default function SceneProductionPage({ projectId }: { projectId: string }
     let active = true;
     (async () => {
       setLoading(true);
-      const planResult = await supabase.from("visual_plans").select(planFields)
-        .eq("project_id", projectId).eq("status", "approved").single();
+      const requestedPlan = new URLSearchParams(window.location.search).get('plan');
+      let query = supabase.from("visual_plans").select(planFields).eq("project_id", projectId).eq("status", "approved");
+      if (requestedPlan) query = query.eq("id", requestedPlan);
+      const planResult = await query.order("revision_number", {ascending:false}).limit(1).single();
       if (planResult.error) {
         if (active) { setError("Lock the Visual Plan before entering Scene Production."); setLoading(false); }
         return;
@@ -108,7 +110,7 @@ export default function SceneProductionPage({ projectId }: { projectId: string }
           <h2>Turn the locked scene briefs into production shots.</h2>
           <p>Your approved Visual Plan is the creative source. Open the Production Workspace to move through the eight scenes and prepare each shot without changing the locked direction.</p>
         </div>
-        <a className="primary-button" href={"/projects/" + projectId + "/production"}>Open Production Workspace →</a>
+        <a className="primary-button" href={"/projects/" + projectId + "/production?plan=" + plan.id}>Open Production Workspace →</a>
       </section>
     </main>
   );
