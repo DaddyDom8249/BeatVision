@@ -75,6 +75,34 @@ do $check$ begin
  then raise exception 'TAKE_HISTORY_LOST'; end if;
 end $check$;
 
+-- All legacy immutability protections still reject direct edits/deletes.
+do $check$ begin
+  begin
+    delete from public.world_reports
+      where project_id='00000000-0000-0000-0000-000000000100';
+    raise exception 'DIRECT_WORLD_DELETE_ALLOWED';
+  exception when object_not_in_prerequisite_state then null;
+  end;
+  begin
+    delete from public.style_bibles
+      where project_id='00000000-0000-0000-0000-000000000100';
+    raise exception 'DIRECT_STYLE_DELETE_ALLOWED';
+  exception when object_not_in_prerequisite_state then null;
+  end;
+  begin
+    delete from public.vision_locks
+      where project_id='00000000-0000-0000-0000-000000000100';
+    raise exception 'DIRECT_VISION_LOCK_DELETE_ALLOWED';
+  exception when object_not_in_prerequisite_state then null;
+  end;
+  begin
+    delete from public.visual_plans
+      where project_id='00000000-0000-0000-0000-000000000100';
+    raise exception 'DIRECT_APPROVED_PLAN_DELETE_ALLOWED';
+  exception when object_not_in_prerequisite_state then null;
+  end;
+end $check$;
+
 -- A parent project cascade must remain functional in a real PostgreSQL schema.
 delete from public.projects where id='00000000-0000-0000-0000-000000000100';
 do $check$ begin
