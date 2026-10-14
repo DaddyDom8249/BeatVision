@@ -1,5 +1,9 @@
 # BeatVision Project Log
 
+## 2026-10-14 — Sub-512px reference copies for consistency references (PR #94, not deployed)
+
+**Change:** Style Studio uploads of character/environment reference images now also store a canvas-downscaled PNG copy (longest side 511px, aspect ratio preserved, strictly under 512x512 per Cloudflare flux-2-klein-4b) at `<original path>.ref511.png` in `visual-assets`, recorded in the asset row's existing `metadata.reference_copy` jsonb. The original upload is untouched (`upsert: false`, separate path). Copy creation is best effort; failure leaves the original only. `beatvision-generation` signs the copy when metadata records a valid one and falls back to the original otherwise (legacy assets, missing object, signing error), recording `image_variant: "reference_copy" | "original"` per image. No migration. Images already ≤511px get no copy. Existing approved assets are not backfilled. Not verified live; edge function not deployed.
+
 ## 2026-10-10 — Gate final assembly on every scene's persisted approved motion (repair branch)
 
 **Objective:** Motion → Final Assembly (P0) only. Baseline main HEAD: `7dbea8b8009c68ba2e806a467790cc7d5d75141a`. AGENTS.md and current Project Log reviewed; source and recent assembly PRs inspected.
