@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase/client";
 import { suggestMissingWorldFields } from "../lib/style/worldSheetSuggestions";
 import type { StyleDraftKind } from "../lib/style/generatedStyleDraft";
 import { mergeGeneratedStyleDraft } from "../lib/style/generatedStyleDraft";
+import { createReferenceCopy, referenceCopyPath, REFERENCE_COPY_MIME } from "../lib/style/referenceResize";
 import type { WorldReport } from "../types/world";
 import {
   formatCreativeText,
@@ -608,6 +609,19 @@ export function useStyleStudio(projectId: string) {
       });
       if (upload.error) throw upload.error;
 
+      // Best effort: a separate downscaled copy for reference-limited image
+      // models. The original upload above is never modified; if this fails the
+      // generator falls back to the original.
+      let referenceCopy: Record<string, unknown> | null = null;
+      try {
+        const copy = await createReferenceCopy(file);
+        if (copy) {
+          const copyPath = referenceCopyPath(path);
+          const copyUpload = await supabase.storage.from("visual-assets").upload(copyPath, copy.blob, { upsert: false, contentType: REFERENCE_COPY_MIME });
+          if (!copyUpload.error) referenceCopy = { storage_path: copyPath, width: copy.width, height: copy.height, mime_type: REFERENCE_COPY_MIME, source_width: copy.source_width, source_height: copy.source_height };
+        }
+      } catch { referenceCopy = null; }
+
       const table = kind === "character" ? "character_assets" : "environment_assets";
       const payload = {
         project_id: projectId,
@@ -617,7 +631,7 @@ export function useStyleStudio(projectId: string) {
         label: label.trim() || file.name,
         storage_path: path,
         status: "draft",
-        metadata: { original_name: file.name, mime_type: file.type, size: file.size },
+        metadata: { original_name: file.name, mime_type: file.type, size: file.size, ...(referenceCopy ? { reference_copy: referenceCopy } : {}) },
       };
       const result = await supabase.from(table).insert(payload).select("*").single();
       if (result.error) throw result.error;
