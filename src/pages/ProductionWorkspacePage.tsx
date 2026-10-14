@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase/client";
 import { getCreativeErrorMessage } from "../lib/formatCreativeText";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
+import CameraPresetPicker from "../components/motion/CameraPresetPicker";
 
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
@@ -318,6 +319,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-provider-note">
             <span className="panel-label">MOTION</span>
+            <CameraPresetPicker projectId={projectId} scene={scene} songId={plan.song_id} locked={busy || Boolean(motion) || pending(motionJob)} />
             {motion && <p>{motion.model === "image-motion" || (motionJob?.id === motion.generation_job_id && motionJob?.output?.arena_response?.result?.generation_type === "PROCEDURAL_MOTION") ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
             {motion?.video_url ? <video src={motion.video_url} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
             <div className="production-actions">
