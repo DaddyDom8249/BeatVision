@@ -57,6 +57,11 @@ function AssetCard<T extends Asset>({
       {refreshError && <p role="alert" className="form-error">{refreshError}</p>}
       <strong>{asset.label}</strong>
       <p>Status: {asset.status}</p>
+      <p className="style-muted" data-consistency-reference={asset.status === "approved" ? "active" : "inactive"}>
+        {asset.status === "approved"
+          ? "Consistency reference: attached automatically to scene image generations that mention this name (once the record is approved)."
+          : "Not used for scene generation until approved."}
+      </p>
       <details className="style-asset-storage"><summary>Storage details</summary><code>{asset.storage_path}</code></details>
       {asset.status !== "approved" && (
         <button type="button" disabled={working} onClick={() => onApprove(asset)}>
