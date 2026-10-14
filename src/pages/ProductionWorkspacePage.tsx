@@ -464,7 +464,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-provider-note">
             <span className="panel-label">MOTION</span>
-            {motion && <p>{isProceduralMotion ? "Saved procedural image animation (pan/zoom), not AI-generated subject motion." : `Saved generative motion · Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
+            {motion && <p>{isProceduralMotion ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Saved generative motion · Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
             {motion?.video_url ? <video key={motion.id} src={motion.video_url} controls playsInline
   onLoadedMetadata={event => {
     const seconds = event.currentTarget.duration;
