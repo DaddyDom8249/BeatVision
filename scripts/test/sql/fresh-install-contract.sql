@@ -46,13 +46,25 @@ do $test$ begin
   exception when insufficient_privilege then null;
   end;
 end $test$;
--- Persist and explicitly approve a timed scene before any generation enqueue.
+-- Direct client inserts into authoritative visual plans must be rejected.
+do $test$ begin
+  begin
+    insert into public.visual_plans(id,project_id,title,duration_seconds)
+    values ('00000000-0000-0000-0000-000000000299','00000000-0000-0000-0000-000000000100','Forbidden browser plan',4);
+    raise exception 'CLIENT_VISUAL_PLAN_INSERT_ALLOWED';
+  exception when insufficient_privilege then null;
+  end;
+end $test$;
+-- The isolated administrator creates plan/scene fixture rows; the creator
+-- must still explicitly approve via the owner-scoped RPC below.
+reset role;
 insert into public.visual_plans(id,project_id,world_report_id,style_bible_id,song_id,vision_lock_id,title,duration_seconds)
 select '00000000-0000-0000-0000-000000000200',project_id,world_report_id,style_bible_id,song_id,id,'Fixture plan',4
 from public.vision_locks;
 insert into public.visual_plan_scenes(id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,start_time,end_time,title)
 select '00000000-0000-0000-0000-000000000300',id,project_id,world_report_id,style_bible_id,song_id,1,0,4,'Fixture scene'
 from public.visual_plans;
+set role authenticated;
 select public.approve_visual_plan('00000000-0000-0000-0000-000000000200');
 do $test$ declare a public.generation_jobs; b public.generation_jobs; begin
   a:=public.enqueue_scene_generation('00000000-0000-0000-0000-000000000100','00000000-0000-0000-0000-000000000300','scene_image');
