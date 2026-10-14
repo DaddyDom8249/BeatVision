@@ -11,7 +11,12 @@ import { createRoot } from 'react-dom/client';
 const rootDir = fileURLToPath(new URL('../../', import.meta.url));
 const dir = await mkdtemp(join(rootDir, '.ui-test-'));
 const source = await readFile(new URL('../../src/pages/ProductionWorkspacePage.tsx', import.meta.url), 'utf8');
-const transformed = ts.transpileModule(source.replace('"../lib/supabase/client"', '"./stub.mjs"').replace('"../lib/formatCreativeText"', '"./formatCreativeText.mjs"'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+const transpile = (code) => ts.transpileModule(code, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+const readSrc = (path) => readFile(new URL('../../' + path, import.meta.url), 'utf8');
+await writeFile(join(dir, 'model-catalog.mjs'), transpile(await readSrc('supabase/functions/_shared/model-catalog.ts')));
+await writeFile(join(dir, 'models.mjs'), transpile((await readSrc('src/lib/generation/models.ts')).replace('"../../../supabase/functions/_shared/model-catalog"', '"./model-catalog.mjs"')));
+await writeFile(join(dir, 'ModelCostGate.mjs'), transpile((await readSrc('src/components/generation/ModelCostGate.tsx')).replaceAll('"../../lib/generation/models"', '"./models.mjs"')));
+const transformed = ts.transpileModule(source.replace('"../lib/supabase/client"', '"./stub.mjs"').replace('"../lib/formatCreativeText"', '"./formatCreativeText.mjs"').replace('"../components/generation/ModelCostGate"', '"./ModelCostGate.mjs"').replace('"../lib/generation/models"', '"./models.mjs"'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }).outputText;
 await writeFile(join(dir, 'page.mjs'), transformed);
 const errorHelper = await readFile(new URL('../../src/lib/formatCreativeText.ts', import.meta.url), 'utf8');
 await writeFile(join(dir, 'formatCreativeText.mjs'), ts.transpileModule(errorHelper, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText);
@@ -19,12 +24,12 @@ await writeFile(join(dir, 'stub.mjs'), 'export const supabase = new Proxy({}, { 
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ motionJob = null, runError = null, stored = false, rpcError = null, approvedMotionSceneIds = [], sceneCount = 1 } = {}) {
+async function mount({ motionJob = null, runError = null, stored = false, rpcError = null, approvedMotionSceneIds = [], sceneCount = 1, arenaConfigured = true, image: imageOverride } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  const image = { id: 'image-1', scene_id: 'scene-1', image_url: 'https://expired.test/image.jpg', storage_path: stored ? 'project-1/scene-images/asset.jpg' : null, status: 'approved', approved: true };
+  const image = imageOverride !== undefined ? imageOverride : { id: 'image-1', scene_id: 'scene-1', image_url: 'https://expired.test/image.jpg', storage_path: stored ? 'project-1/scene-images/asset.jpg' : null, status: 'approved', approved: true };
   const calls = [];
   const rpcCalls = [];
   const scenes = Array.from({ length: sceneCount }, (_, index) => ({
@@ -54,9 +59,11 @@ async function mount({ motionJob = null, runError = null, stored = false, rpcErr
     },
     rpc: async (name, args) => {
       rpcCalls.push({ name, args });
+      if (name === 'approve_generation_cost') return { data: { id: 'approval-1', ...args }, error: null };
       return { data: rpcError ? null : { id: 'job-1', status: 'queued', job_type: args.p_job_type }, error: rpcError };
     },
     functions: { invoke: async (_name, { body }) => {
+      if (body.action === 'models') return { data: { pricing_version: '2026-10-14.1', models: ['arena:flux-schnell', 'arena:ltx-video', 'arena:wan2.2-zerogpu', 'arena:shotstack'].map(id => ({ id, available: arenaConfigured, unavailable_reason: arenaConfigured ? null : 'Not configured on the server (missing ARENA_GATEWAY_URL, ARENA_GATEWAY_TOKEN).' })) }, error: null };
       calls.push(body);
       if (body.action === 'image_url') return { data: { image_url: 'https://fresh.test/image.jpg' }, error: null };
       return { data: { job: { id: 'job-1', status: 'processing', job_type: 'scene_motion' } }, error: runError ? new Error(runError) : null };
@@ -73,6 +80,10 @@ async function mount({ motionJob = null, runError = null, stored = false, rpcErr
       assert.ok(button, `Missing button: ${text}`);
       await act(async () => { button.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); });
     },
+    approve: async () => {
+      const button = [...document.querySelectorAll('button')].find(b => b.textContent === 'Approve and render');
+      if (button) await act(async () => { button.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); });
+    },
     cleanup: async () => { await act(async () => root.unmount()); dom.window.close(); delete globalThis.__uiDb; },
   };
 }
@@ -81,6 +92,7 @@ test('async motion keeps the workspace and exposes status without a completed as
   const view = await mount();
   try {
     await view.click('Generate Motion');
+    await view.approve();
     assert.match(document.body.textContent, /Build the shots/);
     await view.click('Check Motion Status');
     assert.equal(view.calls.at(-1).jobId, 'job-1');
@@ -99,6 +111,7 @@ test('recoverable provider errors do not hide the workspace', async () => {
   const view = await mount({ runError: 'Provider unavailable' });
   try {
     await view.click('Generate Motion');
+    await view.approve();
     assert.match(document.body.textContent, /Provider unavailable/);
     assert.match(document.body.textContent, /Build the shots/);
   } finally { await view.cleanup(); }
@@ -114,6 +127,7 @@ test('async assembly retains its job and exposes the status control', async () =
   const view = await mount({ approvedMotionSceneIds: ['scene-1'] });
   try {
     await view.click('Assemble Final Video');
+    await view.approve();
     assert.match(document.body.textContent, /Build the shots/);
     await view.click('Check Assembly Status');
     assert.equal(view.calls.at(-1).jobId, 'job-1');
@@ -124,6 +138,7 @@ test('structured missing-motion assembly errors explain the prerequisite without
   const view = await mount({ approvedMotionSceneIds: ['scene-1'], rpcError: { message: 'ASSEMBLY_MOTION_NOT_FULLY_APPROVED', code: '55000', details: 'approved_motion=0 required=8' } });
   try {
     await view.click('Assemble Final Video');
+    await view.approve();
     assert.match(document.querySelector('[role="alert"]').textContent, /approve.*motion clip.*every scene/i);
     assert.doesNotMatch(document.body.textContent, /\[object Object\]/);
     assert.match(document.body.textContent, /Build the shots/);
@@ -146,6 +161,7 @@ test('assembly becomes available only after every approved scene has an approved
   try {
     assert.equal(view.button('Assemble Final Video').disabled, false);
     await view.click('Assemble Final Video');
+    await view.approve();
     assert.equal(view.rpcCalls.filter(c => c.name === 'enqueue_assembly_generation').length, 1);
     assert.equal(view.calls.filter(c => c.action === 'run').length, 1);
   } finally { await view.cleanup(); }
@@ -158,6 +174,7 @@ test('assembly rechecks motion approval before enqueue and fails closed when sta
     assert.equal(view.button('Assemble Final Video').disabled, false);
     approvedMotionSceneIds.length = 0; // approval revoked in another tab since initial read
     await view.click('Assemble Final Video');
+    await view.approve();
     assert.equal(view.rpcCalls.length, 0);
     assert.equal(view.calls.length, 0);
     assert.match(document.querySelector('[role="alert"]').textContent, /still need exactly one approved real motion clip/);
@@ -169,6 +186,52 @@ test('extra approved motion duplicates do not satisfy assembly readiness', async
   const view = await mount({ sceneCount: 2, approvedMotionSceneIds: ['scene-1', 'scene-1'] });
   try {
     assert.equal(view.button('Assemble Final Video').disabled, true);
+    assert.equal(view.rpcCalls.length, 0);
+  } finally { await view.cleanup(); }
+});
+
+test('generate opens a cost approval and nothing is recorded or rendered until approved', async () => {
+  const view = await mount({ image: null });
+  try {
+    await view.click('Generate Scene Image');
+    const dialog = document.querySelector('[role="dialog"]');
+    assert.ok(dialog, 'approval dialog is shown');
+    assert.match(dialog.textContent, /Flux Schnell/);
+    assert.match(dialog.textContent, /\$0–\$0\.0012/);
+    assert.match(dialog.textContent, /pixazo\.ai\/api\/pricing-plan/);
+    assert.equal(view.rpcCalls.length, 0);
+    assert.equal(view.calls.filter(c => c.action === 'run').length, 0);
+    await view.click('Cancel');
+    assert.equal(document.querySelector('[role="dialog"]'), null);
+    assert.equal(view.rpcCalls.length, 0);
+  } finally { await view.cleanup(); }
+});
+
+test('approval is recorded with the chosen model before enqueue and run', async () => {
+  const view = await mount();
+  try {
+    const select = document.querySelector('select[aria-label="Model for motion clip"]');
+    assert.ok(select, 'per-scene motion model picker is shown');
+    await act(async () => { select.value = 'arena:wan2.2-zerogpu'; select.dispatchEvent(new window.Event('change', { bubbles: true })); });
+    await view.click('Generate Motion');
+    assert.match(document.querySelector('[role="dialog"]').textContent, /Cost unknown/);
+    await view.approve();
+    assert.deepEqual(view.rpcCalls.map(c => c.name), ['approve_generation_cost', 'enqueue_scene_generation']);
+    const approval = view.rpcCalls[0].args;
+    assert.equal(approval.p_model_id, 'arena:wan2.2-zerogpu');
+    assert.equal(approval.p_scene_id, 'scene-1');
+    assert.equal(approval.p_job_type, 'scene_motion');
+    assert.equal(approval.p_estimate.kind, 'unknown');
+    assert.equal(view.calls.filter(c => c.action === 'run').length, 1);
+  } finally { await view.cleanup(); }
+});
+
+test('unconfigured providers show an explicit unavailable state and cannot be approved', async () => {
+  const view = await mount({ arenaConfigured: false, image: null });
+  try {
+    assert.match(document.body.textContent, /Unavailable: Not configured on the server/);
+    await view.click('Generate Scene Image');
+    assert.equal(view.button('Approve and render').disabled, true);
     assert.equal(view.rpcCalls.length, 0);
   } finally { await view.cleanup(); }
 });
