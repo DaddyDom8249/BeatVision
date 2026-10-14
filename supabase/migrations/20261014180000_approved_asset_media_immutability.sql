@@ -69,3 +69,46 @@ begin
   return case when tg_op = 'DELETE' then old else new end;
 end;
 $$;
+
+
+-- Cascade compatibility: Vision Locks, approved Visual Plans and their
+-- approved scenes are otherwise blocked by independent legacy DELETE triggers.
+-- They remain immutable while their owning project exists.
+create or replace function public.prevent_vision_lock_mutation()
+returns trigger language plpgsql set search_path = public, pg_temp as $$
+begin
+  if tg_op = 'DELETE' and not exists (select 1 from public.projects p where p.id = old.project_id) then
+    return old;
+  end if;
+  raise exception 'VISION_LOCK_IMMUTABLE'
+    using errcode = '55000', detail = 'Vision Locks are immutable. Create a new revision instead.';
+end;
+$$;
+
+create or replace function public.prevent_approved_visual_plan_mutation()
+returns trigger language plpgsql set search_path = public, pg_temp as $$
+begin
+  if tg_op = 'DELETE' and not exists (select 1 from public.projects p where p.id = old.project_id) then
+    return old;
+  end if;
+  if old.status = 'approved' then
+    raise exception 'VISUAL_PLAN_IMMUTABLE'
+      using errcode = '55000', detail = 'Approved Visual Plans are immutable; create a new plan instead.';
+  end if;
+  return case when tg_op = 'DELETE' then old else new end;
+end;
+$$;
+
+create or replace function public.prevent_approved_visual_plan_scene_mutation()
+returns trigger language plpgsql set search_path = public, pg_temp as $$
+begin
+  if tg_op = 'DELETE' and not exists (select 1 from public.projects p where p.id = old.project_id) then
+    return old;
+  end if;
+  if old.status = 'approved' then
+    raise exception using errcode='55000',
+      message='Approved Visual Plan scenes are immutable. Create a new Visual Plan revision instead.';
+  end if;
+  return case when tg_op = 'DELETE' then old else new end;
+end;
+$$;
