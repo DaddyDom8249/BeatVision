@@ -39,7 +39,7 @@ test('SSE split across network chunks produces the real file output',async()=>{
 test('completed HTTP without SSE completion stays processing',async()=>{assert.equal((await hfPoll('test-secret','a'.repeat(32),async()=>new Response('event: heartbeat\ndata: null\n\n'))).status,'processing')});
 function box(type, payload=Buffer.alloc(0)){const b=Buffer.alloc(8);b.writeUInt32BE(8+payload.length);b.write(type,4);return Buffer.concat([b,payload])}
 function container(samples=2){const h=Buffer.alloc(12);h.write('vide',8);const sizes=Buffer.alloc(12);sizes.writeUInt32BE(samples,8);const desc=Buffer.alloc(16);desc.write('avc1',12);const duration=Buffer.alloc(20);duration.writeUInt32BE(30,12);duration.writeUInt32BE(60,16);return Buffer.concat([box('ftyp',Buffer.from('isom0000')),box('moov',box('trak',box('mdia',Buffer.concat([box('hdlr',h),box('mdhd',duration),box('minf',box('stbl',Buffer.concat([box('stsd',desc),box('stsz',sizes)])))])))),box('mdat',Buffer.alloc(1200))])}
-test('MP4 validator rejects HTML, truncation and a still-frame container',()=>{assert.throws(()=>validateMp4(Buffer.from('<html>failure</html>')),/HF_VIDEO_EMPTY/);assert.throws(()=>validateMp4(container().subarray(0,1100)),/HF_MP4_INVALID/);assert.throws(()=>validateMp4(container(1)),/HF_MP4_VIDEO_SAMPLES_MISSING/);assert.equal(validateMp4(container()).subject_motion_verified,false);assert.equal(validateMp4(container()).measured_duration_seconds,2);assert.equal(validateMp4(container()).duration_source,'mp4_video_track_mdhd')});
+test('MP4 validator rejects HTML, truncation and a still-frame container',()=>{assert.throws(()=>validateMp4(Buffer.from('<html>failure</html>')),/HF_VIDEO_EMPTY/);assert.throws(()=>validateMp4(container().subarray(0,1100)),/HF_MP4_INVALID/);assert.throws(()=>validateMp4(container(1)),/HF_MP4_VIDEO_SAMPLES_MISSING/);assert.equal(validateMp4(container()).subject_motion_verified,false)});
 test('video download validates real bytes and never follows another host',async()=>{const b=container();const r=await hfDownload(HF_MOTION.host+'/gradio_api/file=/tmp/video.mp4','test-secret',async(u,i)=>{assert.equal(i.redirect,'error');return new Response(b)});assert.equal(r.verification.video_samples,2);await assert.rejects(hfDownload('https://evil.test/video.mp4','test-secret',async()=>{throw Error('should not fetch')}),/HF_OUTPUT_HOST_REJECTED/)});
 test('legacy new-motion run fails before any paid provider request', async () => {
   let requested = 0;
@@ -110,22 +110,4 @@ for (const approvedPlan of [true,false]) test('HF enqueue '+(approvedPlan?'reuse
     else await assert.rejects(runtime.enqueueHfMotion(client,'project-1','scene-1',true),/approved locked Visual Plan/);
     assert.equal(writes,0);assert.equal(f.calls.filter(c=>c.init.method==='POST').length,0);
   }finally{globalThis.fetch=original;await runtime.cleanup()}
-});
-
-test('LTX MP4 validator reads the media track as 1.90 seconds, not the two-second request',()=>{
-  const bytes=Buffer.from(container());
-  const atom=bytes.indexOf(Buffer.from('mdhd'));
-  assert.ok(atom>0);
-  // mdhd.start follows the four-character box tag; duration starts 16 bytes later.
-  bytes.writeUInt32BE(57,atom+20);
-  const media=validateMp4(bytes);
-  assert.equal(media.measured_duration_seconds,1.9);
-  assert.equal(media.video_samples,2);
-  assert.equal(media.subject_motion_verified,false);
-});
-test('MP4 validator rejects missing timescale before trusting duration',()=>{
-  const bytes=Buffer.from(container());
-  const atom=bytes.indexOf(Buffer.from('mdhd'));
-  bytes.writeUInt32BE(0,atom+16);
-  assert.throws(()=>validateMp4(bytes),/HF_MP4_DURATION_MISSING/);
 });

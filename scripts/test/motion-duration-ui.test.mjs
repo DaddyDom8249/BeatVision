@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 const page=readFileSync(new URL('../../src/pages/ProductionWorkspacePage.tsx',import.meta.url),'utf8');
-const gen=readFileSync(new URL('../../supabase/functions/beatvision-generation/index.ts',import.meta.url),'utf8');
 
 test('Production Workspace shows saved LTX provenance separately from a Wan pilot',()=>{
   assert.match(page,/Saved generative motion · Provider:/);
@@ -24,6 +23,4 @@ test('Missing scene coverage is explicit and no extra generation is launched',()
   assert.match(page,/Only the existing job is polled; no new generation is submitted/);
   const statusEffect=page.slice(page.indexOf('if (!freePilotJob || freePilotJob.sceneId !== scene?.id)'),page.indexOf('const checkMotionStatus ='));
   assert.doesNotMatch(statusEffect,/generateFreePilot\(/);
-  assert.match(gen,/requested_duration_seconds: HF_MOTION\.duration/);
-  assert.match(gen,/duration_seconds: verification\.measured_duration_seconds/);
 });

@@ -482,10 +482,7 @@ async function hfBridgePoll(db: any, job: any) {
   const signed = await db.storage.from("visual-assets").createSignedUrl(path, 3600);
   if (signed.error || !signed.data?.signedUrl) throw new Error("HF_VIDEO_SIGNING_FAILED");
   return { response: new Response(null), data: { ...data, source_image_id: job.input_snapshot.hf_motion.source_image_id,
-    result: { ...data.result, video_url: signed.data.signedUrl, storage_path: path, verification,
-      requested_duration_seconds: HF_MOTION.duration,
-      duration_seconds: verification.measured_duration_seconds,
-      duration_source: verification.duration_source, ai_generated: true } } };
+    result: { ...data.result, video_url: signed.data.signedUrl, storage_path: path, verification, ai_generated: true } } };
 }
 
 async function motionUrl(db: any, projectId: string, assetId: string) {
