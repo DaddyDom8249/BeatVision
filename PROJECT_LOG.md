@@ -1015,3 +1015,15 @@ RELEASE BLOCKERS: Depends on Arena draft PR #42. The additional Shotstack media-
 ## 2026-10-13 — Exact-source reconciliation of live generation Edge v30
 
 Compared deployed Supabase beatvision-generation version 30, consisting of index.ts (44,886 bytes) and hf-motion.ts (10,816 bytes), with existing GitHub PR #84 (repair/hf-real-motion-20261013). Both files match PR #84 byte-for-byte. Replaced the older index.ts in this DRAFT final-video hardening branch with the exact deployed index.ts plus only the guarded persistFinalVideo change, and added the exact deployed hf-motion.ts. The PR #84 test harness, generation-auth fixture and free-HF tests are included. The frontend was not rolled back to PR #84; newer production UI fixes remain untouched. Neither live Supabase functions nor existing creator data were modified. No GPU/media provider calls were made. Source-level reconciliation and CI pending; deployment still requires strict zero-cost proof.
+
+
+## 2026-10-13 — Report real LTX/Wan preview length and motion coverage
+
+**Owner video evidence:** Uploaded MP4 (57 frames, 30 fps, 704x512, H.264) independently measured using ffprobe to 1.900 seconds. Live saved Ghast scene motion is recorded as Hugging Face ZeroGPU model ltxv-13b-0.9.8-distilled, which requests 2s. Exact file-to-database-asset hash comparison remains NOT VERIFIED. The separate Wan 2.2 preview UI requests up to 3s and must never be mistaken for the LTX saved clip.
+
+**Root cause:** LTX HF_MOTION.duration=2 is a requested length. validateMp4 checked mdhd metadata but discarded actual video-track duration, while Studio provided no source-clip duration, no MP4 playback metadata readout, and no approved-scene coverage gap.
+
+**Change (repair branch; not deployed):** Return video-track duration from MP4 mdhd timescale/units with container validation, persist requested_duration_seconds separately from actual duration and verification proof, and show in Studio the saved original job provider/model, its requested LTX length, actual decoded or source-verified clip duration, scene length and uncovered seconds. Label Wan as a separate temporary 3s-max provider path and decode its actual length in the browser. Do not autoqueue GPU work, loop a clip, approve replacement media or imply longer motion continuity is solved.
+
+**Verification:** Synthetic 57/30s and invalid timescale regression tests, independent UI source contract tests; root CI/typecheck/build pending. Existing approved assets and database records untouched. Real longer character-continuous sequence is BLOCKED by missing verified frame-consistent continuation path and free GPU quota permissions.
+

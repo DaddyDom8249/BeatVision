@@ -106,6 +106,7 @@ export function validateMp4(bytes: Uint8Array) {
   if (!top.some(b => b.type === 'ftyp') || !top.some(b => b.type === 'mdat' && b.end - b.start > 100)) fail('HF_MP4_MEDIA_MISSING');
   const moov = top.find(b => b.type === 'moov'); if (!moov) fail('HF_MP4_METADATA_MISSING');
   let samples = 0;
+  let measuredDurationSeconds: number | null = null;
   for (const track of boxes(moov!.start, moov!.end).filter(b => b.type === 'trak')) {
     const mdia = boxes(track.start, track.end).find(b => b.type === 'mdia'); if (!mdia) continue;
     const children = boxes(mdia.start, mdia.end); const handler = children.find(b => b.type === 'hdlr');
@@ -116,12 +117,23 @@ export function validateMp4(bytes: Uint8Array) {
     const stsd = tables.find(b => b.type === 'stsd');
     const mdhd = children.find(b => b.type === 'mdhd');
     if (!stsd || stsd.start + 16 > stsd.end || text(stsd.start + 12) !== 'avc1') fail('HF_MP4_CODEC_UNSUPPORTED');
-    if (!mdhd || mdhd.start + 20 > mdhd.end || bytes[mdhd.start] !== 0 || view.getUint32(mdhd.start + 12) === 0 || view.getUint32(mdhd.start + 16) === 0) fail('HF_MP4_DURATION_MISSING');
+    if (!mdhd || mdhd.start + 20 > mdhd.end || bytes[mdhd.start] !== 0) fail('HF_MP4_DURATION_MISSING');
+    // In mdhd version 0, the track timescale and duration are uint32 at
+    // offsets 12 and 16. This is measured MP4 metadata, not a model request.
+    const timescale = view.getUint32(mdhd.start + 12);
+    const units = view.getUint32(mdhd.start + 16);
+    const seconds = units / timescale;
+    if (!timescale || !units || !Number.isFinite(seconds) || seconds <= 0) fail('HF_MP4_DURATION_MISSING');
+    if (measuredDurationSeconds !== null && Math.abs(measuredDurationSeconds - seconds) > 0.05) fail('HF_MP4_TRACK_DURATION_MISMATCH');
+    measuredDurationSeconds = seconds;
     const stsz = tables.find(b => b.type === 'stsz');
     if (stsz && stsz.start + 12 <= stsz.end) samples = view.getUint32(stsz.start + 8);
   }
   if (samples < 2) fail('HF_MP4_VIDEO_SAMPLES_MISSING');
-  return { byte_length: bytes.length, video_samples: samples, container_verified: true, subject_motion_verified: false };
+  if (measuredDurationSeconds === null) fail('HF_MP4_DURATION_MISSING');
+  return { byte_length: bytes.length, video_samples: samples,
+    measured_duration_seconds: Math.round(measuredDurationSeconds * 1000) / 1000,
+    duration_source: 'mp4_video_track_mdhd', container_verified: true, subject_motion_verified: false };
 }
 export async function hfDownload(url: string, token: string, request: typeof fetch = fetch) {
   const parsed = new URL(url);
