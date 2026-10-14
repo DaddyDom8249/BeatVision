@@ -108,6 +108,14 @@ async function handler(req:Request) {
     if(!response.ok)return respond(req,{ok:false,status:"free_provider_unavailable",error:response.error},503);
     if(response.data?.status==="processing")
       return respond(req,{ok:true,status:"processing",job_token:body.job_token,scene_id:sceneId});
+    // Gradio event:error is terminal. Retain approval data, stop polling,
+    // and never create a second GPU job from a failed status request.
+    if(response.data?.status==="failed")
+      return respond(req,{ok:true,status:"failed",scene_id:sceneId,terminal:true,
+        error_code:"WAN_ZERO_GPU_PROVIDER_ERROR",
+        failure_category:String(response.data.failure_category||"provider_runtime").slice(0,60),
+        error:String(response.data.error||"Hugging Face did not complete this render.").slice(0,240),
+        retry_automatically:false});
     const clip=response.data?.result?.clips?.[0];
     if(response.data?.status!=="completed"||!clip||clip.generation_type!=="GENERATIVE_VIDEO"||!safeURL(clip.video_url))
       return respond(req,{ok:false,error:"No verified AI-video result available."},502);

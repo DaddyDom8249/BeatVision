@@ -68,6 +68,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [motion, setMotion] = useState<any>(null);
   const [motionGenerating, setMotionGenerating] = useState(false);
   const [freePilotBusy, setFreePilotBusy] = useState(false);
+  const [freePilotChecking, setFreePilotChecking] = useState(false);
+  const freePilotPollingRef = useRef(false);
+  const [freePilotStatusMessage, setFreePilotStatusMessage] = useState<string | null>(null);
   const [freePilotUrl, setFreePilotUrl] = useState<string | null>(null);
   const [freePilotJob, setFreePilotJob] = useState<{ token: string; sceneId: string } | null>(null);
   const [freePilotError, setFreePilotError] = useState<string | null>(null);
@@ -227,6 +230,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     setFreePilotUrl(null);
     setFreePilotJob(null);
     setFreePilotError(null);
+    setFreePilotStatusMessage(null);
   }, [projectId, scene?.id]);
 
   async function generateFreePilot() {
@@ -235,6 +239,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     setFreePilotBusy(true);
     setFreePilotUrl(null);
     setFreePilotError(null);
+    setFreePilotStatusMessage("Submitting one free AI video request...");
     try {
       const result = await supabase.functions.invoke("beatvision-free-motion-pilot", {
         body: { action: "start", project_id: projectId, scene_id: targetScene },
@@ -243,24 +248,50 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       const data = result.data;
       if (!data?.ok || data?.status !== "submitted" || !data?.job_token)
         throw new Error(String(data?.error || "Free ZeroGPU job was not accepted."));
-      if (selectedSceneId.current === targetScene)
+      if (selectedSceneId.current === targetScene) {
         setFreePilotJob({ token: String(data.job_token), sceneId: targetScene });
+        setFreePilotStatusMessage("Job accepted. Checking Hugging Face status without resubmitting.");
+      }
     } catch (reason) {
-      if (selectedSceneId.current === targetScene) setFreePilotError(productionErrorMessage(reason));
+      if (selectedSceneId.current === targetScene) {
+        setFreePilotError(productionErrorMessage(reason));
+        setFreePilotStatusMessage("Submission failed; no preview was queued.");
+      }
     } finally {
       setFreePilotBusy(false);
     }
   }
 
-  async function checkFreePilotStatus(job: { token: string; sceneId: string }): Promise<"processing" | "done" | "failed"> {
-    if (selectedSceneId.current !== job.sceneId) return "failed";
+  async function checkFreePilotStatus(job: { token: string; sceneId: string }): Promise<"processing" | "done" | "terminal" | "retry" | "in_flight"> {
+    if (selectedSceneId.current !== job.sceneId) return "terminal";
+    // A manual tap while the 7s background poll is active must never issue a
+    // second concurrent status request or restart generation.
+    if (freePilotPollingRef.current) return "in_flight";
+    freePilotPollingRef.current = true;
+    setFreePilotChecking(true);
+    setFreePilotStatusMessage("Checking the existing Hugging Face job...");
     try {
       const result = await supabase.functions.invoke("beatvision-free-motion-pilot", {
         body: { action: "poll", project_id: projectId, scene_id: job.sceneId, job_token: job.token },
       });
       if (result.error) throw new Error(await motionPilotErrorMessage(result.error));
       const data = result.data;
-      if (data?.ok && data?.status === "processing") return "processing";
+      if (data?.ok && data?.status === "processing") {
+        if (selectedSceneId.current === job.sceneId) {
+          setFreePilotError(null);
+          setFreePilotStatusMessage("Still generating or waiting for free GPU capacity. No new request sent.");
+        }
+        return "processing";
+      }
+      if (data?.ok && data?.status === "failed" && data?.terminal === true) {
+        if (selectedSceneId.current === job.sceneId) {
+          setFreePilotJob(null);
+          setFreePilotUrl(null);
+          setFreePilotStatusMessage("This provider job has finished with a failure; automatic polling stopped.");
+          setFreePilotError(String(data?.error || "The free Hugging Face model failed to render this preview.").slice(0,300));
+        }
+        return "terminal";
+      }
       const media = String(data?.video_url || "");
       const trusted = /^https:\/\/zerogpu-aoti-wan2-2-fp8da-aoti-faster\.hf\.space\//.test(media);
       if (!data?.ok || data?.status !== "pilot_ready" || data?.generation_type !== "GENERATIVE_VIDEO" || !trusted)
@@ -269,11 +300,18 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         setFreePilotUrl(media);
         setFreePilotJob(null);
         setFreePilotError(null);
+        setFreePilotStatusMessage("Hugging Face returned a video preview. It is not approved or saved.");
       }
       return "done";
     } catch (reason) {
-      if (selectedSceneId.current === job.sceneId) setFreePilotError(productionErrorMessage(reason));
-      return "failed";
+      if (selectedSceneId.current === job.sceneId) {
+        setFreePilotError(productionErrorMessage(reason));
+        setFreePilotStatusMessage("Status check failed. Use Check Preview Status to retry the same job.");
+      }
+      return "retry";
+    } finally {
+      freePilotPollingRef.current = false;
+      setFreePilotChecking(false);
     }
   }
 
@@ -432,9 +470,12 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
               <button className="secondary-button" disabled={busy || freePilotBusy || Boolean(freePilotJob) || image?.status !== "approved"} onClick={() => void generateFreePilot()}>
                 {freePilotBusy ? "Submitting free GPU preview…" : freePilotJob ? "Preview queued (no resubmission)" : "Generate free 3-second AI movement"}
               </button>
-              {freePilotJob && <button className="secondary-button" disabled={freePilotBusy} onClick={() => void checkFreePilotStatus(freePilotJob)}>Check Preview Status</button>}
+              {freePilotJob && <button className="secondary-button" disabled={freePilotBusy || freePilotChecking} onClick={() => void checkFreePilotStatus(freePilotJob)}>
+                {freePilotChecking ? "Checking Preview Status..." : "Check Preview Status"}
+              </button>}
             </div>
-            {freePilotJob && <p role="status">Free ZeroGPU preview submitted; checking every 7 seconds. The job is not resubmitted.</p>}
+            {freePilotStatusMessage && <p role="status">{freePilotStatusMessage}</p>}
+            {freePilotJob && <p>Only the existing job is polled; no new generation is submitted.</p>}
             {freePilotError && <p className="form-error" role="alert">{freePilotError}</p>}
             {freePilotUrl && (
               <div>

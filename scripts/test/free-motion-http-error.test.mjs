@@ -23,3 +23,22 @@ test("Preview never approves media or attempts a paid fallback",()=>{
   assert.match(ui,/data\?\.status !== "submitted"/);
   assert.match(edge,/approved:false/);
 });
+
+test("Terminal provider failure is forwarded by owner-authenticated Edge poll",()=>{
+  assert.match(edge,/response\.data\?\.status==="failed"/);
+  assert.match(edge,/status:"failed",scene_id:sceneId,terminal:true/);
+  assert.match(edge,/retry_automatically:false/);
+});
+test("Studio shows active check and releases terminal failed ticket without re-submission",()=>{
+  assert.match(ui,/freePilotPollingRef\.current/);
+  assert.match(ui,/setFreePilotChecking\(true\)/);
+  assert.match(ui,/data\?\.status === "failed"/);
+  assert.match(ui,/setFreePilotJob\(null\)/);
+  assert.match(ui,/automatic polling stopped/);
+  assert.match(ui,/Checking Preview Status\.\.\./);
+});
+test("Transport failure allows manual rechecking of the SAME ticket",()=>{
+  assert.match(ui,/return "retry"/);
+  assert.match(ui,/Status check failed\. Use Check Preview Status to retry the same job\./);
+  assert.match(ui,/action: "poll", project_id: projectId, scene_id: job\.sceneId, job_token: job\.token/);
+});

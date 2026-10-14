@@ -996,3 +996,8 @@ Release result: published exact tested tree 27f9c88c6383d1af94acfc4fb33c6463e29a
 **Observability:** Source now defers missing Arena config details until after user token is verified. The Studio parses FunctionsHttpError.context JSON for accurate messages on submit and poll instead of generic SDK text. No keys, media assets, RLS, or approved work are exposed/modified. All video GPU tests remain gated by verified free eligibility.
 
 **Verification:** CI/preview pending; do not claim actual generated AI video. Recommended test: signed-in user taps once; inspect specific provider failure and no charged queue calls.
+
+
+## 2026-10-13 — End stuck ZeroGPU preview on provider SSE error
+
+Supabase now explicitly forwards a terminal Arena `status:failed` to the authorized job owner without any job insert or retry. Studio shows a checking spinner, prevents concurrent status polls, clears finished failed job tickets, displays safe categorized failure text, and stops automatic polling; temporary network errors still permit manual checks on the same ticket. No approved assets are modified and no GPU jobs are created while checking status.
