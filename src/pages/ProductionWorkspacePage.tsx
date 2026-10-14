@@ -66,6 +66,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [image, setImage] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
   const [motion, setMotion] = useState<any>(null);
+  const [motionMeasured, setMotionMeasured] = useState<{ assetId: string; seconds: number } | null>(null);
+  const [pilotMeasured, setPilotMeasured] = useState<{ url: string; seconds: number } | null>(null);
   const [motionGenerating, setMotionGenerating] = useState(false);
   const [freePilotBusy, setFreePilotBusy] = useState(false);
   const [freePilotChecking, setFreePilotChecking] = useState(false);
@@ -88,6 +90,12 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const selectedSceneId = useRef<string | undefined>(scene?.id);
   selectedSceneId.current = scene?.id;
   const busy = generating || motionGenerating || assemblyRunning || assetLoading;
+  const sceneSeconds = scene ? Math.max(0, Number(scene.end_time) - Number(scene.start_time)) : 0;
+  const savedProofSeconds = Number(motionAssetJob?.output?.arena_status_response?.result?.verification?.measured_duration_seconds);
+  const motionDuration = motionMeasured && motion && motionMeasured.assetId === motion.id ? motionMeasured.seconds
+    : Number.isFinite(savedProofSeconds) && savedProofSeconds > 0 ? savedProofSeconds : null;
+  const remainingMotionSeconds = motionDuration === null ? null : Math.max(0, sceneSeconds - motionDuration);
+  const pilotDuration = pilotMeasured && freePilotUrl && pilotMeasured.url === freePilotUrl ? pilotMeasured.seconds : null;
   const pending = (job: any) => ["queued", "submitted", "processing"].includes(job?.status);
   const productionText = useMemo(() => scene ? prompt(scene) : "", [scene]);
 
@@ -126,8 +134,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     const [images, motions, imageJobs, motionJobs] = await Promise.all([
       supabase.from("scene_image_assets").select(imageFields).eq("project_id", projectId).eq("visual_plan_id", plan?.id).eq("scene_id", sceneId).order("created_at", { ascending: false }),
       supabase.from("motion_clip_assets").select("*").eq("project_id", projectId).eq("visual_plan_id", plan?.id).eq("scene_id", sceneId).order("created_at", { ascending: false }),
-      supabase.from("generation_jobs").select("id,status,error,job_type,output").eq("project_id", projectId).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_image").order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("generation_jobs").select("id,status,error,job_type,output").eq("project_id", projectId).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_motion").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("generation_jobs").select("id,status,error,job_type,output,input_snapshot").eq("project_id", projectId).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_image").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("generation_jobs").select("id,status,error,job_type,output,input_snapshot").eq("project_id", projectId).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_motion").order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
     for (const result of [images, motions, imageJobs, motionJobs]) if (result.error) throw result.error;
     if (selectedSceneId.current !== sceneId) return;
@@ -143,7 +151,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         sourceJob = motionJobs.data;
       } else {
         const relatedJob = await supabase.from("generation_jobs")
-          .select("id,status,error,job_type,output")
+          .select("id,status,error,job_type,output,input_snapshot")
           .eq("project_id", projectId)
           .eq("visual_plan_scene_id", sceneId)
           .eq("job_type", "scene_motion")
@@ -256,6 +264,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const generateMotion = () => operateJob("scene_motion");
   useEffect(() => {
     setFreePilotUrl(null);
+    setPilotMeasured(null);
+    setMotionMeasured(null);
     setFreePilotJob(null);
     setFreePilotError(null);
     setFreePilotStatusMessage(null);
@@ -266,6 +276,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     const targetScene = scene.id;
     setFreePilotBusy(true);
     setFreePilotUrl(null);
+    setPilotMeasured(null);
     setFreePilotError(null);
     setFreePilotStatusMessage("Submitting one free AI video request...");
     try {
@@ -493,9 +504,20 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
           <div className="production-provider-note">
             <span className="panel-label">MOTION</span>
             {motionHistory.length > 1 && <label>Saved motion variants<select aria-label="Saved motion variants" value={motion?.id ?? ''} onChange={event => { assetChoice.current.motionId = event.target.value; void refreshScene(scene.id).catch(e => setError(productionErrorMessage(e))); }}>{motionHistory.map((asset, index) => <option key={asset.id} value={asset.id}>Variant {motionHistory.length - index} · {asset.status}</option>)}</select></label>}
-            {motion?.provider === "huggingface-zerogpu" && <p>AI-generated video · LTX 0.9.8 distilled · 2-second preview. Singing lip sync is not verified.</p>}
+            {motion?.provider === "huggingface-zerogpu" && <p>Saved AI-generated motion · LTX 0.9.8 distilled. Two seconds requested; actual media duration is measured below. Singing lip sync is not verified.</p>}
             {motion && <p>{isProceduralMotion ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
-            {motion?.video_url ? <video src={motion.video_url} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
+            {motion?.video_url ? <video key={motion.id} src={motion.video_url} controls playsInline
+  onLoadedMetadata={event => { const seconds = event.currentTarget.duration;
+    if (Number.isFinite(seconds) && seconds > 0) setMotionMeasured({ assetId: motion.id, seconds });
+  }} style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
+            {motion && <p role="status">
+              {motionAssetJob?.input_snapshot?.hf_motion?.duration_seconds
+                ? "LTX requested " + Number(motionAssetJob.input_snapshot.hf_motion.duration_seconds).toFixed(2) + "s. " : ""}
+              {motionDuration === null ? "Actual media duration not loaded yet."
+                : "Decoded clip " + motionDuration.toFixed(2) + "s of scene " + sceneSeconds.toFixed(2) + "s."}
+              {remainingMotionSeconds !== null && remainingMotionSeconds > 0.05
+                ? " Remaining uncovered scene time: " + remainingMotionSeconds.toFixed(2) + "s. Additional approved AI clips required." : ""}
+            </p>}
             <div className="production-actions">
               {!pending(motionJob) && <label><input type="checkbox" checked={motionTermsAccepted} onChange={event => setMotionTermsAccepted(event.target.checked)} /> I agree to the <a href="https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt" target="_blank" rel="noreferrer">LTX model license and use restrictions</a>, including AI disclosure.</label>}
               {!pending(motionJob) && <p>Generate a 2-second AI motion preview. Existing approved clips remain saved; this preview is not full-scene coverage.</p>}
@@ -523,7 +545,13 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             {freePilotError && <p className="form-error" role="alert">{freePilotError}</p>}
             {freePilotUrl && (
               <div>
-                <video src={freePilotUrl} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} />
+                <video key={freePilotUrl} src={freePilotUrl} controls playsInline
+                  onLoadedMetadata={event => {
+                    const seconds = event.currentTarget.duration;
+                    if (Number.isFinite(seconds) && seconds > 0) setPilotMeasured({ url: freePilotUrl, seconds });
+                  }} style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} />
+                <p role="status">Temporary Wan 2.2 preview · {pilotDuration === null
+                  ? "Loading actual duration." : "Decoded preview duration: " + pilotDuration.toFixed(2) + "s."}</p>
                 <p>AI-generated subject movement preview only. The result has not been approved and does not cover the full scene.</p>
                 <a className="secondary-button" href={freePilotUrl} target="_blank" rel="noopener noreferrer">Open free AI motion preview</a>
               </div>
