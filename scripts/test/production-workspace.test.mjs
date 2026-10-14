@@ -11,20 +11,24 @@ import { createRoot } from 'react-dom/client';
 const rootDir = fileURLToPath(new URL('../../', import.meta.url));
 const dir = await mkdtemp(join(rootDir, '.ui-test-'));
 const source = await readFile(new URL('../../src/pages/ProductionWorkspacePage.tsx', import.meta.url), 'utf8');
-const transformed = ts.transpileModule(source.replace('"../lib/supabase/client"', '"./stub.mjs"').replace('"../lib/formatCreativeText"', '"./formatCreativeText.mjs"'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+const transformed = ts.transpileModule(source.replace('"../lib/supabase/client"', '"./stub.mjs"').replace('"../lib/formatCreativeText"', '"./formatCreativeText.mjs"').replace('"../components/scenes/TakeHistory"', '"./TakeHistory.mjs"').replace('"../lib/beatvision/scenes/takes"', '"./takes.mjs"'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }).outputText;
 await writeFile(join(dir, 'page.mjs'), transformed);
 const errorHelper = await readFile(new URL('../../src/lib/formatCreativeText.ts', import.meta.url), 'utf8');
 await writeFile(join(dir, 'formatCreativeText.mjs'), ts.transpileModule(errorHelper, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText);
+const tsOpts = { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } };
+await writeFile(join(dir, 'takes.mjs'), ts.transpileModule(await readFile(new URL('../../src/lib/beatvision/scenes/takes.ts', import.meta.url), 'utf8'), tsOpts).outputText);
+await writeFile(join(dir, 'TakeHistory.mjs'), ts.transpileModule((await readFile(new URL('../../src/components/scenes/TakeHistory.tsx', import.meta.url), 'utf8')).replaceAll('"../../lib/beatvision/scenes/takes"', '"./takes.mjs"'), tsOpts).outputText);
 await writeFile(join(dir, 'stub.mjs'), 'export const supabase = new Proxy({}, { get: (_, key) => globalThis.__uiDb[key] });');
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ motionJob = null, runError = null, stored = false, rpcError = null, approvedMotionSceneIds = [], sceneCount = 1 } = {}) {
+async function mount({ imageTakes = null, motionTakes = null, rpcData = null, motionJob = null, runError = null, stored = false, rpcError = null, approvedMotionSceneIds = [], sceneCount = 1 } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  const image = { id: 'image-1', scene_id: 'scene-1', image_url: 'https://expired.test/image.jpg', storage_path: stored ? 'project-1/scene-images/asset.jpg' : null, status: 'approved', approved: true };
+  const image = { id: 'image-1', scene_id: 'scene-1', image_url: 'https://expired.test/image.jpg', storage_path: stored ? 'project-1/scene-images/asset.jpg' : null, status: 'approved', approved: true, created_at: '2026-10-01T00:00:00Z' };
+  const images = imageTakes ?? [image];
   const calls = [];
   const rpcCalls = [];
   const scenes = Array.from({ length: sceneCount }, (_, index) => ({
@@ -44,8 +48,8 @@ async function mount({ motionJob = null, runError = null, stored = false, rpcErr
         then(resolve) {
           const data = table === 'visual_plans' ? { id: 'plan-1', status: 'approved', title: 'Locked plan' }
             : table === 'visual_plan_scenes' ? (filters.status ? scenes.filter(s => s.status === filters.status) : scenes)
-            : table === 'scene_image_assets' ? image
-            : table === 'motion_clip_assets' ? (filters.scene_id ? approvedMotionAssets().find(m => m.scene_id === filters.scene_id) ?? null : approvedMotionAssets())
+            : table === 'scene_image_assets' ? images
+            : table === 'motion_clip_assets' ? (filters.scene_id ? (motionTakes ?? approvedMotionAssets().filter(m => m.scene_id === filters.scene_id)) : approvedMotionAssets())
             : table === 'generation_jobs' && filters.job_type === 'scene_motion' ? motionJob : null;
           return Promise.resolve({ data, error: null }).then(resolve);
         },
@@ -54,6 +58,7 @@ async function mount({ motionJob = null, runError = null, stored = false, rpcErr
     },
     rpc: async (name, args) => {
       rpcCalls.push({ name, args });
+      if (rpcData && rpcData[name]) return { data: rpcData[name], error: null };
       return { data: rpcError ? null : { id: 'job-1', status: 'queued', job_type: args.p_job_type }, error: rpcError };
     },
     functions: { invoke: async (_name, { body }) => {

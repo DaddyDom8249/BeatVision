@@ -1,0 +1,1 @@
+export const supabase = new Proxy({}, { get: (_, key) => globalThis.__uiDb[key] });

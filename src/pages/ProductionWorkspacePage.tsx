@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase/client";
 import { getCreativeErrorMessage } from "../lib/formatCreativeText";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
+import TakeHistory from "../components/scenes/TakeHistory";
+import { numberTakes, approvedTake, displayedTake, hasConflictingApprovals, type NumberedTake, type KeyframeSelection } from "../lib/beatvision/scenes/takes";
 
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
@@ -9,6 +11,9 @@ const imageFields = "id,project_id,visual_plan_id,scene_id,generation_job_id,pro
 
 function productionErrorMessage(error: unknown) {
   const message = typeof error === "string" ? error : getCreativeErrorMessage(error, "Production request failed.");
+  if (message.includes("SCENE_IMAGE_HAS_APPROVED_MOTION")) return "This image drives an approved motion clip. Replace that motion take before changing the approved image.";
+  if (message.includes("APPROVAL_CHANGED")) return "The approved take changed elsewhere. Takes were reloaded; review before replacing again.";
+  if (message.includes("ALREADY_APPROVED")) return "This scene already has an approved take. Use Replace Approved Take to swap it intentionally.";
   if (message.includes("ASSEMBLY_MOTION_NOT_FULLY_APPROVED")) {
     return "Approve a real motion clip for every scene before assembling the final video.";
   }
@@ -42,9 +47,15 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [image, setImage] = useState<any>(null);
+  const [imageTakes, setImageTakes] = useState<NumberedTake<any>[]>([]);
+  const [motionTakes, setMotionTakes] = useState<NumberedTake<any>[]>([]);
+  const [viewImageId, setViewImageId] = useState<string | null>(null);
+  const [viewMotionId, setViewMotionId] = useState<string | null>(null);
+  const [keyframes, setKeyframes] = useState<KeyframeSelection>(null);
+  // Explicit confirmation gates: a retake is a new paid-capable provider job,
+  // and replacing an approved take intentionally unapproves the old one.
+  const [confirming, setConfirming] = useState<null | "retake_image" | "retake_motion" | "replace_image" | "replace_motion">(null);
   const [generating, setGenerating] = useState(false);
-  const [motion, setMotion] = useState<any>(null);
   const [motionGenerating, setMotionGenerating] = useState(false);
   const [finalVideo, setFinalVideo] = useState<any>(null);
   const [assemblyJob, setAssemblyJob] = useState<any>(null);
@@ -59,6 +70,10 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   selectedSceneId.current = scene?.id;
   const busy = generating || motionGenerating || assemblyRunning || assetLoading;
   const pending = (job: any) => ["queued", "submitted", "processing"].includes(job?.status);
+  const image = useMemo(() => displayedTake(imageTakes, viewImageId), [imageTakes, viewImageId]);
+  const motion = useMemo(() => displayedTake(motionTakes, viewMotionId), [motionTakes, viewMotionId]);
+  const approvedImage = approvedTake(imageTakes);
+  const approvedMotion = approvedTake(motionTakes);
   const productionText = useMemo(() => scene ? prompt(scene) : "", [scene]);
 
   async function displayImage(asset: any) {
@@ -73,16 +88,19 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
   const refreshScene = useCallback(async (sceneId: string) => {
     const [images, motions, imageJobs, motionJobs] = await Promise.all([
-      supabase.from("scene_image_assets").select(imageFields).eq("scene_id", sceneId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("motion_clip_assets").select("*").eq("scene_id", sceneId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("scene_image_assets").select(imageFields).eq("scene_id", sceneId).order("created_at", { ascending: false }),
+      supabase.from("motion_clip_assets").select("*").eq("scene_id", sceneId).order("created_at", { ascending: false }),
       supabase.from("generation_jobs").select("id,status,error,job_type,output").eq("project_id", projectId).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_image").order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("generation_jobs").select("id,status,error,job_type,output").eq("project_id", projectId).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_motion").order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
     for (const result of [images, motions, imageJobs, motionJobs]) if (result.error) throw result.error;
+    // Keyframe selection is optional: older databases without the table keep working.
+    const frames = await supabase.from("scene_keyframe_selections").select("first_frame_asset_id,last_frame_asset_id").eq("scene_id", sceneId).maybeSingle();
     if (selectedSceneId.current !== sceneId) return;
-    setMotion(motions.data); setImageJob(imageJobs.data); setMotionJob(motionJobs.data);
-    const freshImage = await displayImage(images.data);
-    if (selectedSceneId.current === sceneId) setImage(freshImage);
+    setMotionTakes(numberTakes(motions.data ?? [])); setImageJob(imageJobs.data); setMotionJob(motionJobs.data);
+    setKeyframes(frames.error ? null : frames.data ?? null);
+    const freshImages = await Promise.all((images.data ?? []).map((row: any) => displayImage(row)));
+    if (selectedSceneId.current === sceneId) setImageTakes(numberTakes(freshImages));
   }, [projectId]);
 
   const refreshFinal = useCallback(async (planId: string) => {
@@ -155,7 +173,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
   useEffect(() => {
     let active = true;
-    setImage(null); setMotion(null); setImageJob(null); setMotionJob(null); setError(null);
+    setImageTakes([]); setMotionTakes([]); setViewImageId(null); setViewMotionId(null); setKeyframes(null); setConfirming(null); setImageJob(null); setMotionJob(null); setError(null);
     if (!scene) return;
     setAssetLoading(true);
     refreshScene(scene.id).catch(e => { if (active) setError(productionErrorMessage(e)); }).finally(() => { if (active) setAssetLoading(false); });
@@ -218,20 +236,40 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
   async function approveMotion() {
     if (!motion || motion.status !== "generated" || !motion.video_url) return;
-    setError(null);
-    const result = await supabase.rpc("approve_motion_clip_asset", { p_asset_id: motion.id });
+    // Swapping an approved take must be confirmed and go through the replace RPC.
+    if (approvedMotion && approvedMotion.id !== motion.id && confirming !== "replace_motion") { setConfirming("replace_motion"); return; }
+    setError(null); setConfirming(null);
+    const result = approvedMotion
+      ? await supabase.rpc("replace_approved_motion_clip", { p_asset_id: motion.id, p_expected_current_id: approvedMotion.id })
+      : await supabase.rpc("approve_motion_clip_asset", { p_asset_id: motion.id });
     if (result.error) setError(productionErrorMessage(result.error));
-    else {
-      setMotion(result.data);
-      if (plan) await refreshAssemblyReadiness(plan.id);
-    }
+    if (scene) await refreshScene(scene.id).catch(e => setError(productionErrorMessage(e)));
+    if (plan) await refreshAssemblyReadiness(plan.id);
   }
 
   async function approveImage() {
     if (!image || image.status !== "generated" || !image.image_url) return;
+    if (approvedImage && approvedImage.id !== image.id && confirming !== "replace_image") { setConfirming("replace_image"); return; }
+    setError(null); setConfirming(null);
+    const result = approvedImage
+      ? await supabase.rpc("replace_approved_scene_image", { p_asset_id: image.id, p_expected_current_id: approvedImage.id })
+      : await supabase.rpc("approve_scene_image_asset", { p_asset_id: image.id });
+    if (result.error) setError(productionErrorMessage(result.error));
+    if (scene) await refreshScene(scene.id).catch(e => setError(productionErrorMessage(e)));
+  }
+
+  async function setFrame(role: "first" | "last", assetId: string) {
+    if (!scene) return;
     setError(null);
-    const result = await supabase.rpc("approve_scene_image_asset", { p_asset_id: image.id });
-    if (result.error) setError(productionErrorMessage(result.error)); else setImage({ ...result.data, image_url: image.image_url });
+    const result = await supabase.rpc("set_scene_keyframe", { p_scene_id: scene.id, p_role: role, p_asset_id: assetId });
+    if (result.error) setError(productionErrorMessage(result.error));
+    else setKeyframes(result.data ?? null);
+  }
+
+  function confirmRetake(kind: "retake_image" | "retake_motion") {
+    setConfirming(null);
+    setViewImageId(null); setViewMotionId(null);
+    void (kind === "retake_image" ? generateImage() : generateMotion());
   }
 
   async function copyBrief() {
@@ -307,25 +345,54 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-provider-note">
             <span className="panel-label">SCENE IMAGE</span>
+            {hasConflictingApprovals(imageTakes) && <p role="alert">More than one image take is approved for this scene. Approval is blocked until the database is reconciled.</p>}
+            {image && <p>{"Viewing Take " + image.take_number + (image.id === approvedImage?.id ? " · approved" : " · candidate")}</p>}
             {image?.image_url ? <img src={image.image_url} alt={scene.title} style={{ width: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 12 }} /> : <p>No real scene image exists yet. Generation is only enabled from the approved Scene Direction.</p>}
+            <TakeHistory label="Image" takes={imageTakes} viewingId={image?.id ?? null} disabled={busy} keyframes={keyframes ?? { first_frame_asset_id: null, last_frame_asset_id: null }} onView={setViewImageId} onSetFrame={(role, id) => void setFrame(role, id)} />
             <div className="production-actions">
-              <button className="primary-button" disabled={busy || pending(imageJob) || Boolean(image)} onClick={() => void generateImage()}>{generating ? "Generating…" : image ? "Image Generated" : "Generate Scene Image"}</button>
+              {!imageTakes.length
+                ? <button className="primary-button" disabled={busy || pending(imageJob)} onClick={() => void generateImage()}>{generating ? "Generating…" : "Generate Scene Image"}</button>
+                : <button className="secondary-button" disabled={busy || pending(imageJob) || confirming !== null} onClick={() => setConfirming("retake_image")}>{generating ? "Generating…" : "Retake Image"}</button>}
               {pending(imageJob) && <button className="secondary-button" disabled={busy} onClick={() => void operateJob("scene_image", imageJob)}>Check Image Status</button>}
-              {image?.status === "generated" && <button className="secondary-button" onClick={() => void approveImage()}>Approve Image</button>}
+              {image?.status === "generated" && !hasConflictingApprovals(imageTakes) && <button className="secondary-button" disabled={busy || confirming !== null} onClick={() => void approveImage()}>{approvedImage ? "Replace Approved Take" : "Approve Image"}</button>}
               {image?.status === "approved" && <span className="style-lock-badge">IMAGE APPROVED</span>}
             </div>
+            {confirming === "retake_image" && <div role="dialog" aria-label="Confirm image retake">
+              <p>A retake starts a new provider generation job. It adds a new take; existing takes, including the approved one, are kept unchanged.</p>
+              <button className="primary-button" onClick={() => confirmRetake("retake_image")}>Confirm Image Retake</button>
+              <button className="secondary-button" onClick={() => setConfirming(null)}>Cancel</button>
+            </div>}
+            {confirming === "replace_image" && approvedImage && image && <div role="dialog" aria-label="Confirm approved image replacement">
+              <p>{"This will unapprove Take " + approvedImage.take_number + " and approve Take " + image.take_number + ". Take " + approvedImage.take_number + " is kept in history."}</p>
+              <button className="primary-button" onClick={() => void approveImage()}>Confirm Replace Approved Image</button>
+              <button className="secondary-button" onClick={() => setConfirming(null)}>Cancel</button>
+            </div>}
           </div>
 
           <div className="production-provider-note">
             <span className="panel-label">MOTION</span>
-            {motion && <p>{motion.model === "image-motion" || (motionJob?.id === motion.generation_job_id && motionJob?.output?.arena_response?.result?.generation_type === "PROCEDURAL_MOTION") ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
+            {hasConflictingApprovals(motionTakes) && <p role="alert">More than one motion take is approved for this scene. Approval is blocked until the database is reconciled.</p>}
+            {motion && <p>{"Viewing Take " + motion.take_number + " · "}{motion.model === "image-motion" || (motionJob?.id === motion.generation_job_id && motionJob?.output?.arena_response?.result?.generation_type === "PROCEDURAL_MOTION") ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
             {motion?.video_url ? <video src={motion.video_url} controls playsInline style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
+            <TakeHistory label="Motion" takes={motionTakes} viewingId={motion?.id ?? null} disabled={busy} onView={setViewMotionId} />
             <div className="production-actions">
-              {!motion && !pending(motionJob) && <button className="primary-button" disabled={busy || image?.status !== "approved"} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
+              {!pending(motionJob) && (!motionTakes.length
+                ? <button className="primary-button" disabled={busy || !approvedImage} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>
+                : <button className="secondary-button" disabled={busy || !approvedImage || confirming !== null} onClick={() => setConfirming("retake_motion")}>{motionGenerating ? "Starting Motion…" : "Retake Motion"}</button>)}
               {pending(motionJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkMotionStatus()}>{motionGenerating ? "Checking…" : "Check Motion Status"}</button>}
-              {motion?.status === "generated" && <button className="secondary-button" onClick={() => void approveMotion()}>Approve Motion</button>}
+              {motion?.status === "generated" && !hasConflictingApprovals(motionTakes) && <button className="secondary-button" disabled={busy || confirming !== null} onClick={() => void approveMotion()}>{approvedMotion ? "Replace Approved Motion" : "Approve Motion"}</button>}
               {motion?.status === "approved" && <span className="style-lock-badge">MOTION APPROVED</span>}
             </div>
+            {confirming === "retake_motion" && <div role="dialog" aria-label="Confirm motion retake">
+              <p>A retake starts a new provider motion job from the approved image. It adds a new take; existing clips are kept unchanged.</p>
+              <button className="primary-button" onClick={() => confirmRetake("retake_motion")}>Confirm Motion Retake</button>
+              <button className="secondary-button" onClick={() => setConfirming(null)}>Cancel</button>
+            </div>}
+            {confirming === "replace_motion" && approvedMotion && motion && <div role="dialog" aria-label="Confirm approved motion replacement">
+              <p>{"This will unapprove Take " + approvedMotion.take_number + " and approve Take " + motion.take_number + ". Take " + approvedMotion.take_number + " is kept in history."}</p>
+              <button className="primary-button" onClick={() => void approveMotion()}>Confirm Replace Approved Motion</button>
+              <button className="secondary-button" onClick={() => setConfirming(null)}>Cancel</button>
+            </div>}
           </div>
 
           <div className="production-provider-note">
