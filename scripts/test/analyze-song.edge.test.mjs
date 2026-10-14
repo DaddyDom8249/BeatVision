@@ -164,7 +164,19 @@ test("missing Authorization header returns 401, not 500", async () => {
 
   assert.equal(response.status, 401);
   assert.equal((await response.json()).code, "UNAUTHENTICATED");
-  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "*");
+  assert.notEqual(response.headers.get("Access-Control-Allow-Origin"), "*");
+});
+
+test("CORS reflects only allowlisted origins, never a wildcard", async () => {
+  const { handler } = await bootFunction();
+  const preflight = (origin) => handler(new Request(`${SUPABASE_URL}/functions/v1/beatvision-analyze-song`, {
+    method: "OPTIONS", headers: { Origin: origin },
+  }));
+  const evil = await preflight("https://evil.example");
+  assert.equal(evil.headers.get("Access-Control-Allow-Origin"), null);
+  const good = await preflight("https://beat-vision-beat-vision.vercel.app");
+  assert.equal(good.headers.get("Access-Control-Allow-Origin"), "https://beat-vision-beat-vision.vercel.app");
+  assert.equal(good.headers.get("Vary"), "Origin");
 });
 
 test("rejected session returns 401, not 500", async () => {
