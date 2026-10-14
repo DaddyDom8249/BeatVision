@@ -43,3 +43,23 @@ test('scheduler secret is not compared with ===', async () => {
   const src = await readFile(new URL('../../supabase/functions/beatvision-generation/index.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /queueSecret\s*===/);
 });
+
+test('controller 500 returns a code and reference, not internal error text', async () => {
+  const leaky = { ...client, from: () => { throw new Error('DB_LOOKUP_FAILED: relation "secret_table" SECRET_MARKER'); } };
+  const runtime = await loadGeneration(leaky);
+  const originalError = console.error; console.error = () => {};
+  try {
+    const res = await runtime.handler(new Request('https://test/function', {
+      method: 'POST',
+      headers: { 'X-BeatVision-Queue-Secret': SECRET, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'run', projectId: 'p', jobId: 'j' }),
+    }));
+    const text = await res.text();
+    assert.ok(!text.includes('SECRET_MARKER'), text);
+    if (res.status === 500) {
+      const body = JSON.parse(text);
+      assert.equal(body.error.code, 'DB_LOOKUP_FAILED');
+      assert.ok(body.error.ref);
+    }
+  } finally { console.error = originalError; await runtime.cleanup(); }
+});

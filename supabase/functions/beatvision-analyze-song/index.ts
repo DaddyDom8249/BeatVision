@@ -101,7 +101,10 @@ Deno.serve(async (req) => {
     const raw = await response.text();
     let data: any;
     try { data = raw ? JSON.parse(raw) : null; } catch { data = { raw }; }
-    if (!response.ok) throw new Error("Groq transcription failed (" + response.status + "): " + String(data?.error?.message || data?.message || raw).slice(0, 800));
+    if (!response.ok) {
+      console.error("groq transcription failed", response.status, String(data?.error?.message || data?.message || raw).slice(0, 800));
+      throw new Error("GROQ_TRANSCRIPTION_FAILED: HTTP " + response.status);
+    }
 
     const existing = song.analysis && typeof song.analysis === "object" ? song.analysis as Record<string, unknown> : {};
     const transcriptionDuration = Number(data?.duration);
@@ -142,6 +145,10 @@ Deno.serve(async (req) => {
     if (error instanceof AuthError) {
       return json({ error: error.message, code: "UNAUTHENTICATED" }, error.status);
     }
-    return json({ error: error instanceof Error ? error.message : String(error) }, 500);
+    const ref = crypto.randomUUID();
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error("beatvision-analyze-song failed", ref, detail);
+    const code = /^([A-Z][A-Z0-9_]{2,63}):/.exec(detail)?.[1] || "ANALYZE_FAILED";
+    return json({ error: "Song analysis failed. Reference " + ref + ".", code, ref }, 500);
   }
 });

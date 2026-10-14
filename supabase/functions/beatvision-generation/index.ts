@@ -610,6 +610,12 @@ Deno.serve(async (req) => {
     if (error instanceof HttpError) {
       return json(req, { error: { code: error.code, message: error.message } }, error.status);
     }
-    return json(req, { error: { code: "GENERATION_CONTROLLER_FAILED", message: error instanceof Error ? error.message : String(error) } }, 500);
+    // Log full detail server-side; return only a stable code + reference so DB,
+    // storage and provider internals never reach the browser.
+    const ref = crypto.randomUUID();
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error("beatvision-generation failed", ref, detail);
+    const code = /^([A-Z][A-Z0-9_]{2,63}):/.exec(detail)?.[1] || "GENERATION_CONTROLLER_FAILED";
+    return json(req, { error: { code, message: "Generation request failed. Reference " + ref + ".", ref } }, 500);
   }
 });

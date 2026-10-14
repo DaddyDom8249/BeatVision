@@ -201,3 +201,24 @@ test("non-POST requests are rejected", async () => {
   const response = await call(handler, { projectId: PROJECT_ID }, { method: "GET" });
   assert.equal(response.status, 405);
 });
+test("provider failure detail is not leaked to the client", async () => {
+  const { handler } = await bootFunction();
+  const authFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (String(input).includes("api.groq.com")) {
+      return new Response(JSON.stringify({ error: { message: "SECRET_MARKER internal detail" } }), { status: 500 });
+    }
+    return authFetch(input, init);
+  };
+  try {
+    const response = await call(handler, { projectId: PROJECT_ID });
+    const text = await response.text();
+    assert.equal(response.status, 500);
+    assert.ok(!text.includes("SECRET_MARKER"), "provider body must not reach the browser");
+    const body = JSON.parse(text);
+    assert.equal(body.code, "GROQ_TRANSCRIPTION_FAILED");
+    assert.ok(body.ref);
+  } finally {
+    globalThis.fetch = authFetch;
+  }
+});
