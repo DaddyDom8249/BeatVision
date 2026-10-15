@@ -129,6 +129,16 @@ try {
     await f.page.locator('.arcane-storyboard-thumbnail img').first().evaluate(n => n.decode());
     assert.equal(await f.page.locator('.arcane-storyboard-scene').count(), 8);
     const geometry = await widths(f.page); results.widths.push(geometry); assert.ok(geometry.document <= width, JSON.stringify(geometry)); assert.deepEqual(geometry.offenders, []);
+    if (width <= 700) {
+      const navigation = await f.page.locator('.studio-pipeline-nav').evaluate(n => ({
+        width: n.clientWidth, scroll: n.scrollWidth,
+        buttons: [...n.querySelectorAll('button')].map(b => { const r = b.getBoundingClientRect(); return { left: r.left, right: r.right, height: r.height, fits: b.scrollWidth <= b.clientWidth }; }),
+      }));
+      assert.ok(navigation.scroll <= navigation.width);
+      assert.equal(navigation.buttons.length, 6);
+      assert.ok(navigation.buttons.every(b => b.left >= 0 && b.right <= width && b.height >= 44 && b.fits), JSON.stringify(navigation));
+      results.checks.push(width + 'px: all six workflow controls fully visible with 44px targets');
+    }
     assert.equal(await f.page.evaluate(() => document.documentElement.dataset.motion), 'reduce');
     if (width === 1440 || width === 390) await f.page.screenshot({ path: out + '/implemented-' + (width === 1440 ? 'desktop' : 'mobile') + '.png', fullPage: true });
     const first = f.page.locator('.arcane-storyboard-scene').first(); await first.focus(); await first.press('End');

@@ -13,7 +13,8 @@
     "director": "4:29",
     "navigation": "4:33",
     "preview": "4:36",
-    "mobilePreview": "6:176"
+    "mobilePreview": "6:176",
+    "mobileWorkflowFrame": "8:176"
   },
   "variables": "VariableCollectionId:2:2",
   "imagery": "Only the real owner-supplied saved Ghast frame, with illustrative fixture metadata. No substitute scene imagery.",

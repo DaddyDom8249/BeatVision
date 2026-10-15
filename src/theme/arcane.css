@@ -168,6 +168,8 @@
 @media (max-width: 700px) {
   :root[data-theme='arcane'] .studio-topbar-left { min-width: max-content; }
   :root[data-theme='arcane'] .studio-topbar-right { max-width: 100%; margin-left: auto; }
+  :root[data-theme='arcane'] .studio-pipeline-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
+  :root[data-theme='arcane'] .pipeline-step { min-width: 0; min-height: 44px; justify-content: center; padding: 6px 4px; gap: 4px; }
   .arcane-director-layout { grid-template-columns: minmax(0, 1fr); }
   .appearance-dialog { padding: 18px; }
   .appearance-options { gap: 12px; }
