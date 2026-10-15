@@ -1,0 +1,79 @@
+{
+  "browser": "153.0.8010.0",
+  "fixture": "Synthetic scene/approval state. Only media is the user supplied saved 1.9-second Ghast clip and its first frame.",
+  "widths": [
+    {
+      "viewport": 1440,
+      "document": 1440,
+      "offenders": []
+    },
+    {
+      "viewport": 768,
+      "document": 768,
+      "offenders": []
+    },
+    {
+      "viewport": 390,
+      "document": 390,
+      "offenders": []
+    },
+    {
+      "viewport": 360,
+      "document": 360,
+      "offenders": []
+    },
+    {
+      "viewport": 320,
+      "document": 320,
+      "offenders": []
+    }
+  ],
+  "checks": [
+    "Classic before: retained pre-change 9a108832 screenshot",
+    "Classic after: no storyboard/media reads, editors remain present",
+    "1440px: sequence, keyboard End, previous, locked review, theme persistence, OS motion",
+    "768px: sequence, keyboard End, previous, locked review, theme persistence, OS motion",
+    "390px: all six workflow controls fully visible with 44px targets",
+    "390px: sequence, keyboard End, previous, locked review, theme persistence, OS motion",
+    "360px: all six workflow controls fully visible with 44px targets",
+    "360px: sequence, keyboard End, previous, locked review, theme persistence, OS motion",
+    "320px: all six workflow controls fully visible with 44px targets",
+    "320px: sequence, keyboard End, previous, locked review, theme persistence, OS motion",
+    "Real saved MP4 decoded/played/paused; scene switch removes stale video",
+    "Unsaved draft survives both themes; existing save writes exactly one intercepted draft update",
+    "1440px production: shared storyboard selection, Director focus, existing controls, no creative writes",
+    "390px production: shared storyboard selection, Director focus, existing controls, no creative writes",
+    "empty: honest unavailable state, no fabricated media",
+    "broken: honest unavailable state, no fabricated media",
+    "error: honest unavailable state, no fabricated media"
+  ],
+  "creativeRequests": [
+    {
+      "method": "PATCH",
+      "table": "visual_plan_scenes",
+      "body": {
+        "start_time": 0,
+        "end_time": 31.14086353925,
+        "title": "My unsaved direction",
+        "visual_direction": "The central figure holds still in a dim industrial corridor.",
+        "camera_direction": "Medium shot · eye level",
+        "movement_direction": "Slow tracking camera; restrained subject movement.",
+        "location": "Industrial corridor",
+        "mood": "Haunting, intimate, resolute",
+        "lyric_moment": "Instrumental opening",
+        "transition_style": "Cut on the musical phrase",
+        "continuity_notes": "Preserve the locked character and wardrobe."
+      }
+    }
+  ],
+  "classicPixelDifference": 0,
+  "decodedMedia": {
+    "duration": 1.9,
+    "width": 704,
+    "height": 512,
+    "controls": true,
+    "paused": false,
+    "error": null
+  },
+  "status": "PASS"
+}

@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase/client";
 import { getCreativeErrorMessage } from "../lib/formatCreativeText";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 import StudioHeader from "../components/navigation/StudioHeader";
+import ArcaneStoryboard from "../components/storyboard/ArcaneStoryboard";
 
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
@@ -510,6 +511,16 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         <a className="secondary-button" href={`/projects/${projectId}/scenes?plan=${plan.id}`}>Production Briefs</a>
       </div>
 
+      <ArcaneStoryboard projectId={projectId} planId={plan.id} scenes={scenes}
+        selectedSceneId={scene.id} disabled={busy}
+        onSceneSelect={id => { const next = scenes.findIndex(item => item.id === id); if (next >= 0 && !busy) setSelectedIndex(next); }}
+        currentMedia={{ sceneId: scene.id,
+          image: image?.scene_id === scene.id && image?.image_url ? { url: image.image_url, status: image.status } : undefined,
+          motion: motion?.scene_id === scene.id && motion?.video_url ? { id: motion.id, url: motion.video_url, status: motion.status,
+            label: (isProceduralMotion ? "Procedural image animation · not AI subject motion" : motion.provider === "huggingface-zerogpu" ? "Saved AI-generated motion" : "Saved provider motion") + " · " + motion.status } : undefined,
+          state: pending(motionJob) ? "Motion " + motionJob.status : pending(imageJob) ? "Image " + imageJob.status : undefined,
+        }} />
+
       <section className="production-layout">
         <aside className="production-scene-list">
           <span className="panel-label">SCENES</span>
@@ -522,7 +533,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
           ))}
         </aside>
 
-        <section className="production-detail">
+        <section className="production-detail" id={'scene-director-' + scene.id} tabIndex={-1}>
           <div className="production-detail-head">
             <div><span className="eyebrow">SCENE {String(scene.scene_number).padStart(2, "0")}</span><h2>{scene.title}</h2><p>{time(scene.start_time)} — {time(scene.end_time)} · {scene.location}</p></div>
             <span className="style-lock-badge">APPROVED</span>
