@@ -1,106 +1,69 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase/client";
+import { getCreativeErrorMessage } from "../lib/formatCreativeText";
 import StudioHeader from "../components/navigation/StudioHeader";
 
-interface Props {
-  onNavigate: (path: string) => void;
-}
+interface Props { onNavigate: (path: string) => void; }
 
 type Project = { id: string; title: string; status: string; updated_at: string };
 
 export default function DashboardPage({ onNavigate }: Props) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [signedIn, setSignedIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshCount, setRefreshCount] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setLoading(true); setError(null);
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) {
+      try {
+        const { data: auth, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        if (active) setSignedIn(Boolean(auth.user));
+        if (!auth.user) { if (active) setProjects([]); return; }
+        const { data, error: projectError } = await supabase.from("projects")
+          .select("id,title,status,updated_at")
+          .eq("owner_id", auth.user.id)
+          .order("updated_at", { ascending: false })
+          .limit(12);
+        if (projectError) throw projectError;
+        if (active) setProjects((data ?? []) as Project[]);
+      } catch (e) {
+        if (active) setError(getCreativeErrorMessage(e, "Unable to load projects."));
+      } finally {
         if (active) setLoading(false);
-        return;
-      }
-      const { data } = await supabase
-        .from("projects")
-        .select("id,title,status,updated_at")
-        .eq("owner_id", auth.user.id)
-        .order("updated_at", { ascending: false })
-        .limit(12);
-      if (active) {
-        setProjects((data ?? []) as Project[]);
-        setLoading(false);
       }
     })();
-    return () => {
-      active = false;
-    };
-  }, []);
+    return () => { active = false; };
+  }, [refreshCount]);
 
   return (
     <div className="app-shell">
       <StudioHeader onNavigate={onNavigate} />
 
       <main className="dashboard">
-        <section className="hero">
-          <div className="eyebrow">CREATIVE VIDEO SYSTEM FOR ARTISTS & DIRECTORS</div>
-          <h1>
-            Every song has a world.<br />
-            <em>Reveal it.</em>
-          </h1>
-          <p>
-            BeatVision transforms musical intent into a persistent visual world. Direct characters, environments, visual rules, and motion with total continuity.
-          </p>
+        <header className="dashboard-heading">
+          <div>
+            <div className="eyebrow">YOUR CREATIVE STUDIO</div>
+            <h1>BeatVision</h1>
+          </div>
           <div className="hero-actions" style={{ display: "flex", gap: "14px", flexWrap: "wrap" }}>
             <button className="primary-button large" onClick={() => onNavigate("/projects/new")}>
               Start New Project <span>→</span>
             </button>
-            <button className="secondary-button" onClick={() => onNavigate("/auth")}>
+            {!signedIn && <button className="secondary-button" onClick={() => onNavigate("/auth")}>
               Studio Sign In
-            </button>
+            </button>}
           </div>
-        </section>
+        </header>
 
         <section className="dashboard-stats-bar">
           <div className="stat-item">
-            <span className="stat-label">Active Workflow</span>
-            <span className="stat-value">Song → World → Motion</span>
+            <span className="stat-label">Recent Projects</span>
+            <span className="stat-value">{loading ? "Loading" : error ? "Unavailable" : projects.length}</span>
           </div>
-          <div className="stat-item">
-            <span className="stat-label">Creative Control</span>
-            <span className="stat-value">Artist Directed</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Continuity Guard</span>
-            <span className="stat-value">Vision Lock Active</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Total Projects</span>
-            <span className="stat-value">{projects.length} Worlds</span>
-          </div>
-        </section>
-
-        <section className="principles">
-          <article>
-            <strong>01 / REVEAL</strong>
-            <h3>Understand the Song</h3>
-            <p>
-              Extract BPM, musical key, structure, and emotional resonance before generating visuals. Intent becomes durable creative direction.
-            </p>
-          </article>
-          <article>
-            <strong>02 / DIRECT</strong>
-            <h3>Shape the World</h3>
-            <p>
-              Define visual rules, characters, and spaces directly. AI proposes creative options; the artist approves and locks decisions.
-            </p>
-          </article>
-          <article>
-            <strong>03 / LOCK</strong>
-            <h3>Preserve Continuity</h3>
-            <p>
-              Protect approved character wardrobe, environment lighting, and camera rules from shifting across scene generations.
-            </p>
-          </article>
         </section>
 
         <section className="projects-section">
@@ -119,6 +82,11 @@ export default function DashboardPage({ onNavigate }: Props) {
           {loading ? (
             <div className="empty-state">
               <p>Loading your studio projects…</p>
+            </div>
+          ) : error ? (
+            <div className="empty-state">
+              <p className="form-error" role="alert">{error}</p>
+              <button className="secondary-button" onClick={() => setRefreshCount(value => value + 1)}>Retry loading projects</button>
             </div>
           ) : projects.length === 0 ? (
             <div className="empty-state">

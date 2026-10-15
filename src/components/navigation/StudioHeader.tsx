@@ -6,6 +6,7 @@ export type StageId = "song" | "world" | "style" | "visual-plan" | "scenes" | "p
 export interface StudioHeaderProps {
   projectId?: string;
   projectTitle?: string;
+  planId?: string;
   activeStage?: StageId;
   statusBadge?: string;
   onNavigate?: (path: string) => void;
@@ -23,6 +24,7 @@ const STAGES: { id: StageId; number: string; label: string; path: (id: string) =
 export default function StudioHeader({
   projectId,
   projectTitle,
+  planId,
   activeStage,
   statusBadge,
   onNavigate,
@@ -35,6 +37,8 @@ export default function StudioHeader({
       if (active && data?.user) {
         setUserEmail(data.user.email ?? "Signed in");
       }
+    }).catch(() => {
+      if (active) setUserEmail(null);
     });
     return () => {
       active = false;
@@ -47,6 +51,15 @@ export default function StudioHeader({
     } else {
       window.location.href = path;
     }
+  }
+
+  function handleStageNav(stage: (typeof STAGES)[number]) {
+    const destination = new URL(stage.path(projectId!), window.location.origin);
+    const selectedPlan = planId ?? new URLSearchParams(window.location.search).get("plan");
+    if (selectedPlan && ["visual-plan", "scenes", "production"].includes(stage.id)) {
+      destination.searchParams.set("plan", selectedPlan);
+    }
+    handleNav(destination.pathname + destination.search);
   }
 
   return (
@@ -81,7 +94,8 @@ export default function StudioHeader({
                 key={s.id}
                 type="button"
                 className={`pipeline-step ${isActive ? "active" : ""}`}
-                onClick={() => handleNav(s.path(projectId))}
+                aria-current={isActive ? "step" : undefined}
+                onClick={() => handleStageNav(s)}
               >
                 <span className="step-num">{s.number}</span>
                 <span className="step-label">{s.label}</span>

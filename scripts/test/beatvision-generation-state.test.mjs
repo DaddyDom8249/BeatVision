@@ -1,8 +1,29 @@
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
+const proofResponse = url => ({result:{video_url:url,duration_seconds:2,render_integrity:'PASS',media_validation:{probed:true,probe_provider:'shotstack',format:'mp4',has_video_stream:true,has_audio_stream:true,duration_seconds:2}}});
+const mediaFixture = await readFile(new URL('./fixtures/final-media-contract.mp4', import.meta.url));
+
+test('invalid final output never creates a complete final_video row', async () => {
+  let writes = 0;
+  const db = { from: () => ({ select() { return this; }, eq() { return this; }, maybeSingle: async () => ({data:null,error:null}), upsert() { writes++; throw Error('unexpected write'); } }) };
+  const oldFetch = globalThis.fetch;
+  const runtime = await loadGeneration();
+  globalThis.Deno.env.get = () => 'shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com';
+  globalThis.fetch = async () => new Response('<html>not playable</html>');
+  try {
+    await assert.rejects(runtime.persistFinalVideo(db, {id:'bad-output',job_type:'assembly',project_id:'p',input_snapshot:{plan:{duration_seconds:2}}}, proofResponse('https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/final.mp4')));
+    assert.equal(writes, 0);
+  } finally { globalThis.fetch = oldFetch; await runtime.cleanup(); }
+});
 import assert from 'node:assert/strict';
 import { loadGeneration } from './generation-runtime.mjs';
 
 for (const [name, data, type, expected] of [
+  ['nested Shotstack done completes', { ok: true, result: { status: 'done', video_url: 'https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/final.mp4' } }, 'assembly', 'completed'],
+  ['nested Shotstack failure fails', { ok: true, result: { status: 'failed' } }, 'assembly', 'failed'],
+  ['nested Shotstack rendering remains pending', { ok: true, result: { status: 'rendering' } }, 'assembly', 'processing'],
+  ['nested unknown state is not successful even with media', { ok: true, result: { status: 'unexpected', video_url: 'https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/final.mp4' } }, 'assembly', 'processing'],
+  ['top-level failure wins over nested completion', { status: 'failed', result: { status: 'done' } }, 'assembly', 'failed'],
   ['unknown states remain processing', { status: 'unexpected' }, 'scene_motion', 'processing'],
   ['explicit success completes', { status: 'completed' }, 'scene_motion', 'completed'],
   ['synchronous image URL completes', { image_url: 'https://example.test/image.jpg' }, 'scene_image', 'completed'],
@@ -46,7 +67,7 @@ test('auth errors retain CORS without accepting unauthenticated requests', async
 test('motion persistence records the actual fallback provider and model', async () => {
   let saved;
   const imageQuery = { select() { return this; }, eq() { return this; }, order() { return this; }, limit() { return this; }, async maybeSingle() { return { data: { id: 'image-1' } }; } };
-  const client = { from: name => name === 'scene_image_assets' ? imageQuery : { upsert(row) { saved = row; return { select: () => ({ single: async () => ({ data: row }) }) }; } } };
+  const client = { from: name => name === 'scene_image_assets' ? imageQuery : { select() { return this; }, eq() { return this; }, maybeSingle: async () => ({ data: null }), insert(row) { saved = row; return { select: () => ({ single: async () => ({ data: row }) }) }; } } };
   const runtime = await loadGeneration();
   try {
     await runtime.persistMotionClip(client, { id: 'job-1', job_type: 'scene_motion', project_id: 'project-1', visual_plan_id: 'plan-1', visual_plan_scene_id: 'scene-1' }, { status: 'completed', provider: 'shotstack', model: 'image-motion', result: { video_url: 'https://example.test/clip.mp4', generation_type: 'PROCEDURAL_MOTION' } });
@@ -86,44 +107,19 @@ for (const [name, owner, assetProject, expected] of [
 
 test('poll fails processing job cleanly when upstream_job_id is missing', async () => {
   let failedState = null;
-  const client = {
-    from(table) {
-      return {
-        update(data) {
-          failedState = data;
-          return {
-            eq() {
-              return {
-                in() {
-                  return {
-                    select() { return { error: null, data: [{ id: 'job-img-1' }] }; }
-                  };
-                }
-              };
-            }
-          };
-        },
-        select() {
-          return {
-            eq() {
-              return { single: async () => ({ data: { id: 'job-1', status: 'failed', error: failedState?.error } }) };
-            }
-          };
-        }
-      };
-    }
-  };
-
+  const client = { from() { return {
+    update(data) { failedState = data; return this; },
+    eq() { return this; },
+    select() { return this; },
+    async maybeSingle() { return { data: { id: 'job-1', ...failedState } }; },
+  }; } };
   const runtime = await loadGeneration();
   try {
-    const job = { id: 'job-1', status: 'processing', job_type: 'scene_motion', output: {} };
-    const result = await runtime.poll(client, job);
+    const result = await runtime.poll(client, { id: 'job-1', status: 'processing', job_type: 'scene_motion', output: {} });
     assert.equal(result.status, 'failed');
     assert.equal(result.error.code, 'ARENA_GENERATION_FAILED');
     assert.match(result.error.message, /without a provider job id/);
-  } finally {
-    await runtime.cleanup();
-  }
+  } finally { await runtime.cleanup(); }
 });
 
 test('persistFinalVideo scopes final videos to generation_job_id and prevents duplicate creation', async () => {
@@ -161,13 +157,16 @@ test('persistFinalVideo scopes final videos to generation_job_id and prevents du
     }
   };
 
+  const oldFetch = globalThis.fetch;
   const runtime = await loadGeneration();
+  globalThis.Deno.env.get = name => name === "FINAL_VIDEO_ALLOWED_HOSTS" ? "shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com" : "";
+  globalThis.fetch = async () => new Response(mediaFixture);
   try {
-    const job1 = { id: 'assembly-job-1', job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan A' } } };
-    const res1 = await runtime.persistFinalVideo(client, job1, { video_url: 'https://example.test/plan_a.mp4' });
+    const job1 = { id: 'assembly-job-1', job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan A', duration_seconds: 2 } } };
+    const res1 = await runtime.persistFinalVideo(client, job1, proofResponse('https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/plan_a.mp4'));
 
-    const job2 = { id: 'assembly-job-2', job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan B' } } };
-    const res2 = await runtime.persistFinalVideo(client, job2, { video_url: 'https://example.test/plan_b.mp4' });
+    const job2 = { id: 'assembly-job-2', job_type: 'assembly', project_id: 'proj-1', input_snapshot: { plan: { title: 'Plan B', duration_seconds: 2 } } };
+    const res2 = await runtime.persistFinalVideo(client, job2, proofResponse('https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/plan_b.mp4'));
 
     assert.notEqual(res1.id, res2.id);
     assert.equal(res1.generation_job_id, 'assembly-job-1');
@@ -175,10 +174,11 @@ test('persistFinalVideo scopes final videos to generation_job_id and prevents du
     assert.equal(dbRows.length, 2);
 
     // Re-persisting job2 reuses res2 by generation_job_id without creating a duplicate row
-    const res2Retry = await runtime.persistFinalVideo(client, job2, { video_url: 'https://example.test/plan_b.mp4' });
+    const res2Retry = await runtime.persistFinalVideo(client, job2, proofResponse('https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/plan_b.mp4'));
     assert.equal(res2Retry.id, res2.id);
     assert.equal(dbRows.length, 2);
   } finally {
+    globalThis.fetch = oldFetch;
     await runtime.cleanup();
   }
 });
@@ -330,4 +330,38 @@ test('poll fails processing scene_image job cleanly', async () => {
   } finally {
     await runtime.cleanup();
   }
+});
+
+test('poll persists a nested done assembly once and completes its existing job', async () => {
+  const job = { id: 'assembly-1', project_id: 'project-1', job_type: 'assembly', status: 'processing', output: { upstream_job_id: 'render-1' }, input_snapshot: { plan: { duration_seconds: 2 }, scenes: [{}] } };
+  let video = null;
+  let inserts = 0;
+  let requests = 0;
+  const client = { from(table) {
+    return {
+      select() { return this; }, eq() { return this; },
+      maybeSingle: async () => ({ data: table === 'final_videos' ? video : job, error: null }),
+      single: async () => ({ data: table === 'final_videos' ? video : job, error: null }),
+      update(row) { Object.assign(job,row); return { eq() { return this; }, select: async () => ({ data: [{id:job.id}], error:null }) }; },
+      upsert(row) { inserts++; video={id:'video-1',...row}; return this; }
+    };
+  }};
+  const oldFetch = globalThis.fetch;
+  const runtime = await loadGeneration();
+  globalThis.Deno.env.get = name => name === 'FINAL_VIDEO_ALLOWED_HOSTS' ? 'shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com' : name === 'ARENA_GATEWAY_URL' ? 'https://arena.test' : name === 'ARENA_GATEWAY_TOKEN' ? 'fixture-token' : '';
+  globalThis.fetch = async url => {
+    requests++;
+    if (String(url) === 'https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/final.mp4') return new Response(mediaFixture);
+    assert.match(String(url), /assemble\/status\/render-1/);
+    return new Response(JSON.stringify({ ok:true, result:{ status:'done', video_url:'https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/final.mp4', duration_seconds:2, render_integrity:'PASS',media_validation:{probed:true,probe_provider:'shotstack',format:'mp4',has_video_stream:true,has_audio_stream:true,duration_seconds:2} } }), {status:200});
+  };
+  try {
+    const result=await runtime.poll(client,job);
+    assert.equal(result.status,'completed');
+    assert.equal(result.output.final_video.video_url,'https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/final.mp4');
+    assert.equal(result.output.final_video.duration,2);
+    await runtime.poll(client,result);
+    assert.equal(inserts,1);
+    assert.equal(requests,2);
+  } finally { globalThis.fetch=oldFetch; await runtime.cleanup(); }
 });

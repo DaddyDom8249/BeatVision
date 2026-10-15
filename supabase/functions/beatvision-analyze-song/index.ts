@@ -61,6 +61,10 @@ Deno.serve(async (req) => {
     const groqKey = env("GROQ_API_KEY");
     if (!groqKey) return json({ error: "GROQ_API_KEY is not configured." }, 503);
 
+    // Browser DSP and manual lyrics remain usable without paid/unknown inference.
+    const freeAccountVerified = false;
+    if (!freeAccountVerified) return json({error:"PROVIDER_COST_UNVERIFIED: Transcription is unavailable until this Groq account's free eligibility is verified."},503);
+
     // Production stores audio in the `songs` bucket (see SongPage/useSong);
     // reading `audio` fails to resolve the signed URL and breaks transcription.
     const signed = await admin.storage.from("songs").createSignedUrl(String(song.audio_path), 900);
@@ -88,11 +92,19 @@ Deno.serve(async (req) => {
     const transcriptionDuration = Number(data?.duration);
     const existingDuration = Number(existing.duration_seconds);
     const projectDuration = Number(project.song_duration);
-    const authoritativeDuration = Number.isFinite(transcriptionDuration) && transcriptionDuration > 0
-      ? transcriptionDuration
-      : (Number.isFinite(existingDuration) && existingDuration > 0
-        ? existingDuration
+    // Keep the original audio timeline authoritative when decoding already
+    // established it. Whisper may report a different transcription duration.
+    const authoritativeDuration = Number.isFinite(existingDuration) && existingDuration > 0
+      ? existingDuration
+      : (Number.isFinite(transcriptionDuration) && transcriptionDuration > 0
+        ? transcriptionDuration
         : (Number.isFinite(projectDuration) && projectDuration > 0 ? projectDuration : null));
+    if (authoritativeDuration === null) {
+      return json({
+        error: "No valid audio duration is available. Decode the saved song or retry transcription before completing analysis.",
+        code: "AUDIO_DURATION_UNAVAILABLE",
+      }, 422);
+    }
     const analysis = {
       ...existing,
       duration_seconds: authoritativeDuration,

@@ -1,0 +1,46 @@
+name: Database migration replay
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    env:
+      PGHOST: localhost
+      PGPORT: 54322
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - name: Start isolated Supabase PostgreSQL with real extensions
+        run: |
+          supabase init --workdir /tmp/beatvision-replay
+          supabase db start --workdir /tmp/beatvision-replay
+          replay_db=$(docker ps --filter name=supabase_db_ --format '{{.Names}}')
+          test -n "$replay_db"
+          echo "REPLAY_DB=$replay_db" >> "$GITHUB_ENV"
+      - name: Disable scheduled jobs before loading application SQL
+        run: |
+          docker exec "$REPLAY_DB" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c "ALTER SYSTEM SET cron.launch_active_jobs = 'off'"
+          docker exec "$REPLAY_DB" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_reload_conf()"
+          test "$(docker exec "$REPLAY_DB" psql -U supabase_admin -d postgres -At -c 'SHOW cron.launch_active_jobs')" = off
+      - name: Initialize platform-only baseline
+        run: docker exec -i "$REPLAY_DB" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f - < scripts/test/sql/platform-replay-fixture.sql
+      - name: Replay migrations on an empty application database
+        run: |
+          for migration in supabase/migrations/*.sql; do
+            echo "REPLAYING $migration"
+            docker exec -i "$REPLAY_DB" psql -U supabase_admin -d postgres --single-transaction -v ON_ERROR_STOP=1 -f - < "$migration"
+          done
+      - name: Verify fresh project and song API contracts with owner isolation
+        run: docker exec -i "$REPLAY_DB" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f - < scripts/test/sql/fresh-install-contract.sql
+      - name: Stop isolated database
+        if: always()
+        run: supabase stop --workdir /tmp/beatvision-replay

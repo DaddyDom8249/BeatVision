@@ -44,18 +44,16 @@ export default function SongPage({ projectId }: Props) {
     let local: Awaited<ReturnType<typeof analyzeAudioLocally>> | null = null;
     let localFailure: Error | null = null;
     try {
-      const markAnalyzing = await supabase
-        .from("songs")
-        .update({ analysis_status: "analyzing" })
-        .eq("id", song.id);
+      const persistAnalysis = (status: string, analysis?: unknown) => supabase.rpc('save_local_song_analysis', {
+        p_project_id: projectId, p_song_id: song.id, p_audio_revision: song.audio_revision,
+        p_status: status, p_analysis: analysis ?? null,
+      });
+      const markAnalyzing = await persistAnalysis('analyzing');
       if (markAnalyzing.error) throw new Error(markAnalyzing.error.message);
 
       try {
         local = await analyzeAudioLocally(song.audio_url);
-        const localUpdate = await supabase
-          .from("songs")
-          .update({ analysis_status: "analyzing", analysis: local })
-          .eq("id", song.id);
+        const localUpdate = await persistAnalysis('analyzing', local);
         if (localUpdate.error) throw new Error(localUpdate.error.message);
       } catch (e) {
         localFailure = e instanceof Error ? e : new Error(String(e));
@@ -69,11 +67,7 @@ export default function SongPage({ projectId }: Props) {
       if (invokeError) {
         if (!local) throw invokeError;
         const message = result?.error || invokeError.message || "Groq song transcription failed.";
-        const fallbackUpdate = await supabase.from("songs").update({
-          analysis_status: "completed",
-          analysis: { ...local, transcription_status: "failed", status_detail: message },
-          analyzed_at: new Date().toISOString()
-        }).eq("id", song.id);
+        const fallbackUpdate = await supabase.rpc('save_local_song_analysis', {p_project_id:projectId,p_song_id:song.id,p_audio_revision:song.audio_revision,p_status:'completed',p_analysis:{...local,transcription_status:'failed',status_detail:message}});
         if (fallbackUpdate.error) throw new Error(fallbackUpdate.error.message);
         setError(formatFailure("Song transcription", invokeError, {
           projectId, songId: song.id, localAnalysis: "completed"
@@ -86,17 +80,15 @@ export default function SongPage({ projectId }: Props) {
     } catch (e) {
       const message = e instanceof Error ? e.message : "Song analysis failed.";
       if (local) {
-        const fallbackUpdate = await supabase.from("songs").update({
-          analysis_status: "completed",
-          analysis: { ...local, transcription_status: "failed", status_detail: message },
-          analyzed_at: new Date().toISOString()
-        }).eq("id", song.id);
+        const fallbackUpdate = await supabase.rpc('save_local_song_analysis', {p_project_id:projectId,p_song_id:song.id,p_audio_revision:song.audio_revision,p_status:'completed',p_analysis:{...local,transcription_status:'failed',status_detail:message}});
         if (fallbackUpdate.error) {
+          await supabase.rpc('save_local_song_analysis', {p_project_id:projectId,p_song_id:song.id,p_audio_revision:song.audio_revision,p_status:'failed',p_analysis:null});
           setError(formatFailure("Song analysis", e, { projectId, songId: song.id }) +
             " | Local analysis could not be persisted: " + fallbackUpdate.error.message);
           return;
         }
       }
+      if (!local) await supabase.rpc('save_local_song_analysis', {p_project_id:projectId,p_song_id:song.id,p_audio_revision:song.audio_revision,p_status:'failed',p_analysis:null});
       setError(formatFailure("Song analysis", e, { projectId, songId: song.id }));
       await reload();
     } finally {
@@ -129,7 +121,7 @@ export default function SongPage({ projectId }: Props) {
         audioPath = `${auth.user.id}/${projectId}/${crypto.randomUUID()}.${extension}`;
         const upload = await supabase.storage.from("songs").upload(audioPath, audio, { upsert: false, contentType: audio.type || undefined });
         if (upload.error) throw new Error(upload.error.message);
-        if (song?.audio_path) await supabase.storage.from("songs").remove([song.audio_path]);
+        // Keep prior audio: failed saves and immutable Vision Locks may still reference it.
       }
 
       const payload: Record<string, unknown> = {
@@ -150,6 +142,7 @@ export default function SongPage({ projectId }: Props) {
         throw new Error(result.error.message);
       }
 
+      setAudio(null);
       await reload();
       setSaved(true);
     } catch (e) {
@@ -320,7 +313,7 @@ export default function SongPage({ projectId }: Props) {
                 </div>
                 <div className="analysis-metric-card">
                   <span className="metric-label">Time Signature</span>
-                  <span className="metric-value">{analysis.time_signature ?? "4/4"}</span>
+                  <span className="metric-value">{analysis.time_signature || "Unavailable"}</span>
                 </div>
               </div>
 

@@ -26,7 +26,7 @@ await writeFile(join(dir, 'header.mjs'), 'export default function StudioHeader()
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ motionJob = null, runError = null, stored = false, rpcError = null, approvedMotionSceneIds = [], sceneCount = 1 } = {}) {
+async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, stored = false, rpcError = null, runJob = null, approvedMotionSceneIds = ['scene-1'] } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
@@ -34,14 +34,7 @@ async function mount({ motionJob = null, runError = null, stored = false, rpcErr
   const image = { id: 'image-1', scene_id: 'scene-1', image_url: 'https://expired.test/image.jpg', storage_path: stored ? 'project-1/scene-images/asset.jpg' : null, status: 'approved', approved: true };
   const calls = [];
   const rpcCalls = [];
-  const scenes = Array.from({ length: sceneCount }, (_, index) => ({
-    id: `scene-${index + 1}`, scene_number: index + 1, start_time: index * 10,
-    end_time: (index + 1) * 10, title: `Scene ${index + 1}`, status: 'approved',
-  }));
-  const approvedMotionAssets = () => approvedMotionSceneIds.map((id, index) => ({
-    id: `motion-${index + 1}`, scene_id: id, status: 'approved',
-    approved: true, video_url: `https://media.test/${id}.mp4`,
-  }));
+  const historicalQueries = [];
   globalThis.__uiDb = {
     from(table) {
       const filters = {};
@@ -50,23 +43,23 @@ async function mount({ motionJob = null, runError = null, stored = false, rpcErr
         single() { return this; }, maybeSingle() { return this; },
         then(resolve) {
           const data = table === 'visual_plans' ? { id: 'plan-1', status: 'approved', title: 'Locked plan' }
-            : table === 'visual_plan_scenes' ? (filters.status ? scenes.filter(s => s.status === filters.status) : scenes)
-            : table === 'scene_image_assets' ? image
-            : table === 'motion_clip_assets' ? (filters.scene_id ? approvedMotionAssets().find(m => m.scene_id === filters.scene_id) ?? null : approvedMotionAssets())
-            : table === 'generation_jobs' && filters.job_type === 'scene_motion' ? motionJob : null;
+            : table === 'visual_plan_scenes' ? [{ id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved' }]
+            : table === 'scene_image_assets' ? imageAssets ?? image
+            : table === 'motion_clip_assets' ? (filters.approved === true ? approvedMotionSceneIds.map((scene_id,i)=>({id:'approved-'+i,scene_id,status:'approved',approved:true,video_url:'https://fixture.test/'+i+'.mp4'})) : motionAssets ?? motionAsset)
+            : table === 'generation_jobs' && filters.id ? (historicalQueries.push({ ...filters }), historicalJob?.id === filters.id ? historicalJob : null)
+            : table === 'generation_jobs' ? (filters.job_type === 'scene_motion' ? motionJob : filters.job_type === 'scene_image' ? imageJob : assemblyJob) : null;
           return Promise.resolve({ data, error: null }).then(resolve);
         },
       };
       return query;
     },
-    rpc: async (name, args) => {
-      rpcCalls.push({ name, args });
-      return { data: rpcError ? null : { id: 'job-1', status: 'queued', job_type: args.p_job_type }, error: rpcError };
-    },
+    rpc: async (_name, args) => { rpcCalls.push({ name: _name, args }); return { data: rpcError ? null : { id: 'job-1', status: 'queued', job_type: args.p_job_type }, error: rpcError }; },
     functions: { invoke: async (_name, { body }) => {
       calls.push(body);
+      if (body.action === 'enqueue_ai_motion') return { data: { job: { id: 'job-1', status: 'queued', job_type: 'scene_motion' } }, error: runError ? new Error(runError) : null };
+      if (body.action === 'motion_url') return { data: { video_url: 'https://fresh.test/motion.mp4' }, error: null };
       if (body.action === 'image_url') return { data: { image_url: 'https://fresh.test/image.jpg' }, error: null };
-      return { data: { job: { id: 'job-1', status: 'processing', job_type: 'scene_motion' } }, error: runError ? new Error(runError) : null };
+      return { data: { job: runJob ?? { id: 'job-1', status: 'processing', job_type: 'scene_motion' } }, error: runError ? new Error(runError) : null };
     } },
   };
   const root = createRoot(document.getElementById('root'));
@@ -74,8 +67,10 @@ async function mount({ motionJob = null, runError = null, stored = false, rpcErr
   return {
     calls,
     rpcCalls,
-    button: text => [...document.querySelectorAll('button')].find(b => b.textContent === text),
+    historicalQueries,
+    button: text => [...document.querySelectorAll('button')].find(b=>b.textContent === text),
     click: async text => {
+      if (text === 'Generate Motion') { const box = document.querySelector('input[type=checkbox]'); if (box && !box.checked) await act(async () => { box.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); }); }
       const button = [...document.querySelectorAll('button')].find(b => b.textContent === text);
       assert.ok(button, `Missing button: ${text}`);
       await act(async () => { button.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); });
@@ -118,7 +113,7 @@ test('stored private images are re-signed before display', async () => {
 });
 
 test('async assembly retains its job and exposes the status control', async () => {
-  const view = await mount({ approvedMotionSceneIds: ['scene-1'] });
+  const view = await mount();
   try {
     await view.click('Assemble Final Video');
     assert.match(document.body.textContent, /Shot Monitor/);
@@ -128,7 +123,7 @@ test('async assembly retains its job and exposes the status control', async () =
 });
 
 test('structured missing-motion assembly errors explain the prerequisite without calling a provider', async () => {
-  const view = await mount({ approvedMotionSceneIds: ['scene-1'], rpcError: { message: 'ASSEMBLY_MOTION_NOT_FULLY_APPROVED', code: '55000', details: 'approved_motion=0 required=8' } });
+  const view = await mount({ rpcError: { message: 'ASSEMBLY_MOTION_NOT_FULLY_APPROVED', code: '55000', details: 'approved_motion=0 required=8' } });
   try {
     await view.click('Assemble Final Video');
     assert.match(document.querySelector('[role="alert"]').textContent, /approve.*motion clip.*every scene/i);
@@ -138,44 +133,185 @@ test('structured missing-motion assembly errors explain the prerequisite without
   } finally { await view.cleanup(); }
 });
 
-test('assembly is disabled and explains incomplete approved motion coverage without enqueueing', async () => {
-  const view = await mount({ sceneCount: 2, approvedMotionSceneIds: ['scene-1'] });
+for (const [type, prop, button] of [
+  ['scene_motion', 'motionJob', 'Check Motion Status'],
+  ['scene_image', 'imageJob', 'Check Image Status'],
+  ['assembly', 'assemblyJob', 'Check Assembly Status'],
+]) {
+  test(`submitted ${type} resumes through polling without enqueueing a duplicate`, async () => {
+    const view = await mount({ [prop]: { id: 'submitted-job', status: 'submitted', job_type: type } });
+    try {
+      await view.click(button);
+      assert.equal(view.calls.at(-1).jobId, 'submitted-job');
+      assert.equal(view.calls.at(-1).action, 'poll');
+      assert.equal(view.rpcCalls.length, 0);
+    } finally { await view.cleanup(); }
+  });
+}
+
+test('a new motion job still dispatches once with run', async () => {
+  const view = await mount();
   try {
-    assert.equal(view.button('Assemble Final Video').disabled, true);
-    assert.match(document.body.textContent, /1 of 2 scenes still need exactly one approved real motion clip/);
+    await view.click('Generate Motion');
+    assert.equal(view.calls.at(-1).action, 'run');
+    assert.equal(view.rpcCalls.length, 0);
+    assert.equal(view.calls.filter(call => call.action === 'enqueue_ai_motion').length, 1);
+    assert.equal(view.calls[0].acceptedTerms, true);
+  } finally { await view.cleanup(); }
+});
+
+
+test('restored assembly exposes the actual provider stage and last successful check', async () => {
+  const view = await mount({ assemblyJob: { id: 'assembly-1', status: 'processing', output: { last_polled_at: '2026-10-10T05:50:01.202Z', arena_status_response: { result: { status: 'preprocessing' } } } } });
+  try {
+    assert.match(document.body.textContent, /Assembly status: processing/);
+    assert.match(document.body.textContent, /Provider stage: preprocessing/);
+    assert.match(document.body.textContent, /Last checked: 2026-10-10T05:50:01.202Z/);
+    assert.doesNotMatch(document.body.textContent, /FINAL VIDEO COMPLETE/);
+  } finally { await view.cleanup(); }
+});
+test('checking assembly shows its returned pending stage without submitting again', async () => {
+  const view = await mount({ assemblyJob: { id: 'assembly-1', status: 'processing' }, runJob: { id: 'assembly-1', status: 'processing', output: { last_polled_at: '2026-10-10T05:51:00.000Z', arena_status_response: { result: { status: 'rendering' } } } } });
+  try {
+    await view.click('Check Assembly Status');
+    assert.match(document.body.textContent, /Provider stage: rendering/);
+    assert.match(document.body.textContent, /Last checked: 2026-10-10T05:51:00.000Z/);
+    assert.equal(view.calls.at(-1).action, 'poll');
+    assert.equal(view.rpcCalls.length, 0);
+    assert.doesNotMatch(document.body.textContent, /FINAL VIDEO COMPLETE/);
+  } finally { await view.cleanup(); }
+});
+
+test('motion badge uses the completed asset job rather than an unrelated newer retry', async () => {
+  const motionAsset = {
+    id: 'motion-old', scene_id: 'scene-1', generation_job_id: 'completed-motion-job',
+    model: 'ltx-video', provider: 'arena', status: 'approved',
+    video_url: 'https://example.test/approved-motion.mp4',
+  };
+  const historicalJob = {
+    id: 'completed-motion-job', status: 'completed', job_type: 'scene_motion',
+    output: { arena_status_response: { result: { generation_type: 'PROCEDURAL_MOTION' } } },
+  };
+  const motionJob = { id: 'new-retry-job', status: 'submitted', job_type: 'scene_motion' };
+  const view = await mount({ motionAsset, historicalJob, motionJob });
+  try {
+    assert.match(document.body.textContent, /Procedural image animation \(pan\/zoom\), not AI-generated subject motion\./);
+    assert.doesNotMatch(document.body.textContent, /Provider: arena · Model: ltx-video/);
+    assert.equal(view.historicalQueries.length, 1);
+    assert.deepEqual(view.historicalQueries[0], {
+      project_id: 'project-1', visual_plan_scene_id: 'scene-1',
+      job_type: 'scene_motion', id: 'completed-motion-job',
+    });
     assert.equal(view.rpcCalls.length, 0);
     assert.equal(view.calls.length, 0);
   } finally { await view.cleanup(); }
 });
 
-test('assembly becomes available only after every approved scene has an approved real clip', async () => {
-  const view = await mount({ sceneCount: 2, approvedMotionSceneIds: ['scene-1', 'scene-2'] });
+test('completed final video downloads its actual bytes with an mp4 filename', async () => {
+ const view=await mount({assemblyJob:{id:'assembly-1',status:'completed',output:{final_video:{video_url:'https://media.test/final.mp4'}}}});
+ const oldFetch=globalThis.fetch,oldCreate=URL.createObjectURL,oldRevoke=URL.revokeObjectURL,oldClick=window.HTMLAnchorElement.prototype.click;
+ let saved, requested, created;
+ globalThis.fetch=async url=>{requested=url;return new Response('real fixture video bytes',{headers:{'content-type':'video/mp4'}})};
+ URL.createObjectURL=blob=>{created=blob;return 'blob:fixture-video'};
+ URL.revokeObjectURL=()=>{};
+ window.HTMLAnchorElement.prototype.click=function(){saved={href:this.href,filename:this.download}};
+ try{
+  await view.click('Download Video');
+  assert.equal(requested,'https://media.test/final.mp4');
+  assert.equal(created.size,24);
+  assert.equal(saved.href,'blob:fixture-video');
+  assert.equal(saved.filename,'BeatVision-project-1.mp4');
+  assert.equal(view.rpcCalls.length,0);
+ }finally{globalThis.fetch=oldFetch;URL.createObjectURL=oldCreate;URL.revokeObjectURL=oldRevoke;window.HTMLAnchorElement.prototype.click=oldClick;await view.cleanup()}
+});
+for(const [label,response] of [
+ ['HTTP error',()=>new Response('Not found',{status:404})],
+ ['empty media',()=>new Response('',{headers:{'content-type':'video/mp4'}})],
+ ['non-video response',()=>new Response('<html>error</html>',{headers:{'content-type':'text/html'}})]
+])test('download reports '+label+' without claiming a saved file',async()=>{
+ const view=await mount({assemblyJob:{id:'assembly-1',status:'completed',output:{final_video:{video_url:'https://media.test/final.mp4'}}}});
+ const oldFetch=globalThis.fetch;
+ globalThis.fetch=async()=>response();
+ try{
+  await view.click('Download Video');
+  assert.match(document.querySelector('[role="alert"]').textContent,/download/i);
+  assert.match(document.body.textContent,/FINAL VIDEO COMPLETE/);
+  assert.ok([...document.querySelectorAll('button')].some(b=>b.textContent==='Download Video'&&!b.disabled));
+ }finally{globalThis.fetch=oldFetch;await view.cleanup()}
+});
+test('pending assembly cannot download an uncompleted provider URL',async()=>{
+ const view=await mount({assemblyJob:{id:'assembly-1',status:'processing',output:{final_video:{video_url:'https://media.test/final.mp4'}}}});
+ try{assert.ok(![...document.querySelectorAll('button')].some(b=>b.textContent==='Download Video'))}finally{await view.cleanup()}
+});
+
+test('AI motion requires model terms and appends beside an approved procedural clip', async () => {
+  const view = await mount({ motionAsset: { id: 'old-motion', generation_job_id: 'old-job', provider: 'shotstack', model: 'image-motion', status: 'approved', approved: true, video_url: 'https://original.test/approved.mp4' }, historicalJob: { id: 'old-job', status: 'completed' } });
   try {
-    assert.equal(view.button('Assemble Final Video').disabled, false);
-    await view.click('Assemble Final Video');
-    assert.equal(view.rpcCalls.filter(c => c.name === 'enqueue_assembly_generation').length, 1);
+    const button = [...document.querySelectorAll('button')].find(b => b.textContent === 'Generate Motion');
+    assert.ok(button); assert.equal(button.disabled, true);
+    assert.match(document.body.textContent, /2-second AI motion preview/);
+    await view.click('Generate Motion');
+    assert.equal(view.calls[0].action, 'enqueue_ai_motion');
+    assert.equal(view.calls[0].acceptedTerms, true);
+    assert.equal(view.rpcCalls.length, 0);
     assert.equal(view.calls.filter(c => c.action === 'run').length, 1);
   } finally { await view.cleanup(); }
 });
 
-test('assembly rechecks motion approval before enqueue and fails closed when stale', async () => {
-  const approvedMotionSceneIds = ['scene-1'];
-  const view = await mount({ approvedMotionSceneIds });
+test('HF motion refresh uses owner-authorized private playback URL', async () => {
+  const view = await mount({ motionAsset: { id: 'hf-motion', generation_job_id: 'hf-job', provider: 'huggingface-zerogpu', model: 'ltxv-13b-0.9.8-distilled', status: 'generated', video_url: 'https://expired.test/video.mp4' }, historicalJob: { id: 'hf-job', status: 'completed' } });
   try {
-    assert.equal(view.button('Assemble Final Video').disabled, false);
-    approvedMotionSceneIds.length = 0; // approval revoked in another tab since initial read
-    await view.click('Assemble Final Video');
-    assert.equal(view.rpcCalls.length, 0);
-    assert.equal(view.calls.length, 0);
-    assert.match(document.querySelector('[role="alert"]').textContent, /still need exactly one approved real motion clip/);
-    assert.equal(view.button('Assemble Final Video').disabled, true);
+    assert.equal(document.querySelector('video').getAttribute('src'), 'https://fresh.test/motion.mp4');
+    const call = view.calls.find(c => c.action === 'motion_url');
+    assert.equal(call.projectId, 'project-1'); assert.equal(call.assetId, 'hf-motion');
+    assert.match(document.body.textContent, /Singing lip sync is not verified/);
   } finally { await view.cleanup(); }
 });
 
-test('extra approved motion duplicates do not satisfy assembly readiness', async () => {
-  const view = await mount({ sceneCount: 2, approvedMotionSceneIds: ['scene-1', 'scene-1'] });
-  try {
-    assert.equal(view.button('Assemble Final Video').disabled, true);
-    assert.equal(view.rpcCalls.length, 0);
-  } finally { await view.cleanup(); }
+test('saved history defaults to approved imagery and allows reviewing a newer variant',async()=>{
+ const assets=[{id:'new',image_url:'https://media.test/new.jpg',status:'generated',approved:false},{id:'approved',image_url:'https://media.test/approved.jpg',status:'approved',approved:true}];
+ const view=await mount({imageAssets:assets});
+ try {
+  assert.equal(document.querySelector('img').src,'https://media.test/approved.jpg');
+  const select=document.querySelector('[aria-label="Saved image variants"]');assert.equal(select.options.length,2);
+  await act(async()=>{select.value='new';select.dispatchEvent(new window.Event('change',{bubbles:true}));});
+  assert.equal(document.querySelector('img').src,'https://media.test/new.jpg');
+  assert.match(document.body.textContent,/Reject Image/);
+  assert.equal(assets[1].approved,true);
+ }finally{await view.cleanup()}
+});
+test('Generate Another Variant requests an append-only idempotent image attempt',async()=>{
+ const view=await mount();try {
+  await view.click('Generate Another Variant');
+  assert.equal(view.rpcCalls[0].name,'enqueue_scene_image_variant');
+  assert.equal(view.rpcCalls[0].args.p_project_id,'project-1');
+  assert.match(view.rpcCalls[0].args.p_request_id,/^[0-9a-f-]{36}$/);
+ }finally{await view.cleanup()}
+});
+
+test('final assembly stays disabled if the plan has no approved motion',async()=>{
+ const view=await mount({approvedMotionSceneIds:[]});
+ try{
+   assert.equal(view.button('Assemble Final Video')?.disabled,true);
+   assert.match(document.body.textContent,/1 of 1 scenes still need exactly one approved real motion clip/);
+   assert.equal(view.rpcCalls.length,0);
+ } finally {await view.cleanup();}
+});
+test('extra approved clips for a scene do not satisfy exactly-one constraint',async()=>{
+ const view=await mount({approvedMotionSceneIds:['scene-1','scene-1']});
+ try{
+   assert.equal(view.button('Assemble Final Video')?.disabled,true);
+   assert.equal(view.rpcCalls.length,0);
+ } finally {await view.cleanup();}
+});
+test('approval revoked after initial render is rechecked before enqueue',async()=>{
+ const approvedMotionSceneIds=['scene-1'];
+ const view=await mount({approvedMotionSceneIds});
+ try{
+   assert.equal(view.button('Assemble Final Video')?.disabled,false);
+   approvedMotionSceneIds.length=0;
+   await view.click('Assemble Final Video');
+   assert.equal(view.rpcCalls.length,0);
+   assert.match(document.body.textContent,/1 of 1 scenes still need exactly one approved real motion clip/);
+ } finally {await view.cleanup();}
 });

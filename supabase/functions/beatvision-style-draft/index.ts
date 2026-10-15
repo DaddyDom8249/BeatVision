@@ -146,6 +146,10 @@ Deno.serve(async (req) => {
       throw new HttpError("STYLE_LINEAGE_INVALID", 409, "The record is not attached to the current Style Bible.");
     }
 
+    // Preserve existing records; never assume an API key establishes a free account.
+    const freeAccountVerified = false;
+    if (!freeAccountVerified) throw new HttpError("PROVIDER_COST_UNVERIFIED",503,"New AI descriptions are unavailable until this Groq account's free eligibility is verified. Existing descriptions remain editable.");
+
     const required = FIELDS[kind];
     const source = {
       project_title: project.title,

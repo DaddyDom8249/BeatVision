@@ -40,7 +40,7 @@ function AssetCard<T extends Asset>({
           alt={`Reference preview: ${asset.label}`}
           loading="lazy"
           onError={() => setPreviewFailed(true)}
-          style={{ width: "100%", height: "160px", objectFit: "cover", borderRadius: "6px", display: "block" }}
+          style={{ width: "100%", height: "160px", objectFit: "contain", borderRadius: "6px", display: "block" }}
         />
       ) : (
         isHeif ? (

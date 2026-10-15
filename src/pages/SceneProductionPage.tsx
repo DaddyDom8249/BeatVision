@@ -37,8 +37,10 @@ export default function SceneProductionPage({ projectId }: { projectId: string }
     let active = true;
     (async () => {
       setLoading(true);
-      const planResult = await supabase.from("visual_plans").select(planFields)
-        .eq("project_id", projectId).eq("status", "approved").single();
+      const requestedPlan = new URLSearchParams(window.location.search).get('plan');
+      let query = supabase.from("visual_plans").select(planFields).eq("project_id", projectId).eq("status", "approved");
+      if (requestedPlan) query = query.eq("id", requestedPlan);
+      const planResult = await query.order("revision_number", {ascending:false}).limit(1).single();
       if (planResult.error) {
         if (active) { setError("Lock the Visual Plan before entering Scene Production."); setLoading(false); }
         return;
@@ -64,28 +66,10 @@ export default function SceneProductionPage({ projectId }: { projectId: string }
     window.setTimeout(() => setCopied((current) => current === scene.id ? null : current), 1500);
   }
 
-  if (loading) {
-    return (
-      <div className="app-shell">
-        <StudioHeader projectId={projectId} activeStage="scenes" />
-        <main className="dashboard"><p>Loading Scene Production Briefs…</p></main>
-      </div>
-    );
-  }
+  if (loading) return <main><p>Loading Scene Production…</p></main>;
 
   if (error || !plan) {
-    return (
-      <div className="app-shell">
-        <StudioHeader projectId={projectId} activeStage="scenes" />
-        <main className="dashboard">
-          <h1>Scene Production Briefs</h1>
-          <p className="form-error" role="alert">{error ?? "No approved Visual Plan found."}</p>
-          <button className="primary-button" style={{ marginTop: "16px" }} onClick={() => { window.location.href = `/projects/${projectId}/visual-plan`; }}>
-            ← Return to Visual Plan
-          </button>
-        </main>
-      </div>
-    );
+    return <main><h1>Scene Production</h1><p role="alert">{error ?? "No approved Visual Plan found."}</p><a href={"/projects/" + projectId + "/visual-plan"}>Return to Visual Plan</a></main>;
   }
 
   return (
@@ -93,6 +77,7 @@ export default function SceneProductionPage({ projectId }: { projectId: string }
       <StudioHeader
         projectId={projectId}
         activeStage="scenes"
+        planId={plan.id}
         statusBadge="SCENES READY"
       />
 
@@ -149,7 +134,7 @@ export default function SceneProductionPage({ projectId }: { projectId: string }
               Your approved Visual Plan is the creative source. Open the Production Workspace to generate scene images, motion clips, and final video assembly.
             </p>
           </div>
-          <a className="primary-button large" href={`/projects/${projectId}/production`}>
+          <a className="primary-button large" href={`/projects/${projectId}/production?plan=${plan.id}`}>
             Open Production Workspace →
           </a>
         </section>

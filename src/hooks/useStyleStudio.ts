@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase/client";
-import { suggestMissingWorldFields } from "../lib/style/worldSheetSuggestions";
+import { suggestMissingWorldFields, worldSheetSuggestions } from "../lib/style/worldSheetSuggestions";
 import type { StyleDraftKind } from "../lib/style/generatedStyleDraft";
 import { mergeGeneratedStyleDraft } from "../lib/style/generatedStyleDraft";
 import type { WorldReport } from "../types/world";
@@ -72,6 +72,8 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
     ? world.immutable_continuity as Record<string, unknown>
     : {};
   const continuityText = formatCreativeLines(world.continuity_rules).join("; ");
+  const immutableLines = formatCreativeLines(world.immutable_continuity);
+  const figureIdentity = immutableLines.find((line) => /\b(?:central figure|main character|protagonist)\b/i.test(line)) ?? "";
 
   const clothing = typeof immutable.central_figure_clothing === "string" ? immutable.central_figure_clothing : "";
   const keyProp = typeof immutable.key_prop === "string" ? immutable.key_prop : "";
@@ -87,7 +89,11 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
   const movement = modelOutput.movement && typeof modelOutput.movement === "object"
     ? modelOutput.movement as Record<string, unknown>
     : {};
-  const subjectBehavior = typeof movement.subject_behavior === "string" ? movement.subject_behavior : "";
+  const worldMovement = world.movement && typeof world.movement === "object" && !Array.isArray(world.movement)
+    ? world.movement as Record<string, unknown> : {};
+  const subjectBehavior = typeof worldMovement.subject_behavior === "string"
+    ? worldMovement.subject_behavior
+    : typeof movement.subject_behavior === "string" ? movement.subject_behavior : "";
   const motifs = Array.isArray(modelOutput.motifs)
     ? modelOutput.motifs.map((item) => {
         if (typeof item === "string") return item;
@@ -117,14 +123,16 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
     })
     .filter((item): item is { name: string; sheet: Record<string, string> } => Boolean(item?.name));
 
-  if (!characters.length && (clothing || keyProp || windowLocation || subjectBehavior || motifs.length)) {
+  // Only create a central character when the World actually identifies a
+  // character or its behavior/wardrobe. Motifs alone are not evidence of a cast.
+  if (!characters.length && (figureIdentity || clothing || subjectBehavior)) {
     characters.push({
       name: "Central Figure",
       sheet: {
-        identity: "Primary subject derived from the confirmed World Report; refine before approval.",
+        identity: figureIdentity || "Central Figure identified by the confirmed World; refine before approval.",
         wardrobe: clothing,
         behavior: subjectBehavior,
-        continuity: [keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`, motifs.length && `World motifs: ${motifs.join(", ")}`, continuityText].filter(Boolean).join("; "),
+        continuity: [figureIdentity, keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`, motifs.length && `World motifs: ${motifs.join(", ")}`, continuityText].filter(Boolean).join("; "),
       },
     });
   }
@@ -150,6 +158,7 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       return true;
     }).map((item) => ({
       ...item,
+      sheet: { ...worldSheetSuggestions(world, "character", item.name), ...item.sheet },
       project_id: projectId,
       world_report_id: world.id,
       style_bible_id: styleBibleId,
@@ -161,13 +170,9 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
       style_bible_id: styleBibleId,
       name: item.name,
       status: "draft",
-      sheet: {
-        purpose: item.description,
-        layout: item.description,
-        lighting: formatCreativeText(world.color_lighting),
-        atmosphere: formatCreativeText(world.atmosphere),
-        continuity: [continuityText, keyProp && `Key prop: ${keyProp}`, clothing && `Central figure clothing: ${clothing}`, windowLocation && `Window location: ${windowLocation}`].filter(Boolean).join("; "),
-      },
+      // Seed the persisted draft with the same World-supported fields that
+      // the editor suggests, so it survives refresh without a manual Save.
+      sheet: worldSheetSuggestions(world, "environment", item.name),
     })),
   };
 }
@@ -210,6 +215,9 @@ export function useStyleStudio(projectId: string) {
   const hasStartedLoad = useRef(false);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A newly confirmed World may differ from the approved immutable Style Bible.
+  // Never attempt cross-world child inserts or silently relink creator approvals.
+  const [lineageConflict, setLineageConflict] = useState<{ activeWorldId: string; styleWorldId: string; styleStatus: string } | null>(null);
 
   const load = useCallback(async () => {
     // Retain mounted editor forms on save/upload/approval refreshes.
@@ -219,6 +227,7 @@ export function useStyleStudio(projectId: string) {
       setLoading(true);
     }
     setError(null);
+    setLineageConflict(null);
 
     const projectResult = await supabase
       .from("projects")
@@ -282,6 +291,23 @@ export function useStyleStudio(projectId: string) {
     }
 
     let currentStyleBible = (styleResult.data ?? null) as StyleBible | null;
+    // The Bible, cast, and scene approvals remain attached to the World revision
+    // from which they were created. Showing a review gate is safer than inserting
+    // rows with incompatible foreign-key lineage or changing a locked Bible.
+    if (currentStyleBible && currentStyleBible.world_report_id !== currentWorld.id) {
+      setStyleBible(currentStyleBible);
+      setCharacters([]);
+      setCharacterAssets([]);
+      setEnvironments([]);
+      setEnvironmentAssets([]);
+      setLineageConflict({
+        activeWorldId: currentWorld.id,
+        styleWorldId: currentStyleBible.world_report_id,
+        styleStatus: currentStyleBible.status,
+      });
+      setLoading(false);
+      return;
+    }
     if (currentStyleBible) {
       try {
         // The existing Ghast draft stored "[object Object]" instead of rules.
@@ -309,11 +335,24 @@ export function useStyleStudio(projectId: string) {
       }
     }
 
+    // A confirmed World can predate its Style Bible. Do not query UUID columns
+    // with an empty ID: PostgREST rejects style_bible_id=eq. as invalid UUID.
+    // Leave approved existing Bibles untouched and show the explicit creation gate.
+    if (!currentStyleBible) {
+      setStyleBible(null);
+      setCharacters([]);
+      setCharacterAssets([]);
+      setEnvironments([]);
+      setEnvironmentAssets([]);
+      setLoading(false);
+      return;
+    }
+
     const [characterResult, characterAssetResult, environmentResult, environmentAssetResult] =
       await Promise.all([
-        supabase.from("characters").select(characterFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).eq("style_bible_id", currentStyleBible?.id ?? "").order("created_at", { ascending: true }),
+        supabase.from("characters").select(characterFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).eq("style_bible_id", currentStyleBible.id).order("created_at", { ascending: true }),
         supabase.from("character_assets").select(characterAssetFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).order("created_at", { ascending: true }),
-        supabase.from("environments").select(environmentFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).eq("style_bible_id", currentStyleBible?.id ?? "").order("created_at", { ascending: true }),
+        supabase.from("environments").select(environmentFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).eq("style_bible_id", currentStyleBible.id).order("created_at", { ascending: true }),
         supabase.from("environment_assets").select(environmentAssetFields).eq("project_id", projectId).eq("world_report_id", currentWorld.id).order("created_at", { ascending: true }),
       ]);
 
@@ -390,6 +429,60 @@ export function useStyleStudio(projectId: string) {
       setLoading(false);
     });
   }, [load]);
+
+  // Creation sets the Style Bible without remounting this page. Populate and
+  // display World-derived cast/spaces immediately after its ID becomes known.
+  // A stable ID prevents loops when load refreshes the same approved row.
+  useEffect(() => {
+    if (!styleBible?.id) return;
+    void load().catch((cause: unknown) => {
+      setError(getCreativeErrorMessage(cause, "Unable to populate World-derived drafts."));
+      setLoading(false);
+    });
+  }, [styleBible?.id, load]);
+
+  const restoreApprovedStyleWorld = useCallback(async () => {
+    // This changes only the active project World pointer after the owner
+    // explicitly confirms the action in StylePage. Both World revisions and
+    // every Style/character/environment/scene/approved asset are preserved.
+    if (!lineageConflict || !styleBible || !world ||
+      styleBible.status !== "approved" ||
+      styleBible.world_report_id !== lineageConflict.styleWorldId ||
+      world.id !== lineageConflict.activeWorldId) {
+      throw new Error("The World conflict changed. Refresh before choosing a revision.");
+    }
+    setWorking(true);
+    setError(null);
+    try {
+      const ownerId = await getUserId();
+      const prior = await supabase.from("world_reports")
+        .select("id,project_id,status,confirmed_at")
+        .eq("id", lineageConflict.styleWorldId)
+        .eq("project_id", projectId)
+        .single();
+      if (prior.error) throw prior.error;
+      if (prior.data?.status !== "completed" || !prior.data.confirmed_at)
+        throw new Error("The approved Style Bible's World is not confirmed; nothing changed.");
+
+      // Optimistic guard: do not overwrite a World selected in another tab.
+      // Supabase RLS additionally restricts this write to its owner.
+      const switched = await supabase.from("projects")
+        .update({ world_report_id: prior.data.id })
+        .eq("id", projectId)
+        .eq("owner_id", ownerId)
+        .eq("world_report_id", lineageConflict.activeWorldId)
+        .select("id,world_report_id")
+        .maybeSingle();
+      if (switched.error) throw switched.error;
+      if (!switched.data) throw new Error("Project World changed elsewhere. Refresh and review it again.");
+      await load();
+    } catch (cause) {
+      setError(getCreativeErrorMessage(cause, "Unable to restore the approved Style Bible's World."));
+      throw cause;
+    } finally {
+      setWorking(false);
+    }
+  }, [projectId, world, styleBible, lineageConflict, load]);
 
   const createStyleBible = useCallback(async () => {
     if (!world || world.status !== "completed" || !world.confirmed_at) throw new Error("Confirm the Visual World Report before creating the Style Bible.");
@@ -656,10 +749,27 @@ export function useStyleStudio(projectId: string) {
       const { data, error: invokeError } = await supabase.functions.invoke("beatvision-style-draft", {
         body: { projectId, kind, recordId },
       });
-      const remoteMessage = data && typeof data === "object" && data.error &&
-        typeof data.error === "object" && typeof data.error.message === "string"
-        ? data.error.message : null;
-      if (invokeError) throw new Error(remoteMessage || invokeError.message || "Description generation failed.");
+      // FunctionsHttpError returns the server response on context, not in data.
+      // Decode it so an upstream Groq 429 is not displayed as a generic 502.
+      let serverError: { code?: string; message?: string } | null = null;
+      if (invokeError && "context" in invokeError && invokeError.context instanceof Response) {
+        try {
+          const payload = await invokeError.context.clone().json();
+          if (payload && typeof payload === "object" && payload.error && typeof payload.error === "object") {
+            serverError = payload.error as { code?: string; message?: string };
+          }
+        } catch { /* Preserve the original transport error if the body is not JSON. */ }
+      }
+      const remoteMessage = serverError?.message ||
+        (data && typeof data === "object" && data.error &&
+          typeof data.error === "object" && typeof data.error.message === "string"
+          ? data.error.message : null);
+      if (invokeError) {
+        if (/Groq description generation failed \(429\)|rate limit reached|tokens per minute/i.test(remoteMessage ?? "")) {
+          throw new Error("Groq is temporarily rate-limited. Wait a few seconds and retry Generate Description. Existing approved sheets and drafts are unchanged.");
+        }
+        throw new Error(remoteMessage || invokeError.message || "Description generation failed.");
+      }
       if (!data?.draft || typeof data.draft !== "object" || Array.isArray(data.draft)) {
         throw new Error("Description generation returned an invalid draft.");
       }
@@ -720,6 +830,8 @@ export function useStyleStudio(projectId: string) {
     loading,
     working,
     error,
+    lineageConflict,
+    restoreApprovedStyleWorld,
     locked: styleBible?.status === "approved",
     createStyleBible,
     saveStyleBible,

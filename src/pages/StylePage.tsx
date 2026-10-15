@@ -7,33 +7,9 @@ import { formatCreativeLines } from "../lib/formatCreativeText";
 import StudioHeader from "../components/navigation/StudioHeader";
 
 function StyleValue({ value }: { value: unknown }) {
-  if (Array.isArray(value))
-    return (
-      <div className="style-value-list">
-        {value.length ? (
-          value.map((item, index) => (
-            <div className="style-value-item" key={index}>
-              <StyleValue value={item} />
-            </div>
-          ))
-        ) : (
-          <span className="style-muted">Not specified</span>
-        )}
-      </div>
-    );
-  if (value && typeof value === "object")
-    return (
-      <div className="style-value-object">
-        {Object.entries(value as Record<string, unknown>).map(([key, item]) => (
-          <div className="style-value-row" key={key}>
-            <span>{key.replace(/_/g, " ")}</span>
-            <StyleValue value={item} />
-          </div>
-        ))}
-      </div>
-    );
-  if (value === null || value === undefined || value === "")
-    return <span className="style-muted">Not specified</span>;
+  if (Array.isArray(value)) return <div className="style-value-list">{value.length ? value.map((item, index) => <div className="style-value-item" key={index}><StyleValue value={item} /></div>) : <span className="style-muted">Not specified</span>}</div>;
+  if (value && typeof value === "object") return <div className="style-value-object">{Object.entries(value as Record<string, unknown>).map(([key, item]) => <div className="style-value-row" key={key}><span>{key.replace(/_/g, " ")}</span><StyleValue value={item} /></div>)}</div>;
+  if (value === null || value === undefined || value === "") return <span className="style-muted">Not specified</span>;
   return <span>{String(value)}</span>;
 }
 
@@ -49,6 +25,8 @@ export default function StylePage({ projectId }: { projectId: string }) {
     working,
     error,
     locked,
+    lineageConflict,
+    restoreApprovedStyleWorld,
     createStyleBible,
     saveStyleBible,
     saveCharacter,
@@ -78,58 +56,68 @@ export default function StylePage({ projectId }: { projectId: string }) {
     setVisualRules(editableLines(styleBible.visual_rules));
     setReferenceAssets(editableLines(styleBible.reference_assets));
     setContinuityRules(editableLines(styleBible.continuity_rules));
+  // Preserve unsaved Style Bible edits when a character or image is refreshed.
   }, [styleBible?.id, styleBible?.updated_at, styleBible?.status]);
 
-  if (loading) {
+  if (loading) return <main className="studio-main style-page"><div className="style-loading">Loading Style Studio…</div></main>;
+
+  if (lineageConflict) {
+    // A confirmed World revision cannot reuse an older approved Bible's children.
+    // No automatic changes; the creator decides which World version is active.
     return (
-      <div className="app-shell">
-        <StudioHeader projectId={projectId} activeStage="style" />
-        <main className="style-page"><div className="style-loading">Loading Style Studio…</div></main>
-      </div>
+      <main className="studio-main style-page">
+        <header className="style-header"><div>
+          <span className="eyebrow">PHASE 3 / STYLE BIBLE</span>
+          <h1>Choose the World for your Style Bible</h1>
+          <p>Your project has a newer confirmed World, but your saved Style Bible and its approved creative assets belong to the previous World revision.</p>
+        </div></header>
+        <section className="style-empty-panel">
+          <p role="status">Your approved Style Bible is preserved. BeatVision has stopped automatic character and environment creation until the World versions agree.</p>
+          <p>Active World: {lineageConflict.activeWorldId.slice(0, 8)}…</p>
+          <p>Approved Style World: {lineageConflict.styleWorldId.slice(0, 8)}…</p>
+          {error && <p className="form-error" role="alert">{error}</p>}
+          <div className="style-actions">
+            <a className="secondary-button" href={`/projects/${projectId}/world`}>Review newer World</a>
+            {lineageConflict.styleStatus === "approved" && (
+              <button type="button" disabled={working} onClick={() => {
+                if (window.confirm("Restore the earlier confirmed World associated with your approved Style Bible? Your newer World revision stays saved. No Style Bible, characters, environments, storyboards or media will be overwritten.")) {
+                  void restoreApprovedStyleWorld().catch(() => { /* Hook shows error. */ });
+                }
+              }}>{working ? "Restoring approved World…" : "Restore World used by approved Style Bible"}</button>
+            )}
+            <button type="button" disabled={working} onClick={() => void reload().catch(() => { /* Hook shows error. */ })}>Recheck World versions</button>
+          </div>
+          <p>To keep the newer World instead, leave it selected. A new Style Bible revision must be created before generating downstream assets for that World. This page will not silently rebind existing approvals.</p>
+        </section>
+      </main>
     );
   }
 
   if (!styleBible) {
+    // A failed load is NOT evidence of a missing Style Bible. Never offer
+    // duplicate creation when the account, World, or DB read is failing.
     if (error || !world || world.status !== "completed" || !world.confirmed_at) {
       return (
-        <div className="app-shell">
-          <StudioHeader projectId={projectId} activeStage="style" />
-          <main className="style-page">
-            <header className="style-header">
-              <div>
-                <span className="eyebrow">03 / STYLE BIBLE</span>
-                <h1>Unable to Load Style Studio</h1>
-              </div>
-            </header>
-            <section className="style-empty-panel">
-              <p className="form-error" role="alert">{error || "Confirm the project's Visual World before continuing."}</p>
-              <button className="primary-button" style={{ marginTop: "16px" }} disabled={working} onClick={() => void reload().catch(() => {})}>
-                Retry Style Studio Load
-              </button>
-            </section>
-          </main>
-        </div>
+        <main className="studio-main style-page">
+          <header className="style-header"><div><span className="eyebrow">PHASE 3 / STYLE BIBLE</span><h1>Unable to load Style Studio</h1></div></header>
+          <section className="style-empty-panel">
+            <p className="form-error" role="alert">{error || "Confirm the project's Visual World before continuing."}</p>
+            <button type="button" disabled={working} onClick={() => void reload().catch(() => { /* Hook shows error. */ })}>
+              Retry Style Studio Load
+            </button>
+          </section>
+        </main>
       );
     }
     return (
-      <div className="app-shell">
-        <StudioHeader projectId={projectId} activeStage="style" />
-        <main className="style-page">
-          <header className="style-header">
-            <div>
-              <span className="eyebrow">03 / STYLE BIBLE</span>
-              <h1>Initialize Style Bible</h1>
-              <p>The Style Bible will be created from the confirmed World Report. Its world foundation is lineage data.</p>
-            </div>
-          </header>
-          <section className="style-empty-panel">
-            <button className="primary-button large" disabled={working} onClick={() => void createStyleBible()}>
-              {working ? "Initializing Style Bible…" : "Create Style Bible from Confirmed World →"}
-            </button>
-            {error && <p className="form-error" role="alert" style={{ marginTop: "16px" }}>{error}</p>}
-          </section>
-        </main>
-      </div>
+      <main className="studio-main style-page">
+        <header className="style-header"><div><span className="eyebrow">PHASE 3 / STYLE BIBLE</span><h1>Create Style Bible</h1>
+        <p>The Style Bible will be created from the confirmed World Report. Its world foundation is lineage data, not a disposable UI copy.</p></div></header><section className="style-empty-panel"><button disabled={working} onClick={() => void createStyleBible()}>
+          {working ? "Creating…" : "Create Style Bible from Confirmed World"}
+        </button>
+        {error && <p className="form-error" role="alert">{error}</p>}
+        </section>
+      </main>
     );
   }
 
@@ -139,7 +127,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
       visual_rules: visualRules.split("\n").map((value) => value.trim()).filter(Boolean),
       reference_assets: referenceAssets.split("\n").map((value) => value.trim()).filter(Boolean),
       continuity_rules: continuityRules.split("\n").map((value) => value.trim()).filter(Boolean),
-    }).catch(() => {});
+    }).catch(() => { /* The hook displays the actionable error. */ });
   }
 
   function createCharacter(event: FormEvent) {
@@ -154,7 +142,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
         continuity: newCharacter.continuity,
       },
     }).then(() => setNewCharacter({ name: "", identity: "", appearance: "", wardrobe: "", behavior: "", continuity: "" }))
-      .catch(() => {});
+      .catch(() => { /* Preserve input; the hook shows the failure. */ });
   }
 
   function createEnvironment(event: FormEvent) {
@@ -171,7 +159,7 @@ export default function StylePage({ projectId }: { projectId: string }) {
         continuity: newEnvironment.continuity,
       },
     }).then(() => setNewEnvironment({ name: "", purpose: "", layout: "", architecture: "", surfaces: "", lighting: "", atmosphere: "", continuity: "" }))
-      .catch(() => {});
+      .catch(() => { /* Preserve input; the hook shows the failure. */ });
   }
 
   function characterRevisionIds(startId: string) {
@@ -209,6 +197,12 @@ export default function StylePage({ projectId }: { projectId: string }) {
             {locked ? "STYLE BIBLE LOCKED" : "DRAFT MODE"}
           </span>
         </header>
+
+        <nav className="style-actions style-stage-navigation" aria-label="Style stage navigation">
+          <a className="secondary-button" href={`/projects/${projectId}/world`}>Return to World</a>
+          {locked ? <a className="primary-button" href={`/projects/${projectId}/visual-plan`}>Continue to Visual Plan</a>
+            : <p role="status">Lock the Style Bible to continue to Visual Plan.</p>}
+        </nav>
 
         <section className="style-section">
           <div className="style-section-heading">
@@ -355,15 +349,9 @@ export default function StylePage({ projectId }: { projectId: string }) {
         </section>
 
         {locked && (
-          <div style={{ marginTop: "32px", display: "flex", justifyContent: "flex-end" }}>
-            <button
-              className="primary-button large"
-              type="button"
-              onClick={() => { window.location.href = `/projects/${projectId}/visual-plan`; }}
-            >
-              Continue to Visual Plan →
-            </button>
-          </div>
+          <nav className="style-actions style-stage-navigation" aria-label="Continue after Style Studio">
+            <a className="primary-button" href={`/projects/${projectId}/visual-plan`}>Continue to Visual Plan</a>
+          </nav>
         )}
       </main>
     </div>

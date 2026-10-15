@@ -88,7 +88,7 @@ function ValueView({ value }: { value: unknown }) {
                 fontFamily: "var(--font-mono)",
                 fontSize: 10,
                 fontWeight: 700,
-                letterSpacing: ".08em",
+                letterSpacing: "0",
                 textTransform: "uppercase",
                 color: "var(--accent-gold)",
                 marginBottom: 4,
