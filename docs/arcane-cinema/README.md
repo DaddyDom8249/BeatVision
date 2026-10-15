@@ -60,3 +60,15 @@ Implemented and locally tested; preview publication is recorded separately below
 Authenticated live project/media access, cross-origin playback on the eventual preview, account preference persistence against real Supabase, physical Android/iOS and all-page authenticated production workflows remain **UNVERIFIED**. Local fixtures prove UI behavior and real-media decoding, not provider availability or final assembly. Other studio screens receive the shared appearance layer; this verification concentrates on the requested storyboard and production centerpiece.
 
 Reused Jules session `13242114808289394820` only; its returned completed output references earlier PR #81 and is not evidence for this candidate. No new Jules task or additional worker was created; candidate implementation and verification were performed locally.
+
+## Published preview and CI
+
+Implementation commit: `4af36dca8e575772079743ca74a93ba1fa62d9e3`, tree `e2bbb877b1530131e9daec35a0630131dc1cd206`. All 27 published blob hashes and the complete Git tree match the tested local tree exactly. Local HTTPS push had no configured credentials; the connected GitHub app published the same files and advanced the existing branch normally, with an expected-head check and no force push.
+
+[Preview](https://beat-vision-g5oaxy4eu-beat-vision.vercel.app/) — deployment `dpl_2rgEGfUN21QHkC4R9YPwxX8HoWjg`, **READY**, Vite, preview target (API `target: null`), existing Hobby team/project. Remote logs confirm clone of `4af36dc`, TypeScript + Vite build success and deployment completion (about 17 seconds). No production domain assignment or promotion.
+
+GitHub Actions all succeeded for that exact commit: Production CI [38737019692](https://github.com/DaddyDom8249/BeatVision/actions/runs/38737019692), Generation enqueue security [38737020168](https://github.com/DaddyDom8249/BeatVision/actions/runs/38737020168), Legacy storage ownership security [38737019730](https://github.com/DaddyDom8249/BeatVision/actions/runs/38737019730), Database migration replay [38737019807](https://github.com/DaddyDom8249/BeatVision/actions/runs/38737019807).
+
+Vercel protects preview URLs with its existing authentication setting. Using the connected deployment tool's temporary share access, the actual deployed app rendered in the browser. Appearance changed to Arcane, its radio selection and `html[data-theme="arcane"]` were verified, and reload retained it. The signed-out landing page truthfully reports missing BeatVision auth; no account or production credentials were entered. Live authenticated storyboard/media and real-account preference sync are still UNVERIFIED. Main remains `f2e1375`; the production domain still resolves to separate deployment `dpl_3BKMriaiWYF44CJ3qBeqviSpgXnW` / `a02f746`, not this preview.
+
+An independent read-only review was sent to the same existing Jules session for `4af36dc`; no candidate review result has been accepted. This publication record is a documentation-only follow-up to the previewed implementation.
