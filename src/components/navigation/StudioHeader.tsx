@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase/client";
+import AppearanceSettings from "./AppearanceSettings";
 
 export type StageId = "song" | "world" | "style" | "visual-plan" | "scenes" | "production";
 
@@ -106,6 +107,7 @@ export default function StudioHeader({
       )}
 
       <div className="studio-topbar-right">
+        <AppearanceSettings />
         {userEmail ? (
           <div className="studio-user-badge">
             <span className="user-dot" />
