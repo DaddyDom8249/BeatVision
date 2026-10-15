@@ -205,12 +205,53 @@ function mergeWorldForValidation(existing: Record<string, any>, edits: Record<st
   return merged;
 }
 
+const MAX_BODY_BYTES = 256 * 1024;
+// Enforce actual wire-byte bounds while consuming the body, including
+// chunked uploads without Content-Length. Never buffer over maxBytes.
+async function readJsonBody(req: Request, maxBytes: number): Promise<Record<string, any>> {
+  const header = req.headers.get("Content-Length");
+  const declared = header === null ? null : Number(header);
+  if (declared !== null && (!Number.isSafeInteger(declared) || declared < 0 || declared > maxBytes)) {
+    throw new HttpError("REQUEST_TOO_LARGE", 413, "Request body is too large.");
+  }
+  if (!req.body) return {};
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => {});
+        throw new HttpError("REQUEST_TOO_LARGE", 413, "Request body is too large.");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const data = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    data.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  const text = new TextDecoder().decode(data);
+  if (!text.trim()) return {};
+  try {
+    const value = JSON.parse(text);
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch { return {}; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   try {
     const userId = await getUser(req);
-    const body = req.method === "GET" ? {} : await req.json().catch(() => ({}));
+    const body = req.method === "GET" ? {} : await readJsonBody(req, MAX_BODY_BYTES);
     const projectId =
       String(body.projectId || body.project_id || "") ||
       new URL(req.url).searchParams.get("projectId") ||
@@ -410,23 +451,11 @@ Deno.serve(async (req) => {
 
     const geminiKey = env("GEMINI_API_KEY");
     const openRouterKey = env("OPENROUTER_API_KEY");
-    const groqKey = env("GROQ_API_KEY");
-
-    if (!geminiKey && !openRouterKey && !groqKey) {
-      return json(req, {
-        report: {
-          ...(existing || {}),
-          status: "unavailable",
-          error_code: "WORLD_PROVIDER_UNAVAILABLE",
-          error_message: "No World language provider is configured.",
-        },
-      }, 503);
-    }
-
-    // Account billing/usage eligibility for these configured providers is not verified.
-    // Existing World reads, edits, confirmation and revisions do not invoke inference.
-    const freeAccountVerified = false;
-    if (!freeAccountVerified) return json(req, {error:{code:"PROVIDER_COST_UNVERIFIED",message:"New World generation is unavailable until a language-provider execution path is verified free."}, report:{...(existing || {}),status:"unavailable",error_code:"PROVIDER_COST_UNVERIFIED",error_message:"Language-provider free eligibility is unverified."}}, 503);
+    // The owner supplied a separate Free-plan account key. Never use the
+    // legacy paid GROQ_API_KEY or an unverified provider as a fallback.
+    const groqKey = env("GROQ_FREE_API_KEY");
+    const freeAccountVerified = Boolean(groqKey);
+    if (!freeAccountVerified) return json(req, {error:{code:"PROVIDER_COST_UNVERIFIED",message:"Configure the dedicated free-account key before revealing a World."}, report:{...(existing || {}),status:"unavailable",error_code:"PROVIDER_COST_UNVERIFIED",error_message:"The dedicated free-account key is not configured."}}, 503);
 
     const { data: song, error: songError } = await admin
       .from("songs")
@@ -695,8 +724,7 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
     }
 
     const providers: Array<[string, () => Promise<ProviderResult>]> = [];
-    if (geminiKey) providers.push(["gemini", callGemini]);
-    if (openRouterKey) providers.push(["openrouter", callOpenRouter]);
+    // Only the owner-confirmed free Groq account is eligible for new work.
     if (groqKey) providers.push(["groq", callGroq]);
 
     let generated: ProviderResult | null = null;
@@ -788,10 +816,12 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
     if (error instanceof HttpError) {
       return json(req, { error: { code: error.code, message: error.message } }, error.status);
     }
+    // Log internals server-side only; never return raw database/runtime text.
+    console.error("beatvision-world failed", String(error instanceof Error ? error.message : error).slice(0, 800));
     return json(req, {
       error: {
         code: "WORLD_REQUEST_FAILED",
-        message: error instanceof Error ? error.message : String(error),
+        message: "The World request failed. Please try again.",
       },
     }, 500);
   }

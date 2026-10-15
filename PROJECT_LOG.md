@@ -1,5 +1,15 @@
 # BeatVision Project Log
 
+## 2026-10-15 — Dedicated free Groq credential repair
+
+**Authorization and cause:** Owner identified the existing `GROQ_API_KEY` as paid, supplied a separate Free-plan account key under `GROQ_FREE_API_KEY`, and requested wiring and deployment. All three language functions still hard-coded free eligibility to false, so merely saving the new secret could not enable World, Style proposals or transcription. Free-account status is the owner's confirmation; no independent billing-tier API proof is claimed.
+
+**Repair:** Use only `GROQ_FREE_API_KEY` for new World, Style proposal and transcription requests. Missing dedicated credentials remain unavailable; the legacy paid key is never a fallback. World dispatch now excludes Gemini/OpenRouter fallback. Existing pinned Groq models remain unchanged; Groq's public Free Plan rate-limit table lists both `openai/gpt-oss-20b` and `whisper-large-v3-turbo`. Preserve current live World/Style streaming byte limits and error redaction by carrying their exact source from the deployed PR #103 files onto current main before applying the credential patch. No schema, approval or creative asset change.
+
+**Reproduction:** Three actual Edge-handler fixtures with the dedicated free credential reproduced seven failures before the repair (all were blocked by the constant-false gate). The same 44 checks pass after repair, including free-key headers, missing-key refusal, quota failure without fallback, owner/session enforcement, confirmed World immutability, proposal-only Style behavior and preserved decoded song timing. All provider responses in these tests are mocked. Full verification and deployment results follow when actually completed.
+
+**Local verification:** Combined repository and nested integration suite passed 290/290, zero failures, exit 0. Production audit, TypeScript/Vite build and `git diff --check` passed (exit 0); existing Vite large-chunk warning remains. Imported the current streaming-body hardening regression from PR #103; declared/streamed/multibyte overlimits and redaction still pass. No real inference call, secret-value retrieval, schema mutation or asset approval was performed. Deployment and real owner-authenticated generation remain unverified at this checkpoint.
+
 ## 2026-10-15 — Autonomous subsystem audit: verified local repairs on repair branch
 
 **Baseline:** Checkout `f2e137584d18ed222ca702b89cd8430c3b06b506` (`main`) was clean. `npm install` exited 0; baseline `npm test` passed 261/261, nested integration tests 6/6, production audit passed, and `npm run build` passed. The existing Vite large-chunk warning remains. PR #108 is open and mergeable but its latest Production CI install failed to resolve `@supabase/auth-js@2.118.0`; the same dependency resolves locally, so that CI failure is recorded separately and not treated as a code regression. PR #108’s Arcane preference review finding remains relevant but its feature files are not in main.

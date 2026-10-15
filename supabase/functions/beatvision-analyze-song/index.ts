@@ -58,12 +58,12 @@ Deno.serve(async (req) => {
     if (songError) throw new Error(songError.message);
     if (!song?.audio_path) return json({ error: "Save an audio track before analyzing it." }, 400);
 
-    const groqKey = env("GROQ_API_KEY");
-    if (!groqKey) return json({ error: "GROQ_API_KEY is not configured." }, 503);
+    const groqKey = env("GROQ_FREE_API_KEY");
 
-    // Browser DSP and manual lyrics remain usable without paid/unknown inference.
-    const freeAccountVerified = false;
-    if (!freeAccountVerified) return json({error:"PROVIDER_COST_UNVERIFIED: Transcription is unavailable until this Groq account's free eligibility is verified."},503);
+    // The owner confirmed this separate key belongs to their Free-plan
+    // account. Never fall back to the legacy paid GROQ_API_KEY.
+    const freeAccountVerified = Boolean(groqKey);
+    if (!freeAccountVerified) return json({error:"PROVIDER_COST_UNVERIFIED: The dedicated free-account key is not configured. Local analysis remains available."},503);
 
     // Production stores audio in the `songs` bucket (see SongPage/useSong);
     // reading `audio` fails to resolve the signed URL and breaks transcription.
