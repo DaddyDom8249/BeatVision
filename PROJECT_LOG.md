@@ -1099,3 +1099,16 @@ GitHub main (9e6619f) diverged from deployed production/recovery (7b77f329): 105
 Wan 2.2 new job submission is disabled in deployed Edge (WAN_ELIGIBILITY_UNVERIFIED), but its Studio button was enabled and guaranteed a 503. Reconciliation UI now marks it unavailable, keeps existing ticket polling available, and preserves verified free LTX Generate Motion. No new provider calls, paid services, or database mutations. Backend v32 is unchanged.
 
 Verification: source branch CI, production user checks pending. Do not claim full music-video assembly without validated playable MP4 and owner-authenticated end-to-end evidence.
+
+
+## 2026-10-15 — Production-baseline-only song ACL hotfix release
+
+**Scope:** Production was serving `a02f74602a49a12a3d7c6414bc5cb08bc3c1cfcf`, while `main` has unrelated studio-redesign changes at `f2e137584d18ed222ca702b89cd8430c3b06b506`. To avoid releasing unrequested UI changes, prepare independent `release/song-permission-hotfix-20261015` directly from the production source, and leave PR #108/Arcane unchanged.
+
+**Confirmed root cause:** Authenticated users have permitted column-level UPDATE on song metadata, but not on `project_id` or protected analysis columns. Existing-song UPDATE included `project_id`, causing PostgreSQL 42501; read-only live `EXPLAIN` for that UPDATE reproduced permission denied, while allowed column UPDATE planning passed.
+
+**Fix:** Existing song edits omit `project_id`; new song inserts retain `project_id`. Preserve owner checks, RLS, server-only analysis mutation, and audio replacement semantics. Regression cases added for both paths. No production database grant, policy, schema, assets or providers changed.
+
+**Verification before release:** GitHub PR #109 at `f0f7330c40c079b2137c1505759ca984025673de` passed 263/263 tests, production audit, TypeScript/Vite build and three PostgreSQL security/replay workflows. Independently executed the exact hotfix-branch SongPage submit handler with synthetic Supabase mocks: owner update, owner insert, cross-owner rejection PASS 3/3. Production-hotfix full suite, build/deployment and authenticated real-user save remain **not yet verified**; do not conflate the PR #109 checks with this exact production-based hotfix tree.
+
+**Release decision:** Creator explicitly requested release of the song-save fix. Deploy only the isolated production-baseline hotfix, verify exact deployment SHA and production alias. Do not release PR #108, merge unrelated redesigns, change approvals, use paid providers, or modify song records as a test.
