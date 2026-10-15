@@ -1115,3 +1115,49 @@ GitHub main (9e6619f) diverged from deployed production/recovery (7b77f329): 105
 Wan 2.2 new job submission is disabled in deployed Edge (WAN_ELIGIBILITY_UNVERIFIED), but its Studio button was enabled and guaranteed a 503. Reconciliation UI now marks it unavailable, keeps existing ticket polling available, and preserves verified free LTX Generate Motion. No new provider calls, paid services, or database mutations. Backend v32 is unchanged.
 
 Verification: source branch CI, production user checks pending. Do not claim full music-video assembly without validated playable MP4 and owner-authenticated end-to-end evidence.
+
+## 2026-10-14 — Hardening pass (branch repair/hardening-2026-10-14, not merged/deployed)
+
+Added top-level UI error boundary; edge body-size caps and non-leaking 500s for style-draft and world; additive migration making generated asset media immutable and approved assets undeletable (NOT applied); Vercel security headers; client-secret regression tests; .ui-test-* gitignore. Arena: 8 MB request-size cap (separate PR). Full report and per-PR findings in the PR description. No production data change, no deploy, no paid calls.
+
+
+## 2026-10-14 — Approved-media deletion and project cascade security repair
+
+**Repository baseline:** `main` a02f74602a49a12a3d7c6414bc5cb08bc3c1cfcf. Existing hardening PR #103 head 2bf75192d6c4b3ad987c75764c7ce9ed6fa9df34. All source edits are on repair/hardening-2026-10-14, not main.
+
+**Confirmed P1 bypass:** Existing proposed generated-media trigger denied DELETE only while status/approved was currently true. Privileged updater could demote approved -> generated and delete the row. Table-level TRUNCATE was granted to service_role and bypassed row triggers. Prior PGlite regression reproduced the row's deletion before patch; existing production grants were verified read-only (no live deletion attempted).
+
+**Fix:** `20261014180000_approved_asset_media_immutability.sql` now forbids direct deletion of all generated image/motion asset rows while their owning project exists, regardless of approval status. This preserves retired approved takes. REVOKE TRUNCATE removes the non-row-trigger bypass for app roles, without revoking service_role UPDATE/DELETE needed by legitimate backend operations. Original immutable media and lineage fields remain guarded. Original approval status transitions still work. Privileged PostgreSQL owners retain inherent DDL authority; control them via access restrictions.
+
+**Database compatibility defect, reproduced:** In real isolated PostgreSQL, valid project cascade failed first at confirmed World (Actions 38620324234), then at approved Style (38620798868). These were pre-existing unconditional immutable DELETE triggers, independent of media changes. The same unapplied migration now conditionally permits DELETE only when the project's parent record is already absent, across confirmed World, approved Phase 3, Vision Lock, approved Visual Plans/scenes. Direct asset/World/Style/Plan/lock deletion remains guarded while the project exists; owner checks/RLS and historical data are unchanged.
+
+**Dependent PR:** Streaming request byte guard PR #104 was merged to this repair branch (merge SHA 09793e1f2423f45128b54335ccad01128d8834c2), NOT to main. PR #103 now includes both the original hardening and streamed request caps.
+
+**Regression:** Added source test of the demote/delete bypass and PGlite FK cascade; added `scripts/test/sql/approved-asset-real-postgres.sql` to the isolated database-replay workflow. It validates actual service_role privileges, TRUNCATE denial, approved/demoted DELETE failure, take preservation, direct immutability, real parent-project cascade, with fixture operations wrapped in ROLLBACK. Final tested code SHA 29013c751c000f5c22dfb9726e2629e0cc2aa99a: Production CI 38621247888 SUCCESS (`npm test`: 265 tests/264 passed/1 skipped/0 failed; `npm run production-audit` and `npm run build` successful); isolated PostgreSQL replay 38621247460 SUCCESS; generation enqueue security 38621247852 SUCCESS; legacy storage ownership security 38621247812 SUCCESS.
+
+**Production state:** No live migration, deletion, asset replacement, provider request, paid action, Edge deployment or main merge. Full authenticated browser pipeline and live migration application NOT VERIFIED. Release requires confirming no production-only triggers/grants differ from the tested repository before any apply.
+
+
+## 2026-10-14 — Approved-asset hardening: live migration release and read-only verification
+
+**Production migration:** The exact SQL blob `43396746fd9453235eb567d80b26e30dd20cfd51` from tested PR #103 was applied to Supabase project `mdofsinyofqbeapzfygu` via the connected migration tool. Result `success:true`; live migration ledger version `20261014191504`, name `approved_asset_media_immutability_20261014`. The operation contained only function/trigger DDL and role privilege revocation, with no row update/delete or creative approval.
+
+**Live evidence after apply:** `scene_image_assets_media_immutable` and `motion_clip_assets_media_immutable` both exist and are enabled (tgenabled='O'). `has_table_privilege('service_role', ... 'TRUNCATE')` is FALSE on both. Required service_role UPDATE on scene images and DELETE on motion clips remain TRUE. Seven existing approval/World/Plan/lock helper functions now include a parent-missing cascade exception; the media guard independently uses positive project-existence checks. Migration ledger confirms the new entry. Read-only counts were 18 image records (18 currently approved), 18 motion records (10 approved) at verification time; no pre-apply hash/baseline was captured, so those counts alone do not prove row immutability. No destructive live test was attempted.
+
+**Verification boundary:** Live schema and privileges VERIFIED; actual creator-authenticated approval/swap/cascade E2E was tested only in disposable PostgreSQL, not against production data. PR #103 remains unmerged; main unchanged. The combined World/Style streamed-body Edge code from PR #104 is SOURCE ONLY, not deployed. Avoid older-source Edge redeploy until deployed-function compatibility is checked.
+
+
+## 2026-10-14 — Edge redeploy guard: live source drift confirmed
+
+Read-only retrieval of active Supabase source confirmed `beatvision-world` v40 (`verify_jwt=false`, 799 lines) and `beatvision-style-draft` v8 (`verify_jwt=true`, 225 lines). PR #103 candidate source is respectively 842 and 270 lines. Both differ materially from deployed production source and the deployed functions have no streamed body cap. Blindly replacing the deployed functions with the PR files could roll back production-only logic or alter authentication; **Edge deployment intentionally blocked pending exact-source reconciliation and tests**. No Edge redeployment performed.
+
+Post-migration Supabase verification additionally confirmed both generated asset tables retain RLS enabled, and neither authenticated nor anon roles have direct DELETE; authenticated direct UPDATE remains denied. Asset SQL hardening is LIVE; streaming body hardening remains source-tested only.
+
+
+## 2026-10-14 — World/Style hardening Edge release: exact-source verification
+
+**Corrected provenance investigation:** Comparing deployed World v40 and Style Draft v8 directly with GitHub `main` a02f746 showed both files were byte-for-byte identical. The earlier concern about undocumented production-only source drift was therefore disproven; the line differences were only the deliberately reviewed PR #103/#104 hardening changes. This new evidence supersedes the preceding temporary deployment blocker.
+
+**Production deployment:** Deployed the exact PR #103 candidate Edge `index.ts` files from tested commit `40c2e1ea44483c40ac753eb8a638102125a6b9ca` using the connected Supabase deployment tool. `beatvision-world` advanced from v40 to v41 ACTIVE with original `verify_jwt=false` custom-auth setting preserved. `beatvision-style-draft` advanced from v8 to v9 ACTIVE with original `verify_jwt=true` setting preserved. No provider, generation, upload, approval, data mutation or paid request invoked.
+
+**Read-back verification:** Retrieved both deployed Edge files after deployment; each matches the exact GitHub candidate text, has a bounded streaming reader and `REQUEST_TOO_LARGE` handling. Live source/configuration verification SUCCESS; actual authenticated function calls, adverse chunked-body overlimit responses, full creator workflow and model-provider behavior NOT VERIFIED in production. No Vercel or Cloudflare deploy, main merge or creative asset replacement. Existing JWT settings unchanged.
