@@ -79,6 +79,7 @@ for (const [name, meter, expected] of [
       "../lib/errorDetails": { formatFailure: () => "Fixture error" },
     });
     await f.render(Page, { projectId: "project-1" });
+    assert.equal(f.document.querySelector("h1").textContent, "EVERY SONG.");
     const card = [...f.document.querySelectorAll(".analysis-metric-card")]
       .find(node => node.querySelector(".metric-label")?.textContent === "Time Signature");
     assert.equal(card?.querySelector(".metric-value")?.textContent, expected);
@@ -130,6 +131,7 @@ for (const approved of [false, true]) {
       }) },
     });
     await f.render(Page, { projectId: "project-1" });
+    assert.equal(f.document.querySelector("h1").textContent, "BEATVISION");
     const times = [...f.document.querySelectorAll('input[type="number"]')];
     assert.equal(times.length, 2);
     assert.deepEqual(times.map(input => input.value), ["0", "60"]);
@@ -165,5 +167,48 @@ test("draft scene controls explicitly contrast against their background", () => 
     const values = [luminance(resolve(background)), luminance(resolve(foreground))].sort((a, b) => b - a);
     assert.ok((values[0] + 0.05) / (values[1] + 0.05) >= 4.5);
   }
+  dom.window.close();
+});
+
+test("the opening studio uses the requested BEATVISION headline", async t => {
+  const f = await fixture(t);
+  const Page = f.compile("src/pages/DashboardPage.tsx", {
+    "../lib/supabase/client": { supabase: { auth: { getUser: async () => ({ data: { user: null } }) } } },
+    "../lib/formatCreativeText": { getCreativeErrorMessage: error => error.message },
+  });
+  await f.render(Page, { onNavigate() {} });
+  assert.equal(f.document.querySelector("h1").textContent, "BEATVISION");
+});
+
+for (const confirmed of [false, true]) {
+  test("World " + (confirmed ? "confirmation" : "reveal") + " retains HAS A WORLD and the real workflow state", async t => {
+    const f = await fixture(t);
+    const Report = f.compile("src/components/world/WorldReport.tsx", {});
+    const Page = f.compile("src/pages/WorldPage.tsx", {
+      "../components/world/WorldReport": { default: Report },
+      "../hooks/useWorld": { useWorld: () => ({ loading: false, generating: false,
+        report: confirmed ? { id: "world-1", status: "completed", confirmed_at: "2026-10-15", created_at: "2026-10-15" } : null,
+      }) },
+      "../hooks/useSong": { useSong: () => ({ song: { audio_path: "fixture/song.mp3", analysis_status: "completed" }, loading: false }) },
+    });
+    await f.render(Page, { projectId: "project-1", onNavigate() {} });
+    assert.equal(f.document.querySelector("h1").textContent, "HAS A WORLD");
+    assert.match(f.document.body.textContent, confirmed ? /Confirmed|LOCKED/i : /Reveal World/);
+  });
+}
+
+test("ink-studio typography uses a licensed local display font without changing form text", () => {
+  const css = readFileSync(new URL("../../src/styles.css", import.meta.url), "utf8");
+  const dom = new JSDOM('<style></style><h1>BEATVISION</h1><input>');
+  dom.window.document.querySelector("style").textContent = css;
+  const rules = [...dom.window.document.styleSheets[0].cssRules];
+  const face = rules.find(rule => rule.style?.getPropertyValue("src").includes("UnifrakturCook-Bold.ttf"));
+  assert.ok(face, "Display font must be served from the app, not a paid provider");
+  assert.equal(face.style.getPropertyValue("font-display"), "swap");
+  assert.equal(rules.find(rule => rule.selectorText === "h1").style.getPropertyValue("font-family"), "var(--font-display)");
+  assert.ok(rules.some(rule => rule.selectorText === "button, input, textarea, select" && rule.style.getPropertyValue("font-family") === "inherit"));
+  const font = readFileSync(new URL("../../public/fonts/UnifrakturCook-Bold.ttf", import.meta.url));
+  assert.equal(font.readUInt32BE(0), 0x00010000, "Font must contain a TrueType asset, not an error response");
+  assert.match(readFileSync(new URL("../../public/fonts/UnifrakturCook-OFL.txt", import.meta.url), "utf8"), /SIL OPEN FONT LICENSE Version 1.1/);
   dom.window.close();
 });

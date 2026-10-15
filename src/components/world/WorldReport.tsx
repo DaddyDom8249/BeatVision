@@ -160,7 +160,7 @@ export default function WorldReport({
       <div className="world-report-header">
         <div>
           <div className="eyebrow">02 / VISUAL WORLD REPORT</div>
-          <h1 style={{ fontSize: "32px", color: "#ffffff", margin: "4px 0 8px" }}>Visual Continuity Foundation</h1>
+          <h1 style={{ fontSize: "32px", color: "#ffffff", margin: "4px 0 8px" }}>HAS A WORLD</h1>
           <p style={{ maxWidth: 760, lineHeight: 1.6, color: "var(--text-muted)", fontSize: "14px" }}>
             The visual continuity foundation for your scenes. Review the world as structured creative direction before locking it.
           </p>

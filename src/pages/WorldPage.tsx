@@ -34,7 +34,8 @@ export default function WorldPage({ projectId, onNavigate }: { projectId: string
       <div className="app-shell">
         <StudioHeader projectId={projectId} activeStage="world" />
         <main className="dashboard">
-          <h1>Reveal World</h1>
+          <div className="eyebrow">02 / WORLD REVEAL</div>
+          <h1>HAS A WORLD</h1>
           <p>Save an audio track on the Song page before revealing the visual world.</p>
           <button className="secondary-button" style={{ marginTop: "16px" }} onClick={() => onNavigate(`/projects/${projectId}/song`)}>
             ← Return to Song Intake
@@ -49,7 +50,9 @@ export default function WorldPage({ projectId, onNavigate }: { projectId: string
       <div className="app-shell">
         <StudioHeader projectId={projectId} activeStage="world" />
         <main className="dashboard">
-          <h1>Analyze the Song First</h1>
+          <div className="eyebrow">02 / WORLD REVEAL</div>
+          <h1>HAS A WORLD</h1>
+          <h2 className="page-subtitle">Song analysis pending</h2>
           <p>BeatVision requires completed musical signal analysis before World Reveal. Return to Song and click Analyze Music.</p>
           <button className="primary-button" style={{ marginTop: "16px" }} onClick={() => onNavigate(`/projects/${projectId}/song`)}>
             ← Return to Song & Run Analysis
@@ -66,7 +69,7 @@ export default function WorldPage({ projectId, onNavigate }: { projectId: string
         <main className="dashboard" style={{ maxWidth: "800px" }}>
           <section className="create-card">
             <div className="eyebrow">02 / WORLD REVEAL</div>
-            <h1>Reveal Visual World</h1>
+            <h1>HAS A WORLD</h1>
             <p>
               BeatVision will synthesize your musical analysis, lyrics, and creative direction into a persistent, structured visual world.
             </p>

@@ -47,7 +47,7 @@ export default function DashboardPage({ onNavigate }: Props) {
         <header className="dashboard-heading">
           <div>
             <div className="eyebrow">YOUR CREATIVE STUDIO</div>
-            <h1>BeatVision</h1>
+            <h1>BEATVISION</h1>
           </div>
           <div className="hero-actions" style={{ display: "flex", gap: "14px", flexWrap: "wrap" }}>
             <button className="primary-button large" onClick={() => onNavigate("/projects/new")}>

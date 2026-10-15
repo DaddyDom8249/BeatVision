@@ -87,7 +87,8 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
       <div className="app-shell">
       <StudioHeader projectId={projectId} activeStage="visual-plan" />
       <main className="dashboard">
-        <h1>Visual Plan</h1>
+        <div className="eyebrow">04 / STORYBOARD</div>
+        <h1>BEATVISION</h1>
         <p>Phase 4 begins only after the current Visual World Report is confirmed and the Style Bible is locked.</p>
         {error && <p role="alert">{error}</p>}
         <ul>
@@ -107,8 +108,8 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
     <main className="dashboard">
       <header className="style-header">
         <div>
-        <span className="eyebrow">PHASE 4 / VISUAL PLAN</span>
-        <h1>Direct the Visual Plan</h1>
+        <span className="eyebrow">04 / STORYBOARD</span>
+        <h1>BEATVISION</h1>
         <p>Translate the locked World and Style Bible into a scene-by-scene production plan.</p>
         </div>
       </header>

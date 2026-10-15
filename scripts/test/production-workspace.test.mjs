@@ -82,6 +82,8 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
 test('async motion keeps the workspace and exposes status without a completed asset', async () => {
   const view = await mount();
   try {
+    assert.equal(document.querySelector('h1').textContent, 'REVEALS IT!!');
+    assert.match(document.querySelector('.page-subtitle').textContent, /Shot Monitor/);
     await view.click('Generate Motion');
     assert.match(document.body.textContent, /Shot Monitor/);
     await view.click('Check Motion Status');
