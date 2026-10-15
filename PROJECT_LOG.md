@@ -1,5 +1,21 @@
 # BeatVision Project Log
 
+## 2026-10-15 - Repair rejected local analysis and mobile intake controls
+
+**Target:** Repair the founder's Android screenshot failure, LOCAL_ANALYSIS_SECTIONS_INVALID, independently of the unreleased Style/Mood/theme feature. Preserve uploaded media, lyrics, saved direction and all approval boundaries.
+
+**Confirmed root cause:** musicAnalysis.ts appended decoded.duration to the list of section starts, then mapped that final value to an interval ending at the same duration. Real analyzer execution on decoded-PCM fixtures produced a zero-length terminal section at both 12.000125 and 383.123375 seconds. Passing the latter unmodified result to the real owner-checked save_local_song_analysis RPC in PGlite reproduced the screenshot's exact error. The database guard was correct and is unchanged.
+
+**Change:** Use zero and detected internal boundaries as section starts; close the final interval at the exact decoded duration. Separate metadata-save and analysis busy states, prevent concurrent metadata saves, and stop before transcription if local analysis cannot be persisted. Refresh creative form values only when their saved metadata changes, so analysis-only reloads preserve unsaved lyrics/direction. Add shrinkable song-grid tracks, constrained controls/audio, narrow-screen padding and readable mobile field text. No CSS overflow hiding, forced viewport zoom, new provider, migration, database write or remote media processing.
+
+**Evidence:** New tests failed before repair on zero-length intervals, the actual RPC validation error, misleading Saving Song state, missing responsive constraints, and unsaved lyrics being replaced after analysis. After repair, the full local command node --test --test-concurrency=2 scripts/test/*.test.mjs scripts/test/integration-repair-20261011/*.test.mjs passed 279 tests with zero failures. Production audit and TypeScript/Vite build pass; the preexisting bundle-size warning remains. Timing cases include one sample, sub-half-second audio, fractional sample-rate duration, changing-energy material and a six-minute decoded fixture. Actual DSP output persists through the unchanged RPC, while an intentionally zero-length section remains rejected. React tests cover failure retry state, no provider call after rejected persistence, no overlapping form save and unsaved draft preservation. Local app responds HTTP 200.
+
+**Status:** RESOLVED at source/test level for the confirmed analysis and busy-state/draft-loss defects. CONFIRMED source-level mobile containment improvements; exact screenshot scaling/cropping cause remains PROBABLE because browser desktop-site/zoom settings and rendered dimensions are not available. Source tests are not physical-device verification.
+
+**Not verified:** Authenticated production retry with the founder's actual M4A, browser-rendered narrow-screen layout, physical Android behavior and deployment of this repair. Supplied screenshots were inspected locally; no upload/audio objects or production data were altered, and no paid/unknown-cost generation was invoked.
+
+**Next:** Review the focused repair PR and exact-head checks before any authorized coordinator merge. Carry this repair into the separate Style/Mood/theme PR before that feature is released. The founder has not approved the pending production Style/Mood database rollout by supplying screenshots.
+
 ## 2026-10-15 - Reconcile and independently verify the studio redesign
 
 **Target:** Finish the existing frontend redesign PR against current main without losing the recovered production workflows. The founder authorized the coordinator to personally merge after review and passing checks; Jules was instructed to preserve its work and stop writing.

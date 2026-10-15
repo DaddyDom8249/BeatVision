@@ -681,6 +681,29 @@ button { cursor: pointer; border: none; background: none; }
   border-color: var(--accent-gold);
 }
 
+.song-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 16px;
+  min-width: 0;
+}
+
+.song-intake, .song-intake form, .song-intake label {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.song-intake button {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.song-intake audio {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .auth-prompt {
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface-0);
@@ -1250,6 +1273,8 @@ button { cursor: pointer; border: none; background: none; }
 
 @media (max-width: 700px) {
   .dashboard { padding: 28px 16px 60px; }
+  .song-intake { padding: 24px 18px; }
+  .song-intake input, .song-intake textarea { font-size: 16px; }
   .style-stage-navigation a { width: 100%; text-align: center; }
   .visual-plan-scene, .production-detail, .production-provider-note { padding: 16px; }
   .visual-plan-scene header, .production-detail-head, .production-nav { flex-wrap: wrap; gap: 12px; }
