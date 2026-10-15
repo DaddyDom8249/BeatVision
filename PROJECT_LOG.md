@@ -1,5 +1,17 @@
 # BeatVision Project Log
 
+## 2026-10-15 — Optional Arcane Cinema appearance (feature branch only)
+
+**Objective:** Keep the existing studio (Classic) intact and let artists explicitly opt into a less crowded violet/cyan Arcane Cinema visual skin.
+
+**Baseline:** main f2e137584d18ed222ca702b89cd8430c3b06b506 (prior frontend redesign); AGENTS.md and project log inspected. Independent Style/Mood PR #106 and local song-analysis PR #107 are not included.
+
+**Implementation:** Added validated Classic/Arcane preference tokens, theme provider, appearance selector in the existing StudioHeader, startup preference restoration, local browser persistence, authenticated Supabase user_metadata preference synchronization, optional reduced motion, scoped CSS skin, and automated UI preference tests. Existing creative pages, providers, production controller, database/RLS/migrations and media approval logic untouched. No duplicate editor; Classic keeps all original CSS defaults.
+
+**Verification:** Source-level implementation complete on feature/arcane-cinema-theme. Full test/build, exact-head CI, browser/Android screenshots and account-sync integration require subsequent verification; do not claim verified solely from implementation. No paid calls, media generation, production deployment, creative asset approvals, or production data modifications.
+
+**Next:** Run complete tests, production audit, TypeScript/Vite build and reviewed GitHub CI; inspect visual layouts on mobile and desktop before any release. PR remains unmerged.
+
 ## 2026-10-15 - Reconcile and independently verify the studio redesign
 
 **Target:** Finish the existing frontend redesign PR against current main without losing the recovered production workflows. The founder authorized the coordinator to personally merge after review and passing checks; Jules was instructed to preserve its work and stop writing.
