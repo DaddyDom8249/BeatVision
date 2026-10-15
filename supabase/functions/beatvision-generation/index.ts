@@ -754,10 +754,19 @@ Deno.serve(async (req) => {
 
     if (action === "drain") {
       if (uid.kind !== "system") return json(req, { error: { code: "UNAUTHORIZED_SCHEDULER", message: "Scheduler authorization required." } }, 401);
-      const pending = await db.from("generation_jobs").select("*").in("status", ["queued", "submitted", "processing"]).order("created_at", { ascending: true }).limit(8);
-      if (pending.error) throw new Error(pending.error.message);
+      // Reserve capacity for both dispatch and polling. A single oldest-first
+      // query lets eight long-running provider jobs permanently starve newer
+      // queued work from ever being submitted.
+      const [queued, active] = await Promise.all([
+        db.from("generation_jobs").select("*").eq("status", "queued").order("created_at", { ascending: true }).limit(8),
+        db.from("generation_jobs").select("*").in("status", ["submitted", "processing"]).order("created_at", { ascending: true }).limit(8),
+      ]);
+      if (queued.error) throw new Error(queued.error.message);
+      if (active.error) throw new Error(active.error.message);
+      const pending = [...(queued.data || []), ...(active.data || [])]
+        .filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index);
       const results = [];
-      for (const item of pending.data || []) {
+      for (const item of pending) {
         try {
           const result = item.status !== "queued" ? await poll(db, item) : await run(db, item);
           results.push({ id: item.id, action: item.status !== "queued" ? "poll" : "run", status: result.status });
@@ -765,7 +774,7 @@ Deno.serve(async (req) => {
           results.push({ id: item.id, error: error instanceof Error ? error.message : String(error) });
         }
       }
-      return json(req, { ok: true, scanned: (pending.data || []).length, results });
+      return json(req, { ok: true, scanned: pending.length, results });
     }
 
     if (!projectId || (!["image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility"].includes(action) && !jobId)) return json(req, { error: { code: "JOB_REQUIRED", message: "projectId and jobId are required." } }, 400);

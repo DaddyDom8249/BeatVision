@@ -41,6 +41,50 @@ function blockedPlan(error) {
   return { hook: load(hookPath).useVisualPlan("project"), state, calls };
 }
 
+function approvedPlanRevision() {
+  const state = [null, null, null, { id: "approved-plan", status: "approved" }, null, [], false, false, null, []];
+  let cursor = 0;
+  const react = {
+    useState() { const index = cursor++; return [state[index], value => { state[index] = value; }]; },
+    useCallback(callback) { return callback; },
+    useEffect() {},
+  };
+  const window = {
+    location: { pathname: "/projects/project/visual-plan", search: "?plan=approved-plan", hash: "" },
+    history: { replaceState(_state, _title, url) {
+      const parsed = new URL(url, "https://fixture.test");
+      window.location.pathname = parsed.pathname;
+      window.location.search = parsed.search;
+      window.location.hash = parsed.hash;
+    } },
+  };
+  const supabase = {
+    async rpc(name, args) {
+      assert.equal(name, "create_visual_plan_revision");
+      assert.equal(args.p_plan_id, "approved-plan");
+      return { data: { id: "draft-plan", status: "draft" }, error: null };
+    },
+    from(table) {
+      assert.equal(table, "projects");
+      assert.equal(window.location.search, "?plan=draft-plan");
+      throw new Error("LOAD_REACHED_WITH_NEW_REVISION_SELECTED");
+    },
+  };
+  function load(path) {
+    const javascript = ts.transpileModule(readFileSync(path, "utf8"), {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    }).outputText;
+    const module = { exports: {} };
+    runInNewContext(javascript, { module, exports: module.exports, window, URLSearchParams, require(specifier) {
+      if (specifier === "react") return react;
+      if (specifier.endsWith("/supabase/client")) return { supabase };
+      return load(resolve(dirname(path), specifier + ".ts"));
+    } });
+    return module.exports;
+  }
+  return { hook: load(hookPath).useVisualPlan("project"), window };
+}
+
 test("a real PostgREST environment approval failure tells the artist what to approve", async () => {
   const failure = { message: "VISION_LOCK_ENVIRONMENTS_NOT_APPROVED", code: "23514" };
   const { hook, state, calls } = blockedPlan(failure);
@@ -60,4 +104,10 @@ test("unknown structured database failures preserve their message", async () => 
   await assert.rejects(hook.createPlan(), error => error === failure);
   assert.equal(state[8], failure.message);
   assert.equal(state[7], false);
+});
+
+test("creating a revision selects the returned draft before reloading", async () => {
+  const { hook, window } = approvedPlanRevision();
+  await assert.rejects(hook.revisePlan(), /LOAD_REACHED_WITH_NEW_REVISION_SELECTED/);
+  assert.equal(window.location.search, "?plan=draft-plan");
 });

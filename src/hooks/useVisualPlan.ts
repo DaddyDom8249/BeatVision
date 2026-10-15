@@ -87,6 +87,13 @@ export function useVisualPlan(projectId: string) {
     try {
       const result = await supabase.rpc('create_visual_plan_revision', {p_plan_id: plan.id});
       if (result.error) throw result.error;
+      const revisedPlan = result.data as VisualPlan | null;
+      if (!revisedPlan?.id) throw new Error('Visual Plan revision did not return a draft.');
+      if (typeof window !== 'undefined') {
+        const query = new URLSearchParams(window.location.search);
+        query.set('plan', revisedPlan.id);
+        window.history.replaceState(null, '', `${window.location.pathname}?${query.toString()}${window.location.hash}`);
+      }
       await load();
     } catch (e) { setError(getVisualPlanErrorMessage(e, 'Unable to revise Visual Plan.')); throw e; }
     finally { setWorking(false); }

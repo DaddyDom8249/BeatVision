@@ -21,6 +21,7 @@ export default function SongPage({ projectId }: Props) {
   const [notes, setNotes] = useState("");
   const [audio, setAudio] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,17 +32,19 @@ export default function SongPage({ projectId }: Props) {
     setLyrics(song.lyrics ?? "");
     setCreativeDirection(song.creative_direction ?? "");
     setNotes(song.notes ?? "");
-  }, [song]);
+  }, [song?.id, song?.title, song?.artist, song?.lyrics, song?.creative_direction, song?.notes]);
 
   async function analyzeAudio() {
+    if (saving || analyzing || song?.analysis_status === "analyzing") return;
     if (!song?.audio_url) {
       setError("Save an audio track before analyzing it.");
       return;
     }
     setError(null);
     setSaved(false);
-    setSaving(true);
+    setAnalyzing(true);
     let local: Awaited<ReturnType<typeof analyzeAudioLocally>> | null = null;
+    let localPersisted = false;
     let localFailure: Error | null = null;
     try {
       const persistAnalysis = (status: string, analysis?: unknown) => supabase.rpc('save_local_song_analysis', {
@@ -53,10 +56,14 @@ export default function SongPage({ projectId }: Props) {
 
       try {
         local = await analyzeAudioLocally(song.audio_url);
-        const localUpdate = await persistAnalysis('analyzing', local);
-        if (localUpdate.error) throw new Error(localUpdate.error.message);
       } catch (e) {
         localFailure = e instanceof Error ? e : new Error(String(e));
+      }
+
+      if (local) {
+        const localUpdate = await persistAnalysis('analyzing', local);
+        if (localUpdate.error) throw new Error(localUpdate.error.message);
+        localPersisted = true;
       }
 
       const { data: result, error: invokeError } = await supabase.functions.invoke(
@@ -65,7 +72,7 @@ export default function SongPage({ projectId }: Props) {
       );
 
       if (invokeError) {
-        if (!local) throw invokeError;
+        if (!localPersisted) throw invokeError;
         const message = result?.error || invokeError.message || "Groq song transcription failed.";
         const fallbackUpdate = await supabase.rpc('save_local_song_analysis', {p_project_id:projectId,p_song_id:song.id,p_audio_revision:song.audio_revision,p_status:'completed',p_analysis:{...local,transcription_status:'failed',status_detail:message}});
         if (fallbackUpdate.error) throw new Error(fallbackUpdate.error.message);
@@ -79,7 +86,7 @@ export default function SongPage({ projectId }: Props) {
       await reload();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Song analysis failed.";
-      if (local) {
+      if (local && localPersisted) {
         const fallbackUpdate = await supabase.rpc('save_local_song_analysis', {p_project_id:projectId,p_song_id:song.id,p_audio_revision:song.audio_revision,p_status:'completed',p_analysis:{...local,transcription_status:'failed',status_detail:message}});
         if (fallbackUpdate.error) {
           await supabase.rpc('save_local_song_analysis', {p_project_id:projectId,p_song_id:song.id,p_audio_revision:song.audio_revision,p_status:'failed',p_analysis:null});
@@ -88,11 +95,11 @@ export default function SongPage({ projectId }: Props) {
           return;
         }
       }
-      if (!local) await supabase.rpc('save_local_song_analysis', {p_project_id:projectId,p_song_id:song.id,p_audio_revision:song.audio_revision,p_status:'failed',p_analysis:null});
+      if (!localPersisted) await supabase.rpc('save_local_song_analysis', {p_project_id:projectId,p_song_id:song.id,p_audio_revision:song.audio_revision,p_status:'failed',p_analysis:null});
       setError(formatFailure("Song analysis", e, { projectId, songId: song.id }));
       await reload();
     } finally {
-      setSaving(false);
+      setAnalyzing(false);
     }
   }
 
@@ -102,7 +109,7 @@ export default function SongPage({ projectId }: Props) {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (saving) return;
+    if (saving || analyzing) return;
     setSaving(true);
     setSaved(false);
     setError(null);
@@ -230,10 +237,10 @@ export default function SongPage({ projectId }: Props) {
                   type="button"
                   className="secondary-button"
                   onClick={() => void analyzeAudio()}
-                  disabled={saving || song.analysis_status === "analyzing"}
+                  disabled={saving || analyzing || song.analysis_status === "analyzing"}
                   style={{ alignSelf: "flex-start" }}
                 >
-                  {saving || song.analysis_status === "analyzing"
+                  {analyzing || song.analysis_status === "analyzing"
                     ? "Analyzing Music Signal…"
                     : song.analysis_status === "completed"
                     ? "Re-Analyze Music"
@@ -272,7 +279,7 @@ export default function SongPage({ projectId }: Props) {
               />
             </label>
 
-            <button className="primary-button large" disabled={saving}>
+            <button className="primary-button large" disabled={saving || analyzing}>
               {saving ? "Saving Song…" : saved ? "Song Saved ✓" : "Save Song Details →"}
             </button>
           </form>
