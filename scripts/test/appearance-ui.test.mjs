@@ -83,21 +83,24 @@ const scenes = [
   { id: 'scene-1', scene_number: 1, title: 'First scene', start_time: 0, end_time: 12.34, status: 'draft', camera_direction: 'Wide', visual_direction: 'A real draft', location: 'Forest' },
   { id: 'scene-2', scene_number: 2, title: 'Second scene', start_time: 12.34, end_time: 62.75, status: 'approved', camera_direction: 'Close', visual_direction: 'Approved direction', location: 'Studio' },
 ];
-async function storyboard(t, { theme = 'arcane', assets = [], error = null, invoke } = {}) {
+async function storyboard(t, { theme = 'arcane', assets = [], motionAssets = [], sceneRows = scenes, currentMedia, error = null, invoke } = {}) {
   const f = await fixture(t), calls = [];
   let activeTheme = theme;
-  const query = {};
-  for (const method of ['select', 'eq']) query[method] = (...args) => { calls.push([method, ...args]); return query; };
-  query.order = async (...args) => { calls.push(['order', ...args]); return { data: assets, error }; };
   const supabase = {
-    from(name) { calls.push(['from', name]); return query; },
+    from(name) {
+      calls.push(['from', name]);
+      const query = {};
+      for (const method of ['select', 'eq']) query[method] = (...args) => { calls.push([method, ...args]); return query; };
+      query.order = async (...args) => { calls.push(['order', ...args]); return { data: name === 'motion_clip_assets' ? motionAssets : assets, error }; };
+      return query;
+    },
     functions: { invoke: async (name, options) => { calls.push(['invoke', name, options.body]); return invoke ? invoke(options.body) : { data: { image_url: 'https://fixture.test/private-image.png' }, error: null }; } },
   };
   const Board = f.compile('src/components/storyboard/ArcaneStoryboard.tsx', {
     '../../lib/supabase/client': { supabase },
     '../../theme/ThemeProvider': { useAppearance: () => ({ preference: { theme: activeTheme }, reducedMotion: true }) },
   }).default;
-  const props = { projectId: 'project', planId: 'plan', scenes };
+  const props = { projectId: 'project', planId: 'plan', scenes: sceneRows, currentMedia };
   await f.render(Board, props);
   return { ...f, calls, theme: async theme => { activeTheme = theme; await f.render(Board, props); } };
 }
@@ -106,6 +109,19 @@ test('Classic storyboard adds no UI or application reads', async t => {
   const f = await storyboard(t, { theme: 'classic' });
   assert.equal(f.document.querySelector('section'), null);
   assert.equal(f.calls.length, 0);
+});
+
+test('a failed approved thumbnail cannot hide a separate real production candidate', async t => {
+  const f = await storyboard(t, {
+    assets: [{ id: 'saved', scene_id: 'scene-1', approved: true, status: 'approved', image_url: 'https://fixture.test/expired.png' }],
+    currentMedia: { sceneId: 'scene-1', image: { url: 'https://fixture.test/candidate.png', status: 'completed' } },
+  });
+  await act(async () => f.document.querySelector('.arcane-storyboard-thumbnail img').dispatchEvent(new f.window.Event('error')));
+  const preview = f.document.querySelector('.arcane-preview-screen img');
+  assert.equal(preview?.src, 'https://fixture.test/candidate.png');
+  await act(async () => preview.dispatchEvent(new f.window.Event('error')));
+  assert.equal(f.document.querySelector('.arcane-preview-screen img'), null);
+  assert.match(f.document.querySelector('.arcane-preview-state').textContent, /unavailable/i);
 });
 
 test('Arcane storyboard shows authoritative times and honest empty states, then focuses the original editor', async t => {
@@ -213,4 +229,50 @@ test('narrow Arcane branding retains intrinsic width so header controls wrap ins
   const actions = [...mobile.cssRules].find(rule => rule.selectorText === ":root[data-theme='arcane'] .studio-topbar-right");
   assert.equal(actions.style.getPropertyValue('max-width'), '100%');
   dom.window.close();
+});
+
+test('cinematic cards show duration, camera and visual direction for every supplied scene', async t => {
+  const sceneRows = Array.from({ length: 11 }, (_, i) => ({ ...scenes[i % 2], id: `many-${i}`, scene_number: i + 1 }));
+  const f = await storyboard(t, { sceneRows });
+  const cards = f.document.querySelectorAll('.arcane-storyboard-scene');
+  assert.equal(cards.length, 11);
+  assert.match(cards[0].textContent, /12.34s/);
+  assert.match(cards[0].textContent, /Wide/);
+  assert.match(cards[0].textContent, /A real draft/);
+  assert.equal(f.document.querySelector('video'), null);
+});
+
+test('scene keyboard navigation selects the last scene and Director uses native disclosure', async t => {
+  const f = await storyboard(t);
+  const first = f.document.querySelector('.arcane-storyboard-scene');
+  first.focus();
+  await act(async () => first.dispatchEvent(new f.window.KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true })));
+  const cards = f.document.querySelectorAll('.arcane-storyboard-scene');
+  assert.equal(cards[1].getAttribute('aria-pressed'), 'true');
+  assert.equal(f.document.activeElement, cards[1]);
+  const director = f.document.querySelector('details.arcane-director-panel');
+  assert.ok(director);
+  assert.match(director.querySelector('summary').textContent, /Scene Director/);
+  assert.match(director.textContent, /Approved direction/);
+  assert.equal([...director.querySelectorAll('button')].some(n => n.textContent === 'Edit scene direction'), false);
+});
+
+test('saved motion uses read-only refresh, native controls and decoded duration without claiming coverage', async t => {
+  const f = await storyboard(t, { motionAssets: [
+    { id: 'clip', scene_id: 'scene-1', approved: true, status: 'approved', provider: 'huggingface-zerogpu', model: 'ltx', video_url: null },
+  ], invoke: async body => ({ data: body.action === 'motion_url' ? { video_url: 'https://fixture.test/saved.mp4' } : {}, error: null }) });
+  assert.equal(f.document.querySelector('video'), null);
+  await f.click([...f.document.querySelectorAll('button')].find(n => n.textContent === 'Motion'));
+  const video = f.document.querySelector('video');
+  assert.ok(video);
+  assert.equal(video.controls, true);
+  assert.equal(video.autoplay, false);
+  assert.equal(video.src, 'https://fixture.test/saved.mp4');
+  Object.defineProperty(video, 'duration', { value: 1.9 });
+  await act(async () => video.dispatchEvent(new f.window.Event('loadedmetadata')));
+  assert.match(f.document.body.textContent, /1.90s/);
+  assert.match(f.document.body.textContent, /10.44s.*uncovered/);
+  assert.equal(f.calls.some(c => c[0] === 'invoke' && !['motion_url', 'image_url'].includes(c[2].action)), false);
+  await f.click(f.document.querySelectorAll('.arcane-storyboard-scene')[1]);
+  assert.equal(f.document.querySelector('video'), null, 'old scene media must disappear immediately');
 });

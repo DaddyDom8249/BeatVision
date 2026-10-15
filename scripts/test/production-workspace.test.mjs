@@ -15,7 +15,8 @@ const transformed = ts.transpileModule(
   source
     .replace('"../lib/supabase/client"', '"./stub.mjs"')
     .replace('"../lib/formatCreativeText"', '"./formatCreativeText.mjs"')
-    .replace('"../components/navigation/StudioHeader"', '"./header.mjs"'),
+    .replace('"../components/navigation/StudioHeader"', '"./header.mjs"')
+    .replace('"../components/storyboard/ArcaneStoryboard"', '"./storyboard.mjs"'),
   { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }
 ).outputText;
 await writeFile(join(dir, 'page.mjs'), transformed);
@@ -23,6 +24,7 @@ const errorHelper = await readFile(new URL('../../src/lib/formatCreativeText.ts'
 await writeFile(join(dir, 'formatCreativeText.mjs'), ts.transpileModule(errorHelper, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText);
 await writeFile(join(dir, 'stub.mjs'), 'export const supabase = new Proxy({}, { get: (_, key) => globalThis.__uiDb[key] });');
 await writeFile(join(dir, 'header.mjs'), 'export default function StudioHeader() { return null; }');
+await writeFile(join(dir, 'storyboard.mjs'), 'export default function ArcaneStoryboard() { return null; }');
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 

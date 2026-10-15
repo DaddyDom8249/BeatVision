@@ -17,7 +17,8 @@ const pwpTranspiled = ts.transpileModule(
   pwpSource
     .replace('"../lib/supabase/client"', '"./stub.mjs"')
     .replace('"../lib/formatCreativeText"', '"./formatCreativeText.mjs"')
-    .replace('"../components/navigation/StudioHeader"', '"./header.mjs"'),
+    .replace('"../components/navigation/StudioHeader"', '"./header.mjs"')
+    .replace('"../components/storyboard/ArcaneStoryboard"', '"./storyboard.mjs"'),
   { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }
 ).outputText;
 await writeFile(join(dir, 'ProductionWorkspacePage.mjs'), pwpTranspiled);
@@ -28,6 +29,7 @@ await writeFile(join(dir, 'formatCreativeText.mjs'), ts.transpileModule(fctSourc
 
 await writeFile(join(dir, 'stub.mjs'), 'export const supabase = new Proxy({}, { get: (_, key) => globalThis.__uiDb[key] });');
 await writeFile(join(dir, 'header.mjs'), 'export default function StudioHeader() { return null; }');
+await writeFile(join(dir, 'storyboard.mjs'), 'export default function ArcaneStoryboard() { return null; }');
 
 const ProductionWorkspacePage = (await import(pathToFileURL(join(dir, 'ProductionWorkspacePage.mjs')).href)).default;
 

@@ -1,0 +1,21 @@
+{
+  "url": "https://www.figma.com/design/HuYlkHczDthwcdR3rRwWbo",
+  "fileKey": "HuYlkHczDthwcdR3rRwWbo",
+  "page": "0:1",
+  "frames": {
+    "desktop": "2:17",
+    "mobile": "2:18",
+    "classicComparison": "2:19"
+  },
+  "components": {
+    "sceneCardSet": "4:26",
+    "statusChip": "4:27",
+    "director": "4:29",
+    "navigation": "4:33",
+    "preview": "4:36",
+    "mobilePreview": "6:176"
+  },
+  "variables": "VariableCollectionId:2:2",
+  "imagery": "Only the real owner-supplied saved Ghast frame, with illustrative fixture metadata. No substitute scene imagery.",
+  "structure": "Editable auto-layout frames, text nodes, component instances and local variables."
+}

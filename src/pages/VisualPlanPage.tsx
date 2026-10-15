@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useVisualPlan } from "../hooks/useVisualPlan";
 import type { VisualPlanScene } from "../types/visualPlan";
 import StudioHeader from "../components/navigation/StudioHeader";
@@ -74,7 +74,17 @@ function SceneEditor({ scene, working, onSave }: {
 }
 
 export default function VisualPlanPage({ projectId }: { projectId: string }) {
-  const { world, styleBible, song, plan, planHistory, scenes, loading, working, error, createPlan, revisePlan, saveScene, approvePlan } = useVisualPlan(projectId);
+  const { world, styleBible, song, visionLock, plan, planHistory, scenes, loading, working, error, createPlan, revisePlan, saveScene, approvePlan } = useVisualPlan(projectId);
+  const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editRequest, setEditRequest] = useState<{ id: string } | null>(null);
+  const activeSceneId = scenes.find(scene => scene.id === selectedSceneId)?.id ?? scenes[0]?.id;
+  useEffect(() => {
+    if (!editRequest) return;
+    const editor = document.getElementById('scene-director-' + editRequest.id);
+    editor?.scrollIntoView({ behavior: 'auto', block: 'start' });
+    editor?.focus({ preventScroll: true });
+  }, [editRequest]);
 
   if (loading) return <div className="app-shell"><StudioHeader projectId={projectId} activeStage="visual-plan" /><main className="dashboard"><p>Loading Visual Plan…</p></main></div>;
 
@@ -105,11 +115,11 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
   return (
     <div className="app-shell">
     <StudioHeader projectId={projectId} projectTitle={plan?.title} planId={plan?.id} activeStage="visual-plan" />
-    <main className="dashboard">
+    <main className="dashboard visual-plan-page">
       <header className="style-header">
         <div>
         <span className="eyebrow">PHASE 4 / VISUAL PLAN</span>
-        <h1>Direct the Visual Plan</h1>
+        <h1><span className="classic-plan-title">Direct the Visual Plan</span><span className="arcane-plan-title">Storyboards</span></h1>
         <p>Translate the locked World and Style Bible into a scene-by-scene production plan.</p>
         </div>
       </header>
@@ -127,7 +137,7 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
         </section>
       ) : (
         <>
-          <section className="style-section">
+          <section className="style-section visual-plan-status">
             <div>
               <span className="eyebrow">PLAN STATUS</span>
               <h2>{plan.title} · Revision {plan.revision_number ?? 1}</h2>
@@ -141,16 +151,27 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
             )}
           </section>
 
-          <section>
-            <ArcaneStoryboard projectId={projectId} planId={plan.id} scenes={scenes} />
-            <h2>Timeline</h2>
+          <section className="visual-plan-work">
+            <ArcaneStoryboard projectId={projectId} planId={plan.id} scenes={scenes}
+              selectedSceneId={activeSceneId} onSceneSelect={setSelectedSceneId}
+              lockedContext={(visionLock?.snapshot as Record<string, unknown>) ?? null}
+              onOpenDirector={id => { setSelectedSceneId(id); setEditorOpen(true); setEditRequest({ id }); }} />
+            <div className="scene-editor-deck" data-director-open={editorOpen}>
+            <h2 className="classic-timeline-title">Timeline</h2>
+            <button type="button" className="secondary-button arcane-editor-close" onClick={() => {
+              setEditorOpen(false);
+              document.querySelector<HTMLDetailsElement>('.arcane-director-panel')?.querySelector('summary')?.focus();
+            }}>Close scene editor</button>
             {scenes.map((scene) => (
-              <SceneEditor key={scene.id} scene={scene} working={working || plan.status === "approved"} onSave={saveScene} />
+              <div key={scene.id} className="scene-editor-slot" data-selected={scene.id === activeSceneId}>
+                <SceneEditor scene={scene} working={working || plan.status === "approved" || scene.status === "approved"} onSave={saveScene} />
+              </div>
             ))}
+            </div>
           </section>
 
           {plan.status === "approved" && (
-            <section>
+            <section className="visual-plan-complete">
               <h2>Phase 4 Complete</h2>
               <p>The Visual Plan is locked and ready for the next production stage.</p>
               <a className="primary-button" href={`/projects/${projectId}/scenes?plan=${plan.id}`}>Continue to Scene Production</a>
