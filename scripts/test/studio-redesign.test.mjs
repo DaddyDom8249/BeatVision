@@ -40,6 +40,7 @@ async function fixture(t, { url = "https://fixture.test/projects/project-1/visua
   } } };
   const Header = compile("src/components/navigation/StudioHeader.tsx", {
     "../../lib/supabase/client": { supabase },
+    "./AppearanceSettings": { default: () => null },
   }, dom.window);
   const root = createRoot(dom.window.document.getElementById("root"));
   t.after(async () => {
