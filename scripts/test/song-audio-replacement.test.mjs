@@ -9,18 +9,18 @@ const end = source.indexOf('\n  if (projectLoading', start);
 assert.ok(start >= 0 && end > start, 'Song submit handler must be present');
 const handler = ts.transpileModule(source.slice(start, end), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 
-function fixture({ failSave = false, replacement = true } = {}) {
+function fixture({ failSave = false, replacement = true, newSong = false } = {}) {
   const removed = [];
   const events = [];
   let payload;
   let error;
   let selectedAudio = replacement ? { name: 'new.mp3', type: 'audio/mpeg' } : null;
-  const song = { id: 'song-1', audio_path: 'user-1/project-1/old.mp3' };
-  const query = { eq() { return this; }, select() { return this; }, async single() { events.push('db-save'); return { data: failSave ? null : { id: song.id }, error: failSave ? { message: 'database save failed' } : null }; } };
+  const song = newSong ? null : { id: 'song-1', audio_path: 'user-1/project-1/old.mp3' };
+  const query = { eq() { return this; }, select() { return this; }, async single() { events.push('db-save'); return { data: failSave ? null : { id: song?.id ?? 'new-song-id' }, error: failSave ? { message: 'database save failed' } : null }; } };
   const client = {
     auth: { getUser: async () => ({ data: { user: { id: 'user-1' } } }) },
     storage: { from(bucket) { assert.equal(bucket, 'songs'); return { async upload() { events.push('upload'); return {}; }, async remove(paths) { removed.push(...paths); events.push('remove'); return {}; } }; } },
-    from(table) { assert.equal(table, 'songs'); return { update(value) { payload = value; return query; } }; },
+    from(table) { assert.equal(table, 'songs'); return { update(value) { payload = value; return query; }, insert(value) { payload = value; return query; } }; },
   };
   const submit = new Function('supabase', 'song', 'audio', 'project', 'projectId', 'crypto', 'saving', 'setSaving', 'setSaved', 'setError', 'setAudio', 'reload', 'title', 'artist', 'lyrics', 'creativeDirection', 'notes', handler + '\nreturn submit;')(
     client, song, selectedAudio, { owner_id: 'user-1' }, 'project-1', { randomUUID: () => 'new' }, false, () => {}, () => {}, value => { error = value; }, value => { selectedAudio = value; }, async () => { events.push('reload'); }, 'Song', 'Artist', '', '', ''
@@ -65,6 +65,27 @@ test('failed metadata save never removes the current song audio', async () => {
   assert.deepEqual(state.removed, []);
   assert.deepEqual(state.events, ['db-save']);
   assert.equal(state.error, 'database save failed');
+});
+
+test('existing song updates omit immutable project_id but preserve editable metadata', async () => {
+  const f = fixture({ replacement: false });
+  await f.submit();
+  const state = f.state();
+  assert.equal(Object.hasOwn(state.payload, 'project_id'), false, 'project_id is not UPDATE-granted to authenticated');
+  assert.equal(state.payload.title, 'Song');
+  assert.equal(state.payload.artist, 'Artist');
+  assert.deepEqual(state.events, ['db-save', 'reload']);
+  assert.equal(state.error, null);
+});
+
+test('new song inserts include project_id for the owner-scoped RLS policy', async () => {
+  const f = fixture({ newSong: true, replacement: false });
+  await f.submit();
+  const state = f.state();
+  assert.equal(state.payload.project_id, 'project-1');
+  assert.equal(state.payload.title, 'Song');
+  assert.deepEqual(state.events, ['db-save', 'reload']);
+  assert.equal(state.error, null);
 });
 
 test('failed mobile decode and unavailable transcription release the analyzing state for retry',async()=>{
