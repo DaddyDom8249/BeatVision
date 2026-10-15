@@ -1127,3 +1127,47 @@ GitHub main (9e6619f) diverged from deployed production/recovery (7b77f329): 105
 Wan 2.2 new job submission is disabled in deployed Edge (WAN_ELIGIBILITY_UNVERIFIED), but its Studio button was enabled and guaranteed a 503. Reconciliation UI now marks it unavailable, keeps existing ticket polling available, and preserves verified free LTX Generate Motion. No new provider calls, paid services, or database mutations. Backend v32 is unchanged.
 
 Verification: source branch CI, production user checks pending. Do not claim full music-video assembly without validated playable MP4 and owner-authenticated end-to-end evidence.
+
+
+## 2026-10-15 — Existing-song save denied by column-level grants
+
+**Failure:** A signed-in creator's existing Song Details save can report `42501 permission denied for table songs`. Live production `public.songs` RLS is enabled with project-owner policies; table-wide INSERT/UPDATE privileges are intentionally revoked, and narrow column-level grants preserve ownership and server-only analysis fields. In particular, `authenticated` may INSERT but may not UPDATE `project_id`.
+
+**Reproduction:** The existing `SongPage.submit` sent `project_id` on both INSERT and UPDATE. In production, a read-only `EXPLAIN UPDATE public.songs SET project_id = project_id WHERE false` under `authenticated` failed with SQLSTATE 42501, while an equivalent EXPLAIN for editable `title` succeeded. This is a code/grant contract mismatch, not grounds for removing RLS or granting table-wide UPDATE.
+
+**Minimal repair (dedicated branch):** Omit `project_id` from existing-row UPDATE payload; include `project_id` only in new-row INSERT. Preserve existing owner check, RLS, immutable project association, and protected analysis column grants. Add runtime regressions to `scripts/test/song-audio-replacement.test.mjs` covering both cases. No SQL/schema grants or migration applied.
+
+**Evidence:** Executed the exact edited SongPage submit handler in an isolated JavaScript fixture: existing owner UPDATE, new owner INSERT, and cross-owner rejection passed (3/3). Production read-only permission checks above completed. Full repository npm suite, build, remote CI, authenticated browser song-save, and production patch deployment remain NOT VERIFIED. `main` and production domain were not changed. No provider calls, approvals, generation, or data writes.
+
+
+## 2026-10-15 — PR #109 production release (post-merge verification)
+
+**Authorization:** Owner requested "Release it" for the confirmed `songs` permission-denied repair. PR #109 was merged into `main` as `93054793286880ff6855f6663dba79216d2d89ad` while a production-baseline hotfix was being prepared independently.
+
+**Verified:** PR #109 head `f0f7330c40c079b2137c1505759ca984025673de` passed Production CI `38747094473` (263/263 tests, TypeScript/Vite build, production audit), migration replay `38747094607`, storage ownership `38747094359`, and generation enqueue security `38747094748`. Post-merge main Production CI `38748738446` also succeeded. Production Vercel deployment `dpl_BaZYpysWqKdkexw6eQb7yZMxYLFD` built successfully, has source SHA `93054793286880ff6855f6663dba79216d2d89ad`, and was verified READY with `beat-vision-theta.vercel.app` assigned. The deployed `SongPage` code omits `project_id` on UPDATE and includes it on INSERT; RLS and column ACLs were not changed.
+
+**Concurrency reconciliation:** The first checked production alias pointed to the older `a02f746` baseline; Vercel then auto-published merged main `930547` during this release. A parallel production-baseline-only hotfix `f3624585eead55f81a8955a5444fe2b592764c26` was built and briefly assigned. After recognizing that the merged main deployment already contained the fix, promoted existing verified main deployment `dpl_BaZYpysWqKdkexw6eQb7yZMxYLFD` back to production. Final alias lookup confirms `beat-vision-theta.vercel.app` points to `930547`. No revert or deletion of user data, credentials, providers or approved assets.
+
+**Limits:** Production build, CI, Git commit contents, and alias-to-commit alignment VERIFIED. A real owner-authenticated Song Details SAVE was not run and remains NOT VERIFIED. Public external webpage fetch was unavailable from the read-only browser tool. PR #108/Arcane remains independent and was not merged in this release. The post-merge main already contained an earlier studio redesign; that design was included in its automatically published release.
+
+
+## 2026-10-15 — DSP energy section end-marker failure
+
+**User-visible failure:** Song analysis shows `LOCAL_ANALYSIS_SECTIONS_INVALID`; local DSP results fail to persist. The affected project's song was inspected read-only: `analysis_status='failed'`, analysis JSON absent, audio path present.
+
+**Reproduced by code analysis:** `src/lib/musicAnalysis.ts` generated sections from `[0, ...boundaries, decoded.duration]` and mapped *every element* as a section start. Whenever the final duration survives the >0.5s filter, the last mapping emits `start_time=decoded.duration, end_time=decoded.duration`. The current production SQL RPC correctly rejects such zero-length sections. This is an algorithm error rather than a role/ACL error or a reason to weaken SQL validation.
+
+**Minimal proposed repair:** Build section starts only from zero and genuine nonendpoint change boundaries; use `decoded.duration` strictly as the final end marker. Add `scripts/test/music-analysis-sections.test.mjs` using the actual transpiled `analyzeAudioLocally` routine on synthetic local decoded data (silence, transitions, short clip); assert no gaps/overlaps, positive durations, accurate endpoint. No SQL, RLS, Edge Function, media object, or provider change.
+
+**Status:** Repair isolated to `repair/song-analysis-section-boundary-20261015`, NOT merged or deployed. CI and a real authenticated retry remain to be verified. The prior song-save permission fix remains live. Do not claim this resolves remote transcription eligibility.
+
+
+## 2026-10-15 — Song analysis section fix released (PR #110)
+
+**Authorization:** Creator explicitly approved release of PR #110 after its final CI gate completed.
+
+**Source and verification:** The repaired algorithm avoids mapping song duration as the start of a zero-length section; ownership, revision checks and `save_local_song_analysis` SQL validation were unchanged. PR #110 head `be4bb6fee694df8cbb3851f87c65c1b1f7c478bd` passed all four PR checks: Production CI `38774646673` (266/266 tests, production audit PASS, TypeScript/Vite build PASS), database migration replay `38774646342`, generation enqueue security `38774646416`, and legacy storage ownership security `38774645996`. PR #110 was merged into `main` as `eafb6529d6356fe4af05385c8981c334960182d3`; post-merge CI `38776584242` succeeded.
+
+**Deployment:** Created Vercel production deployment `dpl_GWVYyY2SYfc3HGNY1ueiHfQgKBv4` from GitHub `main` pinned to SHA `eafb6529d6356fe4af05385c8981c334960182d3`. TypeScript/Vite build succeeded, deployment reached READY, and an independent production-domain lookup confirmed `beat-vision-theta.vercel.app` resolves to that deployment and exact SHA. The pre-existing bundle-size warning remains.
+
+**Limits and next action:** No production song analysis was invoked by the agent. The affected song was last seen in `failed` state with audio path preserved. The creator must retry **Analyze Music Signal** while signed in; a successful real-user save of `songs.analysis` and subsequent flow remains UNVERIFIED. No data/approval changes, SQL migration, RLS edits, paid provider calls, or unrelated Arcane-theme PR merge were made for this fix.
