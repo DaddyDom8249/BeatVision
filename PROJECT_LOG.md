@@ -1137,3 +1137,14 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 **Concurrency reconciliation:** The first checked production alias pointed to the older `a02f746` baseline; Vercel then auto-published merged main `930547` during this release. A parallel production-baseline-only hotfix `f3624585eead55f81a8955a5444fe2b592764c26` was built and briefly assigned. After recognizing that the merged main deployment already contained the fix, promoted existing verified main deployment `dpl_BaZYpysWqKdkexw6eQb7yZMxYLFD` back to production. Final alias lookup confirms `beat-vision-theta.vercel.app` points to `930547`. No revert or deletion of user data, credentials, providers or approved assets.
 
 **Limits:** Production build, CI, Git commit contents, and alias-to-commit alignment VERIFIED. A real owner-authenticated Song Details SAVE was not run and remains NOT VERIFIED. Public external webpage fetch was unavailable from the read-only browser tool. PR #108/Arcane remains independent and was not merged in this release. The post-merge main already contained an earlier studio redesign; that design was included in its automatically published release.
+
+
+## 2026-10-15 — DSP energy section end-marker failure
+
+**User-visible failure:** Song analysis shows `LOCAL_ANALYSIS_SECTIONS_INVALID`; local DSP results fail to persist. The affected project's song was inspected read-only: `analysis_status='failed'`, analysis JSON absent, audio path present.
+
+**Reproduced by code analysis:** `src/lib/musicAnalysis.ts` generated sections from `[0, ...boundaries, decoded.duration]` and mapped *every element* as a section start. Whenever the final duration survives the >0.5s filter, the last mapping emits `start_time=decoded.duration, end_time=decoded.duration`. The current production SQL RPC correctly rejects such zero-length sections. This is an algorithm error rather than a role/ACL error or a reason to weaken SQL validation.
+
+**Minimal proposed repair:** Build section starts only from zero and genuine nonendpoint change boundaries; use `decoded.duration` strictly as the final end marker. Add `scripts/test/music-analysis-sections.test.mjs` using the actual transpiled `analyzeAudioLocally` routine on synthetic local decoded data (silence, transitions, short clip); assert no gaps/overlaps, positive durations, accurate endpoint. No SQL, RLS, Edge Function, media object, or provider change.
+
+**Status:** Repair isolated to `repair/song-analysis-section-boundary-20261015`, NOT merged or deployed. CI and a real authenticated retry remain to be verified. The prior song-save permission fix remains live. Do not claim this resolves remote transcription eligibility.
