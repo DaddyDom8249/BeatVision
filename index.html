@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BeatVision</title>
+    <script>
+      try {
+        var appearance = JSON.parse(localStorage.getItem('beatvision.appearance.v1') || 'null');
+        if (appearance && (appearance.theme === 'arcane' || appearance.theme === 'classic')) {
+          document.documentElement.dataset.beatvisionTheme = appearance.theme;
+        }
+        if (appearance && appearance.reducedMotion === true) {
+          document.documentElement.dataset.beatvisionReducedMotion = 'true';
+        }
+      } catch (_) { /* Storage can be unavailable without blocking the app. */ }
+    </script>
   </head>
   <body>
     <div id="root"></div>
