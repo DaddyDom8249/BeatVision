@@ -117,6 +117,7 @@ for (const approved of [false, true]) {
     let revisions = 0;
     const plan = { id: "saved-plan", title: "Fixture plan", revision_number: 2, status: approved ? "approved" : "draft" };
     const Page = f.compile("src/pages/VisualPlanPage.tsx", {
+      "../components/storyboard/ArcaneStoryboard": { default: () => null },
       "../hooks/useVisualPlan": { useVisualPlan: () => ({
         world: { status: "completed", confirmed_at: "fixture" },
         styleBible: { status: "approved", approved_at: "fixture" },

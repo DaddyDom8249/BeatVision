@@ -8,6 +8,7 @@ import StylePage from "../pages/StylePage";
 import VisualPlanPage from "../pages/VisualPlanPage";
 import SceneProductionPage from "../pages/SceneProductionPage";
 import ProductionWorkspacePage from "../pages/ProductionWorkspacePage";
+import AppearancePage from "../pages/AppearancePage";
 import { capturePageview, identifyUser, initAnalytics } from "../lib/analytics";
 import { supabase } from "../lib/supabase/client";
 
@@ -53,6 +54,7 @@ export default function App() {
 
   if (path === "/") return <DashboardPage onNavigate={navigate} />;
   if (path === "/auth") return <AuthPage onNavigate={navigate} />;
+  if (path === "/settings" || path === "/settings/appearance") return <AppearancePage onNavigate={navigate} />;
   if (path === "/projects/new") return <CreateProjectPage onNavigate={navigate} />;
 
   const worldMatch = path.match(/^\/projects\/([^/]+)\/world\/?$/);

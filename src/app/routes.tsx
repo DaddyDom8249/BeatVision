@@ -11,4 +11,5 @@ export const routes = {
   motion: "/projects/:projectId/motion",
   video: "/projects/:projectId/video",
   settings: "/settings",
+  appearance: "/settings/appearance",
 } as const;

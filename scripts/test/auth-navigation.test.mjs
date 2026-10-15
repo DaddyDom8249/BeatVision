@@ -129,6 +129,8 @@ test("direct /auth?next path and other existing routes retain correct component 
   for (const [route, expected] of [
     ["/auth?next=/projects/new", "AuthPage"],
     ["/auth", "AuthPage"],
+    ["/settings", "AppearancePage"],
+    ["/settings/appearance", "AppearancePage"],
     ["/projects/new", "CreateProjectPage"],
     ["/projects/123/song", "SongPage"],
     ["/projects/123/world", "WorldPage"],

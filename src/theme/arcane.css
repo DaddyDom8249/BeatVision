@@ -1,214 +1,229 @@
-/*
- * BeatVision appearance layer. Classic deliberately receives no visual overrides.
- * Arcane is a skin for the same components and production state, never a second UI.
- */
-:root[data-beatvision-theme="arcane"] {
-  color-scheme: dark;
-  --bg-app: #09090f;
-  --bg-surface-0: #11101b;
-  --bg-surface-1: #181523;
-  --bg-surface-2: #231b32;
-  --bg-surface-3: #302440;
-  --bg-glass: rgba(16, 12, 26, 0.96);
-  --border-subtle: rgba(183, 139, 237, 0.17);
-  --border-medium: rgba(189, 149, 244, 0.36);
-  --border-accent: rgba(181, 130, 255, 0.56);
-  --accent-gold: #c3a1ff;
-  --accent-gold-hover: #e0caff;
-  --accent-gold-dim: #a282d1;
-  --accent-gold-glow: rgba(157, 87, 231, 0.15);
-  --text-main: #f3effa;
-  --text-muted: #b9b2c8;
-  --text-dim: #aba4bb;
-  --text-inverse: #110c1a;
-  --color-info: #65d7ec;
-  --shadow-glow: 0 0 18px rgba(143, 71, 233, 0.16);
+@font-face {
+  font-family: 'UnifrakturCook';
+  src: url('/fonts/UnifrakturCook-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
 }
 
-:root[data-beatvision-theme="arcane"] .app-shell,
-:root[data-beatvision-theme="arcane"] .studio-shell {
-  background: radial-gradient(ellipse 85% 260px at 50% -50px, rgba(91, 38, 133, .18), transparent 80%), var(--bg-app);
+/* Classic rules remain unchanged. Page overrides are opt-in. */
+:root[data-theme='arcane'] {
+  --bg-app: #09090d;
+  --bg-surface-0: #100e16;
+  --bg-surface-1: #17141e;
+  --bg-surface-2: #241638;
+  --bg-surface-3: #322342;
+  --bg-glass: #111018;
+  --border-subtle: #3a3045;
+  --border-medium: #61536d;
+  --border-accent: #a855f7;
+  --accent-gold: #ca9aff;
+  --accent-gold-hover: #dfbdff;
+  --accent-gold-dim: #b68bd4;
+  --accent-gold-glow: rgba(168, 85, 247, 0.12);
+  --text-main: #e9e2d8;
+  --text-muted: #bfb4ca;
+  --text-dim: #b0a6bd;
+  --text-inverse: #09090d;
+  --arcane-violet: #a855f7;
+  --arcane-cyan: #46c8f5;
+  --arcane-crimson: #a80f2b;
+  --arcane-gold: #c6a46a;
+  --arcane-button: #7035a4;
+  --arcane-button-hover: #8240b9;
+  --font-display: 'UnifrakturCook', Georgia, serif;
+  --shadow-glow: 0 4px 18px rgba(0, 0, 0, 0.3);
 }
 
-:root[data-beatvision-theme="arcane"] .studio-topbar {
-  border-bottom-color: rgba(175, 106, 237, .27);
-  box-shadow: 0 3px 18px rgba(0, 0, 0, .2);
+:root[data-theme='arcane'] h1, :root[data-theme='arcane'] .brand-text {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+}
+:root[data-theme='arcane'] .brand-text { font-size: 22px; }
+:root[data-theme='arcane'] .brand-text .brand-accent { color: var(--arcane-gold); }
+:root[data-theme='arcane'] .studio-topbar { backdrop-filter: none; -webkit-backdrop-filter: none; }
+:root[data-theme='arcane'] .primary-button {
+  background: var(--arcane-button);
+  border-color: var(--arcane-violet);
+  color: var(--text-main);
+  box-shadow: none;
+}
+:root[data-theme='arcane'] .primary-button:hover:not(:disabled) { background: var(--arcane-button-hover); box-shadow: none; }
+:root[data-theme='arcane'] .pipeline-step.active, :root[data-theme='arcane'] .production-scene.selected {
+  color: var(--arcane-cyan);
+  border-color: var(--arcane-violet);
+  background: var(--bg-surface-2);
+}
+:root[data-theme='arcane'] .project-card:hover { border-color: var(--arcane-violet); }
+:root[data-theme='arcane'] .project-art {
+  background: var(--bg-surface-0) url('/art/abbey-in-the-oakwood.jpg') center 45% / cover;
+}
+:root[data-theme='arcane'] .project-art span {
+  font-family: var(--font-display);
+  color: #ffffff;
+  background: rgba(9, 9, 13, 0.85);
+  padding: 4px 12px;
+  font-size: 28px;
+}
+:root[data-theme='arcane'] .style-asset-card, :root[data-theme='arcane'] .visual-plan-scene,
+:root[data-theme='arcane'] .production-detail { border-color: var(--border-subtle); }
+:root[data-theme='arcane'] .status-approved { color: var(--color-success); }
+:root[data-theme='arcane'] .status-draft { color: var(--arcane-gold); }
+:root[data-theme='arcane'] input, :root[data-theme='arcane'] textarea,
+:root[data-theme='arcane'] select { accent-color: var(--arcane-violet); }
+:root[data-theme='arcane'] button, :root[data-theme='arcane'] a {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 140ms;
 }
 
-:root[data-beatvision-theme="arcane"] .studio-brand,
-:root[data-beatvision-theme="arcane"] .dashboard-heading h1 {
-  font-family: Georgia, 'Times New Roman', serif;
-  letter-spacing: .025em;
-}
-
-:root[data-beatvision-theme="arcane"] .brand-icon,
-:root[data-beatvision-theme="arcane"] .brand-accent {
-  color: #d4a9ff;
-}
-
-:root[data-beatvision-theme="arcane"] .pipeline-step.active {
-  border-color: var(--border-accent);
-  background: #281c3d;
-  box-shadow: inset 0 -2px 0 rgba(94, 207, 237, .35);
-}
-
-:root[data-beatvision-theme="arcane"] .primary-button {
-  background: linear-gradient(115deg, #8244c9, #9c55e8);
-  color: #fff;
-  border-color: #b67bea;
-  box-shadow: 0 2px 10px rgba(126, 62, 199, .2);
-}
-:root[data-beatvision-theme="arcane"] .primary-button:hover:not(:disabled) {
-  background: linear-gradient(115deg, #9953e2, #ae68ee);
-  box-shadow: 0 4px 14px rgba(152, 66, 240, .3);
-}
-
-:root[data-beatvision-theme="arcane"] .project-art {
-  background: radial-gradient(ellipse at 65% 15%, rgba(124, 62, 183, .27), transparent 65%),
-              linear-gradient(125deg, #20132c, #100f1d 65%, #122531);
-}
-
-:root[data-beatvision-theme="arcane"] .project-card:hover,
-:root[data-beatvision-theme="arcane"] .production-scene.selected {
-  border-color: #a772e5;
-  box-shadow: 0 0 0 1px rgba(167, 114, 229, .25), 0 4px 20px rgba(0, 0, 0, .27);
-}
-
-:root[data-beatvision-theme="arcane"] .visual-plan-scene,
-:root[data-beatvision-theme="arcane"] .production-detail,
-:root[data-beatvision-theme="arcane"] .style-section,
-:root[data-beatvision-theme="arcane"] .world-report-card {
-  border-color: var(--border-subtle);
-}
-
-:root[data-beatvision-theme="arcane"] .project-card,
-:root[data-beatvision-theme="arcane"] .visual-plan-scene,
-:root[data-beatvision-theme="arcane"] .production-scene,
-:root[data-beatvision-theme="arcane"] .style-section {
-  transition: border-color .16s ease, box-shadow .16s ease;
-}
-
-/* The customer selector is the only added header control in Classic. */
-.appearance-menu {
-  position: relative;
-  flex: 0 0 auto;
-  font-size: 12px;
-}
-.appearance-menu > summary {
+.appearance-trigger, .appearance-close {
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
-  padding: 6px 12px;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-0);
+}
+.appearance-trigger img, .appearance-close img { filter: invert(1); }
+.appearance-trigger:hover, .appearance-close:hover { border-color: var(--accent-gold); }
+.appearance-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(640px, calc(100% - 24px));
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  overflow-y: auto;
+  overflow-x: clip;
+  color: var(--text-main);
+  background: var(--bg-surface-1);
   border: 1px solid var(--border-medium);
   border-radius: 8px;
-  background: var(--bg-surface-1);
-  color: var(--text-main);
-  font-weight: 700;
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
+  color-scheme: dark;
 }
-.appearance-menu > summary::-webkit-details-marker { display: none; }
-.appearance-menu > summary::before {
-  content: "◐";
-  font-size: 16px;
-  margin-right: 7px;
-  color: var(--accent-gold);
-}
-.appearance-menu[open] > summary { border-color: var(--border-accent); }
-.appearance-menu > summary:focus-visible {
-  outline: 2px solid var(--accent-gold);
-  outline-offset: 3px;
-}
-.appearance-panel {
-  position: absolute;
-  top: calc(100% + 12px);
-  right: 0;
-  width: min(340px, calc(100vw - 24px));
-  max-height: calc(100dvh - 105px);
-  overflow-y: auto;
-  padding: 18px;
-  background: var(--bg-surface-1);
-  color: var(--text-main);
-  border: 1px solid var(--border-medium);
-  border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, .5);
-  z-index: 250;
-}
-.appearance-panel h2 { font-size: 17px; margin: 0 0 6px; }
-.appearance-help {
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.5;
-  margin: 5px 0 12px;
-}
-.appearance-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.appearance-choice {
+.appearance-dialog::backdrop { background: rgba(0, 0, 0, 0.78); }
+.appearance-dialog-header, .appearance-page-header {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  text-align: left;
-  gap: 5px;
-  min-width: 0;
-  padding: 8px;
-  border: 2px solid var(--border-subtle);
-  border-radius: 9px;
-  background: var(--bg-surface-0);
-  color: var(--text-main);
-}
-.appearance-choice.chosen { border-color: var(--accent-gold); }
-.appearance-choice strong { font-size: 12px; }
-.appearance-choice small { color: var(--text-muted); font-size: 10px; line-height: 1.4; }
-.appearance-swatch {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 9px;
-  height: 74px;
-  border-radius: 5px;
-}
-.appearance-swatch i { height: 8px; width: 76%; border-radius: 2px; display: block; }
-.appearance-swatch i:nth-child(2) { width: 100%; height: 20px; }
-.appearance-swatch i:nth-child(3) { width: 53%; }
-.classic-preview .appearance-swatch { background: #101017; border: 1px solid #66502e; }
-.classic-preview .appearance-swatch i { background: #ad8741; }
-.arcane-preview .appearance-swatch { background: #130d23; border: 1px solid #8248bf; }
-.arcane-preview .appearance-swatch i { background: #9f63dc; }
-.arcane-preview .appearance-swatch i:last-child { background: #5cbacf; }
-.appearance-motion {
-  margin-top: 16px;
-  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  color: var(--text-main);
-  cursor: pointer;
+  gap: 16px;
+  margin-bottom: 24px;
 }
-.appearance-motion input { width: 16px; height: 16px; accent-color: var(--accent-gold); }
-.appearance-status {
-  margin-top: 12px;
-  border-top: 1px solid var(--border-subtle);
-  padding-top: 10px;
-  color: var(--text-muted);
-  font-size: 11px;
+.appearance-dialog-header h2 { font-size: 24px; line-height: 1.25; }
+.appearance-page { max-width: 900px; }
+.appearance-controls { min-width: 0; }
+.appearance-fieldset { border: 0; padding: 0; min-width: 0; }
+.appearance-fieldset legend { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+.appearance-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.appearance-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid var(--border-medium);
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--bg-surface-0);
+}
+.appearance-option:has(input:checked) { border-color: var(--accent-gold); }
+.appearance-option:focus-within { outline: 2px solid var(--text-main); outline-offset: 3px; }
+.appearance-option input { position: absolute; right: 20px; top: 20px; width: 20px; height: 20px; z-index: 1; }
+.appearance-option-title { font-size: 16px; font-weight: 700; }
+.appearance-option-description { font-size: 13px; color: var(--text-muted); line-height: 1.5; overflow-wrap: anywhere; }
+.appearance-miniature {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  aspect-ratio: 16 / 7;
+  padding: 14px 10px;
+  overflow: hidden;
+  background: #12121a;
+  color: #f3f4f6;
+  border-radius: 4px;
+  font-family: 'Manrope', sans-serif;
+}
+.miniature-brand { font-size: 13px; font-weight: 700; }
+.miniature-scenes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.miniature-scenes span { aspect-ratio: 4 / 3; background: #202030; border: 1px solid #e2b85c; border-radius: 2px; }
+.miniature-timeline { width: 82%; height: 8px; background: #e2b85c; border-radius: 2px; }
+.preview-arcane .appearance-miniature { background: #100e16; }
+.preview-arcane .miniature-brand { font-family: 'UnifrakturCook', Georgia, serif; font-size: 16px; color: #e9e2d8; }
+.preview-arcane .miniature-scenes span { border-color: #a855f7; background: #241638 url('/art/abbey-in-the-oakwood.jpg') center / cover; }
+.preview-arcane .miniature-timeline { background: #46c8f5; }
+.appearance-motion { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-subtle); }
+.appearance-motion label { display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 14px; }
+.appearance-motion input { width: 20px; height: 20px; }
+.appearance-motion > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.appearance-motion-state, .appearance-save-state { color: var(--text-muted); font-size: 13px; }
+.appearance-save-state { margin-top: 24px; min-height: 20px; }
+.appearance-sync-error { display: grid; gap: 12px; }
+.appearance-dialog button, .appearance-page button { min-height: 44px; }
+
+.arcane-storyboard { margin: 24px 0 36px; padding: 24px 0; border-block: 1px solid var(--border-subtle); }
+.arcane-storyboard-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; }
+.arcane-storyboard-header h2 { font-size: 22px; }
+.arcane-storyboard-scenes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap: 12px; margin-bottom: 24px; }
+.arcane-storyboard-scene { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 10px; text-align: left; border: 1px solid var(--border-medium); border-radius: 6px; background: var(--bg-surface-0); }
+.arcane-storyboard-scene[aria-pressed='true'] { border-color: var(--arcane-violet); box-shadow: inset 0 -2px var(--arcane-cyan); }
+.arcane-storyboard-thumbnail { display: flex; align-items: center; justify-content: center; aspect-ratio: 16 / 9; width: 100%; background: var(--bg-surface-2); border-radius: 3px; font-size: 12px; color: var(--text-muted); }
+.arcane-storyboard-thumbnail img { width: 100%; height: 100%; object-fit: contain; }
+.arcane-storyboard-scene strong { font-size: 14px; overflow-wrap: anywhere; }
+.arcane-storyboard-scene small { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+.arcane-scene-number { color: var(--arcane-cyan); font-size: 12px; }
+.arcane-scene-status { font-size: 11px; color: var(--arcane-gold); }
+.arcane-director-layout { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 24px; }
+.arcane-scene-preview { margin: 0; min-width: 0; }
+.arcane-scene-preview > div { display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 16 / 9; background: var(--bg-surface-0); color: var(--text-muted); padding: 0; }
+.arcane-scene-preview img { width: 100%; height: 100%; object-fit: contain; }
+.arcane-scene-preview p { padding: 16px; text-align: center; }
+.arcane-scene-preview figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 13px; margin-top: 12px; }
+.arcane-scene-preview figcaption span { font-family: var(--font-mono); color: var(--arcane-cyan); font-size: 11px; }
+.arcane-director-summary { min-width: 0; }
+.arcane-director-summary h3 { font-size: 20px; margin-bottom: 16px; }
+.arcane-director-summary dt { color: var(--text-muted); font-size: 12px; margin-top: 14px; }
+.arcane-director-summary dd { margin: 4px 0 0; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.arcane-director-summary button { margin-top: 20px; min-height: 44px; }
+:root[data-theme='arcane'] .visual-plan-scene { scroll-margin-top: 170px; }
+
+@media (max-width: 700px) {
+  :root[data-theme='arcane'] .studio-topbar-left { min-width: max-content; }
+  :root[data-theme='arcane'] .studio-topbar-right { max-width: 100%; margin-left: auto; }
+  .arcane-director-layout { grid-template-columns: minmax(0, 1fr); }
+  .appearance-dialog { padding: 18px; }
+  .appearance-options { gap: 12px; }
+  .appearance-option { padding: 10px; }
+  .appearance-miniature { padding: 12px 6px; gap: 10px; }
+  .appearance-option input { right: 14px; top: 14px; }
+  :root[data-theme='arcane'] .create-card { padding: 24px 18px; }
+  :root[data-theme='arcane'] .create-card form > div { grid-template-columns: minmax(0, 1fr) !important; }
+  :root[data-theme='arcane'] .create-card input, :root[data-theme='arcane'] .create-card textarea { font-size: 16px; }
+  :root[data-theme='arcane'] .style-foundation-grid, :root[data-theme='arcane'] .style-form,
+  :root[data-theme='arcane'] .style-create-grid { grid-template-columns: minmax(0, 1fr); }
+  :root[data-theme='arcane'] .production-scene-list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); }
+  :root[data-theme='arcane'] .dashboard button { max-width: 100%; overflow-wrap: anywhere; }
+}
+@media (max-width: 380px) {
+  .appearance-options { grid-template-columns: minmax(0, 1fr); }
+  .appearance-miniature { aspect-ratio: 2 / 1; }
 }
 
-:root[data-beatvision-reduced-motion="true"] *,
-:root[data-beatvision-reduced-motion="true"] *::before,
-:root[data-beatvision-reduced-motion="true"] *::after {
-  animation-duration: .01ms !important;
-  transition-duration: .01ms !important;
+:root[data-motion='reduce'] *, :root[data-motion='reduce'] *::before, :root[data-motion='reduce'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: .01ms !important;
-    transition-duration: .01ms !important;
+  :root:not([data-motion='full']) *, :root:not([data-motion='full']) *::before, :root:not([data-motion='full']) *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-@media (max-width: 700px) {
-  .appearance-menu > summary { min-height: 40px; padding: 7px 10px; }
-  .appearance-panel { position: fixed; top: 68px; left: 12px; right: 12px; width: auto; max-height: calc(100dvh - 80px); }
-  :root[data-beatvision-theme="arcane"] .studio-topbar { backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
