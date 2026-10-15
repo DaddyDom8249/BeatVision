@@ -158,8 +158,13 @@ export async function analyzeAudioLocally(audioUrl: string): Promise<SongAnalysi
       if (boundaries.length >= 7) break;
     }
     boundaries.sort((a, b) => a - b);
-    const sections = [0, ...boundaries, decoded.duration].filter((v, i, a) => i === 0 || v > a[i - 1] + 0.5)
-      .map((start, i, a) => ({ index: i + 1, start_time: start, end_time: a[i + 1] ?? decoded.duration }));
+    // The song duration is an end marker, never the start of another section.
+    // Keep boundary candidates away from either endpoint to avoid zero-length
+    // segments; each adjacent pair below produces a positive-length window.
+    const sectionStarts = [0, ...boundaries.filter((time) => time > 0.5 && time < decoded.duration - 0.5)];
+    const sections = sectionStarts.map((start, i) => ({
+      index: i + 1, start_time: start, end_time: sectionStarts[i + 1] ?? decoded.duration
+    }));
     const bpm = estimateBpm(channel, decoded.sampleRate);
     const key = estimateKey(channel, decoded.sampleRate);
     return {
