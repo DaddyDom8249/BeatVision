@@ -5,7 +5,6 @@ import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import React, { act } from "react";
 import * as jsx from "react/jsx-runtime";
-import { createRoot } from "react-dom/client";
 import { JSDOM } from "jsdom";
 
 function compile(path, dependencies, window) {
@@ -34,6 +33,7 @@ async function fixture(t, { url = "https://fixture.test/projects/project-1/visua
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const { createRoot } = await import("react-dom/client");
   const supabase = { auth: { getUser: async () => {
     if (rejectAuth) throw new Error("Fixture auth transport failure");
     return { data: { user: { email: "a-long-synthetic-creator-email@fixture.test" } } };
@@ -58,6 +58,13 @@ async function fixture(t, { url = "https://fixture.test/projects/project-1/visua
     click: async (button) => {
       assert.ok(button);
       await act(async () => button.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
+    },
+    edit: async (control, value) => {
+      const prototype = control.tagName === "TEXTAREA" ? dom.window.HTMLTextAreaElement.prototype : dom.window.HTMLInputElement.prototype;
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(prototype, "value").set.call(control, value);
+        control.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+      });
     },
   };
 }
@@ -166,4 +173,80 @@ test("draft scene controls explicitly contrast against their background", () => 
     assert.ok((values[0] + 0.05) / (values[1] + 0.05) >= 4.5);
   }
   dom.window.close();
+});
+
+for (const persistenceFails of [false, true]) {
+  test("analysis has its own busy state and " + (persistenceFails ? "stops after a database rejection" : "preserves local DSP on provider refusal"), async t => {
+    const f = await fixture(t);
+    const calls = [];
+    let invocations = 0, authCalls = 0, reloads = 0, finish;
+    const pending = new Promise(resolve => { finish = resolve; });
+    const song = { id: "song-1", title: "Fixture song", artist: "Fixture artist", audio_path: "fixture/song.m4a",
+      audio_url: "https://fixture.test/song.m4a", audio_revision: "1", analysis_status: "not_started" };
+    const client = {
+      auth: { getUser: async () => { authCalls++; return { data: { user: null } }; } },
+      rpc: async (name, args) => {
+        calls.push({ name, ...args });
+        return { error: persistenceFails && args.p_analysis ? { message: "Fixture analysis write rejected" } : null };
+      },
+      functions: { invoke: async () => { invocations++; return { error: new Error("PROVIDER_COST_UNVERIFIED") }; } },
+    };
+    const Page = f.compile("src/pages/SongPage.tsx", {
+      "../lib/supabase/client": { supabase: client },
+      "../hooks/useProject": { useProject: () => ({ project: { id: "project-1", title: "Fixture project" }, loading: false }) },
+      "../hooks/useSong": { useSong: () => ({ song, loading: false, reload: async () => { reloads++; } }) },
+      "../lib/musicAnalysis": { analyzeAudioLocally: () => pending },
+      "../lib/errorDetails": { formatFailure: (operation, error) => operation + ": " + error.message },
+    });
+    await f.render(Page, { projectId: "project-1" });
+    await f.click([...f.document.querySelectorAll("button")].find(button => button.textContent === "Analyze Music Signal"));
+    const save = f.document.querySelector("form > button.primary-button");
+    assert.equal(save.disabled, true);
+    assert.doesNotMatch(save.textContent, /Saving Song/, "Analysis is not a metadata save");
+    await act(async () => f.document.querySelector("form").dispatchEvent(new f.window.Event("submit", { bubbles: true, cancelable: true })));
+    assert.equal(authCalls, 0, "Metadata save must not race an active analysis");
+    await act(async () => finish({ analysis_method: "browser_audio_decode", duration_seconds: 10,
+      sections: [{ index: 1, start_time: 0, end_time: 10 }] }));
+    assert.equal(save.disabled, false);
+    assert.equal(invocations, persistenceFails ? 0 : 1);
+    assert.deepEqual(calls.map(call => call.p_status), ["analyzing", "analyzing", persistenceFails ? "failed" : "completed"]);
+    assert.equal(reloads, 1);
+    if (persistenceFails) assert.match(f.document.querySelector('[role="alert"]').textContent, /Fixture analysis write rejected/);
+  });
+}
+
+test("song intake uses shrinkable grid tracks and constrained mobile controls", () => {
+  const source = readFileSync(new URL("../../src/pages/SongPage.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../../src/styles.css", import.meta.url), "utf8");
+  assert.match(source, /className="song-meta-grid"/);
+  assert.match(css, /\.song-meta-grid\s*\{[^}]*minmax\(min\(100%, 240px\), 1fr\)/);
+  assert.match(css, /\.song-intake button\s*\{[^}]*max-width:\s*100%/);
+  assert.match(css, /\.song-intake audio\s*\{[^}]*min-width:\s*0/);
+  assert.match(css, /\.song-intake input, \.song-intake textarea\s*\{[^}]*font-size:\s*16px/);
+});
+
+test("analysis-only reload preserves unsaved lyrics and creative direction", async t => {
+  const f = await fixture(t);
+  let song = { id: "song-1", title: "Fixture song", artist: "Fixture artist", lyrics: "Saved lyrics",
+    creative_direction: "Saved direction", audio_url: "https://fixture.test/song.m4a", audio_revision: "1", analysis_status: "not_started" };
+  const analysis = { analysis_method: "browser_audio_decode", duration_seconds: 10,
+    sections: [{ index: 1, start_time: 0, end_time: 10 }] };
+  const Page = f.compile("src/pages/SongPage.tsx", {
+    "../lib/supabase/client": { supabase: { rpc: async () => ({ error: null }),
+      functions: { invoke: async () => ({ error: new Error("PROVIDER_COST_UNVERIFIED") }) } } },
+    "../hooks/useProject": { useProject: () => ({ project: { id: "project-1", title: "Fixture" }, loading: false }) },
+    "../hooks/useSong": { useSong: () => ({ song, loading: false, reload: async () => {
+      song = { ...song, analysis_status: "completed", analysis };
+    } }) },
+    "../lib/musicAnalysis": { analyzeAudioLocally: async () => analysis },
+    "../lib/errorDetails": { formatFailure: (operation, error) => operation + ": " + error.message },
+  });
+  await f.render(Page, { projectId: "project-1" });
+  const [lyrics, direction] = f.document.querySelectorAll("textarea");
+  await f.edit(lyrics, "Unsaved verse");
+  await f.edit(direction, "Unsaved direction");
+  await f.click([...f.document.querySelectorAll("button")].find(button => button.textContent === "Analyze Music Signal"));
+  assert.equal(lyrics.value, "Unsaved verse");
+  assert.equal(direction.value, "Unsaved direction");
+  assert.match(f.document.body.textContent, /Track Intelligence Breakdown/);
 });
