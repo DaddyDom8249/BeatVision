@@ -4,6 +4,7 @@ import CharacterEditor from "../components/style/CharacterEditor";
 import EnvironmentEditor from "../components/style/EnvironmentEditor";
 import { useStyleStudio } from "../hooks/useStyleStudio";
 import { formatCreativeLines } from "../lib/formatCreativeText";
+import StudioHeader from "../components/navigation/StudioHeader";
 
 function StyleValue({ value }: { value: unknown }) {
   if (Array.isArray(value)) return <div className="style-value-list">{value.length ? value.map((item, index) => <div className="style-value-item" key={index}><StyleValue value={item} /></div>) : <span className="style-muted">Not specified</span>}</div>;
@@ -172,108 +173,187 @@ export default function StylePage({ projectId }: { projectId: string }) {
   }
 
   return (
-    <main className="studio-main style-page">
-      {error && <p className="form-error style-error" role="alert">{error}</p>}
-      <header className="style-header"><div><span className="eyebrow">PHASE 3 / STYLE BIBLE</span><h1>Style Bible</h1><p>{locked ? "The approved Style Bible is immutable. Character and environment drafts continue from this locked creative source." : "Translate the confirmed World into repeatable visual rules, character continuity, environments, and reference language."}</p></div><div className="style-status">{locked ? "APPROVED / DOWNSTREAM ASSETS" : "DRAFT / WORLD BOUND"}</div></header>
+    <div className="app-shell">
+      <StudioHeader
+        projectId={projectId}
+        activeStage="style"
+        statusBadge={locked ? "STYLE LOCKED" : "DRAFT"}
+      />
 
-      <nav className="style-actions style-stage-navigation" aria-label="Style stage navigation">
-        <a className="secondary-button" href={`/projects/${projectId}/world`}>← Return to World</a>
-        {locked ? (
-          <a className="primary-button" href={`/projects/${projectId}/visual-plan`}>Continue to Visual Plan →</a>
-        ) : (
-          <p role="status">Lock the Style Bible to continue to Visual Plan.</p>
-        )}
-      </nav>
+      <main className="style-page">
+        {error && <p className="form-error style-error" role="alert">{error}</p>}
 
-      <section className="style-section">
-        <div className="style-section-heading"><div><span className="panel-label">01 / SOURCE</span><h2>World Foundation</h2></div><span className="style-lineage">World: {world?.id ? `${world.id.slice(0, 8)}…` : "Unavailable"}</span></div>
-        <p className="style-section-copy">These fields come from the confirmed World Report. They are reference data for this stage, not an editable replacement for the World.</p><div className="style-foundation-grid">{Object.entries(styleBible.world_basis ?? {}).map(([key, value]) => <article className="style-foundation-card" key={key}><span className="style-card-label">{key.replace(/_/g, " ")}</span><StyleValue value={value} /></article>)}</div>
-        <form className="style-form" onSubmit={saveStyle}>
-          <label>Visual rules, one per line
-            <textarea rows={8} value={visualRules} readOnly={locked} onChange={(e) => setVisualRules(e.target.value)} />
-          </label>
-          <label>Reference assets, one URL/path per line
-            <textarea rows={8} value={referenceAssets} readOnly={locked} onChange={(e) => setReferenceAssets(e.target.value)} />
-          </label>
-          <label>Continuity rules, one per line
-            <textarea rows={8} value={continuityRules} readOnly={locked} onChange={(e) => setContinuityRules(e.target.value)} />
-          </label>
-          <button disabled={working || locked}>{working ? "Saving…" : "Save Style Bible"}</button>
-        </form>
-        {!locked && (<button
-          disabled={working}
-          onClick={() => void approveStyleBible().catch(() => { /* Error shown by hook. */ })}
-        >
-          {working ? "Locking…" : "Lock Style Bible"}
-        </button>)}
-      </section>
+        <header className="style-header">
+          <div>
+            <span className="eyebrow">03 / STYLE BIBLE & CASTING</span>
+            <h1>Style Bible & Continuity Rules</h1>
+            <p>
+              {locked
+                ? "The approved Style Bible is locked and immutable. Characters and environments inherit these rules."
+                : "Translate the confirmed World into repeatable visual rules, character wardrobe continuity, environments, and reference language."}
+            </p>
+          </div>
+          <span className={`status-badge ${locked ? "status-approved" : "status-draft"}`}>
+            {locked ? "STYLE BIBLE LOCKED" : "DRAFT MODE"}
+          </span>
+        </header>
 
-      <section className="style-section">
-        <div className="style-section-heading"><div><span className="panel-label">02 / CAST</span><h2>Characters</h2></div><span className="style-count">{characters.length} {characters.length === 1 ? "character" : "characters"}</span></div>
-        <form className="style-create-card" onSubmit={createCharacter}>
-          <div className="style-create-heading"><span>New character</span><small>Define identity before adding reference assets.</small></div>
-          <label className="style-field"><span>Name</span><input required value={newCharacter.name} onChange={(e) => setNewCharacter((s) => ({ ...s, name: e.target.value }))} /></label>
-          <label className="style-field"><span>Identity</span><textarea value={newCharacter.identity} onChange={(e) => setNewCharacter((s) => ({ ...s, identity: e.target.value }))} /></label>
-          <label className="style-field"><span>Appearance</span><textarea value={newCharacter.appearance} onChange={(e) => setNewCharacter((s) => ({ ...s, appearance: e.target.value }))} /></label>
-          <label className="style-field"><span>Wardrobe / props</span><textarea value={newCharacter.wardrobe} onChange={(e) => setNewCharacter((s) => ({ ...s, wardrobe: e.target.value }))} /></label>
-          <label className="style-field"><span>Behavior / movement</span><textarea value={newCharacter.behavior} onChange={(e) => setNewCharacter((s) => ({ ...s, behavior: e.target.value }))} /></label>
-          <label className="style-field"><span>Continuity / must-not-change</span><textarea value={newCharacter.continuity} onChange={(e) => setNewCharacter((s) => ({ ...s, continuity: e.target.value }))} /></label>
-          <button disabled={working}>{working ? "Creating…" : "Add Character"}</button>
-        </form>
-
-        {characters.map((character) => (
-          <CharacterEditor
-            key={character.id}
-            character={character}
-            assets={characterAssets.filter((asset) => characterRevisionIds(character.id).has(asset.character_id))}
-            working={working}
-            onSave={(id, input) => saveCharacter(id, input)}
-            onUpload={(file, label) => uploadAsset("character", character.id, file, label)}
-            onApproveAsset={(asset) => approveAsset("character", asset.id)}
-            onGenerate={(character) => generateDescription("character", character.id)}
-            onCreateRevision={(character, proposal) => createRevision("character", character.id, proposal)}
-            onRefresh={reload}
-            onApprove={(character) => approveCharacter(character.id)}
-          />
-        ))}
-      </section>
-
-      <section className="style-section">
-        <div className="style-section-heading"><div><span className="panel-label">03 / WORLD SPACES</span><h2>Environments</h2></div><span className="style-count">{environments.length} {environments.length === 1 ? "environment" : "environments"}</span></div>
-        <form className="style-create-card" onSubmit={createEnvironment}>
-          <div className="style-create-heading"><span>New environment</span><small>Define the physical rules of the space.</small></div>
-          <label>Name <input required value={newEnvironment.name} onChange={(e) => setNewEnvironment((s) => ({ ...s, name: e.target.value }))} /></label>
-          <label className="style-field"><span>Purpose / narrative role</span><textarea value={newEnvironment.purpose} onChange={(e) => setNewEnvironment((s) => ({ ...s, purpose: e.target.value }))} /></label>
-          <label className="style-field"><span>Layout / composition</span><textarea value={newEnvironment.layout} onChange={(e) => setNewEnvironment((s) => ({ ...s, layout: e.target.value }))} /></label>
-          <label className="style-field"><span>Architecture / structure</span><textarea value={newEnvironment.architecture} onChange={(e) => setNewEnvironment((s) => ({ ...s, architecture: e.target.value }))} /></label>
-          <label className="style-field"><span>Surfaces / props</span><textarea value={newEnvironment.surfaces} onChange={(e) => setNewEnvironment((s) => ({ ...s, surfaces: e.target.value }))} /></label>
-          <label className="style-field"><span>Lighting / color</span><textarea value={newEnvironment.lighting} onChange={(e) => setNewEnvironment((s) => ({ ...s, lighting: e.target.value }))} /></label>
-          <label className="style-field"><span>Atmosphere</span><textarea value={newEnvironment.atmosphere} onChange={(e) => setNewEnvironment((s) => ({ ...s, atmosphere: e.target.value }))} /></label>
-          <label>Continuity / must-not-change <textarea value={newEnvironment.continuity} onChange={(e) => setNewEnvironment((s) => ({ ...s, continuity: e.target.value }))} /></label>
-          <button disabled={working}>{working ? "Creating…" : "Add Environment"}</button>
-        </form>
-
-        {environments.map((environment) => (
-          <EnvironmentEditor
-            key={environment.id}
-            environment={environment}
-            assets={environmentAssets.filter((asset) => environmentRevisionIds(environment.id).has(asset.environment_id))}
-            working={working}
-            onSave={(id, input) => saveEnvironment(id, input)}
-            onUpload={(file, label) => uploadAsset("environment", environment.id, file, label)}
-            onApproveAsset={(asset) => approveAsset("environment", asset.id)}
-            onGenerate={(environment) => generateDescription("environment", environment.id)}
-            onCreateRevision={(environment, proposal) => createRevision("environment", environment.id, proposal)}
-            onRefresh={reload}
-            onApprove={(environment) => approveEnvironment(environment.id)}
-          />
-        ))}
-      </section>
-      {locked && (
-        <nav className="style-actions style-stage-navigation" aria-label="Continue after Style Studio">
-          <a className="primary-button" href={`/projects/${projectId}/visual-plan`}>Continue to Visual Plan →</a>
+        <nav className="style-actions style-stage-navigation" aria-label="Style stage navigation">
+          <a className="secondary-button" href={`/projects/${projectId}/world`}>Return to World</a>
+          {locked ? <a className="primary-button" href={`/projects/${projectId}/visual-plan`}>Continue to Visual Plan</a>
+            : <p role="status">Lock the Style Bible to continue to Visual Plan.</p>}
         </nav>
-      )}
-    </main>
+
+        <section className="style-section">
+          <div className="style-section-heading">
+            <div>
+              <span className="eyebrow">01 / WORLD FOUNDATION</span>
+              <h2>Visual Rules & References</h2>
+            </div>
+            <span className="style-lineage" style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-dim)" }}>
+              World ID: {world?.id ? `${world.id.slice(0, 8)}…` : "Unavailable"}
+            </span>
+          </div>
+
+          <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "20px" }}>
+            These foundation parameters come directly from your confirmed Visual World Report.
+          </p>
+
+          <div className="style-foundation-grid">
+            {Object.entries(styleBible.world_basis ?? {}).map(([key, value]) => (
+              <article className="style-foundation-card" key={key}>
+                <span className="style-card-label">{key.replace(/_/g, " ")}</span>
+                <StyleValue value={value} />
+              </article>
+            ))}
+          </div>
+
+          <form className="style-form" onSubmit={saveStyle}>
+            <label>
+              Visual Rules (one rule per line)
+              <textarea rows={6} value={visualRules} readOnly={locked} onChange={(e) => setVisualRules(e.target.value)} />
+            </label>
+            <label>
+              Reference Assets (URLs/paths per line)
+              <textarea rows={6} value={referenceAssets} readOnly={locked} onChange={(e) => setReferenceAssets(e.target.value)} />
+            </label>
+            <label>
+              Continuity Directives (one per line)
+              <textarea rows={6} value={continuityRules} readOnly={locked} onChange={(e) => setContinuityRules(e.target.value)} />
+            </label>
+            <div style={{ gridColumn: "1 / -1", display: "flex", gap: "12px" }}>
+              <button className="primary-button" disabled={working || locked}>
+                {working ? "Saving…" : "Save Style Bible"}
+              </button>
+              {!locked && (
+                <button
+                  type="button"
+                  className="primary-button"
+                  style={{ background: "var(--color-success)", borderColor: "var(--color-success)", color: "#000" }}
+                  disabled={working}
+                  onClick={() => void approveStyleBible().catch(() => {})}
+                >
+                  {working ? "Locking…" : "Lock Style Bible ✓"}
+                </button>
+              )}
+            </div>
+          </form>
+        </section>
+
+        <section className="style-section">
+          <div className="style-section-heading">
+            <div>
+              <span className="eyebrow">02 / CAST & CHARACTERS</span>
+              <h2>Characters ({characters.length})</h2>
+            </div>
+          </div>
+
+          <form className="style-create-card" onSubmit={createCharacter}>
+            <div className="style-create-heading">
+              <span>Add New Character</span>
+              <small style={{ color: "var(--text-dim)", fontFamily: "var(--font-mono)" }}>Define identity and wardrobe before adding reference photos.</small>
+            </div>
+            <label>Character Name <input required value={newCharacter.name} onChange={(e) => setNewCharacter((s) => ({ ...s, name: e.target.value }))} /></label>
+            <label>Identity <textarea rows={2} value={newCharacter.identity} onChange={(e) => setNewCharacter((s) => ({ ...s, identity: e.target.value }))} /></label>
+            <label>Appearance <textarea rows={2} value={newCharacter.appearance} onChange={(e) => setNewCharacter((s) => ({ ...s, appearance: e.target.value }))} /></label>
+            <label>Wardrobe & Props <textarea rows={2} value={newCharacter.wardrobe} onChange={(e) => setNewCharacter((s) => ({ ...s, wardrobe: e.target.value }))} /></label>
+            <label>Behavior & Movement <textarea rows={2} value={newCharacter.behavior} onChange={(e) => setNewCharacter((s) => ({ ...s, behavior: e.target.value }))} /></label>
+            <label>Continuity Directives <textarea rows={2} value={newCharacter.continuity} onChange={(e) => setNewCharacter((s) => ({ ...s, continuity: e.target.value }))} /></label>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <button className="secondary-button" disabled={working}>
+                {working ? "Adding…" : "+ Add Character Sheet"}
+              </button>
+            </div>
+          </form>
+
+          {characters.map((character) => (
+            <CharacterEditor
+              key={character.id}
+              character={character}
+              assets={characterAssets.filter((asset) => characterRevisionIds(character.id).has(asset.character_id))}
+              working={working}
+              onSave={(id, input) => saveCharacter(id, input)}
+              onUpload={(file, label) => uploadAsset("character", character.id, file, label)}
+              onApproveAsset={(asset) => approveAsset("character", asset.id)}
+              onGenerate={(character) => generateDescription("character", character.id)}
+              onCreateRevision={(character, proposal) => createRevision("character", character.id, proposal)}
+              onRefresh={reload}
+              onApprove={(character) => approveCharacter(character.id)}
+            />
+          ))}
+        </section>
+
+        <section className="style-section">
+          <div className="style-section-heading">
+            <div>
+              <span className="eyebrow">03 / WORLD SPACES & LOCATIONS</span>
+              <h2>Environments ({environments.length})</h2>
+            </div>
+          </div>
+
+          <form className="style-create-card" onSubmit={createEnvironment}>
+            <div className="style-create-heading">
+              <span>Add New Environment</span>
+              <small style={{ color: "var(--text-dim)", fontFamily: "var(--font-mono)" }}>Define architecture, lighting, and surfaces.</small>
+            </div>
+            <label>Environment Name <input required value={newEnvironment.name} onChange={(e) => setNewEnvironment((s) => ({ ...s, name: e.target.value }))} /></label>
+            <label>Purpose / Narrative Role <textarea rows={2} value={newEnvironment.purpose} onChange={(e) => setNewEnvironment((s) => ({ ...s, purpose: e.target.value }))} /></label>
+            <label>Layout & Framing <textarea rows={2} value={newEnvironment.layout} onChange={(e) => setNewEnvironment((s) => ({ ...s, layout: e.target.value }))} /></label>
+            <label>Architecture & Materials <textarea rows={2} value={newEnvironment.architecture} onChange={(e) => setNewEnvironment((s) => ({ ...s, architecture: e.target.value }))} /></label>
+            <label>Surfaces & Props <textarea rows={2} value={newEnvironment.surfaces} onChange={(e) => setNewEnvironment((s) => ({ ...s, surfaces: e.target.value }))} /></label>
+            <label>Lighting & Color Palette <textarea rows={2} value={newEnvironment.lighting} onChange={(e) => setNewEnvironment((s) => ({ ...s, lighting: e.target.value }))} /></label>
+            <label>Atmosphere <textarea rows={2} value={newEnvironment.atmosphere} onChange={(e) => setNewEnvironment((s) => ({ ...s, atmosphere: e.target.value }))} /></label>
+            <label>Continuity Directives <textarea rows={2} value={newEnvironment.continuity} onChange={(e) => setNewEnvironment((s) => ({ ...s, continuity: e.target.value }))} /></label>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <button className="secondary-button" disabled={working}>
+                {working ? "Adding…" : "+ Add Environment Space"}
+              </button>
+            </div>
+          </form>
+
+          {environments.map((environment) => (
+            <EnvironmentEditor
+              key={environment.id}
+              environment={environment}
+              assets={environmentAssets.filter((asset) => environmentRevisionIds(environment.id).has(asset.environment_id))}
+              working={working}
+              onSave={(id, input) => saveEnvironment(id, input)}
+              onUpload={(file, label) => uploadAsset("environment", environment.id, file, label)}
+              onApproveAsset={(asset) => approveAsset("environment", asset.id)}
+              onGenerate={(environment) => generateDescription("environment", environment.id)}
+              onCreateRevision={(environment, proposal) => createRevision("environment", environment.id, proposal)}
+              onRefresh={reload}
+              onApprove={(environment) => approveEnvironment(environment.id)}
+            />
+          ))}
+        </section>
+
+        {locked && (
+          <nav className="style-actions style-stage-navigation" aria-label="Continue after Style Studio">
+            <a className="primary-button" href={`/projects/${projectId}/visual-plan`}>Continue to Visual Plan</a>
+          </nav>
+        )}
+      </main>
+    </div>
   );
 }

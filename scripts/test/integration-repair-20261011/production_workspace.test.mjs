@@ -16,7 +16,8 @@ const pwpSource = await readFile(join(rootDir, 'src/pages/ProductionWorkspacePag
 const pwpTranspiled = ts.transpileModule(
   pwpSource
     .replace('"../lib/supabase/client"', '"./stub.mjs"')
-    .replace('"../lib/formatCreativeText"', '"./formatCreativeText.mjs"'),
+    .replace('"../lib/formatCreativeText"', '"./formatCreativeText.mjs"')
+    .replace('"../components/navigation/StudioHeader"', '"./header.mjs"'),
   { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }
 ).outputText;
 await writeFile(join(dir, 'ProductionWorkspacePage.mjs'), pwpTranspiled);
@@ -26,6 +27,7 @@ const fctSource = await readFile(join(rootDir, 'src/lib/formatCreativeText.ts'),
 await writeFile(join(dir, 'formatCreativeText.mjs'), ts.transpileModule(fctSource, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText);
 
 await writeFile(join(dir, 'stub.mjs'), 'export const supabase = new Proxy({}, { get: (_, key) => globalThis.__uiDb[key] });');
+await writeFile(join(dir, 'header.mjs'), 'export default function StudioHeader() { return null; }');
 
 const ProductionWorkspacePage = (await import(pathToFileURL(join(dir, 'ProductionWorkspacePage.mjs')).href)).default;
 

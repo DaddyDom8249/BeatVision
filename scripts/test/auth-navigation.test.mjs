@@ -36,12 +36,6 @@ function makeHarness(start = "/projects/new") {
         return [state[index], (value) => { state[index] = typeof value === "function" ? value(state[index]) : value; }];
       },
       useEffect(effect) {
-        // Route effects need to be executed so popstate is tested, too.
-        // The mock removes subscriptions between renders before re-adding them.
-        if (typeof effect === "function") {
-          // Suppress unrelated Supabase/analytics effects.
-          // The popstate subscription is explicitly simulated below.
-        }
       },
     };
   }
@@ -63,6 +57,7 @@ function makeHarness(start = "/projects/new") {
     if (name === "../lib/errorDetails") return { formatFailure: () => "error" };
     if (name === "../lib/formatCreativeText") return { getCreativeErrorMessage: () => "error" };
     if (name.startsWith("../pages/")) return { default: name.split("/").at(-1) };
+    if (name.startsWith("../components/")) return { default: () => null };
     throw new Error("Unexpected dependency " + name);
   };
   function load(path, hook) {
@@ -195,13 +190,13 @@ test("project creation catches a rejected save and retries with the original tit
 });
 
 
-test("signed-in Start with a song opens creation, not the login screen", () => {
+test("signed-in new project action opens creation, not the login screen", () => {
   const view = makeHarness("/");
   view.api.auth.getUser = async () => ({ data: { user: { id: "owner-1" } }, error: null });
   const dashboardRoute = view.renderApp();
   assert.equal(dashboardRoute.type, "DashboardPage");
   const home = view.DashboardPage({ onNavigate: dashboardRoute.props.onNavigate });
-  const start = walk(home, node => node.type === "button" && JSON.stringify(node.props.children ?? "").includes("Start with a song"));
+  const start = walk(home, node => node.type === "button" && JSON.stringify(node.props.children ?? "").includes("Start New Project"));
   assert.ok(start, "dashboard CTA is present");
   start.props.onClick();
   assert.equal(view.browser.location.pathname, "/projects/new", "must not navigate to /auth");

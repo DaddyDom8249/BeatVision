@@ -1,5 +1,21 @@
 # BeatVision Project Log
 
+## 2026-10-15 - Reconcile and independently verify the studio redesign
+
+**Target:** Finish the existing frontend redesign PR against current main without losing the recovered production workflows. The founder authorized the coordinator to personally merge after review and passing checks; Jules was instructed to preserve its work and stop writing.
+
+**Confirmed cause:** The redesign predates the production reconciliation on main `a02f74602a49a12a3d7c6414bc5cb08bc3c1cfcf`, producing seven frontend merge conflicts. Its review also identified near-white scene editor text on default white controls, a fabricated 4/4 meter for unavailable analysis, and a limited recent-project list labeled as a total.
+
+**Change:** Preserve current main's owner-checked analysis writes, prior audio, World/Style lineage recovery, revision history, editable scene timing, saved asset variants, motion terms/eligibility, exact-one assembly coverage, and actual final-video download validation. Apply the studio theme/header around those workflows. Preserve the selected plan in pipeline/handoff links, restore approved-only Style forward links, render honest missing-data/error states, show full reference images, and constrain forms/grids/header navigation for narrow screens. The dashboard opens onto the studio and recent projects.
+
+**Source evidence:** The local full command `node --test --test-concurrency=2 scripts/test/*.test.mjs scripts/test/integration-repair-20261011/*.test.mjs` passed 267 tests with zero failures. Production audit and TypeScript/Vite build passed with exit code 0. Focused regressions execute real React components for missing/derived meter, selected plan navigation, auth failure, draft timing and approved revision controls. A CSSOM regression verifies scene control contrast. Existing auth, dashboard retry, asset history, polling, assembly and download assertions remain covered. GitHub checks on the published head are recorded in the PR separately.
+
+**Status:** RESOLVED at source level for conflicts and the reviewed defects. No database, RLS, provider, schema, approval or production-data changes were made by this repair relative to current main. No media generation, paid service, manual production deployment or private screenshot export was performed.
+
+**Not verified:** Actual browser screenshots/layout measurements, a physical Android device, authenticated production workflows and real provider/media output on this redesigned frontend. DOM fixtures and CSS checks do not establish those outcomes. Automatic deployment readiness, if reported, is separate from authenticated product verification.
+
+**Next:** Confirm the exact published head's checks and mergeability, then perform the founder-authorized coordinator merge. Live visual/authenticated checks remain a separate verification step.
+
 ## 2026-10-10 — Automatically seed Characters and Environments from confirmed World
 
 **Objective:** Populate cast and spaces as World-backed editable drafts when the Style Bible is created or opened, without requiring manual re-entry or touching approved assets.

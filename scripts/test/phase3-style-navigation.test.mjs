@@ -43,6 +43,7 @@ function renderStyle(locked) {
     if (path === "react/jsx-runtime") return runtime;
     if (path === "../hooks/useStyleStudio") return { useStyleStudio: () => hook };
     if (path === "../lib/formatCreativeText") return { formatCreativeLines: () => [] };
+    if (path === "../components/navigation/StudioHeader") return { default: () => null };
     if (path === "../components/style/CharacterEditor" ||
         path === "../components/style/EnvironmentEditor") return { default: () => null };
     throw new Error("Unexpected StylePage dependency: " + path);
@@ -65,8 +66,8 @@ test("locked mobile Style Studio exposes Visual Plan action at top and bottom", 
     assert.match(link.props.className, /primary-button/);
     assert.match(String(link.props.children), /Continue to Visual Plan/);
   }
-  assert.match(cssSource, /@media\s*\(max-width:900px\).*?\.studio-sidebar\{display:none\}/s,
-    "sidebar is hidden on mobile, so the explicit next-stage link must stay visible");
+  assert.match(cssSource, /@media\s*\(max-width:\s*900px\).*?\.studio-pipeline-nav\s*\{[^}]*order:\s*3/s,
+    "the replacement pipeline navigation has its own row on mobile");
   assert.match(cssSource, /\.style-stage-navigation\s*\{/,
     "navigation should wrap and remain accessible in a narrow viewport");
 });

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase/client";
 import { getCreativeErrorMessage } from "../lib/formatCreativeText";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
+import StudioHeader from "../components/navigation/StudioHeader";
 
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
@@ -474,24 +475,29 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     window.setTimeout(() => setCopied(false), 1500);
   }
 
-  if (loading) return <main className="studio-main production-page"><div className="style-loading">Loading Production Workspace…</div></main>;
+  if (loading) return <div className="app-shell"><StudioHeader projectId={projectId} activeStage="production" /><main className="dashboard production-page"><div className="style-loading">Loading Production Workspace…</div></main></div>;
 
   if (!plan || !scene) {
     return (
-      <main className="studio-main production-page">
-        <header className="style-header"><div><span className="eyebrow">PHASE 5 / PRODUCTION</span><h1>Production Workspace</h1></div></header>
+      <div className="app-shell">
+      <StudioHeader projectId={projectId} activeStage="production" />
+      <main className="dashboard production-page">
+        <header className="style-header"><div><span className="eyebrow">06 / PRODUCTION</span><h1>Production Workspace</h1></div></header>
         <section className="style-empty-panel"><p className="form-error" role="alert">{error ?? "No approved production scenes found."}</p><a className="secondary-button" href={`/projects/${projectId}/scenes`}>Return to Production Brief</a></section>
       </main>
+      </div>
     );
   }
 
   return (
-    <main className="studio-main production-page">
+    <div className="app-shell">
+    <StudioHeader projectId={projectId} projectTitle={plan.title} planId={plan.id} activeStage="production" />
+    <main className="dashboard production-page" style={{ maxWidth: "1400px" }}>
       <header className="style-header">
         <div>
-          <span className="eyebrow">PHASE 5 / PRODUCTION WORKSPACE</span>
-          <h1>Build the shots from the locked direction.</h1>
-          <p>{plan.title} is approved. Select a scene, review its production brief, and carry the locked creative direction into your production tools.</p>
+          <span className="eyebrow">06 / PRODUCTION WORKSPACE</span>
+          <h1>Shot Monitor &amp; Video Assembly</h1>
+          <p>Build the shots from the locked direction. {plan.title} is approved. Select a scene and review its production brief.</p>
         </div>
         <div className="style-status">PLAN LOCKED / {scenes.length} SCENES</div>
       </header>
@@ -500,8 +506,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       {(pending(imageJob) || pending(motionJob) || pending(assemblyJob)) && <p role="status">Generation is still processing. Status refreshes automatically; no completed media is claimed yet.</p>}
       {[imageJob, motionJob, assemblyJob].filter(job => job?.status === "failed").map(job => <p className="form-error" role="alert" key={job.id}>{job.error?.message || "Generation failed."}</p>)}
       <div className="production-nav">
-        <a className="secondary-button" href={`/projects/${projectId}/visual-plan`}>← Visual Plan</a>
-        <a className="secondary-button" href={`/projects/${projectId}/scenes`}>Production Briefs</a>
+        <a className="secondary-button" href={`/projects/${projectId}/visual-plan?plan=${plan.id}`}>← Visual Plan</a>
+        <a className="secondary-button" href={`/projects/${projectId}/scenes?plan=${plan.id}`}>Production Briefs</a>
       </div>
 
       <section className="production-layout">
@@ -633,5 +639,6 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         </section>
       </section>
     </main>
+    </div>
   );
 }

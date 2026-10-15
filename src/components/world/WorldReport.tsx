@@ -15,32 +15,6 @@ const FIELDS = [
   ["immutable_continuity", "Things That Must Not Change"],
 ] as const;
 
-const shellStyle: React.CSSProperties = {
-  maxWidth: 1100,
-  margin: "0 auto",
-  padding: "32px 20px 56px",
-};
-
-const gridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-  gap: 16,
-  marginTop: 24,
-};
-
-const cardStyle: React.CSSProperties = {
-  border: "1px solid rgba(127,127,127,.25)",
-  borderRadius: 16,
-  padding: 20,
-  background: "rgba(127,127,127,.06)",
-  minWidth: 0,
-};
-
-const wideCardStyle: React.CSSProperties = {
-  ...cardStyle,
-  gridColumn: "1 / -1",
-};
-
 function pretty(value: unknown) {
   return typeof value === "string" ? value : JSON.stringify(value, null, 2);
 }
@@ -51,12 +25,12 @@ function labelKey(key: string) {
 
 function ValueView({ value }: { value: unknown }) {
   if (value === null || value === undefined || value === "") {
-    return <span style={{ opacity: 0.55 }}>Not specified</span>;
+    return <span style={{ opacity: 0.5, fontStyle: "italic", fontSize: "13px" }}>Not specified</span>;
   }
 
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
     return (
-      <div style={{ lineHeight: 1.65, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+      <div style={{ lineHeight: 1.6, whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: "14px" }}>
         {String(value)}
       </div>
     );
@@ -70,10 +44,13 @@ function ValueView({ value }: { value: unknown }) {
             <span
               key={index}
               style={{
-                border: "1px solid rgba(127,127,127,.3)",
-                borderRadius: 999,
-                padding: "6px 10px",
-                lineHeight: 1.2,
+                border: "1px solid var(--border-subtle)",
+                background: "var(--bg-surface-0)",
+                color: "var(--text-main)",
+                borderRadius: "6px",
+                padding: "4px 10px",
+                fontSize: "12px",
+                lineHeight: 1.3,
                 overflowWrap: "anywhere",
               }}
             >
@@ -90,7 +67,7 @@ function ValueView({ value }: { value: unknown }) {
           <div
             key={index}
             style={{
-              borderLeft: "2px solid rgba(127,127,127,.35)",
+              borderLeft: "2px solid var(--accent-gold)",
               paddingLeft: 12,
             }}
           >
@@ -103,17 +80,18 @@ function ValueView({ value }: { value: unknown }) {
 
   if (typeof value === "object") {
     return (
-      <div style={{ display: "grid", gap: 14 }}>
+      <div style={{ display: "grid", gap: 12 }}>
         {Object.entries(value as Record<string, unknown>).map(([key, child]) => (
           <div key={key}>
             <div
               style={{
-                fontSize: 12,
+                fontFamily: "var(--font-mono)",
+                fontSize: 10,
                 fontWeight: 700,
-                letterSpacing: ".08em",
+                letterSpacing: "0",
                 textTransform: "uppercase",
-                opacity: 0.6,
-                marginBottom: 5,
+                color: "var(--accent-gold)",
+                marginBottom: 4,
               }}
             >
               {labelKey(key)}
@@ -178,51 +156,46 @@ export default function WorldReport({
   const confirmed = Boolean(report.confirmed_at);
 
   return (
-    <article style={shellStyle}>
-      <header>
-        <div
-          style={{
-            fontSize: 12,
-            fontWeight: 800,
-            letterSpacing: ".14em",
-            textTransform: "uppercase",
-            opacity: 0.6,
-          }}
-        >
-          BeatVision / World
+    <article className="world-report-card">
+      <div className="world-report-header">
+        <div>
+          <div className="eyebrow">02 / VISUAL WORLD REPORT</div>
+          <h1 style={{ fontSize: "32px", color: "#ffffff", margin: "4px 0 8px" }}>Visual Continuity Foundation</h1>
+          <p style={{ maxWidth: 760, lineHeight: 1.6, color: "var(--text-muted)", fontSize: "14px" }}>
+            The visual continuity foundation for your scenes. Review the world as structured creative direction before locking it.
+          </p>
         </div>
-        <h1 style={{ marginBottom: 8 }}>Visual World Report</h1>
-        <p style={{ maxWidth: 760, lineHeight: 1.6, opacity: 0.75 }}>
-          The visual continuity foundation for your scenes. Review the world as structured creative direction before locking it.
-        </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
-          <span style={{ border: "1px solid rgba(127,127,127,.3)", borderRadius: 999, padding: "6px 10px", fontSize: 12 }}>
-            {confirmed ? "LOCKED" : completed ? "READY FOR REVIEW" : report.status.toUpperCase()}
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <span className={`status-badge ${confirmed ? "status-approved" : "status-draft"}`}>
+            {confirmed ? "WORLD LOCKED" : completed ? "READY FOR REVIEW" : report.status.toUpperCase()}
           </span>
           {report.provider && (
-            <span style={{ border: "1px solid rgba(127,127,127,.3)", borderRadius: 999, padding: "6px 10px", fontSize: 12 }}>
+            <span className="status-badge" style={{ border: "1px solid var(--border-subtle)", color: "var(--text-muted)" }}>
               {report.provider}
             </span>
           )}
         </div>
-      </header>
+      </div>
 
-      <div style={gridStyle}>
+      <div className="world-field-grid">
         {FIELDS.map(([key, title], index) => {
-          const wide = index === 1 || index === 2 || index === 9 || index === 10;
           return (
-            <section key={key} style={wide ? wideCardStyle : cardStyle}>
+            <section key={key} className="world-field-box">
               <div
                 style={{
                   display: "flex",
-                  alignItems: "baseline",
+                  alignItems: "center",
                   justifyContent: "space-between",
                   gap: 12,
-                  marginBottom: 14,
+                  marginBottom: 12,
+                  paddingBottom: 8,
+                  borderBottom: "1px solid var(--border-subtle)",
                 }}
               >
-                <h2 style={{ margin: 0, fontSize: 18 }}>{title}</h2>
-                <span style={{ fontSize: 11, opacity: 0.45 }}>{String(index + 1).padStart(2, "0")}</span>
+                <strong>{title}</strong>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-dim)" }}>
+                  {String(index + 1).padStart(2, "0")}
+                </span>
               </div>
 
               {editing ? (
@@ -236,11 +209,13 @@ export default function WorldReport({
                     minHeight: 120,
                     boxSizing: "border-box",
                     resize: "vertical",
-                    borderRadius: 10,
-                    border: "1px solid rgba(127,127,127,.35)",
+                    borderRadius: 6,
+                    border: "1px solid var(--border-medium)",
                     padding: 12,
-                    background: "transparent",
-                    font: "inherit",
+                    background: "var(--bg-surface-1)",
+                    color: "var(--text-main)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "13px",
                     lineHeight: 1.5,
                   }}
                 />
@@ -252,40 +227,58 @@ export default function WorldReport({
         })}
       </div>
 
-      <footer style={{ marginTop: 24 }}>
+      <footer style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid var(--border-subtle)" }}>
         {confirmed ? (
           editing ? (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              <button disabled={saving} onClick={() => void saveEdits()}>
-                {saving ? "Creating Revision…" : "Save as New Revision"}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              <button className="primary-button" disabled={saving} onClick={() => void saveEdits()}>
+                {saving ? "Saving New Revision…" : "Save as New Revision →"}
               </button>
-              <button disabled={saving} onClick={() => setEditing(false)}>
+              <button className="secondary-button" disabled={saving} onClick={() => setEditing(false)}>
                 Cancel
               </button>
             </div>
           ) : (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-              <p role="status" style={{ margin: 0, padding: 16, borderRadius: 12, border: "1px solid rgba(127,127,127,.25)", flex: "1 1 320px" }}>
-                World confirmed. Revision {report.revision_number} is immutable.
-              </p>
-              <button onClick={() => setEditing(true)}>Create Revision</button>
-              <button onClick={onContinue}>Continue to Style</button>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center" }}>
+              <div
+                style={{
+                  background: "var(--bg-surface-0)",
+                  border: "1px solid var(--border-subtle)",
+                  padding: "12px 18px",
+                  borderRadius: "8px",
+                  flex: "1 1 320px",
+                  fontSize: "13px",
+                  color: "var(--color-success)",
+                }}
+              >
+                ✓ World confirmed. Revision {report.revision_number} is locked and immutable.
+              </div>
+              <button className="secondary-button" onClick={() => setEditing(true)}>
+                Create Revision
+              </button>
+              <button className="primary-button" onClick={onContinue}>
+                Continue to Style Studio →
+              </button>
             </div>
           )
         ) : completed ? (
           editing ? (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              <button disabled={saving} onClick={() => void saveEdits()}>
-                {saving ? "Saving…" : "Save World Changes"}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              <button className="primary-button" disabled={saving} onClick={() => void saveEdits()}>
+                {saving ? "Saving Edits…" : "Save World Changes →"}
               </button>
-              <button disabled={saving} onClick={() => setEditing(false)}>
+              <button className="secondary-button" disabled={saving} onClick={() => setEditing(false)}>
                 Cancel
               </button>
             </div>
           ) : (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              <button onClick={() => setEditing(true)}>Edit World</button>
-              <button onClick={onConfirm}>Yes, that's my world.</button>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+              <button className="secondary-button" onClick={() => setEditing(true)}>
+                Edit World Directions
+              </button>
+              <button className="primary-button large" onClick={onConfirm}>
+                Yes, that's my world ✓
+              </button>
             </div>
           )
         ) : null}

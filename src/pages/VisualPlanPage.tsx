@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useVisualPlan } from "../hooks/useVisualPlan";
 import type { VisualPlanScene } from "../types/visualPlan";
+import StudioHeader from "../components/navigation/StudioHeader";
 
 function formatTime(seconds: number) {
   const total = Math.max(0, Math.floor(seconds));
@@ -74,7 +75,7 @@ function SceneEditor({ scene, working, onSave }: {
 export default function VisualPlanPage({ projectId }: { projectId: string }) {
   const { world, styleBible, song, plan, planHistory, scenes, loading, working, error, createPlan, revisePlan, saveScene, approvePlan } = useVisualPlan(projectId);
 
-  if (loading) return <main><p>Loading Visual Plan…</p></main>;
+  if (loading) return <div className="app-shell"><StudioHeader projectId={projectId} activeStage="visual-plan" /><main className="dashboard"><p>Loading Visual Plan…</p></main></div>;
 
   const prerequisitesReady =
     Boolean(world?.status === "completed" && world.confirmed_at) &&
@@ -83,7 +84,9 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
 
   if (!prerequisitesReady) {
     return (
-      <main>
+      <div className="app-shell">
+      <StudioHeader projectId={projectId} activeStage="visual-plan" />
+      <main className="dashboard">
         <h1>Visual Plan</h1>
         <p>Phase 4 begins only after the current Visual World Report is confirmed and the Style Bible is locked.</p>
         {error && <p role="alert">{error}</p>}
@@ -94,22 +97,27 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
         </ul>
         <a href={`/projects/${projectId}/style`}>Return to Style Bible</a>
       </main>
+      </div>
     );
   }
 
   return (
-    <main>
-      <header>
+    <div className="app-shell">
+    <StudioHeader projectId={projectId} projectTitle={plan?.title} planId={plan?.id} activeStage="visual-plan" />
+    <main className="dashboard">
+      <header className="style-header">
+        <div>
         <span className="eyebrow">PHASE 4 / VISUAL PLAN</span>
-        <h1>Direct the song.</h1>
+        <h1>Direct the Visual Plan</h1>
         <p>Translate the locked World and Style Bible into a scene-by-scene production plan.</p>
+        </div>
       </header>
 
       {planHistory.length > 1 && <nav aria-label="Plan revisions">{planHistory.map(saved => <a key={saved.id} className="secondary-button" href={`/projects/${projectId}/visual-plan?plan=${saved.id}`}>Revision {saved.revision_number} · {saved.status}</a>)}</nav>}
       {error && <div role="alert"><p>{error}</p><a href={`/projects/${projectId}/style`}>Return to Style Bible</a></div>}
 
       {!plan ? (
-        <section>
+        <section className="create-card">
           <h2>Build Visual Plan</h2>
           <p>{song?.analysis?.sections?.length ?? 0} analyzed song sections are available as the initial timing structure.</p>
           <button className="primary-button" disabled={working} onClick={() => void createPlan().catch(() => undefined)}>
@@ -118,7 +126,7 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
         </section>
       ) : (
         <>
-          <section>
+          <section className="style-section">
             <div>
               <span className="eyebrow">PLAN STATUS</span>
               <h2>{plan.title} · Revision {plan.revision_number ?? 1}</h2>
@@ -149,5 +157,6 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
         </>
       )}
     </main>
+    </div>
   );
 }

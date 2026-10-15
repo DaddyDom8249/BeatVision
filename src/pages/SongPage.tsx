@@ -5,8 +5,11 @@ import { useProject } from "../hooks/useProject";
 import { useSong } from "../hooks/useSong";
 import { analyzeAudioLocally } from "../lib/musicAnalysis";
 import { formatFailure } from "../lib/errorDetails";
+import StudioHeader from "../components/navigation/StudioHeader";
 
-interface Props { projectId: string; }
+interface Props {
+  projectId: string;
+}
 
 export default function SongPage({ projectId }: Props) {
   const { project, loading: projectLoading, error: projectError } = useProject(projectId);
@@ -23,14 +26,21 @@ export default function SongPage({ projectId }: Props) {
 
   useEffect(() => {
     if (!song) return;
-    setTitle(song.title); setArtist(song.artist);
-    setLyrics(song.lyrics ?? ""); setCreativeDirection(song.creative_direction ?? "");
+    setTitle(song.title);
+    setArtist(song.artist);
+    setLyrics(song.lyrics ?? "");
+    setCreativeDirection(song.creative_direction ?? "");
     setNotes(song.notes ?? "");
   }, [song]);
 
   async function analyzeAudio() {
-    if (!song?.audio_url) { setError("Save an audio track before analyzing it."); return; }
-    setError(null); setSaved(false); setSaving(true);
+    if (!song?.audio_url) {
+      setError("Save an audio track before analyzing it.");
+      return;
+    }
+    setError(null);
+    setSaved(false);
+    setSaving(true);
     let local: Awaited<ReturnType<typeof analyzeAudioLocally>> | null = null;
     let localFailure: Error | null = null;
     try {
@@ -41,9 +51,6 @@ export default function SongPage({ projectId }: Props) {
       const markAnalyzing = await persistAnalysis('analyzing');
       if (markAnalyzing.error) throw new Error(markAnalyzing.error.message);
 
-      // Browser DSP is valuable, but it must not be the single point of failure.
-      // The server transcription path can still complete analysis on mobile
-      // browsers that cannot decode the uploaded MP3 reliably.
       try {
         local = await analyzeAudioLocally(song.audio_url);
         const localUpdate = await persistAnalysis('analyzing', local);
@@ -84,7 +91,9 @@ export default function SongPage({ projectId }: Props) {
       if (!local) await supabase.rpc('save_local_song_analysis', {p_project_id:projectId,p_song_id:song.id,p_audio_revision:song.audio_revision,p_status:'failed',p_analysis:null});
       setError(formatFailure("Song analysis", e, { projectId, songId: song.id }));
       await reload();
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   function continueToWorld() {
@@ -94,7 +103,9 @@ export default function SongPage({ projectId }: Props) {
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (saving) return;
-    setSaving(true); setSaved(false); setError(null);
+    setSaving(true);
+    setSaved(false);
+    setError(null);
     try {
       let { data: auth } = await supabase.auth.getUser();
       if (!auth.user) {
@@ -106,9 +117,6 @@ export default function SongPage({ projectId }: Props) {
 
       let audioPath = song?.audio_path ?? null;
       if (audio) {
-        // Do not require browser-side audio metadata. Android browsers can reject
-        // valid MP3 metadata even when the uploaded object is valid. Server-side
-        // analysis is authoritative for duration and transcription.
         const extension = audio.name.includes(".") ? audio.name.split(".").pop() : "bin";
         audioPath = `${auth.user.id}/${projectId}/${crypto.randomUUID()}.${extension}`;
         const upload = await supabase.storage.from("songs").upload(audioPath, audio, { upsert: false, contentType: audio.type || undefined });
@@ -117,12 +125,13 @@ export default function SongPage({ projectId }: Props) {
       }
 
       const payload: Record<string, unknown> = {
-        project_id: projectId, title: title.trim(), artist: artist.trim(),
+        project_id: projectId,
+        title: title.trim(),
+        artist: artist.trim(),
         lyrics: lyrics.trim() || null,
-        creative_direction: creativeDirection.trim() || null, notes: notes.trim() || null
+        creative_direction: creativeDirection.trim() || null,
+        notes: notes.trim() || null
       };
-      // The DB invalidates analysis on UPDATE OF audio_path. Do not send the
-      // existing path on an ordinary metadata save or completed analysis resets.
       if (audio) payload.audio_path = audioPath;
       const result = song
         ? await supabase.from("songs").update(payload).eq("id", song.id).select("id").single()
@@ -138,52 +147,208 @@ export default function SongPage({ projectId }: Props) {
       setSaved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save song failed.");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
-  if (projectLoading || songLoading) return <main><p>Loading project…</p></main>;
-  if (projectError || songError) return <main><p role="alert">{projectError ?? songError}</p></main>;
-  if (!project) return <main><p role="alert">Project not found.</p></main>;
+  if (projectLoading || songLoading) {
+    return (
+      <div className="app-shell">
+        <StudioHeader projectId={projectId} activeStage="song" />
+        <main className="dashboard"><p>Loading project song intake…</p></main>
+      </div>
+    );
+  }
+
+  if (projectError || songError || !project) {
+    return (
+      <div className="app-shell">
+        <StudioHeader projectId={projectId} activeStage="song" />
+        <main className="dashboard"><p className="form-error" role="alert">{projectError ?? songError ?? "Project not found."}</p></main>
+      </div>
+    );
+  }
 
   const analysis = song?.analysis;
   const durationSeconds = analysis ? Number(analysis.duration_seconds) : 0;
   const hasValidAnalysisDuration = Number.isFinite(durationSeconds) && durationSeconds > 0;
 
-  return <main className="app-shell">
-    <div className="dashboard">
-      <button className="brand" onClick={() => { window.location.href = "/"; }}>BEAT<span>VISION</span></button>
-      <section className="create-card">
-        <div className="eyebrow">01 / SONG</div>
-        <h1>Start with the song.</h1>
-        <p>The track is the source material. Add enough intent for BeatVision to reveal the world without taking authorship away from you.</p>
-        <form onSubmit={submit}>
-          <label>Song title <input required value={title} onChange={e => { setTitle(e.target.value); setSaved(false); }} placeholder="Song title" /></label>
-          <label>Artist <input required value={artist} onChange={e => { setArtist(e.target.value); setSaved(false); }} placeholder="Artist name" /></label>
-          <label>Audio upload <input accept="audio/*" type="file" onChange={e => { setAudio(e.target.files?.[0] ?? null); setSaved(false); }} /></label>
-          {song?.audio_url && <><audio controls src={song.audio_url} /><button type="button" onClick={() => void analyzeAudio()} disabled={saving || song.analysis_status === "analyzing"}>{saving || song.analysis_status === "analyzing" ? "Analyzing music…" : song.analysis_status === "completed" ? "Re-analyze" : "Analyze music"}</button></>}
-          <label>Lyrics <textarea rows={8} value={lyrics} onChange={e => { setLyrics(e.target.value); setSaved(false); }} /></label>
-          <label>What are you trying to make people feel?<textarea rows={5} value={creativeDirection} onChange={e => { setCreativeDirection(e.target.value); setSaved(false); }} placeholder="Not a prompt. Your intent." /></label>
-          <label>Notes<textarea rows={4} value={notes} onChange={e => { setNotes(e.target.value); setSaved(false); }} /></label>
-          <button className="primary-button large" disabled={saving}>{saving ? "Saving…" : saved ? "Saved ✓" : "Save song →"}</button>
-        </form>
-        {(saved || song?.analysis_status === "completed") && (
-          <section aria-label="Next step" className="create-card">
-            {saved && <p role="status"><strong>Song saved successfully.</strong></p>}
-            {song?.analysis_status === "completed" ? (
-              <>
-                <p>Next step: reveal the visual world for this song.</p>
-                <button type="button" className="primary-button large" onClick={continueToWorld}>
-                  Continue to World →
+  return (
+    <div className="app-shell">
+      <StudioHeader
+        projectId={projectId}
+        projectTitle={project.title}
+        activeStage="song"
+        statusBadge={song?.analysis_status === "completed" ? "ANALYZED" : "DRAFT"}
+      />
+
+      <main className="dashboard" style={{ maxWidth: "1000px" }}>
+        <section className="create-card">
+          <div className="eyebrow">01 / SONG INTAKE</div>
+          <h1>Song Intake & Musical Direction</h1>
+          <p>
+            The audio track is the primary source material. Provide song details and artistic intent for BeatVision to analyze before World Reveal.
+          </p>
+
+          <form onSubmit={submit}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
+              <label>
+                Song title
+                <input
+                  required
+                  value={title}
+                  onChange={(e) => { setTitle(e.target.value); setSaved(false); }}
+                  placeholder="Song title"
+                />
+              </label>
+              <label>
+                Artist
+                <input
+                  required
+                  value={artist}
+                  onChange={(e) => { setArtist(e.target.value); setSaved(false); }}
+                  placeholder="Artist name"
+                />
+              </label>
+            </div>
+
+            <label>
+              Audio Upload (.mp3, .wav, .m4a)
+              <input
+                accept="audio/*"
+                type="file"
+                onChange={(e) => { setAudio(e.target.files?.[0] ?? null); setSaved(false); }}
+              />
+            </label>
+
+            {song?.audio_url && (
+              <div className="song-player-card" style={{ background: "var(--bg-surface-0)", border: "1px solid var(--border-subtle)", padding: "16px", borderRadius: "8px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                <span className="panel-label" style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--accent-gold)" }}>AUDIO TRACK PREVIEW</span>
+                <audio controls src={song.audio_url} style={{ width: "100%" }} />
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => void analyzeAudio()}
+                  disabled={saving || song.analysis_status === "analyzing"}
+                  style={{ alignSelf: "flex-start" }}
+                >
+                  {saving || song.analysis_status === "analyzing"
+                    ? "Analyzing Music Signal…"
+                    : song.analysis_status === "completed"
+                    ? "Re-Analyze Music"
+                    : "Analyze Music Signal"}
                 </button>
-              </>
-            ) : (
-              <p>Next step: click <strong>Analyze music</strong> above. BeatVision will analyze the song before World Reveal.</p>
+              </div>
             )}
-          </section>
-        )}
-        {song?.analysis_status === "completed" && analysis && <section><h2>Musical analysis</h2><p>{hasValidAnalysisDuration ? `Duration ${durationSeconds.toFixed(1)}s` : "Duration unavailable"}{analysis.bpm ? ` · BPM ${analysis.bpm}` : ""}{analysis.key ? ` · Key ${analysis.key}` : ""}{analysis.time_signature ? ` · Meter ${analysis.time_signature}` : ""}</p><p>{analysis.genre_tags?.join(", ") || "Genre unavailable"} · {analysis.mood_tags?.slice(0, 5).join(", ") || "Mood unavailable"}</p><p>{analysis.sections?.length ?? 0} structural segments · {analysis.instruments?.slice(0, 8).join(", ") || "Instrument data unavailable"}</p>{analysis.description && <p>{analysis.description}</p>}{analysis.transcript && <><h3>Transcript</h3><p>{analysis.transcript}</p></>}</section>}
-        {error && <p className="form-error" role="alert">{error}</p>}
-      </section>
+
+            <label>
+              Lyrics
+              <textarea
+                rows={6}
+                value={lyrics}
+                onChange={(e) => { setLyrics(e.target.value); setSaved(false); }}
+                placeholder="Song lyrics..."
+              />
+            </label>
+
+            <label>
+              Creative Intent & Emotional Goal
+              <textarea
+                rows={4}
+                value={creativeDirection}
+                onChange={(e) => { setCreativeDirection(e.target.value); setSaved(false); }}
+                placeholder="Describe what you want viewers to feel and experience visually."
+              />
+            </label>
+
+            <label>
+              Notes
+              <textarea
+                rows={3}
+                value={notes}
+                onChange={(e) => { setNotes(e.target.value); setSaved(false); }}
+                placeholder="Additional notes for production..."
+              />
+            </label>
+
+            <button className="primary-button large" disabled={saving}>
+              {saving ? "Saving Song…" : saved ? "Song Saved ✓" : "Save Song Details →"}
+            </button>
+          </form>
+
+          {(saved || song?.analysis_status === "completed") && (
+            <section aria-label="Next step" className="create-card" style={{ marginTop: "24px", background: "var(--bg-surface-0)" }}>
+              {saved && <p role="status" style={{ color: "var(--color-success)", fontWeight: 600 }}>Song details saved successfully.</p>}
+              {song?.analysis_status === "completed" ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <p>Musical signal analysis is complete. Ready to reveal the visual world for this song.</p>
+                  <button type="button" className="primary-button large" onClick={continueToWorld}>
+                    Continue to World Reveal →
+                  </button>
+                </div>
+              ) : (
+                <p>Click <strong>Analyze Music Signal</strong> above to allow BeatVision to analyze the track before World Reveal.</p>
+              )}
+            </section>
+          )}
+
+          {song?.analysis_status === "completed" && analysis && (
+            <section style={{ marginTop: "32px", borderTop: "1px solid var(--border-subtle)", paddingTop: "24px" }}>
+              <div className="eyebrow">MUSICAL SIGNAL ANALYSIS</div>
+              <h2 style={{ fontSize: "20px", color: "#ffffff", marginBottom: "16px" }}>Track Intelligence Breakdown</h2>
+
+              <div className="analysis-dashboard-grid">
+                <div className="analysis-metric-card">
+                  <span className="metric-label">Duration</span>
+                  <span className="metric-value">{hasValidAnalysisDuration ? `${durationSeconds.toFixed(1)}s` : "Unavailable"}</span>
+                </div>
+                <div className="analysis-metric-card">
+                  <span className="metric-label">BPM</span>
+                  <span className="metric-value">{analysis.bpm ? String(analysis.bpm) : "N/A"}</span>
+                </div>
+                <div className="analysis-metric-card">
+                  <span className="metric-label">Musical Key</span>
+                  <span className="metric-value">{analysis.key ?? "N/A"}</span>
+                </div>
+                <div className="analysis-metric-card">
+                  <span className="metric-label">Time Signature</span>
+                  <span className="metric-value">{analysis.time_signature || "Unavailable"}</span>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gap: "12px", marginTop: "16px" }}>
+                <div className="analysis-metric-card">
+                  <span className="metric-label">Genre & Mood Tags</span>
+                  <span className="metric-value" style={{ fontSize: "14px", fontWeight: 500 }}>
+                    {analysis.genre_tags?.join(", ") || "Genre N/A"} • {analysis.mood_tags?.slice(0, 5).join(", ") || "Mood N/A"}
+                  </span>
+                </div>
+                <div className="analysis-metric-card">
+                  <span className="metric-label">Structural Segments</span>
+                  <span className="metric-value" style={{ fontSize: "14px", fontWeight: 500 }}>
+                    {analysis.sections?.length ?? 0} structural regions detected • Instruments: {analysis.instruments?.slice(0, 6).join(", ") || "N/A"}
+                  </span>
+                </div>
+                {analysis.description && (
+                  <div className="analysis-metric-card">
+                    <span className="metric-label">AI Music Summary</span>
+                    <p style={{ fontSize: "13px", color: "var(--text-main)", lineHeight: "1.5" }}>{analysis.description}</p>
+                  </div>
+                )}
+                {analysis.transcript && (
+                  <div className="analysis-metric-card">
+                    <span className="metric-label">Vocal Transcript</span>
+                    <p style={{ fontSize: "13px", color: "var(--text-main)", lineHeight: "1.5" }}>{analysis.transcript}</p>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {error && <p className="form-error" role="alert" style={{ marginTop: "16px" }}>{error}</p>}
+        </section>
+      </main>
     </div>
-  </main>;
+  );
 }
