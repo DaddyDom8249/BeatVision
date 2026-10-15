@@ -1,16 +1,30 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Content-Type": "application/json",
-};
+// Authoritative app origins; wildcard CORS must not expose authenticated
+// responses to arbitrary browser origins. Server-to-server callers are unaffected.
+const ALLOWED_ORIGINS = new Set([
+  "https://beat-vision-theta.vercel.app",
+  "https://beat-vision-beat-vision.vercel.app",
+  "https://beat-vision-git-main-beat-vision.vercel.app",
+  "https://beat-vision-git-fix-style-description-genera-790bfa-beat-vision.vercel.app",
+  "https://beat-vision-f8nn-git-fix-style-description-g-a4cacb-beat-vision.vercel.app",
+]);
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const headers: Record<string,string> = {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Content-Type": "application/json",
+    "Cache-Control": "no-store",
+    "Vary": "Origin",
+  };
+  if (ALLOWED_ORIGINS.has(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  return headers;
+}
 
 function env(name: string) { return String(Deno.env.get(name) || "").trim(); }
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: cors });
-}
 
 // Auth failures must surface as 401, not fall through to the generic 500.
 class AuthError extends Error {
@@ -39,7 +53,10 @@ function adminClient() {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+    status, headers: corsHeaders(req),
+  });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
   try {
     if (req.method !== "POST") return json({ error: "POST required." }, 405);
     const userId = await getUser(req);

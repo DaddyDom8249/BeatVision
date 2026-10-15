@@ -147,7 +147,7 @@ test("missing Authorization header returns 401, not 500", async () => {
 
   assert.equal(response.status, 401);
   assert.equal((await response.json()).code, "UNAUTHENTICATED");
-  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "*");
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), null);
 });
 
 test("rejected session returns 401, not 500", async () => {
@@ -182,4 +182,21 @@ for (const analysis of [
  const {handler,db}=await bootFunction({analysis});const before=structuredClone(db.songs);
  const response=await call(handler,{projectId:PROJECT_ID});assert.equal(response.status,503);
  assert.match((await response.json()).error,/PROVIDER_COST_UNVERIFIED/);assert.deepEqual(db.songs,before);
+});
+
+test("song analysis preflight never reflects untrusted origins", async () => {
+  const { handler } = await bootFunction();
+  for (const origin of ["https://evil.example","null","https://beat-vision-theta.vercel.app.evil.example"]) {
+    const response = await handler(new Request(`${SUPABASE_URL}/functions/v1/beatvision-analyze-song`, {method: "OPTIONS", headers:{Origin: origin}}));
+    assert.equal(response.headers.get("Access-Control-Allow-Origin"), null);
+    assert.equal(response.headers.get("Vary"), "Origin");
+  }
+});
+
+test("song analysis CORS allows only the canonical production origin", async () => {
+  const { handler } = await bootFunction();
+  const good = "https://beat-vision-theta.vercel.app";
+  const response = await handler(new Request(`${SUPABASE_URL}/functions/v1/beatvision-analyze-song`, {method: "OPTIONS", headers:{Origin:good}}));
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), good);
+  assert.equal(response.headers.get("Access-Control-Allow-Methods"), "POST, OPTIONS");
 });

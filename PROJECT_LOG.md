@@ -1115,3 +1115,8 @@ GitHub main (9e6619f) diverged from deployed production/recovery (7b77f329): 105
 Wan 2.2 new job submission is disabled in deployed Edge (WAN_ELIGIBILITY_UNVERIFIED), but its Studio button was enabled and guaranteed a 503. Reconciliation UI now marks it unavailable, keeps existing ticket polling available, and preserves verified free LTX Generate Motion. No new provider calls, paid services, or database mutations. Backend v32 is unchanged.
 
 Verification: source branch CI, production user checks pending. Do not claim full music-video assembly without validated playable MP4 and owner-authenticated end-to-end evidence.
+
+
+## 2026-10-14 — Production-compatible Edge security (repair branch)
+
+Current source in GitHub main exactly matches Supabase beatvision-generation v32 and beatvision-analyze-song v19. Prior founder audit PR #90 is based on an old generation code line, so the fix was manually ported. Scheduler secret is SHA-256 fixed-length compared and a present but incorrect secret fails with 401; no fallback to bearer user scope. Song analysis CORS responses allow only named production origins and do not return wildcard. Preserve the existing hard-disable PROVIDER_COST_UNVERIFIED on Groq transcription. No provider request, service-role credential disclosure or creative asset edits. Verification pending CI and live version deploy.
