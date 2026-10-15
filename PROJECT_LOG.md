@@ -1115,3 +1115,14 @@ GitHub main (9e6619f) diverged from deployed production/recovery (7b77f329): 105
 Wan 2.2 new job submission is disabled in deployed Edge (WAN_ELIGIBILITY_UNVERIFIED), but its Studio button was enabled and guaranteed a 503. Reconciliation UI now marks it unavailable, keeps existing ticket polling available, and preserves verified free LTX Generate Motion. No new provider calls, paid services, or database mutations. Backend v32 is unchanged.
 
 Verification: source branch CI, production user checks pending. Do not claim full music-video assembly without validated playable MP4 and owner-authenticated end-to-end evidence.
+
+
+## 2026-10-15 — Existing-song save denied by column-level grants
+
+**Failure:** A signed-in creator's existing Song Details save can report `42501 permission denied for table songs`. Live production `public.songs` RLS is enabled with project-owner policies; table-wide INSERT/UPDATE privileges are intentionally revoked, and narrow column-level grants preserve ownership and server-only analysis fields. In particular, `authenticated` may INSERT but may not UPDATE `project_id`.
+
+**Reproduction:** The existing `SongPage.submit` sent `project_id` on both INSERT and UPDATE. In production, a read-only `EXPLAIN UPDATE public.songs SET project_id = project_id WHERE false` under `authenticated` failed with SQLSTATE 42501, while an equivalent EXPLAIN for editable `title` succeeded. This is a code/grant contract mismatch, not grounds for removing RLS or granting table-wide UPDATE.
+
+**Minimal repair (dedicated branch):** Omit `project_id` from existing-row UPDATE payload; include `project_id` only in new-row INSERT. Preserve existing owner check, RLS, immutable project association, and protected analysis column grants. Add runtime regressions to `scripts/test/song-audio-replacement.test.mjs` covering both cases. No SQL/schema grants or migration applied.
+
+**Evidence:** Executed the exact edited SongPage submit handler in an isolated JavaScript fixture: existing owner UPDATE, new owner INSERT, and cross-owner rejection passed (3/3). Production read-only permission checks above completed. Full repository npm suite, build, remote CI, authenticated browser song-save, and production patch deployment remain NOT VERIFIED. `main` and production domain were not changed. No provider calls, approvals, generation, or data writes.
