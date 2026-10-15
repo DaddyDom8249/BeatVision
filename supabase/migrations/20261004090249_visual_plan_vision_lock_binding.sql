@@ -390,4 +390,3 @@ $$;
 
 revoke all on function public.approve_visual_plan(uuid) from public;
 grant execute on function public.approve_visual_plan(uuid) to authenticated;
-

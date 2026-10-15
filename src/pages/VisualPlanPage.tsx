@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useVisualPlan } from "../hooks/useVisualPlan";
 import type { VisualPlanScene } from "../types/visualPlan";
 import StudioHeader from "../components/navigation/StudioHeader";
+import ArcaneStoryboard from "../components/storyboard/ArcaneStoryboard";
 
 function formatTime(seconds: number) {
   const total = Math.max(0, Math.floor(seconds));
@@ -31,7 +32,7 @@ function SceneEditor({ scene, working, onSave }: {
   }
 
   return (
-    <article className="visual-plan-scene">
+    <article className="visual-plan-scene" id={`scene-director-${scene.id}`} tabIndex={-1}>
       <header>
         <div>
           <span className="eyebrow">SCENE {String(scene.scene_number).padStart(2, "0")}</span>
@@ -141,6 +142,7 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
           </section>
 
           <section>
+            <ArcaneStoryboard projectId={projectId} planId={plan.id} scenes={scenes} />
             <h2>Timeline</h2>
             {scenes.map((scene) => (
               <SceneEditor key={scene.id} scene={scene} working={working || plan.status === "approved"} onSave={saveScene} />

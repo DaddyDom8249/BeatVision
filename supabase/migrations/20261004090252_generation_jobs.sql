@@ -297,4 +297,3 @@ using (
 );
 
 revoke insert, update, delete on public.generation_jobs from authenticated;
-

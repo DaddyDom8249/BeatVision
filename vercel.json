@@ -1,4 +1,5 @@
 {
+  "git": { "deploymentEnabled": { "feature/arcane-cinema-theme": false } },
   "rewrites": [
     {
       "source": "/(.*)",

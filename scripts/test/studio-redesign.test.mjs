@@ -40,6 +40,7 @@ async function fixture(t, { url = "https://fixture.test/projects/project-1/visua
   } } };
   const Header = compile("src/components/navigation/StudioHeader.tsx", {
     "../../lib/supabase/client": { supabase },
+    "./AppearanceSettings": { default: () => null },
   }, dom.window);
   const root = createRoot(dom.window.document.getElementById("root"));
   t.after(async () => {
@@ -116,6 +117,7 @@ for (const approved of [false, true]) {
     let revisions = 0;
     const plan = { id: "saved-plan", title: "Fixture plan", revision_number: 2, status: approved ? "approved" : "draft" };
     const Page = f.compile("src/pages/VisualPlanPage.tsx", {
+      "../components/storyboard/ArcaneStoryboard": { default: () => null },
       "../hooks/useVisualPlan": { useVisualPlan: () => ({
         world: { status: "completed", confirmed_at: "fixture" },
         styleBible: { status: "approved", approved_at: "fixture" },
@@ -142,6 +144,41 @@ for (const approved of [false, true]) {
     }
   });
 }
+
+test("AssetList opens full image inspection overlay on click", async (t) => {
+  const f = await fixture(t);
+  const AssetList = f.compile("src/components/style/AssetList.tsx", {});
+  const asset = {
+    id: "asset-1",
+    label: "Hero character reference",
+    signed_url: "https://fixture.test/hero.png",
+    storage_path: "user/proj/hero.png",
+    status: "draft",
+  };
+  await f.render(AssetList, { assets: [asset], onApprove: () => {}, working: false });
+  assert.equal(f.document.querySelector("dialog.asset-inspect-dialog"), null);
+  const inspectBtn = [...f.document.querySelectorAll("button")].find(b => b.textContent.includes("Inspect Full Image"));
+  await f.click(inspectBtn);
+  const dialog = f.document.querySelector("dialog.asset-inspect-dialog");
+  assert.ok(dialog);
+  assert.equal(dialog.querySelector("img").src, "https://fixture.test/hero.png");
+});
+
+test("DashboardPage stat item labels Recent Projects truthfully", async (t) => {
+  const f = await fixture(t);
+  const Page = f.compile("src/pages/DashboardPage.tsx", {
+    "../lib/supabase/client": { supabase: {
+      auth: { getUser: async () => ({ data: { user: { id: "user-1" } } }) },
+      from: () => ({ select: () => ({ eq: () => ({ order: () => ({ limit: async () => ({ data: [
+        { id: "p1", title: "Project 1", status: "draft", updated_at: "2026-10-15T00:00:00Z" }
+      ] }) }) }) }) }),
+    } },
+    "../lib/formatCreativeText": { getCreativeErrorMessage: () => "Error" },
+  });
+  await f.render(Page, { onNavigate: () => {} });
+  const statLabel = f.document.querySelector(".stat-item .stat-label");
+  assert.equal(statLabel?.textContent, "Recent Projects");
+});
 
 test("draft scene controls explicitly contrast against their background", () => {
   const css = readFileSync(new URL("../../src/styles.css", import.meta.url), "utf8");

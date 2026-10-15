@@ -1,5 +1,17 @@
 # BeatVision Project Log
 
+## 2026-10-15 — Optional Arcane Cinema appearance (feature branch only)
+
+**Objective:** Keep the existing studio (Classic) intact and let artists explicitly opt into a less crowded violet/cyan Arcane Cinema visual skin.
+
+**Baseline:** main f2e137584d18ed222ca702b89cd8430c3b06b506 (prior frontend redesign); AGENTS.md and project log inspected. Independent Style/Mood PR #106 and local song-analysis PR #107 are not included.
+
+**Implementation:** Added validated Classic/Arcane preference tokens, theme provider, appearance selector in the existing StudioHeader, startup preference restoration, local browser persistence, authenticated Supabase user_metadata preference synchronization, optional reduced motion, scoped CSS skin, and automated UI preference tests. Existing creative pages, providers, production controller, database/RLS/migrations and media approval logic untouched. No duplicate editor; Classic keeps all original CSS defaults.
+
+**Verification:** Initial Production CI failed 9 legacy fixture tests because their isolated StudioHeader compiler did not stub the new AppearanceSettings import. Added that exact missing fixture dependency without changing application behavior. On code commit `3c7a4d21b1df83ab07168efc9107bc587f065dad`, Production CI run `38690335117` completed successfully: 266/266 tests passed (exit 0), production audit passed (exit 0), TypeScript/Vite build passed (exit 0). Migration replay run `38690335130`, generation enqueue security run `38690335092` and legacy storage ownership run `38690335101` all passed. Vercel Git preview deployment `dpl_B1SsijBWrXQJLrXR7jXKHz6fxb8K` reported READY for the exact code SHA, not a production release. Authenticated browser, physical Android layout and real account sync remain UNVERIFIED. No paid calls, media generation, production deployment, creative asset approvals, or production database changes.
+
+**Next:** Run complete tests, production audit, TypeScript/Vite build and reviewed GitHub CI; inspect visual layouts on mobile and desktop before any release. PR remains unmerged.
+
 ## 2026-10-15 - Reconcile and independently verify the studio redesign
 
 **Target:** Finish the existing frontend redesign PR against current main without losing the recovered production workflows. The founder authorized the coordinator to personally merge after review and passing checks; Jules was instructed to preserve its work and stop writing.
@@ -1115,3 +1127,15 @@ GitHub main (9e6619f) diverged from deployed production/recovery (7b77f329): 105
 Wan 2.2 new job submission is disabled in deployed Edge (WAN_ELIGIBILITY_UNVERIFIED), but its Studio button was enabled and guaranteed a 503. Reconciliation UI now marks it unavailable, keeps existing ticket polling available, and preserves verified free LTX Generate Motion. No new provider calls, paid services, or database mutations. Backend v32 is unchanged.
 
 Verification: source branch CI, production user checks pending. Do not claim full music-video assembly without validated playable MP4 and owner-authenticated end-to-end evidence.
+
+## 2026-10-15 - Opt-in Arcane Cinema and preserved Classic theme
+
+TARGET: Implement the requested dual appearance system on dedicated `feature/arcane-cinema-theme`, based on verified GitHub main/checkout `f2e137584d18ed222ca702b89cd8430c3b06b506`. Read complete repository instructions/log and inspected related open styling/auth/navigation work; prior unmerged ink-theme/intake and audio-analysis repair are kept separate.
+
+RECONCILIATION: Final publish inspection discovered the existing same-purpose remote theme branch at `94f3c245011e0d53a7f3199f20ff7e71bb977f30` and its draft PR. Continue that history with a normal fast-forward, preserve its complete earlier log entry above, and reuse its ThemeProvider, arcane stylesheet and header settings entry paths. The initial five-test fixture is superseded by expanded store/UI regressions, including its original acceptance cases and legacy boolean-motion preference migration. There is one active theme engine, not parallel implementations. The prior preview/CI above refer only to that earlier source, not this candidate; no new deployment is authorized.
+
+CHANGE: Added pre-React appearance bootstrap, centralized store/provider, validated local fallback and serialized Supabase Auth display-metadata preference writes, in-place header Appearance dialog and Settings routes, two preview cards, and OS/custom reduced motion. Arcane-only tokens/style layer, self-hosted OFL blackletter, licensed Lucide icons and credited public-domain artwork leave the original Classic stylesheet byte-identical. Arcane storyboard reads actual approved saved imagery/times/status and focuses existing editors; no generation or approval operation is added. Fixed interrupted-save busy state and stale/failed preview handling with regressions. Existing auth/RLS/ownership, jobs, provider routing, scene editors/timing, production media, approved assets and database schema are unchanged. Feature-branch automatic Vercel deployment disabled to honor no-deploy instruction.
+
+EVIDENCE: Baseline `npm test` 261/261, `./node_modules/.bin/tsc -b`, `npm run build`, `npm run production-audit` all exit 0. Candidate `npm test` 289/289, nested integration suite 6/6, type check, separate-output and standard `npm run build`, production audit and diff check exit 0. No repository lint command exists. Existing large-bundle warning remains. Real local Chromium desktop/tablet/narrow mobile captures verify preference/motion/keyboard controls, Classic aligned comparisons and synthetic song/file/scene-draft preservation. Fixed the independently reported 320px Arcane wordmark/settings overlap using intrinsic-width wrapping; focused browser recheck and exact artifact references are maintained in `docs/arcane-cinema-verification.md`.
+
+STATUS: IMPLEMENTED and locally TESTED; not merged/deployed/production-verified. The 320px Arcane overlap is RESOLVED by real-browser rechecks, including one-line Sign in, long synthetic account email containment and edit/review focus below the wrapped header. No current finding remains within tested public/synthetic browser scope. Real account preference persistence, physical Android, authenticated provider pipeline and final MP4 remain NOT VERIFIED. No production credentials, paid service, generation request, migration or approved-data mutation used. Synthetic API fixtures are not live-user/provider evidence.

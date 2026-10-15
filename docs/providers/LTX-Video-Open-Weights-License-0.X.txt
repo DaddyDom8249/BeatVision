@@ -1,4 +1,4 @@
-LTX Video ("LTXV") 
+LTX Video ("LTXV")
 By Lightricks Ltd. ("Lightricks")
 LTXV Open Weights License 0.X
 License date: April 15, 2025
@@ -36,7 +36,7 @@ You may add your own copyright statement to your modifications and may provide a
 END OF TERMS AND CONDITIONS
 
 
-Attachment A 
+Attachment A
 Use Restrictions
 You agree not to use the Model or its Derivatives in any of the following ways:
 (a) In any way that violates any applicable national, federal, state, local or international law or regulation;
