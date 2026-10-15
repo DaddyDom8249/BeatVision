@@ -465,13 +465,19 @@ export function useStyleStudio(projectId: string) {
         throw new Error("The approved Style Bible's World is not confirmed; nothing changed.");
 
       // Optimistic guard: do not overwrite a World selected in another tab.
-      // Supabase RLS additionally restricts this write to its owner.
+      // Restore the matching confirmation timestamp with the pointer. Leaving
+      // it null makes the restored confirmed World fail create_vision_lock's
+      // project-level confirmation gate. Supabase RLS additionally restricts
+      // this write to its owner.
       const switched = await supabase.from("projects")
-        .update({ world_report_id: prior.data.id })
+        .update({
+          world_report_id: prior.data.id,
+          world_confirmed_at: prior.data.confirmed_at,
+        })
         .eq("id", projectId)
         .eq("owner_id", ownerId)
         .eq("world_report_id", lineageConflict.activeWorldId)
-        .select("id,world_report_id")
+        .select("id,world_report_id,world_confirmed_at")
         .maybeSingle();
       if (switched.error) throw switched.error;
       if (!switched.data) throw new Error("Project World changed elsewhere. Refresh and review it again.");

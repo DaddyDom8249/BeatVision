@@ -21,7 +21,7 @@ test("World reconciliation requires explicit creator confirmation and approved p
   assert.match(hook, /!prior\.data\.confirmed_at/);
 });
 test("World pointer update is owner scoped with optimistic concurrency", () => {
-  assert.match(hook, /\.update\(\{ world_report_id: prior\.data\.id \}\)/);
+  assert.match(hook, /\.update\(\{\s*world_report_id: prior\.data\.id,\s*world_confirmed_at: prior\.data\.confirmed_at,?\s*\}\)/);
   assert.match(hook, /\.eq\("owner_id", ownerId\)/);
   assert.match(hook, /\.eq\("world_report_id", lineageConflict\.activeWorldId\)/);
   assert.match(hook, /if \(!switched\.data\)/);

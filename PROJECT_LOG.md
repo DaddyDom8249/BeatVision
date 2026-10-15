@@ -1,5 +1,17 @@
 # BeatVision Project Log
 
+## 2026-10-15 — Autonomous subsystem audit: verified local repairs on repair branch
+
+**Baseline:** Checkout `f2e137584d18ed222ca702b89cd8430c3b06b506` (`main`) was clean. `npm install` exited 0; baseline `npm test` passed 261/261, nested integration tests 6/6, production audit passed, and `npm run build` passed. The existing Vite large-chunk warning remains. PR #108 is open and mergeable but its latest Production CI install failed to resolve `@supabase/auth-js@2.118.0`; the same dependency resolves locally, so that CI failure is recorded separately and not treated as a code regression. PR #108’s Arcane preference review finding remains relevant but its feature files are not in main.
+
+**Confirmed and repaired locally:**
+- Style World lineage restoration now writes the matching `world_confirmed_at` with the owner- and optimistic-concurrency-scoped World pointer, preventing a restored confirmed World from failing the project-level Vision Lock gate.
+- Creating a Visual Plan revision now selects the returned draft revision before reloading; approved parent plans remain immutable. Regression reproduces stale selection before repair and passes after.
+- Local DSP no longer creates a zero-length terminal section at the exact decoded duration. Song intake now separates `analyzing` from metadata `saving`, prevents concurrent save/analysis, and preserves unsaved creator fields during analysis reloads.
+- Generation scheduler drains queued and active jobs through separate bounded queries, preventing eight older active jobs from starving queued work. Existing submitted/processing recovery and no-resubmission behavior remain covered.
+
+**Verification:** Focused repair tests pass (24/24); full top-level suite passes 265/265; production audit and TypeScript/Vite build pass; `git diff --check` passes. No production data, migrations, approvals, providers, deployments, commits, or pushes were performed. Assembly/export specialist work was blocked by agent usage limits and remains NOT VERIFIED by this cycle.
+
 ## 2026-10-15 - Reconcile and independently verify the studio redesign
 
 **Target:** Finish the existing frontend redesign PR against current main without losing the recovered production workflows. The founder authorized the coordinator to personally merge after review and passing checks; Jules was instructed to preserve its work and stop writing.

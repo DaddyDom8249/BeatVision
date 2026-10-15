@@ -108,3 +108,20 @@ test('scheduler scans and recovers submitted jobs', async () => {
     assert.ok(f.state().selectedStatuses.includes('submitted'));
   } finally { await runtime.cleanup(); }
 });
+
+test('scheduler reserves dispatch capacity when eight older provider jobs are still active', async () => {
+  const active = Array.from({ length: 8 }, (_, index) => ({ id: `active-${index}`, job_type: 'scene_motion', status: 'processing', created_at: new Date(Date.now() - 60_000).toISOString(), updated_at: new Date().toISOString(), output: { upstream_job_id: `provider-${index}`, dispatch_started_at: new Date().toISOString() } }));
+  const queued = { id: 'queued-new-work', job_type: 'scene_image', status: 'queued', created_at: new Date().toISOString(), output: {} };
+  const selected = [];
+  const client = { rpc: async () => ({ data: 'test-queue-secret' }), from(table) { assert.equal(table, 'generation_jobs'); let statuses = []; return { select() { return this; }, eq(key, value) { if (key === 'status') statuses = [value]; return this; }, in(key, values) { if (key === 'status') statuses = values; return this; }, order() { return this; }, async limit() { selected.push(statuses); return { data: statuses.includes('queued') ? [queued] : active }; } }; } };
+  const runtime = await loadGeneration(client);
+  const originalRun = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ error: 'provider must not be called by fixture' }), { status: 503 });
+  try {
+    const response = await runtime.handler(new Request('https://test/function', { method: 'POST', headers: { 'X-BeatVision-Queue-Secret': 'test-queue-secret', 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'drain' }) }));
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.ok(result.results.some(item => item.id === queued.id));
+    assert.deepEqual(selected, [['queued'], ['submitted', 'processing']]);
+  } finally { globalThis.fetch = originalRun; await runtime.cleanup(); }
+});
