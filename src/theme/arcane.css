@@ -209,6 +209,6 @@
 }
 @media (max-width: 700px) {
   .appearance-menu > summary { min-height: 40px; padding: 7px 10px; }
-  .appearance-panel { right: -6px; }
+  .appearance-panel { position: fixed; top: 68px; left: 12px; right: 12px; width: auto; max-height: calc(100dvh - 80px); }
   :root[data-beatvision-theme="arcane"] .studio-topbar { backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
