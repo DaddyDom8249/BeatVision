@@ -482,7 +482,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       <div className="app-shell">
       <StudioHeader projectId={projectId} activeStage="production" />
       <main className="dashboard production-page">
-        <header className="style-header"><div><span className="eyebrow">06 / PRODUCTION</span><h1>Production Workspace</h1></div></header>
+        <header className="style-header"><div><span className="eyebrow">06 / PRODUCTION</span><h1>REVEALS IT!!</h1></div></header>
         <section className="style-empty-panel"><p className="form-error" role="alert">{error ?? "No approved production scenes found."}</p><a className="secondary-button" href={`/projects/${projectId}/scenes`}>Return to Production Brief</a></section>
       </main>
       </div>
@@ -496,7 +496,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       <header className="style-header">
         <div>
           <span className="eyebrow">06 / PRODUCTION WORKSPACE</span>
-          <h1>Shot Monitor &amp; Video Assembly</h1>
+          <h1>REVEALS IT!!</h1>
+          <h2 className="page-subtitle">Shot Monitor &amp; Video Assembly</h2>
           <p>Build the shots from the locked direction. {plan.title} is approved. Select a scene and review its production brief.</p>
         </div>
         <div className="style-status">PLAN LOCKED / {scenes.length} SCENES</div>

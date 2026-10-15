@@ -1,27 +1,37 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
 
+@font-face {
+  font-family: 'UnifrakturCook';
+  src: url('/fonts/UnifrakturCook-Bold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
 :root {
   --font-sans: 'Manrope', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'DM Mono', monospace;
+  --font-display: 'UnifrakturCook', Georgia, serif;
 
-  /* Deep High-Contrast Obsidian Theme */
-  --bg-app: #08080a;
-  --bg-surface-0: #0d0d12;
-  --bg-surface-1: #12121a;
-  --bg-surface-2: #181824;
-  --bg-surface-3: #202030;
-  --bg-glass: rgba(18, 18, 26, 0.75);
+  /* Ink-studio surfaces, chalk lettering and muted red accents. */
+  --bg-app: #090909;
+  --bg-surface-0: #101010;
+  --bg-surface-1: #171717;
+  --bg-surface-2: #202020;
+  --bg-surface-3: #2b2b2b;
+  --bg-glass: rgba(15, 15, 15, 0.96);
 
   /* Borders */
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-medium: rgba(255, 255, 255, 0.15);
-  --border-accent: rgba(226, 184, 92, 0.35);
+  --border-accent: rgba(226, 142, 153, 0.45);
 
-  /* Primary Accent: Studio Gold/Amber */
-  --accent-gold: #e2b85c;
-  --accent-gold-hover: #f0c973;
-  --accent-gold-dim: #997833;
-  --accent-gold-glow: rgba(226, 184, 92, 0.18);
+  --accent-ink: #e28e99;
+  /* Preserve existing component token references. */
+  --accent-gold: var(--accent-ink);
+  --accent-gold-hover: #f0a6af;
+  --accent-gold-dim: #ad626b;
+  --accent-gold-glow: rgba(226, 142, 153, 0.12);
 
   /* Status Colors */
   --color-success: #34d399;
@@ -34,16 +44,16 @@
   --bg-info-subtle: rgba(96, 165, 250, 0.12);
 
   /* Text Colors */
-  --text-main: #f3f4f6;
-  --text-muted: #9ca3af;
-  --text-dim: #929aaa;
-  --text-inverse: #08080a;
+  --text-main: #ededeb;
+  --text-muted: #b5b5b5;
+  --text-dim: #a3a3a3;
+  --text-inverse: #090909;
 
   /* Shadows */
   --shadow-sm: 0 2px 4px rgba(0,0,0,0.3);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.6);
-  --shadow-glow: 0 0 20px rgba(226, 184, 92, 0.15);
+  --shadow-glow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -63,6 +73,20 @@ body {
 button, input, textarea, select {
   font-family: inherit;
   color: inherit;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.page-subtitle {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 8px 0;
 }
 
 input, textarea, select {
@@ -126,9 +150,12 @@ button { cursor: pointer; border: none; background: none; }
   align-items: center;
   gap: 8px;
   color: var(--text-main);
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-weight: 700;
   letter-spacing: 0;
-  font-size: 15px;
+  font-size: 30px;
+  line-height: 1.15;
+  flex-shrink: 0;
   transition: opacity 0.15s ease;
 }
 
@@ -338,9 +365,7 @@ button { cursor: pointer; border: none; background: none; }
 
 .hero h1 em {
   font-style: normal;
-  background: linear-gradient(135deg, #fce09b 0%, #c9a66b 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--accent-ink);
 }
 
 .hero p {
@@ -366,15 +391,16 @@ button { cursor: pointer; border: none; background: none; }
 }
 
 .primary-button {
-  background: linear-gradient(135deg, #e5be6a 0%, #c9a66b 100%);
-  color: #08080a;
-  border: 1px solid var(--accent-gold);
-  box-shadow: 0 2px 10px rgba(201, 166, 107, 0.2);
+  background: var(--text-main);
+  color: var(--text-inverse);
+  border: 1px solid var(--text-main);
+  box-shadow: var(--shadow-sm);
 }
 
 .primary-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #f2cd79 0%, #d8b274 100%);
-  box-shadow: 0 4px 16px rgba(201, 166, 107, 0.35);
+  background: #ffffff;
+  border-color: var(--accent-ink);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
@@ -554,7 +580,7 @@ button { cursor: pointer; border: none; background: none; }
 
 .project-art {
   height: 140px;
-  background: linear-gradient(135deg, #1c1a14 0%, #101016 60%, #2a2216 100%);
+  background: var(--bg-surface-0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -563,10 +589,10 @@ button { cursor: pointer; border: none; background: none; }
 }
 
 .project-art span {
-  font-family: var(--font-mono);
-  letter-spacing: 0;
-  font-size: 20px;
+  font-family: var(--font-display);
+  font-size: 48px;
   font-weight: 700;
+  letter-spacing: 0;
   color: var(--accent-gold);
   opacity: 0.8;
 }
@@ -1250,6 +1276,7 @@ button { cursor: pointer; border: none; background: none; }
 
 @media (max-width: 700px) {
   .dashboard { padding: 28px 16px 60px; }
+  .auth-card, .create-card { padding: 24px 18px; }
   .style-stage-navigation a { width: 100%; text-align: center; }
   .visual-plan-scene, .production-detail, .production-provider-note { padding: 16px; }
   .visual-plan-scene header, .production-detail-head, .production-nav { flex-wrap: wrap; gap: 12px; }

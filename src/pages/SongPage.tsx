@@ -17,6 +17,7 @@ export default function SongPage({ projectId }: Props) {
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [lyrics, setLyrics] = useState("");
+  const [styleMood, setStyleMood] = useState("");
   const [creativeDirection, setCreativeDirection] = useState("");
   const [notes, setNotes] = useState("");
   const [audio, setAudio] = useState<File | null>(null);
@@ -29,6 +30,7 @@ export default function SongPage({ projectId }: Props) {
     setTitle(song.title);
     setArtist(song.artist);
     setLyrics(song.lyrics ?? "");
+    setStyleMood(song.style_mood ?? "");
     setCreativeDirection(song.creative_direction ?? "");
     setNotes(song.notes ?? "");
   }, [song]);
@@ -129,6 +131,7 @@ export default function SongPage({ projectId }: Props) {
         title: title.trim(),
         artist: artist.trim(),
         lyrics: lyrics.trim() || null,
+        style_mood: styleMood.trim() || null,
         creative_direction: creativeDirection.trim() || null,
         notes: notes.trim() || null
       };
@@ -186,15 +189,12 @@ export default function SongPage({ projectId }: Props) {
       <main className="dashboard" style={{ maxWidth: "1000px" }}>
         <section className="create-card">
           <div className="eyebrow">01 / SONG INTAKE</div>
-          <h1>Song Intake & Musical Direction</h1>
-          <p>
-            The audio track is the primary source material. Provide song details and artistic intent for BeatVision to analyze before World Reveal.
-          </p>
+          <h1>EVERY SONG.</h1>
 
           <form onSubmit={submit}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))", gap: "16px" }}>
               <label>
-                Song title
+                Title
                 <input
                   required
                   value={title}
@@ -214,7 +214,7 @@ export default function SongPage({ projectId }: Props) {
             </div>
 
             <label>
-              Audio Upload (.mp3, .wav, .m4a)
+              Song (optional)
               <input
                 accept="audio/*"
                 type="file"
@@ -253,7 +253,17 @@ export default function SongPage({ projectId }: Props) {
             </label>
 
             <label>
-              Creative Intent & Emotional Goal
+              Style / Mood
+              <textarea
+                rows={3}
+                value={styleMood}
+                onChange={(e) => { setStyleMood(e.target.value); setSaved(false); }}
+                placeholder="Black-and-white realism, late-night city, reflective and hopeful."
+              />
+            </label>
+
+            <label>
+              Creative Direction
               <textarea
                 rows={4}
                 value={creativeDirection}
@@ -263,7 +273,7 @@ export default function SongPage({ projectId }: Props) {
             </label>
 
             <label>
-              Notes
+              Extra Notes
               <textarea
                 rows={3}
                 value={notes}
@@ -278,7 +288,7 @@ export default function SongPage({ projectId }: Props) {
           </form>
 
           {(saved || song?.analysis_status === "completed") && (
-            <section aria-label="Next step" className="create-card" style={{ marginTop: "24px", background: "var(--bg-surface-0)" }}>
+            <section aria-label="Next step" style={{ marginTop: "24px", borderTop: "1px solid var(--border-subtle)", paddingTop: "20px" }}>
               {saved && <p role="status" style={{ color: "var(--color-success)", fontWeight: 600 }}>Song details saved successfully.</p>}
               {song?.analysis_status === "completed" ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -287,8 +297,10 @@ export default function SongPage({ projectId }: Props) {
                     Continue to World Reveal →
                   </button>
                 </div>
-              ) : (
+              ) : song?.audio_path ? (
                 <p>Click <strong>Analyze Music Signal</strong> above to allow BeatVision to analyze the track before World Reveal.</p>
+              ) : (
+                <p>No audio uploaded. Creative draft saved.</p>
               )}
             </section>
           )}

@@ -66,14 +66,7 @@ export default function StudioHeader({
     <header className="studio-topbar">
       <div className="studio-topbar-left">
         <button className="studio-brand" onClick={() => handleNav("/")} type="button">
-          <span className="brand-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="12 2 2 7 12 12 22 7 12 2" />
-              <polyline points="2 17 12 22 22 17" />
-              <polyline points="2 12 12 17 22 12" />
-            </svg>
-          </span>
-          <span className="brand-text">BEAT<span className="brand-accent">VISION</span></span>
+          <span className="brand-text">Beat<span className="brand-accent">Vision</span></span>
         </button>
 
         {projectTitle && (

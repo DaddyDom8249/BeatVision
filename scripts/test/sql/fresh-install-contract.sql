@@ -4,9 +4,18 @@ set role authenticated;
 set request.jwt.claim.sub='00000000-0000-0000-0000-000000000001';
 insert into public.projects(id,owner_id,title,status,stage)
 values ('00000000-0000-0000-0000-000000000100','00000000-0000-0000-0000-000000000001','Fresh install fixture','Draft','song');
-insert into public.songs(project_id,title,artist,audio_path)
-values ('00000000-0000-0000-0000-000000000100','Fixture song','Fixture artist','00000000-0000-0000-0000-000000000001/song.mp3');
-select id,project_id,title,artist,audio_path,audio_revision,lyrics,creative_direction,notes,analysis_status,analysis,analyzed_at,created_at,updated_at from public.songs;
+insert into public.songs(project_id,title,artist,lyrics,style_mood,creative_direction,notes)
+values ('00000000-0000-0000-0000-000000000100','Fixture song','Fixture artist','Fixture lyrics','Ink noir, hopeful','Existing direction','Existing notes');
+update public.songs set style_mood='Black-and-white realism, resilient'
+where project_id='00000000-0000-0000-0000-000000000100';
+select id,project_id,title,artist,audio_path,audio_revision,lyrics,style_mood,creative_direction,notes,analysis_status,analysis,analyzed_at,created_at,updated_at from public.songs;
+do $test$ begin
+  if not exists(select from public.songs where style_mood='Black-and-white realism, resilient'
+    and creative_direction='Existing direction' and notes='Existing notes' and audio_path is null
+    and analysis_status='not_started') then raise exception 'TEXT_ONLY_STYLE_MOOD_SAVE_FAILED'; end if;
+end $test$;
+update public.songs set audio_path='00000000-0000-0000-0000-000000000001/song.mp3'
+where project_id='00000000-0000-0000-0000-000000000100';
 -- Direct AI-analysis updates must fail for authenticated creators.
 -- Analysis is written only by a trusted server, never by browser role grants.
 do $test$ begin
@@ -86,6 +95,9 @@ end $test$;
 set request.jwt.claim.sub='00000000-0000-0000-0000-000000000002';
 do $test$ begin
   if exists(select from public.projects) or exists(select from public.songs) or exists(select from public.vision_locks) or exists(select from public.generation_jobs) then raise exception 'FRESH_INSTALL_CROSS_OWNER_READ'; end if;
+  update public.songs set style_mood='Unauthorized replacement'
+  where project_id='00000000-0000-0000-0000-000000000100';
+  if found then raise exception 'CROSS_OWNER_STYLE_MOOD_UPDATE_ALLOWED'; end if;
   begin
     insert into public.projects(owner_id,title,status,stage) values('00000000-0000-0000-0000-000000000001','Forbidden','Draft','song');
     raise exception 'FRESH_INSTALL_CROSS_OWNER_INSERT';

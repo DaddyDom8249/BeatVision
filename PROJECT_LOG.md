@@ -1,5 +1,21 @@
 # BeatVision Project Log
 
+## 2026-10-15 - Creator Style/Mood intake and ink-studio identity
+
+**Target:** Honor the founder's requested order: Title, Artist, Song (optional), Lyrics, Style/Mood, Creative Direction, Extra Notes. Apply the updated old-English tattoo-artist direction and the exact page headlines: BEATVISION, EVERY SONG., HAS A WORLD, BEATVISION, REVEALS IT!!.
+
+**Confirmed cause:** Song intake had no separate persisted Style/Mood field. Audio was already nullable, but successful text-only saves displayed instructions to use a nonexistent audio-analysis control. The existing gold studio theme did not match the newly requested identity.
+
+**Change:** Add nullable songs.style_mood with only the additional authenticated column INSERT/UPDATE grants; existing ownership policies and protected analysis privileges are unchanged. Load, edit, save and intentionally clear this creator input separately from lyrics, creative_direction and notes. Include a bounded artist-intent value in the World compiler input without changing analysis provenance, approval/revision logic, or the free-provider refusal. Text-only drafts save without storage or inference calls. Use ink-black neutral surfaces, chalk controls, muted red accents and a locally served SIL-OFL UnifrakturCook display font, with readable sans-serif controls. Retain stage labels, error states, approved-plan gates, selected-plan navigation and all production actions. World and timed production still require real audio/analysis; this change does not claim lyrics-only video generation.
+
+**Evidence:** Before implementation, new real-component regressions failed on the missing field and requested order. After implementation, the full local suite passed 278 tests with zero failures; production-audit and TypeScript/Vite build passed. Tests exercise real SongPage/useSong against a synthetic persisted database: no-audio insert/update/reload/clear, preservation of other creative inputs, save failure recovery and owner mismatch. PGlite runs the actual new migration twice, checks existing data preservation and column grants, and confirms anonymous and direct analysis writes remain denied. The fresh-install SQL contract additionally checks real replay owner isolation and no-audio persistence in CI. DOM tests verify all requested headlines, confirmed World state and retained production controls. CSSOM contrast and local font/license/binary checks pass. The existing bundle-size warning remains.
+
+**Status:** CONFIRMED at source/test level. No production schema/data, approvals, media, paid services or provider settings changed. Remote checks and rollout are recorded in the PR separately. The unrelated open Style Bible genre-template gallery is not duplicated or merged.
+
+**Not verified:** Browser-painted typography/layout at desktop/mobile sizes, physical Android, authenticated live save/reload, and actual World/media generation. Existing provider cost gates remain unavailable. The song-column migration must precede frontend rollout, followed by deployment of the updated World function; an unmigrated backend cannot serve the new explicit song SELECT.
+
+**Next:** Review the focused PR and exact-head CI. Obtain authorization before the production database rollout and merge, then verify authenticated live persistence and rendered mobile layout.
+
 ## 2026-10-15 - Reconcile and independently verify the studio redesign
 
 **Target:** Finish the existing frontend redesign PR against current main without losing the recovered production workflows. The founder authorized the coordinator to personally merge after review and passing checks; Jules was instructed to preserve its work and stop writing.

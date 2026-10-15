@@ -64,6 +64,7 @@ export interface Song {
   audio_revision: string;
   audio_url?: string | null;
   lyrics: string | null;
+  style_mood: string | null;
   creative_direction: string | null;
   notes: string | null;
   analysis_status: SongAnalysisStatus;
