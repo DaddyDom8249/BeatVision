@@ -125,7 +125,6 @@ export default function SongPage({ projectId }: Props) {
       }
 
       const payload: Record<string, unknown> = {
-        project_id: projectId,
         title: title.trim(),
         artist: artist.trim(),
         lyrics: lyrics.trim() || null,
@@ -135,7 +134,7 @@ export default function SongPage({ projectId }: Props) {
       if (audio) payload.audio_path = audioPath;
       const result = song
         ? await supabase.from("songs").update(payload).eq("id", song.id).select("id").single()
-        : await supabase.from("songs").insert(payload).select("id").single();
+        : await supabase.from("songs").insert({ project_id: projectId, ...payload }).select("id").single();
 
       if (result.error) {
         if (audioPath && audioPath !== song?.audio_path) await supabase.storage.from("songs").remove([audioPath]);
