@@ -1148,3 +1148,14 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 **Minimal proposed repair:** Build section starts only from zero and genuine nonendpoint change boundaries; use `decoded.duration` strictly as the final end marker. Add `scripts/test/music-analysis-sections.test.mjs` using the actual transpiled `analyzeAudioLocally` routine on synthetic local decoded data (silence, transitions, short clip); assert no gaps/overlaps, positive durations, accurate endpoint. No SQL, RLS, Edge Function, media object, or provider change.
 
 **Status:** Repair isolated to `repair/song-analysis-section-boundary-20261015`, NOT merged or deployed. CI and a real authenticated retry remain to be verified. The prior song-save permission fix remains live. Do not claim this resolves remote transcription eligibility.
+
+
+## 2026-10-15 — Song analysis section fix released (PR #110)
+
+**Authorization:** Creator explicitly approved release of PR #110 after its final CI gate completed.
+
+**Source and verification:** The repaired algorithm avoids mapping song duration as the start of a zero-length section; ownership, revision checks and `save_local_song_analysis` SQL validation were unchanged. PR #110 head `be4bb6fee694df8cbb3851f87c65c1b1f7c478bd` passed all four PR checks: Production CI `38774646673` (266/266 tests, production audit PASS, TypeScript/Vite build PASS), database migration replay `38774646342`, generation enqueue security `38774646416`, and legacy storage ownership security `38774645996`. PR #110 was merged into `main` as `eafb6529d6356fe4af05385c8981c334960182d3`; post-merge CI `38776584242` succeeded.
+
+**Deployment:** Created Vercel production deployment `dpl_GWVYyY2SYfc3HGNY1ueiHfQgKBv4` from GitHub `main` pinned to SHA `eafb6529d6356fe4af05385c8981c334960182d3`. TypeScript/Vite build succeeded, deployment reached READY, and an independent production-domain lookup confirmed `beat-vision-theta.vercel.app` resolves to that deployment and exact SHA. The pre-existing bundle-size warning remains.
+
+**Limits and next action:** No production song analysis was invoked by the agent. The affected song was last seen in `failed` state with audio path preserved. The creator must retry **Analyze Music Signal** while signed in; a successful real-user save of `songs.analysis` and subsequent flow remains UNVERIFIED. No data/approval changes, SQL migration, RLS edits, paid provider calls, or unrelated Arcane-theme PR merge were made for this fix.
