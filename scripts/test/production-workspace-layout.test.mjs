@@ -5,20 +5,30 @@ import { readFile, mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
 // Optional local browser regression: no cloud browser, credentials or providers.
 // Run: node --test scripts/test/production-workspace-layout.test.mjs
-const chromium = ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome']
-  .find(existsSync);
+// Prefer the runner-configured stable Chrome over a Chromium snapshot. A path
+// can also be a distribution launcher; existence alone is not proof of usability.
+let browserVersion = '';
+const chromium = [...new Set([process.env.CHROME_BIN, '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].filter(Boolean))]
+  .find(path => {
+    if (!existsSync(path)) return false;
+    const version = spawnSync(path, ['--version'], { encoding: 'utf8', timeout: 5_000 });
+    if (version.status !== 0 || !/(?:Google Chrome|Chromium) \d+\./.test(version.stdout)) return false;
+    browserVersion = version.stdout.trim();
+    return true;
+  });
 const rootDir = fileURLToPath(new URL('../../', import.meta.url));
 
 test('real workspace CSS compacts mobile scene navigation without changing desktop layout', {
   skip: chromium ? false : 'Local Chromium is not installed; browser layout is NOT VERIFIED.',
   timeout: 30_000,
 }, async t => {
+  t.diagnostic('Local browser: ' + chromium + ' (' + browserVersion + ')');
   const bundled = await build({
     stdin: {
       contents: `import React from 'react';
@@ -75,9 +85,9 @@ test('real workspace CSS compacts mobile scene navigation without changing deskt
   });
   const browserUrl = await new Promise((resolve, reject) => {
     let output = '';
-    const timer = setTimeout(() => reject(new Error('Local Chromium did not start within 10 seconds.')), 10_000);
+    const timer = setTimeout(() => reject(new Error('Local Chromium did not start within 10 seconds. ' + output.slice(-1_500))), 10_000);
     browser.once('error', error => { clearTimeout(timer); reject(error); });
-    browser.once('exit', () => { clearTimeout(timer); reject(new Error('Local Chromium exited before readiness.')); });
+    browser.once('exit', code => { clearTimeout(timer); reject(new Error('Local Chromium exited before readiness (' + code + '). ' + output.slice(-1_500))); });
     browser.stderr.on('data', chunk => {
       output = (output + chunk).slice(-16_384);
       const match = output.match(/DevTools listening on (ws:\/\/[^\s]+)/);
