@@ -1,5 +1,11 @@
 # BeatVision Project Log
 
+## 2026-10-16 — Release alignment and issue #76 verification
+
+**Frontend release:** Previous primary production URL `beat-vision-theta.vercel.app` served `eafb6529d6356fe4af05385c8981c334960182d3`, 15 commits behind audited source. Main `32a90f87c2ac58d8dd6df111b6908a83e3e3ac3e` passed GitHub Production CI. Manually created production deployment `dpl_9aJnoGy4yuEsvNq6eLmvv5Yfvtzv`, Vercel build completed (existing chunk-size warning), deployment READY; independently resolved the primary production domain to that deployment and exact SHA. Browser-signed-in pipeline and provider activity were not invoked; real end-to-end media completion remains UNVERIFIED.
+
+**Issue #76:** Main's prior `npm test` only matched top-level tests and omitted six nested tests. Scoped PR #115 at `0bb3fa5dbab1d85f8e1142e1f659ddd755005dc1` introduces recursive deterministic discovery and corrects the historical forensic report's misleading `npm test` claim. Its Production CI `38936445897` passed 290/290, zero failures/skips, including all six nested integration checks, audit/build. Generation enqueue security, legacy storage security, and isolated database migration replay also passed. PR #115 remains OPEN and unmerged as directed by issue #76; no production change from the issue itself.
+
 ## 2026-10-16 — Production P1: atomic audio-revision transcription completion (PR #114)
 
 **Authorization:** Owner authorized verified production repairs. Branch `repair/audio-revision-atomic-completion-20261016` was reviewed against `main` `2761952f799842b2fc69b1b5462546cba2b75766`.
