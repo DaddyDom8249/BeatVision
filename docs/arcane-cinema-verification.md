@@ -8,7 +8,7 @@
 - Reconciliation parent: existing remote theme work `94f3c245011e0d53a7f3199f20ff7e71bb977f30`, discovered at final publish check. Its commit history and original log are preserved; this continues the existing draft pull request rather than opening a duplicate or force-pushing.
 - Read the complete `AGENTS.md` and `PROJECT_LOG.md`, styling/routes/header/pages, auth client, production image-playback contract, relevant tests/audits and related open work before editing.
 - Classic is the verified main interface, not the unmerged ink-studio proposal. Existing Style/Mood intake work and local-analysis repairs remain separate, unmerged pull requests.
-- No main merge, deployment, production mutation, generation, new API, dependency or database migration is part of this feature. Automatic Vercel deployment for this feature branch is explicitly disabled in `vercel.json`.
+- No main merge, production deployment or promotion, production mutation, generation, new API, dependency or database migration is part of this feature. A READY Vercel preview was published for the reviewed implementation; automatic Vercel deployment for this feature branch is explicitly disabled in `vercel.json`.
 
 ## Implemented
 
@@ -111,4 +111,4 @@ Repository review captures:
 - **CONFIRMED, separate repair:** Supplied local audio-analysis section-validation failure is addressed in the independent unmerged song-analysis repair, not silently bundled here.
 - **NOT VERIFIED:** Physical Android device, screen reader and low-memory hardware performance. Desktop Chromium mobile viewports are not physical-device testing.
 - **NOT VERIFIED:** Exhaustive visual equivalence of every authenticated production/third-party overlay state. Shared tokens support existing controls; captured synthetic and public states must not be described as a complete live pipeline pass.
-- **NOT DEPLOYED:** This candidate has no hosted preview or production deployment. The existing draft pull request lists a prior preview for older source; it must not be represented as this candidate. Local dev server is available for review. No merge or deployment is authorized by this task.
+- **PREVIEW ONLY:** The independently tested implementation `2fcbb26f66c337afd355edd6b4bfadd0fa97e2e7` has a READY hosted preview at https://beat-vision-fb7qwvm34-beat-vision.vercel.app/. Later review fixes on this branch are not independently preview-verified. Production remains unchanged; no `main` merge or production promotion is evidenced here.
