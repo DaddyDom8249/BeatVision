@@ -1,5 +1,19 @@
 # BeatVision Project Log
 
+## 2026-10-16 — Production P1: atomic audio-revision transcription completion (PR #114)
+
+**Authorization:** Owner authorized verified production repairs. Branch `repair/audio-revision-atomic-completion-20261016` was reviewed against `main` `2761952f799842b2fc69b1b5462546cba2b75766`.
+
+**Failure and root cause:** The live analyzer accepted a stale asynchronous Groq transcription even after audio was replaced, because it ignored the client's `audioRevision` and updated `projects.song_duration` and `songs.analysis` separately without matching `audio_revision`. A deterministic mock reproduced the incorrect completed state and wrong duration.
+
+**Repair:** Validate the client's UUID and currently saved revision before signed storage/provider access. After inference, use the service-role-only `public.complete_song_transcription` RPC with project-owner and audio-path/revision checks under database row locks, atomically writing both song analysis and project duration. Return HTTP 409 for replaced audio. Neither the legacy paid Groq key nor provider fallback was enabled. No old approved assets, auth/RLS policies, or existing production song rows were changed.
+
+**Repository verification:** PR #114 head `99ebd33e26ec83ef0ba24a517f59c9997e97505d`; Production CI `38936544108` passed 293/293 tests, zero skips, audit and build. Migration replay `38936544128`, generation enqueue security `38936544137`, and legacy storage security `38936544337` all passed. Two initial database-fixture failures were caused by assertions querying a PostgreSQL transaction after intentionally throwing; savepoints corrected the test fixture and the focused tests passed. PR merged to `main` as `9a499f9de017a227aa467f282c9350b9d7b3bff6`.
+
+**Production:** Applied non-destructive migration `atomic_song_transcription_revision` (Supabase recorded version `20261016170515`) to project `mdofsinyofqbeapzfygu`. Deployed `beatvision-analyze-song` v22 ACTIVE from the merged GitHub source; independent readback is byte-for-byte identical. Checked `has_function_privilege`: service_role EXECUTE true, authenticated and anon false; `verify_jwt=false` remains unchanged because the function authenticates its bearer token in-handler. No real inference request was submitted.
+
+**Remaining uncertainty:** Real authenticated production audio-replacement race and end-to-end successful transcription are NOT VERIFIED. Image/motion and final-video paths still require proven zero-cost providers and real output checks. This backend-only repair did not deploy a new Vercel frontend. Issue #76's separate nested-test discovery repair remains PR #115, not part of this release.
+
 ## 2026-10-15 — Dedicated free Groq credential repair
 
 **Authorization and cause:** Owner identified the existing `GROQ_API_KEY` as paid, supplied a separate Free-plan account key under `GROQ_FREE_API_KEY`, and requested wiring and deployment. All three language functions still hard-coded free eligibility to false, so merely saving the new secret could not enable World, Style proposals or transcription. Free-account status is the owner's confirmation; no independent billing-tier API proof is claimed.
