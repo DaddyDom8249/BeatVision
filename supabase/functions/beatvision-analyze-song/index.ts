@@ -46,6 +46,9 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const projectId = String(body.projectId || body.project_id || "");
     if (!projectId) return json({ error: "projectId is required." }, 400);
+    const audioRevision = String(body.audioRevision || "").trim();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(audioRevision))
+      return json({ error: "Audio revision is required.", code: "SONG_AUDIO_REVISION_REQUIRED" }, 400);
 
     const admin = adminClient();
     const { data: project, error: projectError } = await admin.from("projects")
@@ -54,9 +57,11 @@ Deno.serve(async (req) => {
     if (!project || project.owner_id !== userId) return json({ error: "Project not found or access denied." }, 403);
 
     const { data: song, error: songError } = await admin.from("songs")
-      .select("id,audio_path,analysis").eq("project_id", projectId).maybeSingle();
+      .select("id,audio_path,audio_revision,analysis").eq("project_id", projectId).maybeSingle();
     if (songError) throw new Error(songError.message);
     if (!song?.audio_path) return json({ error: "Save an audio track before analyzing it." }, 400);
+    if (song.audio_revision !== audioRevision)
+      return json({ error: "Song audio changed. Reload before analyzing.", code: "SONG_AUDIO_REVISION_CHANGED" }, 409);
 
     const groqKey = env("GROQ_FREE_API_KEY");
 
@@ -116,20 +121,20 @@ Deno.serve(async (req) => {
       transcription_method: "groq_whisper",
     };
 
-    if (Number.isFinite(authoritativeDuration) && authoritativeDuration > 0) {
-      const { error: projectDurationError } = await admin.from("projects")
-        .update({ song_duration: authoritativeDuration })
-        .eq("id", projectId);
-      if (projectDurationError) throw new Error(projectDurationError.message);
-    }
-
-    const { error: updateError } = await admin.from("songs").update({
-      analysis_status: "completed",
-      analysis,
-      analyzed_at: new Date().toISOString(),
-    }).eq("id", String(song.id));
+    // Song and project duration are updated in one service-only transaction.
+    // The RPC checks audio revision and path again under row locks.
+    const { data: persisted, error: updateError } = await admin.rpc("complete_song_transcription", {
+      p_project_id: projectId,
+      p_song_id: String(song.id),
+      p_actor_id: userId,
+      p_audio_revision: audioRevision,
+      p_audio_path: String(song.audio_path),
+      p_analysis: analysis,
+      p_duration: authoritativeDuration,
+    });
     if (updateError) throw new Error(updateError.message);
-
+    if (persisted !== true)
+      return json({ error: "Song audio changed during transcription. Reload and retry.", code: "SONG_AUDIO_REVISION_CHANGED" }, 409);
     return json({ status: "completed", analysis });
   } catch (error) {
     if (error instanceof AuthError) {
