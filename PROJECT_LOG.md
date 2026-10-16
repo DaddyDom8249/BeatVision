@@ -1,5 +1,18 @@
 # BeatVision Project Log
 
+## 2026-10-16 — Repair CodeRabbit/Copilot review findings on Arcane PR #108
+
+**Scope:** Existing unmerged feature branch only; no merge, production deployment, data mutation, generation or paid requests.
+
+**Evidence/root causes:** CodeRabbit requested changes because `getUser()` incorrectly tested `error && data.user`, treating a typical `{user:null,error}` as sign-out, and because the evidence document incorrectly denied a READY hosted preview. Copilot independently found same-user auth events could replace an explicitly chosen theme with stale account metadata after a failed save.
+
+**Changes:** `src/theme/appearance.ts` preserves unacknowledged explicit preferences and retry state on same-user auth refresh, clears the marker on successful server acknowledgment or identity change, and reports returned `getUser()` errors without treating them as logout. `scripts/test/appearance.test.mjs` now covers failed save → same-user token refresh → retry and returned getUser error. `docs/arcane-cinema-verification.md` distinguishes the earlier READY hosted preview from production deployment and explicitly excludes these later review fixes from preview verification.
+
+**Evidence at this checkpoint:** Source commits `b786c242`, `6957d4a9`, `1f0bee01` pushed to the existing PR branch. Full exact-head CI and account-authenticated browser verification are **NOT VERIFIED**. Prior existing candidate test results must not be substituted for tests of this changed head. CodeRabbit's prior requested-changes review is not automatically clearance. No merge or production deploy.
+
+**Next gate:** Verify fresh exact-commit regression, full production build, CI checks and review of the changed branch; only then consider an authorized merge and separate production verification.
+
+
 ## 2026-10-15 — Optional Arcane Cinema appearance (feature branch only)
 
 **Objective:** Keep the existing studio (Classic) intact and let artists explicitly opt into a less crowded violet/cyan Arcane Cinema visual skin.
