@@ -1,5 +1,13 @@
 # BeatVision Project Log
 
+## 2026-10-16 — Issue #76: nested integration tests excluded from npm test
+
+**Baseline:** `main` at `2761952f799842b2fc69b1b5462546cba2b75766`.
+**Reproduction:** `package.json` declared `node --test scripts/test/*.test.mjs`, which does not match the two tracked `scripts/test/integration-repair-20261011/*.test.mjs` files (six tests). The historical forensic report falsely labeled 97 top-level plus six separately run nested tests as one `npm test` run.
+**Fix:** `scripts/run-tests.mjs` recursively walks `scripts/test` in lexical order and runs all `.test.mjs` files with Node's test runner. `npm test` now invokes the runner; the forensic report states the actual historical two-command execution and its limitation.
+**Scope:** test discovery and evidence documentation only. No application, provider, database, RLS, approval or production-data changes.
+**Verification:** Exact PR head CI, production audit and build pending at time of this entry; no passing test count or production release claimed. See issue #76 and the associated PR workflow checks. Do not mistake this change for a fix to PR #114's independently failing database test isolation.
+
 ## 2026-10-15 — Dedicated free Groq credential repair
 
 **Authorization and cause:** Owner identified the existing `GROQ_API_KEY` as paid, supplied a separate Free-plan account key under `GROQ_FREE_API_KEY`, and requested wiring and deployment. All three language functions still hard-coded free eligibility to false, so merely saving the new secret could not enable World, Style proposals or transcription. Free-account status is the owner's confirmation; no independent billing-tier API proof is claimed.
