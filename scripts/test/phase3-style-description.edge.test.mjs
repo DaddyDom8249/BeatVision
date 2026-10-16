@@ -41,7 +41,7 @@ function makeDb({ ownerId = USER_ID, status = "draft" } = {}) {
   };
 }
 
-async function bootFunction({ authUserId = USER_ID, ownerId = USER_ID, status = "draft" } = {}) {
+async function bootFunction({ authUserId = USER_ID, ownerId = USER_ID, status = "draft", freeKey = "", providerStatus = 200 } = {}) {
   const db = makeDb({ ownerId, status });
   const source = await readFile(FUNCTION_PATH, "utf8");
   assert.ok(source.includes(REMOTE_IMPORT));
@@ -60,11 +60,12 @@ async function bootFunction({ authUserId = USER_ID, ownerId = USER_ID, status = 
       SUPABASE_ANON_KEY: "anon",
       SUPABASE_SERVICE_ROLE_KEY: "service",
       GROQ_API_KEY: "groq",
+      GROQ_FREE_API_KEY: freeKey,
     })[key] ?? "" },
     serve: (fn) => { handler = fn; return { finished: Promise.resolve() }; },
   };
   console.error = () => {};
-  globalThis.fetch = async (input) => {
+  globalThis.fetch = async (input, options) => {
     const url = String(input);
     if (url.endsWith("/auth/v1/user")) {
       if (!authUserId) return new Response("{}", { status: 401 });
@@ -72,6 +73,8 @@ async function bootFunction({ authUserId = USER_ID, ownerId = USER_ID, status = 
     }
     if (url.includes("api.groq.com")) {
       groqCalls += 1;
+      assert.equal(options.headers.Authorization, "Bearer " + freeKey);
+      if (providerStatus !== 200) return new Response(JSON.stringify({ error: { message: "Fixture quota exhausted" } }), { status: providerStatus });
       return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
         identity: "A solitary figure carrying the song's emotional conflict.",
         appearance: "Tired eyes, restrained posture, and an indistinct weathered silhouette.",
@@ -88,6 +91,27 @@ async function bootFunction({ authUserId = USER_ID, ownerId = USER_ID, status = 
   assert.equal(typeof handler, "function");
   return { handler, db, groqCalls: () => groqCalls };
 }
+
+for (const status of ["draft", "approved"]) test(`free-key Style proposal leaves ${status} records unchanged`, async () => {
+  const { handler, db, groqCalls } = await bootFunction({ freeKey: "fixture-free-key", status });
+  const before = structuredClone(db);
+  const response = await request(handler);
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.ok(body.draft?.appearance);
+  assert.deepEqual(db, before);
+  assert.equal(groqCalls(), 1);
+});
+
+test("Style quota failure never uses the legacy paid key", async () => {
+  const { handler, db, groqCalls } = await bootFunction({ freeKey: "fixture-free-key", providerStatus: 429 });
+  const before = structuredClone(db);
+  const response = await request(handler);
+  assert.equal(response.status, 502);
+  assert.equal((await response.json()).error.code, "STYLE_MODEL_FAILED");
+  assert.deepEqual(db, before);
+  assert.equal(groqCalls(), 1);
+});
 
 function request(handler, { token = "valid", recordId = RECORD_ID, origin = APP_ORIGIN, method = "POST" } = {}) {
   const headers = { "Content-Type": "application/json", Origin: origin };
@@ -126,7 +150,7 @@ test("unverified inference cannot mutate an approved owner record", async () => 
 });
 
 test("non-owner is rejected before any model call", async () => {
-  const { handler, groqCalls } = await bootFunction({ authUserId: "other-user" });
+  const { handler, groqCalls } = await bootFunction({ authUserId: "other-user", freeKey: "fixture-free-key" });
   const response = await request(handler);
   assert.equal(response.status, 404);
   assert.equal((await response.json()).error.code, "NOT_FOUND");
@@ -134,7 +158,7 @@ test("non-owner is rejected before any model call", async () => {
 });
 
 test("missing session is rejected before any model call", async () => {
-  const { handler, groqCalls } = await bootFunction();
+  const { handler, groqCalls } = await bootFunction({ freeKey: "fixture-free-key" });
   const response = await request(handler, { token: null });
   assert.equal(response.status, 401);
   assert.equal((await response.json()).error.code, "UNAUTHENTICATED");

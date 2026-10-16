@@ -93,7 +93,7 @@ function makeDb(worldOverrides = {}) {
     ],
     world_reports: [makeWorldReport(worldOverrides)],
     songs: [
-      { id: "song-1", title: "Midnight", artist: "Artist", analysis_status: "completed", analysis: {} },
+      { id: "song-1", project_id: PROJECT_ID, title: "Midnight", artist: "Artist", analysis_status: "completed", analysis: {} },
     ],
   };
 }
@@ -102,7 +102,7 @@ function makeDb(worldOverrides = {}) {
  * Boots the real function module against a stub database.
  * `authUserId` controls which authenticated user the token resolves to.
  */
-async function bootFunction({ worldOverrides = {}, authUserId = USER_ID } = {}) {
+async function bootFunction({ worldOverrides = {}, authUserId = USER_ID, freeKey = "", providerStatus = 200 } = {}) {
   const db = makeDb(worldOverrides);
   const source = await readFile(FUNCTION_PATH, "utf8");
   if (!source.includes(REMOTE_IMPORT)) {
@@ -124,6 +124,7 @@ async function bootFunction({ worldOverrides = {}, authUserId = USER_ID } = {}) 
   await writeFile(join(dir, "function.ts"), source.replace(REMOTE_IMPORT, 'from "./supabase_stub.mjs"'));
 
   let handler = null;
+  const providerCalls = [];
   const logs = [];
   // The function logs while serving the request, not while loading, so the
   // capture stays installed for the lifetime of the tests.
@@ -137,6 +138,9 @@ async function bootFunction({ worldOverrides = {}, authUserId = USER_ID } = {}) 
           SUPABASE_ANON_KEY: "stub-anon-key",
           SUPABASE_SERVICE_ROLE_KEY: "stub-service-role-key",
           GROQ_API_KEY: "stub-groq-key",
+          GROQ_FREE_API_KEY: freeKey,
+          GEMINI_API_KEY: "paid-gemini-key",
+          OPENROUTER_API_KEY: "unverified-openrouter-key",
         })[key] ?? "",
     },
     serve: (fn) => {
@@ -148,12 +152,18 @@ async function bootFunction({ worldOverrides = {}, authUserId = USER_ID } = {}) 
   globalThis.__supabaseStubFactory = createStubClientFactory(db);
   // The handler resolves the caller's token with fetch() on every request, so
   // this stub must stay installed for the lifetime of the tests.
-  globalThis.fetch = async (input) => {
+  globalThis.fetch = async (input, options) => {
     if (String(input).endsWith("/auth/v1/user")) {
       if (!authUserId) return new Response("{}", { status: 401 });
       return new Response(JSON.stringify({ id: authUserId }), { status: 200 });
     }
-    throw new Error(`unexpected network call: ${String(input)}`);
+    providerCalls.push({ url: String(input), options });
+    assert.equal(String(input), "https://api.groq.com/openai/v1/chat/completions");
+    assert.equal(options.headers.Authorization, "Bearer " + freeKey);
+    assert.equal(JSON.parse(options.body).model, "openai/gpt-oss-20b");
+    return new Response(JSON.stringify(providerStatus === 200
+      ? { id: "fixture-request", choices: [{ message: { content: JSON.stringify(uiPayload().changes) } }] }
+      : { error: { message: "Fixture quota exhausted" } }), { status: providerStatus });
   };
 
   try {
@@ -165,8 +175,36 @@ async function bootFunction({ worldOverrides = {}, authUserId = USER_ID } = {}) 
   if (typeof handler !== "function") {
     throw new Error("Function module did not register a request handler via Deno.serve");
   }
-  return { handler, db, logs };
+  return { handler, db, logs, providerCalls };
 }
+
+test("World generation uses only the dedicated free key even when paid providers are configured", async () => {
+  const { handler, providerCalls } = await bootFunction({ freeKey: "fixture-free-key" });
+  const response = await request(handler, { method: "POST", body: { projectId: PROJECT_ID } });
+  assert.equal(response.status, 200);
+  const { report } = await response.json();
+  assert.equal(report.status, "completed");
+  assert.equal(report.provider, "groq");
+  assert.equal(report.confirmed_at, null);
+  assert.equal(providerCalls.length, 1);
+});
+
+test("World quota failure makes one free-key request with no paid fallback", async () => {
+  const { handler, providerCalls } = await bootFunction({ freeKey: "fixture-free-key", providerStatus: 429 });
+  const response = await request(handler, { method: "POST", body: { projectId: PROJECT_ID } });
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).report.error_code, "WORLD_MODEL_FAILED");
+  assert.equal(providerCalls.length, 1);
+});
+
+test("confirmed World remains immutable with the free key configured", async () => {
+  const { handler, db, providerCalls } = await bootFunction({ freeKey: "fixture-free-key", worldOverrides: { confirmed_at: "2026-10-15T00:00:00Z" } });
+  const before = structuredClone(db.world_reports);
+  const response = await request(handler, { method: "POST", body: { projectId: PROJECT_ID } });
+  assert.equal(response.status, 409);
+  assert.deepEqual(db.world_reports, before);
+  assert.equal(providerCalls.length, 0);
+});
 
 function request(handler, { method = "PATCH", body, token = "valid-token", origin = APP_ORIGIN } = {}) {
   const headers = { "Content-Type": "application/json", Origin: origin };

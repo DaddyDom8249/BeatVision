@@ -25,6 +25,48 @@ class HttpError extends Error {
   }
 }
 
+
+const MAX_BODY_BYTES = 64 * 1024;
+// Enforce actual wire-byte bounds while consuming the body, including
+// chunked uploads without Content-Length. Never buffer over maxBytes.
+async function readJsonBody(req: Request, maxBytes: number): Promise<Record<string, any>> {
+  const header = req.headers.get("Content-Length");
+  const declared = header === null ? null : Number(header);
+  if (declared !== null && (!Number.isSafeInteger(declared) || declared < 0 || declared > maxBytes)) {
+    throw new HttpError("REQUEST_TOO_LARGE", 413, "Request body is too large.");
+  }
+  if (!req.body) return {};
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => {});
+        throw new HttpError("REQUEST_TOO_LARGE", 413, "Request body is too large.");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const data = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    data.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  const text = new TextDecoder().decode(data);
+  if (!text.trim()) return {};
+  try {
+    const value = JSON.parse(text);
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch { return {}; }
+}
+
 const env = (name: string) => String(Deno.env.get(name) || "").trim();
 
 function corsHeaders(req: Request) {
@@ -101,7 +143,7 @@ Deno.serve(async (req) => {
 
   try {
     const userId = await getUser(req);
-    const body = await req.json().catch(() => ({}));
+    const body = await readJsonBody(req, MAX_BODY_BYTES);
     const projectId = String(body.projectId || body.project_id || "").trim();
     const recordId = String(body.recordId || body.record_id || "").trim();
     const kind = String(body.kind || "").trim() as DraftKind;
@@ -110,8 +152,7 @@ Deno.serve(async (req) => {
       throw new HttpError("STYLE_DRAFT_INPUT_INVALID", 400, "projectId, recordId, and a valid kind are required.");
     }
 
-    const groqKey = env("GROQ_API_KEY");
-    if (!groqKey) throw new HttpError("STYLE_PROVIDER_UNAVAILABLE", 503, "Groq description generation is not configured.");
+    const groqKey = env("GROQ_FREE_API_KEY");
 
     const admin = adminClient();
     const projectResult = await admin.from("projects")
@@ -146,9 +187,10 @@ Deno.serve(async (req) => {
       throw new HttpError("STYLE_LINEAGE_INVALID", 409, "The record is not attached to the current Style Bible.");
     }
 
-    // Preserve existing records; never assume an API key establishes a free account.
-    const freeAccountVerified = false;
-    if (!freeAccountVerified) throw new HttpError("PROVIDER_COST_UNVERIFIED",503,"New AI descriptions are unavailable until this Groq account's free eligibility is verified. Existing descriptions remain editable.");
+    // Only the dedicated key from the owner's confirmed Free-plan account
+    // is eligible. The legacy paid key is never read or used as a fallback.
+    const freeAccountVerified = Boolean(groqKey);
+    if (!freeAccountVerified) throw new HttpError("PROVIDER_COST_UNVERIFIED",503,"The dedicated free-account key is not configured. Existing descriptions remain editable.");
 
     const required = FIELDS[kind];
     const source = {
@@ -197,7 +239,8 @@ Every field must be non-empty, concise, production-useful, and mutually consiste
     try { data = raw ? JSON.parse(raw) : null; } catch { data = { raw }; }
     if (!response.ok) {
       const message = String(data?.error?.message || data?.message || raw).slice(0, 800);
-      throw new HttpError("STYLE_MODEL_FAILED", 502, "Groq description generation failed (" + response.status + "): " + message);
+      console.error("beatvision-style-draft upstream", response.status, message);
+      throw new HttpError("STYLE_MODEL_FAILED", 502, "Description generation provider failed (HTTP " + response.status + ").");
     }
     const content = data?.choices?.[0]?.message?.content;
     if (typeof content !== "string" || !content.trim()) {
@@ -217,8 +260,10 @@ Every field must be non-empty, concise, production-useful, and mutually consiste
   } catch (error) {
     const status = error instanceof HttpError ? error.status : 500;
     const code = error instanceof HttpError ? error.code : "STYLE_DRAFT_FAILED";
-    const message = error instanceof Error ? error.message : "Unable to generate the description proposal.";
-    console.error("beatvision-style-draft failed", JSON.stringify({ code, status, message: message.slice(0, 800) }));
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error("beatvision-style-draft failed", JSON.stringify({ code, status, message: detail.slice(0, 800) }));
+    // Never return internal (database/runtime) error text to the client.
+    const message = error instanceof HttpError ? error.message : "Unable to generate the description proposal.";
     return json(req, { error: { code, message } }, status);
   }
 });
