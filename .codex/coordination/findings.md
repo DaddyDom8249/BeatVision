@@ -1,5 +1,12 @@
 # Findings
 
+## 2026-10-16 — Production Workspace
+
+- CONFIRMED: live Generation v33 rejects new image/assembly work with PROVIDER_COST_UNVERIFIED; two recent image jobs failed with that code. Groq language credentials cannot enable these paths. Existing asset reads bypass submission dispatch after owner checks.
+- REPRODUCED: one failed run appears as both global error and saved-job alert. Standalone JSON brief strings render/copy verbatim. Mobile scene-list sets grid columns while remaining flex; eight scenes unnecessarily displace details.
+- NOT REPRODUCED: screenshot's tiny desktop layout at normal 360–900px mobile viewports; a 980px viewport reproduces its proportions. Actual phone Desktop-site setting is unknown.
+- BLOCKED: Cloudflare subscription lookup returns API 10000 Authentication error. Worker default_usage_model=standard does not prove Workers Free. Actual Arena worker source is Pixazo-first, with Cloudflare only on selected failures; prior Cloudflare-only release evidence is not current. Do not remove the controller guard or infer free eligibility from API keys.
+
 - Baseline checkout is clean `origin/main` at `f2e137584d18ed222ca702b89cd8430c3b06b506`.
 - Latest main Production CI and Master Audit are green.
 - PR #108 (`65acf316f44ef7cb1e3b0edc6633761b7dbc06a3`) is mergeable but UNSTABLE.
