@@ -130,6 +130,39 @@ test('failed account writes keep the selected theme, expose the failure and supp
   assert.equal(f.snapshot().synced, true);
 });
 
+test('a failed account save survives same-user auth refresh without losing Retry', async t => {
+  let fail = true;
+  const stored = user('creator', { theme: 'classic', motion: 'system' });
+  const f = fixture(t, { account: stored, update: async payload => fail
+    ? { data: { user: null }, error: new Error('offline') }
+    : { data: { user: user('creator', payload.data.beatvision_appearance) }, error: null } });
+  await flush();
+  f.store.setTheme('arcane');
+  await flush();
+  assert.equal(f.snapshot().preference.theme, 'arcane');
+  assert.match(f.snapshot().syncError, /could not be saved/);
+  f.event('TOKEN_REFRESHED', stored);
+  await flush();
+  assert.equal(f.snapshot().preference.theme, 'arcane');
+  assert.equal(f.snapshot().synced, false);
+  assert.match(f.snapshot().syncError, /could not be saved/);
+  fail = false;
+  f.store.retrySync();
+  await flush();
+  assert.equal(f.snapshot().synced, true);
+  assert.equal(f.snapshot().preference.theme, 'arcane');
+});
+
+test('getUser error preserves local appearance and reports account sync error', async t => {
+  const f = fixture(t, { local: { theme: 'arcane', motion: 'reduce' },
+    initial: async () => ({ data: { user: null }, error: new Error('offline') }) });
+  await flush();
+  assert.equal(f.snapshot().preference.theme, 'arcane');
+  assert.equal(f.snapshot().preference.motion, 'reduce');
+  assert.equal(f.snapshot().account, false);
+  assert.match(f.snapshot().syncError, /unavailable/);
+});
+
 test('a preference write without matching returned account metadata is not called synced', async t => {
   const f = fixture(t, { account: user(), update: async () => ({ data: { user: user() }, error: null }) });
   await flush(); f.store.setTheme('arcane'); await flush();
