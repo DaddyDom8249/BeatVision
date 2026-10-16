@@ -73,12 +73,16 @@ test('matching revision with changed path cannot persist',async()=>{
 });
 test('wrong owner has no path to modify another project',async()=>{
   const before=await snapshot();
+  await db.exec('savepoint expected_owner_error');
   await assert.rejects(complete({actor:id.other}),/SONG_NOT_FOUND_OR_FORBIDDEN/);
+  await db.exec('rollback to savepoint expected_owner_error');
   assert.deepEqual(await snapshot(),before);
 });
 test('invalid duration causes no partial update',async()=>{
   const before=await snapshot();
+  await db.exec('savepoint expected_duration_error');
   await assert.rejects(complete({duration:0}),/SONG_DURATION_INVALID/);
+  await db.exec('rollback to savepoint expected_duration_error');
   assert.deepEqual(await snapshot(),before);
 });
 test('browser role cannot call privileged transcription writer',async()=>{
