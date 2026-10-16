@@ -26,7 +26,7 @@ await writeFile(join(dir, 'header.mjs'), 'export default function StudioHeader()
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, stored = false, rpcError = null, runJob = null, approvedMotionSceneIds = ['scene-1'] } = {}) {
+async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, stored = false, rpcError = null, runJob = null, approvedMotionSceneIds = ['scene-1'], sceneRecord = null } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
@@ -43,7 +43,7 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
         single() { return this; }, maybeSingle() { return this; },
         then(resolve) {
           const data = table === 'visual_plans' ? { id: 'plan-1', status: 'approved', title: 'Locked plan' }
-            : table === 'visual_plan_scenes' ? [{ id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved' }]
+            : table === 'visual_plan_scenes' ? [sceneRecord ?? { id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved' }]
             : table === 'scene_image_assets' ? imageAssets ?? image
             : table === 'motion_clip_assets' ? (filters.approved === true ? approvedMotionSceneIds.map((scene_id,i)=>({id:'approved-'+i,scene_id,status:'approved',approved:true,video_url:'https://fixture.test/'+i+'.mp4'})) : motionAssets ?? motionAsset)
             : table === 'generation_jobs' && filters.id ? (historicalQueries.push({ ...filters }), historicalJob?.id === filters.id ? historicalJob : null)
@@ -314,4 +314,63 @@ test('approval revoked after initial render is rechecked before enqueue',async()
    assert.equal(view.rpcCalls.length,0);
    assert.match(document.body.textContent,/1 of 1 scenes still need exactly one approved real motion clip/);
  } finally {await view.cleanup();}
+});
+
+
+test('production displays approved JSON-like brief content as readable text without rewriting it', async () => {
+  const rawScene = {
+    id: 'scene-1', scene_number: 1, start_time: 0, end_time: 15.966958333333332,
+    title: 'Section 1 (0–15.966958333333332s)', status: 'approved',
+    location: '["abandoned warehouse","dimly lit interior"]',
+    visual_direction: '["cinematic","high contrast"]',
+    camera_direction: '["handheld tracking","slow zoom"]',
+    movement_direction: '["rapid cuts","slow movement"]',
+    mood: '["dark","defiant"]',
+    transition_style: 'Cut to next sequence',
+    continuity_notes: '[{"rule":"Keep lighting consistent"},{"rule":"Same wardrobe"}]',
+    lyric_moment: 'I used to know the sound of my own hand',
+  };
+  const original = structuredClone(rawScene);
+  const view = await mount({ sceneRecord: rawScene });
+  try {
+    const detail = document.querySelector('.production-detail');
+    assert.equal(detail.querySelector('h2').textContent, 'Section 1');
+    assert.match(detail.textContent, /00:00 — 00:15/);
+    assert.match(detail.textContent, /abandoned warehouse/);
+    assert.match(detail.textContent, /high contrast/);
+    assert.match(detail.textContent, /Keep lighting consistent/);
+    assert.doesNotMatch(detail.textContent, /15\\.966958333333332s|\\[\\"handheld|\\[\\{\\"rule\\"/);
+    assert.deepEqual(rawScene, original, 'approved scene data must not be changed');
+    assert.equal(view.rpcCalls.length, 0);
+    assert.equal(view.calls.length, 0);
+  } finally { await view.cleanup(); }
+});
+
+test('two failed generation jobs with the same provider error display one labeled alert', async () => {
+  const reason = { message: 'PROVIDER_COST_UNVERIFIED: Free execution is unverified.' };
+  const view = await mount({
+    imageJob: { id: 'failed-image', status: 'failed', error: reason },
+    assemblyJob: { id: 'failed-assembly', status: 'failed', error: reason },
+  });
+  try {
+    const alerts = [...document.querySelectorAll('.production-page [role="alert"]')];
+    assert.equal(alerts.length, 1);
+    assert.match(alerts[0].textContent, /Scene image/);
+    assert.match(alerts[0].textContent, /Final assembly/);
+    assert.match(alerts[0].textContent, /PROVIDER_COST_UNVERIFIED/);
+    assert.equal(view.calls.length, 0);
+  } finally { await view.cleanup(); }
+});
+
+test('distinct failed job errors remain distinct labeled alerts', async () => {
+  const view = await mount({
+    imageJob: { id: 'failed-image', status: 'failed', error: {message:'IMAGE_PROVIDER_UNAVAILABLE'} },
+    motionJob: { id: 'failed-motion', status: 'failed', error: {message:'MOTION_PROVIDER_UNAVAILABLE'} },
+  });
+  try {
+    const alerts = [...document.querySelectorAll('.production-page [role="alert"]')];
+    assert.equal(alerts.length, 2);
+    assert.match(alerts[0].textContent, /Scene image: IMAGE_PROVIDER_UNAVAILABLE/);
+    assert.match(alerts[1].textContent, /Scene motion: MOTION_PROVIDER_UNAVAILABLE/);
+  } finally { await view.cleanup(); }
 });
