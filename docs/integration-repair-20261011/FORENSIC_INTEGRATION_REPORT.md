@@ -64,12 +64,28 @@ ok 6 - Integration 2026-10-11: Motion -> Final Assembly enabled when all scenes 
 # fail 0
 ```
 
-### Full Repository Verification Run (`npm test`, `npm run production-audit`, `npm run build`)
+### Historical full-repository verification (corrected 2026-10-16)
+
+The original sentence attributing **103 tests to `npm test` was incorrect**.
+At checkout `dc8e8a7593a5b6f02434aaead20510804ac658dc`,
+the `package.json` script was `node --test scripts/test/*.test.mjs`, which **did not** discover
+the two nested integration test files. The supervisor's actual `npm test` run recorded
+**97/97** top-level tests. The six nested tests were run separately:
+
+```text
+node --test scripts/test/integration-repair-20261011/*.test.mjs
+exit 0; tests 6; pass 6; fail 0
 ```
-npm test: 97 existing tests + 6 new integration tests = 103 passed, 0 failed.
-npm run production-audit: PASS (Canonical production route, World CORS, generation terminal-state handling, and stub cleanup verified).
-npm run build: PASS (TypeScript compilation & Vite production bundle created successfully in 3.92s).
-```
+
+Thus **97 + 6 = 103 checks across two separate commands**, not 103 tests in
+one `npm test` invocation. Historical `production-audit` and `build` pass claims
+above are preserved as previously recorded, not independently rerun for the 2026-10-11 checkout.
+
+On the 2026-10-16 issue #76 repair branch, `npm test` now runs
+`node scripts/run-tests.mjs`. That runner recursively discovers sorted
+`*.test.mjs` paths below `scripts/test` and executes them together.
+**Current CI pass/fail evidence belongs to the specific PR commit and its
+GitHub Actions job logs; this historical report does not claim a new passing run.**
 
 ---
 
