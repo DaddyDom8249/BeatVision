@@ -32,6 +32,7 @@ export class AppearanceStore {
   private choiceVersion = 0;
   private identityKnown = false;
   private pending: { preference: Appearance; owner: string; version: number } | null = null;
+  private unacknowledgedChoice: { preference: Appearance; owner: string; version: number } | null = null;
   private writing = false;
   private cleanup: (() => void) | null = null;
   private state: AppearanceState;
@@ -83,7 +84,10 @@ export class AppearanceStore {
     const authVersion = this.authVersion;
     void this.auth.getUser().then(({ data, error }) => {
       if (!this.active || lifetime !== this.lifetime || authVersion !== this.authVersion) return;
-      if (error && data.user) return;
+      if (error) {
+        this.emit({ syncError: 'Account appearance is unavailable. Device preference remains active.' });
+        return;
+      }
       this.acceptUser(data.user ?? null);
     }).catch(() => {
       if (this.active && lifetime === this.lifetime && authVersion === this.authVersion) this.emit({ syncError: 'Account appearance is unavailable. Device preference remains active.' });
@@ -95,14 +99,22 @@ export class AppearanceStore {
     };
   }
 
-  stop() { this.active = false; this.lifetime++; this.cleanup?.(); this.cleanup = null; this.pending = null; this.emit({ saving: false }); }
+  stop() { this.active = false; this.lifetime++; this.cleanup?.(); this.cleanup = null; this.pending = null; this.unacknowledgedChoice = null; this.emit({ saving: false }); }
 
   private acceptUser(user: User | null) {
     const changed = this.identityKnown && this.user?.id !== user?.id;
     const recentLocalChoice = !this.identityKnown && this.choiceVersion > 0;
     this.identityKnown = true;
     this.user = user;
-    if (changed) { this.choiceVersion++; this.pending = null; this.emit({ saving: false }); }
+    if (changed) { this.choiceVersion++; this.pending = null; this.unacknowledgedChoice = null; this.emit({ saving: false }); }
+    // A refreshed same-user session may contain stale account metadata after a
+    // failed write. Keep the explicit local choice and its Retry state until
+    // the write is acknowledged or the account identity changes.
+    if (!changed && user && this.unacknowledgedChoice?.owner === user.id) {
+      this.emit({ account: true, synced: false });
+      if (!this.state.saving) this.apply(this.unacknowledgedChoice.preference);
+      return;
+    }
     const resolved = this.bridge.resolve(user?.user_metadata?.beatvision_appearance, this.bridge.read());
     const saved = user?.user_metadata?.beatvision_appearance;
     this.emit({ account: Boolean(user), synced: Boolean(saved && saved.theme === resolved.theme && saved.motion === resolved.motion), syncError: null });
@@ -124,6 +136,7 @@ export class AppearanceStore {
   private queueSave() {
     if (!this.user || !this.active) return;
     this.pending = { preference: this.state.preference, owner: this.user.id, version: this.choiceVersion };
+    this.unacknowledgedChoice = this.pending;
     this.emit({ saving: true, syncError: null });
     if (!this.writing) void this.drain();
   }
@@ -143,6 +156,7 @@ export class AppearanceStore {
           const saved = data.user.user_metadata?.beatvision_appearance;
           if (saved?.theme !== task.preference.theme || saved?.motion !== task.preference.motion) throw new Error('Preference was not acknowledged');
           this.user = data.user;
+          this.unacknowledgedChoice = null;
           this.emit({ synced: true, syncError: null });
         } catch {
           if (this.active && lifetime === this.lifetime && this.user?.id === task.owner && this.choiceVersion === task.version) {
