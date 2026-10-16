@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase/client";
-import { getCreativeErrorMessage } from "../lib/formatCreativeText";
+import { formatCreativeText, getCreativeErrorMessage } from "../lib/formatCreativeText";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 import StudioHeader from "../components/navigation/StudioHeader";
 
@@ -46,14 +46,14 @@ function prompt(scene: VisualPlanScene) {
   return [
     "SCENE " + scene.scene_number + ": " + scene.title,
     "TIME: " + time(scene.start_time) + "–" + time(scene.end_time),
-    "LOCATION: " + scene.location,
-    "MOOD: " + scene.mood,
-    "VISUAL: " + scene.visual_direction,
-    "CAMERA: " + scene.camera_direction,
-    "MOVEMENT: " + scene.movement_direction,
-    "MUSICAL / LYRIC MOMENT: " + (scene.lyric_moment || "Follow the analyzed musical section."),
-    "TRANSITION: " + scene.transition_style,
-    "CONTINUITY: " + scene.continuity_notes,
+    "LOCATION: " + formatCreativeText(scene.location),
+    "MOOD: " + formatCreativeText(scene.mood),
+    "VISUAL: " + formatCreativeText(scene.visual_direction),
+    "CAMERA: " + formatCreativeText(scene.camera_direction),
+    "MOVEMENT: " + formatCreativeText(scene.movement_direction),
+    "MUSICAL / LYRIC MOMENT: " + (formatCreativeText(scene.lyric_moment) || "Follow the analyzed musical section."),
+    "TRANSITION: " + formatCreativeText(scene.transition_style),
+    "CONTINUITY: " + formatCreativeText(scene.continuity_notes),
   ].join("\n");
 }
 
@@ -301,7 +301,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       // has not observed the latest job write yet.
       if (type === "assembly") await refreshFinal(plan.id); else await refreshScene(sceneId);
       setJob(result);
-      if (result.status === "failed") throw new Error(result.error?.message || "Generation failed.");
+      // The saved job's labeled alert owns terminal failures. Reserve the global
+      // error for request/refresh failures that have no authoritative job state.
       if (type === "assembly" && result.status === "completed") setFinalVideo(result.output?.final_video ?? null);
     } catch (e) { setError(productionErrorMessage(e)); }
     finally { setBusy(false); }
@@ -504,7 +505,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
       {error && <p className="form-error" role="alert">{error}</p>}
       {(pending(imageJob) || pending(motionJob) || pending(assemblyJob)) && <p role="status">Generation is still processing. Status refreshes automatically; no completed media is claimed yet.</p>}
-      {[imageJob, motionJob, assemblyJob].filter(job => job?.status === "failed").map(job => <p className="form-error" role="alert" key={job.id}>{job.error?.message || "Generation failed."}</p>)}
+      {[{ label: "Scene image", job: imageJob }, { label: "Scene motion", job: motionJob }, { label: "Final assembly", job: assemblyJob }]
+        .filter(({ job }) => job?.status === "failed")
+        .map(({ label, job }) => <p className="form-error" role="alert" key={job.id}>{label}: {productionErrorMessage(job.error ?? "Generation failed.")}</p>)}
       <div className="production-nav">
         <a className="secondary-button" href={`/projects/${projectId}/visual-plan?plan=${plan.id}`}>← Visual Plan</a>
         <a className="secondary-button" href={`/projects/${projectId}/scenes?plan=${plan.id}`}>Production Briefs</a>
@@ -524,18 +527,18 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
         <section className="production-detail">
           <div className="production-detail-head">
-            <div><span className="eyebrow">SCENE {String(scene.scene_number).padStart(2, "0")}</span><h2>{scene.title}</h2><p>{time(scene.start_time)} — {time(scene.end_time)} · {scene.location}</p></div>
+            <div><span className="eyebrow">SCENE {String(scene.scene_number).padStart(2, "0")}</span><h2>{scene.title}</h2><p>{time(scene.start_time)} — {time(scene.end_time)} · {formatCreativeText(scene.location)}</p></div>
             <span className="style-lock-badge">APPROVED</span>
           </div>
 
           <div className="production-grid">
-            <article><span>Visual</span><p>{scene.visual_direction}</p></article>
-            <article><span>Camera</span><p>{scene.camera_direction}</p></article>
-            <article><span>Movement</span><p>{scene.movement_direction}</p></article>
-            <article><span>Mood</span><p>{scene.mood}</p></article>
-            <article><span>Transition</span><p>{scene.transition_style}</p></article>
-            <article><span>Continuity</span><p>{scene.continuity_notes}</p></article>
-            <article className="production-wide"><span>Lyric / musical moment</span><p>{scene.lyric_moment || "Follow the analyzed musical section."}</p></article>
+            <article><span>Visual</span><p>{formatCreativeText(scene.visual_direction)}</p></article>
+            <article><span>Camera</span><p>{formatCreativeText(scene.camera_direction)}</p></article>
+            <article><span>Movement</span><p>{formatCreativeText(scene.movement_direction)}</p></article>
+            <article><span>Mood</span><p>{formatCreativeText(scene.mood)}</p></article>
+            <article><span>Transition</span><p>{formatCreativeText(scene.transition_style)}</p></article>
+            <article><span>Continuity</span><p>{formatCreativeText(scene.continuity_notes)}</p></article>
+            <article className="production-wide"><span>Lyric / musical moment</span><p>{formatCreativeText(scene.lyric_moment) || "Follow the analyzed musical section."}</p></article>
           </div>
 
           <div className="production-actions">

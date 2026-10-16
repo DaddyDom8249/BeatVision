@@ -26,7 +26,7 @@ await writeFile(join(dir, 'header.mjs'), 'export default function StudioHeader()
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, stored = false, rpcError = null, runJob = null, approvedMotionSceneIds = ['scene-1'] } = {}) {
+async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, stored = false, rpcError = null, runJob = null, approvedMotionSceneIds = ['scene-1'], scene = {} } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
@@ -43,7 +43,7 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
         single() { return this; }, maybeSingle() { return this; },
         then(resolve) {
           const data = table === 'visual_plans' ? { id: 'plan-1', status: 'approved', title: 'Locked plan' }
-            : table === 'visual_plan_scenes' ? [{ id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved' }]
+            : table === 'visual_plan_scenes' ? [{ id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved', ...scene }]
             : table === 'scene_image_assets' ? imageAssets ?? image
             : table === 'motion_clip_assets' ? (filters.approved === true ? approvedMotionSceneIds.map((scene_id,i)=>({id:'approved-'+i,scene_id,status:'approved',approved:true,video_url:'https://fixture.test/'+i+'.mp4'})) : motionAssets ?? motionAsset)
             : table === 'generation_jobs' && filters.id ? (historicalQueries.push({ ...filters }), historicalJob?.id === filters.id ? historicalJob : null)
@@ -103,6 +103,101 @@ test('recoverable provider errors do not hide the workspace', async () => {
     await view.click('Generate Motion');
     assert.match(document.body.textContent, /Provider unavailable/);
     assert.match(document.body.textContent, /Shot Monitor/);
+  } finally { await view.cleanup(); }
+});
+
+for (const [type, button, label] of [
+  ['scene_image', 'Generate Another Variant', 'Scene image'],
+  ['scene_motion', 'Generate Motion', 'Scene motion'],
+  ['assembly', 'Assemble Final Video', 'Final assembly'],
+]) {
+  test(`returned failed ${type} has one labeled alert without replacing saved media`, async () => {
+    const view = await mount({
+      runJob: { id: 'failed-job', job_type: type, status: 'failed', error: { message: 'PROVIDER_COST_UNVERIFIED: no verified free route.' } },
+    });
+    try {
+      await view.click(button);
+      const alerts = [...document.querySelectorAll('[role="alert"]')];
+      assert.equal(alerts.length, 1, 'The persisted job error must not also become a global operation error.');
+      assert.equal(alerts[0].textContent, `${label}: PROVIDER_COST_UNVERIFIED: no verified free route.`);
+      assert.equal(document.querySelector('img').src, 'https://expired.test/image.jpg');
+      assert.equal(view.rpcCalls.filter(call => /approve|reject/.test(call.name)).length, 0);
+      assert.equal(view.calls.filter(call => call.action === 'run').length, 1);
+    } finally { await view.cleanup(); }
+  });
+}
+
+test('restored same-message failures remain labeled and independent of unrelated request errors', async () => {
+  const message = 'PROVIDER_COST_UNVERIFIED: no verified free route.';
+  const view = await mount({
+    imageJob: { id: 'image-failure', status: 'failed', error: { message } },
+    assemblyJob: { id: 'assembly-failure', status: 'failed', error: { message } },
+    runError: 'Status transport unavailable',
+    motionJob: { id: 'motion-pending', status: 'processing', job_type: 'scene_motion' },
+  });
+  try {
+    let alerts = [...document.querySelectorAll('[role="alert"]')].map(node => node.textContent);
+    assert.deepEqual(alerts, [`Scene image: ${message}`, `Final assembly: ${message}`]);
+    await view.click('Check Motion Status');
+    alerts = [...document.querySelectorAll('[role="alert"]')].map(node => node.textContent);
+    assert.deepEqual(alerts, ['Status transport unavailable', `Scene image: ${message}`, `Final assembly: ${message}`]);
+    assert.equal(view.rpcCalls.length, 0);
+    assert.equal(document.querySelector('img').src, 'https://expired.test/image.jpg');
+  } finally { await view.cleanup(); }
+});
+
+test('approved JSON-encoded brief fields render and copy as readable text without writes', async () => {
+  const scene = Object.freeze({
+    title: 'Locked scene',
+    location: '[{"name":"Warehouse","setting":"dim interior"}]',
+    visual_direction: '["cinematic","gritty"]',
+    camera_direction: '["handheld tracking","dolly zoom"]',
+    movement_direction: '["rapid cuts","slow movement"]',
+    mood: '["dark","defiant"]',
+    continuity_notes: '[{"rule":"Keep the palette stable"}]',
+    transition_style: 'Opening transition',
+    lyric_moment: 'Ordinary creator-authored lyric',
+  });
+  const before = JSON.stringify(scene);
+  const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  let copied;
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { clipboard: { writeText: async text => { copied = text; } } } });
+  const view = await mount({ scene });
+  try {
+    const articles = [...document.querySelectorAll('.production-grid article')];
+    const field = name => articles.find(article => article.querySelector('span').textContent === name).querySelector('p').textContent;
+    assert.equal(field('Visual'), 'cinematic\ngritty');
+    assert.equal(field('Camera'), 'handheld tracking\ndolly zoom');
+    assert.equal(field('Movement'), 'rapid cuts\nslow movement');
+    assert.equal(field('Mood'), 'dark\ndefiant');
+    assert.equal(field('Continuity'), 'Keep the palette stable');
+    assert.match(document.querySelector('.production-detail-head p').textContent, /name: Warehouse\nsetting: dim interior/);
+    await view.click('Copy Shot Brief');
+    assert.match(copied, /LOCATION: name: Warehouse\nsetting: dim interior/);
+    assert.match(copied, /VISUAL: cinematic\ngritty/);
+    assert.match(copied, /CAMERA: handheld tracking\ndolly zoom/);
+    assert.match(copied, /MOOD: dark\ndefiant/);
+    assert.match(copied, /MUSICAL \/ LYRIC MOMENT: Ordinary creator-authored lyric/);
+    assert.doesNotMatch(copied, /\[\{|\["/);
+    assert.equal(JSON.stringify(scene), before, 'Formatting must not alter the approved input.');
+    assert.equal(view.rpcCalls.length, 0);
+    assert.equal(view.calls.length, 0);
+  } finally {
+    await view.cleanup();
+    if (navigatorDescriptor) Object.defineProperty(globalThis, 'navigator', navigatorDescriptor);
+    else delete globalThis.navigator;
+  }
+});
+
+test('brief formatting preserves ordinary creator prose and mixed non-JSON direction strings', async () => {
+  const prose = ' Hold on the singer — no camera move. [literal note] ';
+  const composite = '["cinematic"] — [{"stage":"Intro"}] — A creator-authored lyric';
+  const view = await mount({ scene: { camera_direction: prose, visual_direction: composite } });
+  try {
+    const values = [...document.querySelectorAll('.production-grid article p')].map(node => node.textContent);
+    assert.equal(values[0], composite);
+    assert.equal(values[1], prose);
+    assert.equal(view.rpcCalls.length, 0);
   } finally { await view.cleanup(); }
 });
 
