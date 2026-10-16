@@ -1,5 +1,19 @@
 # BeatVision Project Log
 
+## 2026-10-16 — Production Workspace mobile readability repair (PR #116)
+
+**Evidence:** Owner-provided Android screenshot shows approved 8-scene Visual Plan, scene titles with full fractional-second suffixes, JSON-serialized shot-brief arrays and objects printed literally, tiny desktop-like layout, and repeated PROVIDER_COST_UNVERIFIED messages.
+
+**Cause and scope:** `ProductionWorkspacePage` rendered approved stringified creative JSON directly; its mobile CSS defined `grid-template-columns` without switching the scene list from flex to grid. Identical provider failures appeared independently for multiple jobs. All repairs are view-only; no approved scenes, assets, RLS, provider routing, or generation code changed.
+
+**Implementation:** Display `formatCreativeText` for location, visual, camera, movement, mood, continuity, transition, and exported shot brief; recognize auto-generated `Section N (start–end seconds)` display titles without modifying stored titles; group identical failed-job messages while retaining affected stages and error codes; mobile 2-column scene selector, single-column readable detail fields and min-size touch controls, with desktop layout preserved.
+
+**Verification:** PR #116 at `f7045907c6ffce10576993d1a55be86193a8cbf1`, Production CI `38943149366`, passed 297/297, zero skips, build and audit. The Chrome 155 layout test measured 390px mobile viewport, 390px document scroll width, two scene buttons in one row, stacked detail, and 980px desktop unchanged. Security and isolated DB migration replay checks passed. A first CI run failed only due to an invalid new test assertion regex; corrected before passing CI. Post-merge Production CI `38943380259` passed. Merged to `main` as `82feca01fb2c997423178e845765fdfb86dbf79a`.
+
+**Deployment:** Vercel production deployment `dpl_4B4M24M1C6eshyWsXhhUES32otfQ` READY. Independently resolved `beat-vision-theta.vercel.app` to this exact deployment and commit SHA. No Supabase/Cloudflare writes or model/provider inference calls occurred. Owner's mobile screenshot is historical evidence; actual authenticated on-device revisit after release remains NOT VERIFIED.
+
+**Remaining blocker:** PROVIDER_COST_UNVERIFIED is a real, intentionally closed free-tier verification gate for new image and assembly submissions; UI grouping does not and must not remove it. Full music-video end-to-end generation, lip sync, and export are NOT VERIFIED. If the phone browser is set to Desktop site, viewport emulation may stay wide and negate mobile CSS; disable Desktop site in the browser.
+
 ## 2026-10-16 — Release alignment and issue #76 verification
 
 **Frontend release:** Previous primary production URL `beat-vision-theta.vercel.app` served `eafb6529d6356fe4af05385c8981c334960182d3`, 15 commits behind audited source. Main `32a90f87c2ac58d8dd6df111b6908a83e3e3ac3e` passed GitHub Production CI. Manually created production deployment `dpl_9aJnoGy4yuEsvNq6eLmvv5Yfvtzv`, Vercel build completed (existing chunk-size warning), deployment READY; independently resolved the primary production domain to that deployment and exact SHA. Browser-signed-in pipeline and provider activity were not invoked; real end-to-end media completion remains UNVERIFIED.
