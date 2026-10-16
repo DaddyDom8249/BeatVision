@@ -339,7 +339,9 @@ test('production displays approved JSON-like brief content as readable text with
     assert.match(detail.textContent, /abandoned warehouse/);
     assert.match(detail.textContent, /high contrast/);
     assert.match(detail.textContent, /Keep lighting consistent/);
-    assert.doesNotMatch(detail.textContent, /15\\.966958333333332s|\\[\\"handheld|\\[\\{\\"rule\\"/);
+    assert.equal(detail.textContent.includes('15.966958333333332s'), false);
+    assert.equal(detail.textContent.includes('["handheld'), false);
+    assert.equal(detail.textContent.includes('[{"rule"'), false);
     assert.deepEqual(rawScene, original, 'approved scene data must not be changed');
     assert.equal(view.rpcCalls.length, 0);
     assert.equal(view.calls.length, 0);
