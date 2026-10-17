@@ -13,7 +13,7 @@ test('only exactly merged and reachable branch heads are eligible', () => {
   assert.equal(allowed(), null);
 });
 test('never prune protected, main, archived or release branches', () => {
-  for (const name of ['main', 'archive/snapshot', 'release/stable']) {
+  for (const name of ['main', 'archive/snapshot', 'release/stable', 'jules-existing-worker']) {
     assert.ok(allowed({ ...branch, name }));
   }
   assert.equal(allowed({ ...branch, protected: true }), 'protected branch');
