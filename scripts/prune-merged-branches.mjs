@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 
 const REPOSITORY = 'DaddyDom8249/BeatVision';
 const MAX_DELETIONS = 80;
-const RESERVED = ['archive/', 'release/'];
+const RESERVED = ['archive/', 'release/', 'jules-'];
 
 export function classifyBranch(branch, openRefs, mergedHeads, compare) {
   if (!branch?.name || !branch?.commit?.sha) return 'incomplete branch record';
