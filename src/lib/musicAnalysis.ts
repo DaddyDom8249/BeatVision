@@ -127,8 +127,27 @@ function estimateKey(samples: Float32Array, sampleRate: number) {
   return { key: best.key, confidence: Math.max(0, Math.min(1, (best.score - second + 1) / 2)) };
 }
 
+function buildValidatedUrl(baseUrl: string): string {
+  try {
+    if (baseUrl.includes('/../') || /\/%2e%2e\//i.test(baseUrl)) {
+      throw new Error('Invalid path');
+    }
+    const url = new URL(baseUrl);
+    const allowedDomains = ['example.com']; // add your allowed domains here
+    if (!allowedDomains.includes(url.hostname)) {
+      throw new Error('Invalid host');
+    }
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      throw new Error('Invalid protocol');
+    }
+    return url.href;
+  } catch {
+    throw new Error('Invalid URL');
+  }
+}
+
 export async function analyzeAudioLocally(audioUrl: string): Promise<SongAnalysis> {
-  const response = await fetch(audioUrl);
+  const response = await fetch(buildValidatedUrl(audioUrl));
   if (!response.ok) throw new Error("Could not retrieve the uploaded audio for local analysis.");
   const buffer = await response.arrayBuffer();
   const context = new AudioContext();
