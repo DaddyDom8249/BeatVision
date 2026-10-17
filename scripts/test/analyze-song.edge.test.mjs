@@ -244,7 +244,7 @@ test("missing Authorization header returns 401, not 500", async () => {
 
   assert.equal(response.status, 401);
   assert.equal((await response.json()).code, "UNAUTHENTICATED");
-  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "*");
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), null);
 });
 
 test("rejected session returns 401, not 500", async () => {
@@ -279,4 +279,30 @@ for (const analysis of [
  const {handler,db}=await bootFunction({analysis});const before=structuredClone(db.songs);
  const response=await call(handler,{projectId:PROJECT_ID});assert.equal(response.status,503);
  assert.match((await response.json()).error,/PROVIDER_COST_UNVERIFIED/);assert.deepEqual(db.songs,before);
+});
+
+test("song analysis CORS does not reflect untrusted Origins on preflight or errors", async () => {
+  const { handler } = await bootFunction();
+  const endpoint = `${SUPABASE_URL}/functions/v1/beatvision-analyze-song`;
+  for (const origin of ["https://evil.example", "null", "https://beat-vision-theta.vercel.app.evil.example"]) {
+    const preflight = await handler(new Request(endpoint, { method: "OPTIONS", headers: { Origin: origin } }));
+    assert.equal(preflight.headers.get("Access-Control-Allow-Origin"), null);
+    assert.equal(preflight.headers.get("Vary"), "Origin");
+    const denied = await handler(new Request(endpoint, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: "{}" }));
+    assert.equal(denied.status, 401);
+    assert.equal(denied.headers.get("Access-Control-Allow-Origin"), null);
+  }
+});
+
+test("song analysis allows canonical origin without wildcard CORS", async () => {
+  const { handler } = await bootFunction();
+  const origin = "https://beat-vision-theta.vercel.app";
+  const endpoint = `${SUPABASE_URL}/functions/v1/beatvision-analyze-song`;
+  const options = await handler(new Request(endpoint, { method: "OPTIONS", headers: { Origin: origin } }));
+  assert.equal(options.headers.get("Access-Control-Allow-Origin"), origin);
+  assert.equal(options.headers.get("Access-Control-Allow-Methods"), "POST, OPTIONS");
+  assert.equal(options.headers.get("Vary"), "Origin");
+  const denied = await handler(new Request(endpoint, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: "{}" }));
+  assert.equal(denied.status, 401);
+  assert.equal(denied.headers.get("Access-Control-Allow-Origin"), origin);
 });
