@@ -124,3 +124,21 @@ test('stale provider work fails from acceptance age despite recent poll timestam
  const original=globalThis.fetch;const runtime=await loadGeneration(db);globalThis.fetch=async()=>{calls++;throw Error('unexpected network')};
  try{const result=await runtime.poll(db,job);assert.equal(result.status,'failed');assert.equal(result.error.code,'PROVIDER_TIMEOUT');assert.equal(calls,0)}finally{globalThis.fetch=original;await runtime.cleanup()}
 });
+
+test('free motion claim never PATCHes nonexistent generation_jobs.model', async () => {
+  const updates = [];
+  const db = { from(table) {
+    assert.equal(table, 'generation_jobs');
+    return { update(record) { updates.push(record); throw Error('STOP_BEFORE_WRITE'); } };
+  } };
+  const runtime = await loadGeneration();
+  try {
+    await assert.rejects(runtime.run(db, { id: 'job-queued', job_type: 'scene_motion', status: 'queued',
+      input_snapshot: { hf_motion: { revision: HF_MOTION.revision } }, output: {}, attempts: 0 }), /STOP_BEFORE_WRITE/);
+    assert.equal(updates.length, 1);
+    assert.equal(Object.hasOwn(updates[0], 'model'), false);
+    assert.equal(updates[0].provider, 'huggingface-zerogpu');
+    assert.equal(updates[0].provider_job_id, 'beatvision:job-queued');
+    assert.equal(updates[0].status, 'submitted');
+  } finally { await runtime.cleanup(); }
+});

@@ -551,7 +551,6 @@ async function run(db: any, job: any) {
     .update({
       status: "submitted",
       provider: job.input_snapshot?.hf_motion ? "huggingface-zerogpu" : "arena",
-      model: job.input_snapshot?.hf_motion ? HF_MOTION.model : job.model,
       provider_job_id: requestId,
       output: {...job.output, dispatch_started_at: new Date().toISOString()},
       attempts: Number(job.attempts || 0) + 1,

@@ -208,7 +208,7 @@ test('motion badge uses the completed asset job rather than an unrelated newer r
 });
 
 test('completed final video downloads its actual bytes with an mp4 filename', async () => {
- const view=await mount({assemblyJob:{id:'assembly-1',status:'completed',output:{final_video:{video_url:'https://media.test/final.mp4'}}}});
+ const view=await mount({assemblyJob:{id:'assembly-1',status:'completed',output:{final_video:{video_url:'https://media.test/final.mp4',downloadable:true}}}});
  const oldFetch=globalThis.fetch,oldCreate=URL.createObjectURL,oldRevoke=URL.revokeObjectURL,oldClick=window.HTMLAnchorElement.prototype.click;
  let saved, requested, created;
  globalThis.fetch=async url=>{requested=url;return new Response('real fixture video bytes',{headers:{'content-type':'video/mp4'}})};
@@ -216,6 +216,9 @@ test('completed final video downloads its actual bytes with an mp4 filename', as
  URL.revokeObjectURL=()=>{};
  window.HTMLAnchorElement.prototype.click=function(){saved={href:this.href,filename:this.download}};
  try{
+  const player = [...document.querySelectorAll('video')].find(v => v.src === 'https://media.test/final.mp4');
+  assert.ok(player);
+  await act(async () => player.dispatchEvent(new window.Event('canplay')));
   await view.click('Download Video');
   assert.equal(requested,'https://media.test/final.mp4');
   assert.equal(created.size,24);
@@ -229,13 +232,16 @@ for(const [label,response] of [
  ['empty media',()=>new Response('',{headers:{'content-type':'video/mp4'}})],
  ['non-video response',()=>new Response('<html>error</html>',{headers:{'content-type':'text/html'}})]
 ])test('download reports '+label+' without claiming a saved file',async()=>{
- const view=await mount({assemblyJob:{id:'assembly-1',status:'completed',output:{final_video:{video_url:'https://media.test/final.mp4'}}}});
+ const view=await mount({assemblyJob:{id:'assembly-1',status:'completed',output:{final_video:{video_url:'https://media.test/final.mp4',downloadable:true}}}});
  const oldFetch=globalThis.fetch;
  globalThis.fetch=async()=>response();
  try{
+  const player = [...document.querySelectorAll('video')].find(v => v.src === 'https://media.test/final.mp4');
+  assert.ok(player);
+  await act(async () => player.dispatchEvent(new window.Event('canplay')));
   await view.click('Download Video');
   assert.match(document.querySelector('[role="alert"]').textContent,/download/i);
-  assert.match(document.body.textContent,/FINAL VIDEO COMPLETE/);
+  assert.match(document.body.textContent,/FINAL PREVIEW READY/);
   assert.ok([...document.querySelectorAll('button')].some(b=>b.textContent==='Download Video'&&!b.disabled));
  }finally{globalThis.fetch=oldFetch;await view.cleanup()}
 });
@@ -374,5 +380,77 @@ test('distinct failed job errors remain distinct labeled alerts', async () => {
     assert.equal(alerts.length, 2);
     assert.match(alerts[0].textContent, /Scene image: IMAGE_PROVIDER_UNAVAILABLE/);
     assert.match(alerts[1].textContent, /Scene motion: MOTION_PROVIDER_UNAVAILABLE/);
+  } finally { await view.cleanup(); }
+});
+
+test('status checks reuse freshly signed motion and image URLs instead of restarting video playback', async () => {
+  const motionAsset = {
+    id: 'approved-ai-clip', scene_id: 'scene-1', generation_job_id: 'completed-ai-job',
+    provider: 'huggingface-zerogpu', video_url: 'https://old.example/expired.mp4',
+    status: 'approved', approved: true,
+  };
+  const view = await mount({
+    stored: true, motionAssets: [motionAsset],
+    motionJob: { id: 'new-queued-attempt', status: 'queued' },
+    historicalJob: { id: 'completed-ai-job', status: 'completed', input_snapshot: { hf_motion: { duration_seconds: 2 } } },
+  });
+  try {
+    assert.equal(document.querySelector('video')?.src, 'https://fresh.test/motion.mp4');
+    assert.equal(view.calls.filter(call => call.action === 'motion_url').length, 1);
+    assert.equal(view.calls.filter(call => call.action === 'image_url').length, 1);
+    await view.click('Check Motion Status');
+    assert.equal(document.querySelector('video')?.src, 'https://fresh.test/motion.mp4');
+    assert.equal(view.calls.filter(call => call.action === 'motion_url').length, 1,
+      'poll must not issue a second signature or change the video src');
+    assert.equal(view.calls.filter(call => call.action === 'image_url').length, 1,
+      'poll must not repeatedly sign the same saved image');
+    assert.equal(motionAsset.approved, true, 'no approved media was changed');
+  } finally { await view.cleanup(); }
+});
+
+test('motion player failure can refresh its cached signature without unapproving the clip', async () => {
+  const motionAsset = { id: 'approved-ai-clip', scene_id: 'scene-1', provider: 'huggingface-zerogpu',
+    video_url: 'https://old.example/expired.mp4', status: 'approved', approved: true };
+  const view = await mount({ motionAssets: [motionAsset] });
+  try {
+    const player = document.querySelector('video');
+    assert.ok(player);
+    await act(async () => player.dispatchEvent(new window.Event('error')));
+    assert.match(document.body.textContent, /could not be played/);
+    await view.click('Retry Motion Playback');
+    assert.equal(view.calls.filter(call => call.action === 'motion_url').length, 2);
+    assert.equal(motionAsset.approved, true);
+  } finally { await view.cleanup(); }
+});
+
+test('old complete assembly marked non-downloadable cannot claim a downloadable video', async () => {
+  const video_url = 'https://old.example/final.mp4';
+  const view = await mount({ assemblyJob: { id: 'finished-assembly', status: 'completed',
+    output: { final_video: { video_url, downloadable: false, render_status: 'complete' } } } });
+  try {
+    assert.equal(view.button('Download Video'), undefined);
+    assert.match(document.body.textContent, /marked non-downloadable/);
+    assert.match(document.body.textContent, /PLAYBACK UNVERIFIED/);
+    const player = [...document.querySelectorAll('video')].find(item => item.src === video_url);
+    assert.ok(player);
+    await act(async () => player.dispatchEvent(new window.Event('canplay')));
+    assert.match(document.body.textContent, /FINAL PREVIEW READY/);
+    assert.equal(view.button('Download Video'), undefined, 'browser preview does not override the database export gate');
+  } finally { await view.cleanup(); }
+});
+
+test('downloadable final media requires successful browser playback before download is offered', async () => {
+  const video_url = 'https://new.example/final.mp4';
+  const view = await mount({ assemblyJob: { id: 'finished-assembly', status: 'completed',
+    output: { final_video: { video_url, downloadable: true, render_status: 'complete' } } } });
+  try {
+    assert.equal(view.button('Download Video'), undefined);
+    const player = [...document.querySelectorAll('video')].find(item => item.src === video_url);
+    assert.ok(player);
+    await act(async () => player.dispatchEvent(new window.Event('error')));
+    assert.match(document.body.textContent, /could not be played/);
+    assert.equal(view.button('Download Video'), undefined);
+    await act(async () => player.dispatchEvent(new window.Event('canplay')));
+    assert.ok(view.button('Download Video'));
   } finally { await view.cleanup(); }
 });
