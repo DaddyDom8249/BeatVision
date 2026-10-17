@@ -10,6 +10,12 @@
 
 **Evidence boundary:** Code and tests proposed in isolated PR; GitHub CI, deploy and signed-in production checks pending. No migration, provider call, spend, creative approvals or production mutations performed for this change.
 
+**Verified release (2026-10-17):** PR #121 head `797502d3590b7925182e17c66546c1426f2bae9b` passed Production CI run `39065042820`: `npm test` 320/320 passed, 0 failed, 0 skipped; `npm run production-audit` PASS; `npm run build` PASS. Generation enqueue security `39065042737`, legacy storage ownership security `39065042837`, and isolated database replay `39065042862` all succeeded. Merged by squash as `5ff16e39b7411a88e7ab844056ebe72cf0352c30`. No change to schemas, RLS, approved creative assets or production data.
+
+**Supabase deployments and read-back:** `beatvision-analyze-song` v23 ACTIVE and `beatvision-generation` v34 ACTIVE. Fetched deployed entrypoint source is byte-for-byte identical to merged GitHub source, generation's three helper files match original live files, and both functions retain `verify_jwt=false` with their existing explicit in-function authentication. Generation v34 also brings the already-committed GitHub scheduler queued/active capacity selection into production, replacing v33's single oldest-eight pending query; no additional provider call was made to test it.
+
+**Verification limits:** CI and deployed-source identity are VERIFIED. Production runtime responses and owner-authenticated song-to-final-video workflow remain UNVERIFIED; no paid model requests or production data mutations were made by this repair cycle.
+
 
 ## 2026-10-17 — Open PR triple-check and database security replay reconciliation
 
