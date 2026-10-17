@@ -81,7 +81,9 @@ test('real workspace CSS compacts mobile scene navigation without changing deskt
       browser.kill('SIGTERM');
       await new Promise(resolve => browser.once('exit', resolve));
     }
-    await rm(profile, { recursive: true, force: true });
+    // Chrome subprocesses can release profile files after the parent exits.
+    // Retry only transient filesystem cleanup races; preserve layout assertions.
+    await rm(profile, { recursive: true, force: true, maxRetries: 12, retryDelay: 125 });
   });
   const browserUrl = await new Promise((resolve, reject) => {
     let output = '';
