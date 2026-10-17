@@ -76,7 +76,8 @@ async function cleanup() {
     const currentMain = await request('/git/ref/heads/main');
     if (currentMain?.object?.sha !== mainSha)
       throw new Error('main advanced during cleanup; stopped before deleting further refs.');
-    const fresh = await request('/branches/' + encodeURIComponent(branch.name), 'GET', true);
+    const encoded = branch.name.split('/').map(encodeURIComponent).join('/');
+    const fresh = await request('/branches/' + encoded, 'GET', true);
     if (!fresh || fresh.protected || fresh.commit?.sha !== branch.commit.sha) {
       console.log('SKIP changed branch ' + branch.name);
       continue;
@@ -86,7 +87,6 @@ async function cleanup() {
       console.log('SKIP newly referenced branch ' + branch.name);
       continue;
     }
-    const encoded = branch.name.split('/').map(encodeURIComponent).join('/');
     await request('/git/refs/heads/' + encoded, 'DELETE');
     deleted++;
     console.log('DELETED merged ' + branch.name + ' @ ' + branch.commit.sha);
