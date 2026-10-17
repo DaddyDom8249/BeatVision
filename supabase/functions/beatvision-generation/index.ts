@@ -35,13 +35,33 @@ function admin() {
   return createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"));
 }
 
+// Constant-size digest comparison avoids early-exit equality of raw secrets.
+async function timingSafeEqualText(a: string, b: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const [aDigest, bDigest] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(a)),
+    crypto.subtle.digest("SHA-256", encoder.encode(b)),
+  ]);
+  const left = new Uint8Array(aDigest);
+  const right = new Uint8Array(bDigest);
+  let difference = 0;
+  for (let i = 0; i < left.length; i++) difference |= left[i] ^ right[i];
+  return difference === 0;
+}
+
 async function authenticate(req: Request) {
-  const queueSecret = String(req.headers.get("X-BeatVision-Queue-Secret") || "").trim();
-  if (queueSecret) {
+  // A supplied scheduler header is always scheduler authentication.
+  // Invalid (including blank) values never fall through to a user bearer token.
+  if (req.headers.has("X-BeatVision-Queue-Secret")) {
+    const queueSecret = String(req.headers.get("X-BeatVision-Queue-Secret") || "").trim();
+    if (!queueSecret) throw new HttpError(401, "UNAUTHORIZED_SCHEDULER", "Invalid scheduler credential.");
     const db = admin();
     const config = await db.rpc("get_generation_scheduler_secret");
-    if (config.error) throw new HttpError(500, "SCHEDULER_CONFIG_FAILED", config.error.message);
-    if (config.data && queueSecret === String(config.data)) return { kind: "system" as const, userId: null };
+    if (config.error) throw new HttpError(500, "SCHEDULER_CONFIG_FAILED", "Scheduler configuration is unavailable.");
+    const expected = String(config.data || "");
+    if (expected && await timingSafeEqualText(queueSecret, expected))
+      return { kind: "system" as const, userId: null };
+    throw new HttpError(401, "UNAUTHORIZED_SCHEDULER", "Invalid scheduler credential.");
   }
 
   const token = req.headers.get("Authorization") || "";

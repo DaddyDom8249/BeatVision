@@ -1,5 +1,16 @@
 # BeatVision Project Log
 
+## 2026-10-17 — Scheduler authentication and analyzer CORS security reconciliation
+
+**Baseline:** `main` `2ca872c1070074f88712974e65c4f4c97b072edf`. PR #102's source is stale: directly merging it would roll back the dedicated `GROQ_FREE_API_KEY` transcription route and the song audio-revision concurrency guard. Reconcile its two targeted security repairs onto latest main instead.
+
+**Confirmed defects:** `beatvision-generation` accepted an incorrect nonempty scheduler header and fell through to valid bearer user authentication. The scheduler RPC's raw error detail also entered 500 response text. `beatvision-analyze-song` answered with wildcard `Access-Control-Allow-Origin: *` on preflights and authenticated responses.
+
+**Scoped fix:** Require every present scheduler header (including blank) to authenticate as scheduler or return explicit 401; compare fixed-size SHA-256 digests without early-exit string comparison; redact scheduler RPC error. Add a canonical browser Origin allowlist for song analysis. Preserve dedicated Free Groq key, song audio revision, owner gate, approved media, RLS, schemas and existing generation providers unchanged. Add behavioral tests for valid/invalid scheduler and bearer handling, CORS preflight/response, while retaining existing Groq/revision regressions.
+
+**Evidence boundary:** Code and tests proposed in isolated PR; GitHub CI, deploy and signed-in production checks pending. No migration, provider call, spend, creative approvals or production mutations performed for this change.
+
+
 ## 2026-10-17 — Open PR triple-check and database security replay reconciliation
 
 **Read-only baseline:** `main` `f37eb5ce6ab256ff75a110362be45c1571e582ea` at start, 42 open PRs / 89 branches. Compared each exact current PR head against main; investigated security PR patches, GitHub CI, production database policies/trigger permissions, source-versus-live Edge functions, and Vercel SHA. Open PR work was not batch-merged.
