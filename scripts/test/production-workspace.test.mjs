@@ -376,3 +376,75 @@ test('distinct failed job errors remain distinct labeled alerts', async () => {
     assert.match(alerts[1].textContent, /Scene motion: MOTION_PROVIDER_UNAVAILABLE/);
   } finally { await view.cleanup(); }
 });
+
+test('status checks reuse freshly signed motion and image URLs instead of restarting video playback', async () => {
+  const motionAsset = {
+    id: 'approved-ai-clip', scene_id: 'scene-1', generation_job_id: 'completed-ai-job',
+    provider: 'huggingface-zerogpu', video_url: 'https://old.example/expired.mp4',
+    status: 'approved', approved: true,
+  };
+  const view = await mount({
+    stored: true, motionAssets: [motionAsset],
+    motionJob: { id: 'new-queued-attempt', status: 'queued' },
+    historicalJob: { id: 'completed-ai-job', status: 'completed', input_snapshot: { hf_motion: { duration_seconds: 2 } } },
+  });
+  try {
+    assert.equal(document.querySelector('video')?.src, 'https://fresh.test/motion.mp4');
+    assert.equal(view.calls.filter(call => call.action === 'motion_url').length, 1);
+    assert.equal(view.calls.filter(call => call.action === 'image_url').length, 1);
+    await view.click('Check Motion Status');
+    assert.equal(document.querySelector('video')?.src, 'https://fresh.test/motion.mp4');
+    assert.equal(view.calls.filter(call => call.action === 'motion_url').length, 1,
+      'poll must not issue a second signature or change the video src');
+    assert.equal(view.calls.filter(call => call.action === 'image_url').length, 1,
+      'poll must not repeatedly sign the same saved image');
+    assert.equal(motionAsset.approved, true, 'no approved media was changed');
+  } finally { await view.cleanup(); }
+});
+
+test('motion player failure can refresh its cached signature without unapproving the clip', async () => {
+  const motionAsset = { id: 'approved-ai-clip', scene_id: 'scene-1', provider: 'huggingface-zerogpu',
+    video_url: 'https://old.example/expired.mp4', status: 'approved', approved: true };
+  const view = await mount({ motionAssets: [motionAsset] });
+  try {
+    const player = document.querySelector('video');
+    assert.ok(player);
+    await act(async () => player.dispatchEvent(new window.Event('error')));
+    assert.match(document.body.textContent, /could not be played/);
+    await view.click('Retry Motion Playback');
+    assert.equal(view.calls.filter(call => call.action === 'motion_url').length, 2);
+    assert.equal(motionAsset.approved, true);
+  } finally { await view.cleanup(); }
+});
+
+test('old complete assembly marked non-downloadable cannot claim a downloadable video', async () => {
+  const video_url = 'https://old.example/final.mp4';
+  const view = await mount({ assemblyJob: { id: 'finished-assembly', status: 'completed',
+    output: { final_video: { video_url, downloadable: false, render_status: 'complete' } } } });
+  try {
+    assert.equal(view.button('Download Video'), undefined);
+    assert.match(document.body.textContent, /marked non-downloadable/);
+    assert.match(document.body.textContent, /PLAYBACK UNVERIFIED/);
+    const player = [...document.querySelectorAll('video')].find(item => item.src === video_url);
+    assert.ok(player);
+    await act(async () => player.dispatchEvent(new window.Event('canplay')));
+    assert.match(document.body.textContent, /FINAL PREVIEW READY/);
+    assert.equal(view.button('Download Video'), undefined, 'browser preview does not override the database export gate');
+  } finally { await view.cleanup(); }
+});
+
+test('downloadable final media requires successful browser playback before download is offered', async () => {
+  const video_url = 'https://new.example/final.mp4';
+  const view = await mount({ assemblyJob: { id: 'finished-assembly', status: 'completed',
+    output: { final_video: { video_url, downloadable: true, render_status: 'complete' } } } });
+  try {
+    assert.equal(view.button('Download Video'), undefined);
+    const player = [...document.querySelectorAll('video')].find(item => item.src === video_url);
+    assert.ok(player);
+    await act(async () => player.dispatchEvent(new window.Event('error')));
+    assert.match(document.body.textContent, /could not be played/);
+    assert.equal(view.button('Download Video'), undefined);
+    await act(async () => player.dispatchEvent(new window.Event('canplay')));
+    assert.ok(view.button('Download Video'));
+  } finally { await view.cleanup(); }
+});

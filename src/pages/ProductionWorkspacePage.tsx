@@ -7,6 +7,7 @@ import StudioHeader from "../components/navigation/StudioHeader";
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
 const imageFields = "id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,storage_path,status,approved,created_at,updated_at";
+const SIGNED_MEDIA_REUSE_MS = 50 * 60 * 1000; // Supabase signs clips and images for 60 minutes.
 
 function productionErrorMessage(error: unknown) {
   const message = typeof error === "string" ? error : getCreativeErrorMessage(error, "Production request failed.");
@@ -90,6 +91,11 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [assemblyRunning, setAssemblyRunning] = useState(false);
   const [assemblyReadiness, setAssemblyReadiness] = useState({ ready: false, message: "Checking approved motion clips…" });
   const [downloading, setDownloading] = useState(false);
+  const [finalPlayback, setFinalPlayback] = useState<{ url: string; state: "ready" | "failed" } | null>(null);
+  const [motionPlaybackFailure, setMotionPlaybackFailure] = useState<string | null>(null);
+  // Keep a stable media source during short job-status polls. Changing a signed
+  // URL every five seconds restarts browser MP4 decoding, even when bytes exist.
+  const signedMediaCache = useRef(new Map<string, { url: string; createdAt: number }>());
 
   const [imageJob, setImageJob] = useState<any>(null);
   const [motionJob, setMotionJob] = useState<any>(null);
@@ -140,14 +146,26 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     ].includes("PROCEDURAL_MOTION");
   }, [motion, motionAssetJob, motionJob]);
 
+  async function reuseSignedMedia(kind: "image" | "motion", id: string, sign: () => Promise<string>) {
+    const key = projectId + ":" + kind + ":" + id;
+    const cached = signedMediaCache.current.get(key);
+    if (cached && Date.now() - cached.createdAt < SIGNED_MEDIA_REUSE_MS) return cached.url;
+    const url = await sign();
+    signedMediaCache.current.set(key, { url, createdAt: Date.now() });
+    return url;
+  }
+
   async function displayImage(asset: any) {
     if (!asset?.storage_path) return asset;
-    const result = await supabase.functions.invoke("beatvision-generation", {
-      body: { action: "image_url", projectId, assetId: asset.id },
+    const url = await reuseSignedMedia("image", asset.id, async () => {
+      const result = await supabase.functions.invoke("beatvision-generation", {
+        body: { action: "image_url", projectId, assetId: asset.id },
+      });
+      if (result.error) throw result.error;
+      if (!result.data?.image_url) throw new Error("No fresh image URL was returned.");
+      return String(result.data.image_url);
     });
-    if (result.error) throw result.error;
-    if (!result.data?.image_url) throw new Error("No fresh image URL was returned.");
-    return { ...asset, image_url: result.data.image_url };
+    return { ...asset, image_url: url };
   }
 
   const [imageHistory, setImageHistory] = useState<any[]>([]);
@@ -190,9 +208,12 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     if (selectedSceneId.current !== sceneId) return;
     let freshMotion = selectedMotion;
     if (freshMotion?.provider === "huggingface-zerogpu") {
-      const signed = await supabase.functions.invoke("beatvision-generation", { body: { action: "motion_url", projectId, assetId: freshMotion.id } });
-      if (signed.error || !signed.data?.video_url) throw signed.error || new Error("Motion playback URL unavailable.");
-      freshMotion = { ...freshMotion, video_url: signed.data.video_url };
+      const url = await reuseSignedMedia("motion", freshMotion.id, async () => {
+        const signed = await supabase.functions.invoke("beatvision-generation", { body: { action: "motion_url", projectId, assetId: freshMotion.id } });
+        if (signed.error || !signed.data?.video_url) throw signed.error || new Error("Motion playback URL unavailable.");
+        return String(signed.data.video_url);
+      });
+      freshMotion = { ...freshMotion, video_url: url };
     }
     if (selectedSceneId.current !== sceneId) return;
     setMotion(freshMotion); setImageJob(imageJobs.data); setMotionJob(motionJobs.data);
@@ -440,7 +461,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const checkAssemblyStatus = () => operateJob("assembly", assemblyJob);
 
   async function downloadFinalVideo() {
-    if (!finalVideo?.video_url || assemblyJob?.status !== "completed" || downloading) return;
+    if (!finalVideo?.video_url || finalVideo.downloadable !== true ||
+        finalPlayback?.url !== finalVideo.video_url || finalPlayback.state !== "ready" ||
+        assemblyJob?.status !== "completed" || downloading) return;
     setDownloading(true); setError(null);
     try {
       const response = await fetch(finalVideo.video_url);
@@ -586,8 +609,17 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             {motion && <p>{isProceduralMotion ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
             {motion?.video_url ? <video key={motion.id} src={motion.video_url} controls playsInline
   onLoadedMetadata={event => { const seconds = event.currentTarget.duration;
-    if (Number.isFinite(seconds) && seconds > 0) setMotionMeasured({ assetId: motion.id, seconds });
+    if (Number.isFinite(seconds) && seconds > 0) {
+      setMotionMeasured({ assetId: motion.id, seconds });
+      setMotionPlaybackFailure(null);
+    }
+  }}
+  onError={() => {
+    signedMediaCache.current.delete(projectId + ":motion:" + motion.id);
+    setMotionMeasured(null);
+    setMotionPlaybackFailure(motion.id);
   }} style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
+            {motion?.id === motionPlaybackFailure && <p role="alert">This approved motion clip could not be played. Its status does not prove browser playback. <button className="secondary-button" onClick={() => { if (scene) void refreshScene(scene.id).catch(e => setError(productionErrorMessage(e))); }}>Retry Motion Playback</button></p>}
             {motion && <p role="status">
               {motionAssetJob?.input_snapshot?.hf_motion?.duration_seconds
                 ? "LTX requested " + Number(motionAssetJob.input_snapshot.hf_motion.duration_seconds).toFixed(2) + "s. " : ""}
@@ -643,13 +675,18 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
               {" "}Provider stage: {assemblyJob.output?.arena_status_response?.result?.status ?? assemblyJob.output?.arena_response?.result?.status ?? "Not reported"}.
               {" "}Last checked: {assemblyJob.output?.last_polled_at ?? "Not checked yet"}.
             </p>}
-            {finalVideo?.video_url ? <video src={finalVideo.video_url} controls playsInline style={{ width: "100%", maxHeight: 600, borderRadius: 12 }} /> : <p>No completed final video exists yet. Assembly requires every approved scene to have an approved real motion clip.</p>}
+            {finalVideo?.video_url ? <video key={finalVideo.video_url} src={finalVideo.video_url} controls playsInline
+              onCanPlay={() => setFinalPlayback({ url: finalVideo.video_url, state: "ready" })}
+              onError={() => setFinalPlayback({ url: finalVideo.video_url, state: "failed" })}
+              style={{ width: "100%", maxHeight: 600, borderRadius: 12 }} /> : <p>No completed final video exists yet. Assembly requires every approved scene to have an approved real motion clip.</p>}
             {!finalVideo && <p role="status">{assemblyReadiness.message}</p>}
+            {finalVideo?.video_url && finalPlayback?.url === finalVideo.video_url && finalPlayback.state === "failed" && <p role="alert">The saved final-video URL could not be played on this device. A completed job does not establish that the file is still accessible.</p>}
+            {finalVideo?.video_url && finalVideo.downloadable !== true && <p role="status">A final render is recorded, but its database record is marked non-downloadable. Do not assume the external render URL is a durable export.</p>}
             <div className="production-actions">
               {!finalVideo && !pending(assemblyJob) && <button className="primary-button" disabled={busy || !assemblyReadiness.ready} onClick={() => void assembleFinal()}>{assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}</button>}
               {pending(assemblyJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkAssemblyStatus()}>{assemblyRunning ? "Checking…" : "Check Assembly Status"}</button>}
-              {finalVideo?.video_url && <button className="secondary-button" disabled={downloading} onClick={() => void downloadFinalVideo()}>{downloading ? "Downloading…" : "Download Video"}</button>}
-              {finalVideo?.video_url && <span className="style-lock-badge">FINAL VIDEO COMPLETE</span>}
+              {finalVideo?.video_url && finalVideo.downloadable === true && finalPlayback?.url === finalVideo.video_url && finalPlayback.state === "ready" && <button className="secondary-button" disabled={downloading} onClick={() => void downloadFinalVideo()}>{downloading ? "Downloading…" : "Download Video"}</button>}
+              {finalVideo?.video_url && <span className="style-lock-badge">{finalPlayback?.url === finalVideo.video_url && finalPlayback.state === "ready" ? "FINAL PREVIEW READY" : "RENDER RECORDED · PLAYBACK UNVERIFIED"}</span>}
             </div>
           </div>
 

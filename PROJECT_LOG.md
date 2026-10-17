@@ -1,5 +1,16 @@
 # BeatVision Project Log
 
+## 2026-10-17 — Verified Ghast media URL churn, truthful playback/export status
+
+**Observed authenticated Android workflow:** 8-scene Ghast approved Visual Plan. Scene 1 approved Hugging Face MP4 is physically present in the private `visual-assets` storage bucket and was served via valid 200/206 responses at 21:03 UTC. The browser's five-second job-status polls repeatedly called the Edge signing action and reloaded a different short-lived signed video URL, interrupting media decoder loading; job state never reached a terminal status because a different queued AI motion attempt is stuck with PostgREST 400 on scheduler dispatch. Those database and storage records are not altered by the frontend fix.
+
+**Other confirmed production facts:** Existing Ghast final assembly completed October 10, and `final_videos` stores an external Shotstack stage URL with `downloadable = false`. The previous UI incorrectly offered download and displayed `FINAL VIDEO COMPLETE` just because `video_url` existed. The external URL's current accessibility is unverified, and `PROVIDER_COST_UNVERIFIED` legitimately blocks new free-cost-unverified image and assembly requests.
+
+**Scoped source repair:** Reuse signed media URLs for up to 50 minutes per project/kind/asset (provider signing TTL is 60 minutes), so five-second status polling does not reset `<video>` source; clear motion signature after media errors and allow manual refresh. Distinguish a recorded render, actually playable browser preview, and `downloadable` database permission; hide download unless both browser can-play and explicit database downloadability are true. Regression tests cover polling, retry, old false-dowload records, and genuine playback readiness. Approved assets, auth/RLS, provider gating, DB migrations and user data are unchanged.
+
+**Verification limit:** Source and local test proposals are not production proof. Live full-scene motion and durable final-MP4 export remain unresolved; queued AI motion's PostgreSQL HTTP 400 requires separate specific server-body diagnosis before attempting writes. No provider calls, paid fallback, storage uploads, or destructive changes in this patch.
+
+
 ## 2026-10-17 — Scheduler authentication and analyzer CORS security reconciliation
 
 **Baseline:** `main` `2ca872c1070074f88712974e65c4f4c97b072edf`. PR #102's source is stale: directly merging it would roll back the dedicated `GROQ_FREE_API_KEY` transcription route and the song audio-revision concurrency guard. Reconcile its two targeted security repairs onto latest main instead.
