@@ -1,0 +1,27 @@
+name: One-time merged branch cleanup
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/prune-merged-branches-once.yml'
+permissions:
+  contents: write
+  pull-requests: read
+concurrency:
+  group: beatvision-merged-branch-cleanup
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout audited cleanup script
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify Node runtime
+        run: node --version
+      - name: Prune only proven merged branch heads
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/prune-merged-branches.mjs
