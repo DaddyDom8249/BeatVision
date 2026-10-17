@@ -1,5 +1,17 @@
 # BeatVision Project Log
 
+## 2026-10-17 — CI and branch inventory reconciliation
+
+**Requested:** Reduce stale Git branches and synchronize the repository without losing active PR work.
+
+**Baseline:** Prior main `e6b87482bdbfa22c3977d3b571d5cba7a09d2b45`, 124 branches observed initially (126 by cleanup start), 44 open PRs initially. Current production app commit `82feca01fb2c997423178e845765fdfb86dbf79a` was READY; newer main changes were test tooling/docs only.
+
+**Issue #76:** Exact PR #115 job 117093029001 did execute six nested integration tests as part of `npm test` (290/290, zero skips). PR #115 had GitHub mergeable_state `dirty` after later `PROJECT_LOG.md` edits. Rebased by preparing PR #117 on current main, without force-pushing or losing historical commits. It adds recursive `scripts/test/**/*.test.mjs` discovery, corrects October 11 report attribution, and fixes the current main's confirmed Chrome profile teardown `ENOTEMPTY` race using bounded filesystem retries. PR #117 at `9187797addad69866736cfd4eacaf6631e16e392` passed 303/303, audit/build and security/migration replay checks; merged `4e4f9e2526fa2e6a45d1d2faef61a121c7b19b0a`, post-merge CI `39051929724` passed. Original PR #115 was commented and closed as superseded, NOT merged.
+
+**Conservative branch pruning:** PR #118 introduced a one-time scoped GitHub Actions push workflow and testable guarded deletion script. It requires an exact merged PR branch head SHA, `ahead_by=0` against main, rechecks branch SHA and current open-PR references, and preserves main/protected/archive/release/Jules refs. PR #118 at `1933f40a0b07d99eda66d9f3545236622fae0d3d` passed 309/309, zero skips, audit/build and security/migration replay; merged as `88b6b4671cfa028cc199737b443b7daf5b5cc3b9`. One-time workflow run `39052608435` passed: evaluated 126 branches, found 37 eligible, deleted 37 remote refs; each deleted branch and original SHA is preserved in the workflow log for recovery. Branches after cleanup: 89; open PRs: 43, zero missing open PR head/base refs. This does not delete commits contained in main.
+
+**Production impact and limits:** No application source, Supabase schemas or data, paid or unverified providers, creator approvals, or Vercel deployment were changed in this cleanup. Full signed-in end-to-end song-to-final-video generation remains UNVERIFIED. Open PRs with unmerged unique work remain open and must be reconciled individually; reducing Git branches does not by itself complete the application.
+
 ## 2026-10-16 — Production Workspace mobile readability repair (PR #116)
 
 **Evidence:** Owner-provided Android screenshot shows approved 8-scene Visual Plan, scene titles with full fractional-second suffixes, JSON-serialized shot-brief arrays and objects printed literally, tiny desktop-like layout, and repeated PROVIDER_COST_UNVERIFIED messages.
