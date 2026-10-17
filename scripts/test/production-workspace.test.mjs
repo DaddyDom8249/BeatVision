@@ -208,7 +208,7 @@ test('motion badge uses the completed asset job rather than an unrelated newer r
 });
 
 test('completed final video downloads its actual bytes with an mp4 filename', async () => {
- const view=await mount({assemblyJob:{id:'assembly-1',status:'completed',output:{final_video:{video_url:'https://media.test/final.mp4'}}}});
+ const view=await mount({assemblyJob:{id:'assembly-1',status:'completed',output:{final_video:{video_url:'https://media.test/final.mp4',downloadable:true}}}});
  const oldFetch=globalThis.fetch,oldCreate=URL.createObjectURL,oldRevoke=URL.revokeObjectURL,oldClick=window.HTMLAnchorElement.prototype.click;
  let saved, requested, created;
  globalThis.fetch=async url=>{requested=url;return new Response('real fixture video bytes',{headers:{'content-type':'video/mp4'}})};
@@ -216,6 +216,9 @@ test('completed final video downloads its actual bytes with an mp4 filename', as
  URL.revokeObjectURL=()=>{};
  window.HTMLAnchorElement.prototype.click=function(){saved={href:this.href,filename:this.download}};
  try{
+  const player = [...document.querySelectorAll('video')].find(v => v.src === 'https://media.test/final.mp4');
+  assert.ok(player);
+  await act(async () => player.dispatchEvent(new window.Event('canplay')));
   await view.click('Download Video');
   assert.equal(requested,'https://media.test/final.mp4');
   assert.equal(created.size,24);
@@ -229,13 +232,16 @@ for(const [label,response] of [
  ['empty media',()=>new Response('',{headers:{'content-type':'video/mp4'}})],
  ['non-video response',()=>new Response('<html>error</html>',{headers:{'content-type':'text/html'}})]
 ])test('download reports '+label+' without claiming a saved file',async()=>{
- const view=await mount({assemblyJob:{id:'assembly-1',status:'completed',output:{final_video:{video_url:'https://media.test/final.mp4'}}}});
+ const view=await mount({assemblyJob:{id:'assembly-1',status:'completed',output:{final_video:{video_url:'https://media.test/final.mp4',downloadable:true}}}});
  const oldFetch=globalThis.fetch;
  globalThis.fetch=async()=>response();
  try{
+  const player = [...document.querySelectorAll('video')].find(v => v.src === 'https://media.test/final.mp4');
+  assert.ok(player);
+  await act(async () => player.dispatchEvent(new window.Event('canplay')));
   await view.click('Download Video');
   assert.match(document.querySelector('[role="alert"]').textContent,/download/i);
-  assert.match(document.body.textContent,/FINAL VIDEO COMPLETE/);
+  assert.match(document.body.textContent,/FINAL PREVIEW READY/);
   assert.ok([...document.querySelectorAll('button')].some(b=>b.textContent==='Download Video'&&!b.disabled));
  }finally{globalThis.fetch=oldFetch;await view.cleanup()}
 });
