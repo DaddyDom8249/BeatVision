@@ -6,6 +6,7 @@ import { verifyFinalMedia } from "./final-media.ts";
 import { HF_MOTION, hfEligibility, hfSubmit, hfPoll, hfDownload, hfJobSeed, HfMotionError } from "./hf-motion.ts";
 
 const ALLOWED_ORIGINS = new Set([
+  "https://beat-vision-f8nn.vercel.app",
   "https://beat-vision-theta.vercel.app",
   "https://beat-vision-beat-vision.vercel.app",
   "https://beat-vision-git-main-beat-vision.vercel.app",
