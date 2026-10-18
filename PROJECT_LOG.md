@@ -1,5 +1,16 @@
 # BeatVision Project Log
 
+## 2026-10-17 — Restore pinned free FLUX Schnell scene-image generation
+
+**Production reproduction:** Ghast approved Scene 1 shows the most recent failed scene-image job `09465b07-850f-4e4a-b3d4-6585984af075` with `PROVIDER_COST_UNVERIFIED` although a prior image is approved. This failure is produced by the unconditional Supabase `scene_image` rejection, not by the active free Cloudflare provider.
+
+**Inspected deployed provider:** The live Cloudflare Worker `beatvision-provider-arena` has an AI binding and the explicit plain-text `BEATVISION_FREE_WORKERS_AI_CONFIRMED=true`. Deployed `/v2/scene-image` validates owner-provided locked contract, tags the internal `generation.source='beatvision'`, requires confirmed Workers Free and AI binding, and routes exclusively to Cloudflare Workers AI `@cf/black-forest-labs/flux-1-schnell` with four steps. It never calls Pixazo for BeatVision-origin jobs. Missing entitlement returns 503 before inference. Official Cloudflare Workers Free plan includes a hard daily free-neuron allocation; paid plan may have overage, so the confirmed-free runtime gate must be retained.
+
+**Coordinated repository fix:** Arena PR #47 copied the deployed free-only implementation into GitHub source to prevent future redeploy regression; Arena Audit passed, merged `f8c4c26f294ae298dd448c91c0eba6f9dffa1035`. Supabase controller now allows scene_image via the already-authenticated /v2 route, retaining assembly sandbox and free Hugging Face motion. The controller rejects successful image responses unless the bridge contract is 2.0, source of truth BeatVision, cost_class free, generation model flux-schnell, `free_only=true`, one provider `cloudflare-workers-ai`, one matching image, and actual base64 image bytes. It persists exact actual provider/model and leaves new media unapproved. Unknown, paid or different providers are never accepted as a completed image.
+
+**Evidence boundary:** The change is initially source and CI only; no model requests, new images, provider charges, asset approvals or production-data writes were made by this repair. Verify GitHub tests/build/security/migration replay, deploy Supabase and confirm exact code parity. Creator must deliberately generate a new variant to test the live model; expired free quota should surface as unavailable without paid fallback.
+
+
 ## 2026-10-17 — Remove blanket cost block from sandbox final assembly only
 
 **Evidence:** BeatVision Arena worker routes /v2/assemble through the existing /v1/video/assemble handler using Shotstack Edit **/edit/stage/render** (sandbox), not its billed production endpoint. The assembly edit uses pre-existing approved video clips and frozen song audio; no Shotstack generative AI elements are requested. Shotstack's current official docs state ordinary sandbox renders do not debit rendering credits; output is watermarked and limited to 10 minutes, and the account needs at least one active credit. A missing balance can fail closed with 403, without authorizing a paid request.
