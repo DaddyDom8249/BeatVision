@@ -70,7 +70,7 @@ export function hfEvent(block: string) {
     // Map only known failure categories. Never expose provider-internal SSE text
     // (which may contain source URLs or user-derived prompts) in persisted jobs.
     const detail = raw.slice(0, 4096);
-    if (/(?:quota|gpu[\\s_-]*seconds?.*(?:limit|exceed|used)|daily[\\s_-]*(?:limit|allowance)|zerogpu.*(?:exceed|quota)|too many gpu seconds)/i.test(detail))
+    if (/(?:quota|gpu[\s_-]*seconds?.*(?:limit|exceed|used)|daily[\s_-]*(?:limit|allowance)|zerogpu.*(?:exceed|quota)|too many gpu seconds)/i.test(detail))
       fail('HF_QUOTA_EXHAUSTED');
     if (/(?:CUDA.*out of memory|out of memory|GPU.*(?:unavailable|busy)|queue.*(?:full|capacity)|no gpu available)/i.test(detail))
       fail('HF_CAPACITY_UNAVAILABLE');
