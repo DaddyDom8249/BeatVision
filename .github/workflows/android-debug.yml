@@ -26,9 +26,19 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
       - name: Install Android SDK 35
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for sdkmanager in "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager; do
+            if test -x "$sdkmanager"; then
+              "$sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+              found=1
+              break
+            fi
+          done
+          test "$found" = 1
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
