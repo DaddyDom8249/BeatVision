@@ -10,7 +10,11 @@
 
 **Verification:** At creation time no Mac/Xcode, iPhone, authenticated E2E session, or project dependency installation was available; native compile, capture/render bytes, persistence and TestFlight are **UNVERIFIED**. GitHub CI status must be checked on this exact branch head; no successful test run has yet been claimed. No paid provider calls, migrations, production deployment or service cost changes.
 
-**Next:** Verify CI and test on a physical iPhone. If `canvas.captureStream` / `MediaRecorder` are not supported by WKWebView, implement and test a native AVFoundation exporter before claiming provider-free final output. Native Files sharing and entitlement/deep-link auth also require real-device verification.
+**Source verification (2026-10-18 UTC):** On iOS-only head `1d000c96f5470223b3b916178522dfb8272bd914`, Production CI passed 335/335 tests, production audit and TypeScript/Vite build (all exit 0). Adding Capacitor types had initially broken an existing `setTimeout` declaration because the Node and DOM typings conflicted; declaring the `window.setTimeout` ID as `number` restored the build. Current main advanced to `9bcc2e0ea99861320b3cddc7d7fbc572e814ee37` with a distinct motion repair and stage-only assembly change. An explicit two-parent merge `4a726d99514e90950b9d755220f9f635119346fd` preserved both main files by content reconciliation; no force-push was used. An initial merged run failed only because the new iOS regression assumed obsolete blanket image+assembly rejection. The regression and iOS UI were corrected to follow current main: unknown-cost remote scene images remain blocked, while main's stage-only assembly remains separately available.
+
+**Final source verification:** Exact functional head `49d6b5d864c36f4840fba187898cbebb6c5b58cc` passed BeatVision Production CI workflow `39096758903`: `npm install` PASS, `npm test` 336/336 PASS, `npm run production-audit` PASS, `npm run build` PASS. This is source/test/build verification only. No Xcode/iPhone compile, usable local MP4 export, signed IPA, TestFlight or authenticated production verification has occurred.
+
+**Next:** Verify the generated iOS project and end-to-end local capture on a physical iPhone. If `canvas.captureStream` / `MediaRecorder` are not supported by WKWebView, implement and test a native AVFoundation exporter before claiming provider-free final output. Native Files sharing and entitlement/deep-link auth also require real-device verification.
 
 
 ## 2026-10-17 — Remove blanket cost block from sandbox final assembly only
