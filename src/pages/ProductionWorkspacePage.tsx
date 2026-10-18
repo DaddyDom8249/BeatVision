@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase/client";
 import { formatCreativeText, getCreativeErrorMessage } from "../lib/formatCreativeText";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 import StudioHeader from "../components/navigation/StudioHeader";
+import { Capacitor } from "@capacitor/core";
 
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
@@ -84,6 +85,7 @@ function prompt(scene: VisualPlanScene) {
 }
 
 export default function ProductionWorkspacePage({ projectId }: { projectId: string }) {
+  const nativeIOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
   const [plan, setPlan] = useState<VisualPlan | null>(null);
   const [scenes, setScenes] = useState<VisualPlanScene[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -615,7 +617,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             {imageHistory.length > 1 && <label>Saved image variants<select aria-label="Saved image variants" value={image?.id ?? ''} onChange={event => { assetChoice.current.imageId = event.target.value; void refreshScene(scene.id).catch(e => setError(productionErrorMessage(e))); }}>{imageHistory.map((asset, index) => <option key={asset.id} value={asset.id}>Variant {imageHistory.length - index} · {asset.status}</option>)}</select></label>}
             {image?.image_url ? <img src={image.image_url} alt={scene.title} style={{ width: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 12 }} /> : <p>No real scene image exists yet. Generation is only enabled from the approved Scene Direction.</p>}
             <div className="production-actions">
-              <button className="primary-button" disabled={busy || pending(imageJob)} onClick={() => void generateImage()}>{generating ? "Generating…" : image ? "Generate Another Variant" : "Generate Scene Image"}</button>
+              {!nativeIOS && <button className="primary-button" disabled={busy || pending(imageJob)} onClick={() => void generateImage()}>{generating ? "Generating…" : image ? "Generate Another Variant" : "Generate Scene Image"}</button>}
+              {nativeIOS && <p>New remote scene-image generation is not available in this iOS build. Choose your own image in Local Cut instead; no provider is called.</p>}
               {pending(imageJob) && <button className="secondary-button" disabled={busy} onClick={() => void operateJob("scene_image", imageJob)}>Check Image Status</button>}
               {image?.status === "generated" && <button className="secondary-button" onClick={() => void approveImage()}>Approve Image</button>}
               {image?.status === "generated" && <button className="secondary-button" disabled={busy} onClick={() => void rejectAsset("scene_image", image.id)}>Reject Image</button>}
@@ -706,7 +709,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             {externalLegacyRenderHref && <p role="status">The original render may still be hosted externally. <a href={externalLegacyRenderHref} target="_blank" rel="noopener noreferrer">Open original render (availability unverified)</a>. If the file opens, use your browser's own save control. This does not start generation or change approvals.</p>}
             <p>iOS alternative: <a href={"/projects/" + projectId + "/local-cut?plan=" + plan.id}>Open Local Cut</a> to preview and render a manual animatic using files stored on your device. This route makes no generation-provider calls.</p>
             <div className="production-actions">
-              {!finalVideo && !pending(assemblyJob) && <button className="primary-button" disabled={busy || !assemblyReadiness.ready} onClick={() => void assembleFinal()}>{assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}</button>}
+              {!nativeIOS && !finalVideo && !pending(assemblyJob) && <button className="primary-button" disabled={busy || !assemblyReadiness.ready} onClick={() => void assembleFinal()}>{assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}</button>}
               {pending(assemblyJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkAssemblyStatus()}>{assemblyRunning ? "Checking…" : "Check Assembly Status"}</button>}
               {finalVideo?.video_url && finalVideo.downloadable === true && finalPlayback?.url === finalVideo.video_url && finalPlayback?.state === "ready" && <button className="secondary-button" disabled={downloading} onClick={() => void downloadFinalVideo()}>{downloading ? "Downloading…" : "Download Video"}</button>}
               {finalVideo?.video_url && <span className="style-lock-badge">{finalPlayback?.url === finalVideo.video_url && finalPlayback?.state === "ready" ? "FINAL PREVIEW READY" : "RENDER RECORDED · PLAYBACK UNVERIFIED"}</span>}
