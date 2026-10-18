@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Keep browser origins aligned with the existing generation Edge allowlist.
 const ALLOWED_ORIGINS = new Set([
+  "capacitor://localhost", // Default Capacitor iOS WKWebView origin; JWT/owner checks unchanged.
   "https://beat-vision-theta.vercel.app",
   "https://beat-vision-beat-vision.vercel.app",
   "https://beat-vision-git-main-beat-vision.vercel.app",

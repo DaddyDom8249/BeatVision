@@ -8,6 +8,7 @@ import StylePage from "../pages/StylePage";
 import VisualPlanPage from "../pages/VisualPlanPage";
 import SceneProductionPage from "../pages/SceneProductionPage";
 import ProductionWorkspacePage from "../pages/ProductionWorkspacePage";
+import LocalCutPage from "../pages/LocalCutPage";
 import { capturePageview, identifyUser, initAnalytics } from "../lib/analytics";
 import { supabase } from "../lib/supabase/client";
 
@@ -63,6 +64,9 @@ export default function App() {
 
   const sceneProductionMatch = path.match(/^\/projects\/([^/]+)\/scenes\/?$/);
   if (sceneProductionMatch) return <SceneProductionPage projectId={sceneProductionMatch[1]} />;
+
+  const localCutMatch = path.match(/^\/projects\/([^/]+)\/local-cut\/?$/);
+  if (localCutMatch) return <LocalCutPage projectId={localCutMatch[1]} />;
 
   const productionMatch = path.match(/^\/projects\/([^/]+)\/(?:production|motion|video)\/?$/);
   if (productionMatch) return <ProductionWorkspacePage projectId={productionMatch[1]} />;

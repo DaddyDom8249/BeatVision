@@ -1,5 +1,22 @@
 # BeatVision Project Log
 
+## 2026-10-17 — iOS Capacitor and isolated local manual cut (UNVERIFIED on device)
+
+**Objective:** Provide an iOS-compatible BeatVision build path and a useful no-provider alternative to blocked image/assembly submissions, without permitting unknown-cost external models.
+
+**Baseline:** GitHub main was `f3523c9ab0f57ca2cf116e635eef28374f223cdb`; `AGENTS.md`, the project log, and generation/approval/audit sources were read. Existing controller rejects new image/assembly dispatch with `PROVIDER_COST_UNVERIFIED`. Canonical approved image/motion tables require generation-job lineage and block user inserts; they must not be modified for manually imported files.
+
+**Change:** Add Capacitor v8 iOS configuration and dependencies with Mac/Xcode build instructions. Add `Local Cut` read-only approved-plan route and production link. Local song/photo/video import previews against approved timing; optional 720p image-only animatic export uses on-device canvas recording and WebAudio when the WKWebView provides the required capture/encoding support. Invalid timeline, audio-duration mismatch, absent codec and missing imagery stop with visible errors. No local files are uploaded, and no `generation_jobs`, creative approvals, or `final_videos` state is written. Add exact Capacitor WKWebView origin to four existing Edge CORS allowlists while retaining JWT, RLS, owner checks, and the remote provider cost guard. Add static isolation/CORS regressions and docs.
+
+**Verification:** At creation time no Mac/Xcode, iPhone, authenticated E2E session, or project dependency installation was available; native compile, capture/render bytes, persistence and TestFlight are **UNVERIFIED**. GitHub CI status must be checked on this exact branch head; no successful test run has yet been claimed. No paid provider calls, migrations, production deployment or service cost changes.
+
+**Source verification (2026-10-18 UTC):** On iOS-only head `1d000c96f5470223b3b916178522dfb8272bd914`, Production CI passed 335/335 tests, production audit and TypeScript/Vite build (all exit 0). Adding Capacitor types had initially broken an existing `setTimeout` declaration because the Node and DOM typings conflicted; declaring the `window.setTimeout` ID as `number` restored the build. Current main advanced to `9bcc2e0ea99861320b3cddc7d7fbc572e814ee37` with a distinct motion repair and stage-only assembly change. An explicit two-parent merge `4a726d99514e90950b9d755220f9f635119346fd` preserved both main files by content reconciliation; no force-push was used. An initial merged run failed only because the new iOS regression assumed obsolete blanket image+assembly rejection. The regression and iOS UI were corrected to follow current main: unknown-cost remote scene images remain blocked, while main's stage-only assembly remains separately available.
+
+**Final source verification:** Exact functional head `49d6b5d864c36f4840fba187898cbebb6c5b58cc` passed BeatVision Production CI workflow `39096758903`: `npm install` PASS, `npm test` 336/336 PASS, `npm run production-audit` PASS, `npm run build` PASS. This is source/test/build verification only. No Xcode/iPhone compile, usable local MP4 export, signed IPA, TestFlight or authenticated production verification has occurred.
+
+**Next:** Verify the generated iOS project and end-to-end local capture on a physical iPhone. If `canvas.captureStream` / `MediaRecorder` are not supported by WKWebView, implement and test a native AVFoundation exporter before claiming provider-free final output. Native Files sharing and entitlement/deep-link auth also require real-device verification.
+
+
 ## 2026-10-17 — Remove blanket cost block from sandbox final assembly only
 
 **Evidence:** BeatVision Arena worker routes /v2/assemble through the existing /v1/video/assemble handler using Shotstack Edit **/edit/stage/render** (sandbox), not its billed production endpoint. The assembly edit uses pre-existing approved video clips and frozen song audio; no Shotstack generative AI elements are requested. Shotstack's current official docs state ordinary sandbox renders do not debit rendering credits; output is watermarked and limited to 10 minutes, and the account needs at least one active credit. A missing balance can fail closed with 403, without authorizing a paid request.
