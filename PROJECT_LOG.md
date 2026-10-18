@@ -1,5 +1,24 @@
 # BeatVision Project Log
 
+## 2026-10-17 — Android debug app shell candidate (no production changes)
+
+**Objective:** Provide an installable Android test build while reusing BeatVision's current React/Vite studio and Supabase backend.
+
+**Baseline:** Current GitHub main `f3523c9ab0f57ca2cf116e635eef28374f223cdb`, read AGENTS.md, PROJECT_LOG.md, current test/build commands, AuthPage and studio routing. No Android/Capacitor project previously present. Existing email/password authentication stores sessions in the browser; existing app already supports Android browser access but has known unfinished motion/export paths.
+
+**Implementation:** New isolated branch `feature/beatvision-android-20261017` adds a minimal Java Android WebView shell, production-host HTTPS-only top-level navigation, browser handling for off-origin links/download URLs, user-selected content:// document uploads, Android back navigation, playback support, no JavaScript bridge or storage permissions, navigation policy unit tests, and Android-specific GitHub Actions debug APK workflow. The app does not replace any frontend/backend routes, change schema, alter approved assets, invoke generation, or require paid providers.
+
+**Cost:** Public repository standard hosted GitHub Actions runners are listed as free; no paid runner, account credential, production provider, or release signing service is configured.
+
+**Verification:** Repository changes were committed; native Gradle execution is **UNVERIFIED** pending GitHub Actions. Actual APK artifact, installation, auth persistence, audio upload, signed media playback and final export remain **UNVERIFIED** until CI/device evidence. An Android debug APK must not be represented as production-ready or Play Store-signed.
+
+**Known limitations:** The shell requires network access; existing production provider/export blockers remain. Blob downloads, external OAuth flows, device-specific keyboard/permissions and prolonged Android playback are not yet tested.
+
+**Next checkpoint:** Review PR CI; obtain a successful `:app:testDebugUnitTest :app:assembleDebug :app:lintDebug` with a real APK artifact, then test the device acceptance checklist in `android/README.md`.
+
+---
+
+
 ## 2026-10-17 — Verified Ghast media URL churn, truthful playback/export status
 
 **Observed authenticated Android workflow:** 8-scene Ghast approved Visual Plan. Scene 1 approved Hugging Face MP4 is physically present in the private `visual-assets` storage bucket and was served via valid 200/206 responses at 21:03 UTC. The browser's five-second job-status polls repeatedly called the Edge signing action and reloaded a different short-lived signed video URL, interrupting media decoder loading; job state never reached a terminal status because a different queued AI motion attempt is stuck with PostgREST 400 on scheduler dispatch. Those database and storage records are not altered by the frontend fix.
