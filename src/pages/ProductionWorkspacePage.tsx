@@ -200,6 +200,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
   const [imageHistory, setImageHistory] = useState<any[]>([]);
   const [motionHistory, setMotionHistory] = useState<any[]>([]);
+  const [imagePreviewFailure, setImagePreviewFailure] = useState<string | null>(null);
   const assetChoice = useRef<{sceneId: string; imageId?: string; motionId?: string}>({sceneId: ''});
   const attemptId = useRef<string | null>(null);
   const rows = (data: any) => Array.isArray(data) ? data : data ? [data] : [];
@@ -248,8 +249,23 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     if (selectedSceneId.current !== sceneId) return;
     setMotion(freshMotion); setImageJob(imageJobs.data); setMotionJob(motionJobs.data);
     setMotionAssetJob(sourceJob);
-    const freshImage = await displayImage(selectedImage);
-    if (selectedSceneId.current === sceneId) setImage(freshImage);
+    // Asset eligibility comes from the owner-scoped database row, not from the
+    // short-lived URL used only to render its preview. Keep the approved asset
+    // selected when signing is temporarily unavailable so the server can still
+    // perform its authoritative motion preflight.
+    if (selectedSceneId.current === sceneId) {
+      setImage(selectedImage);
+      setImagePreviewFailure(null);
+    }
+    try {
+      const freshImage = await displayImage(selectedImage);
+      if (selectedSceneId.current === sceneId) setImage(freshImage);
+    } catch (reason) {
+      if (selectedSceneId.current === sceneId && selectedImage) {
+        setImage({ ...selectedImage, image_url: "" });
+        setImagePreviewFailure(productionErrorMessage(reason));
+      }
+    }
   }, [projectId, plan?.id]);
 
   const refreshFinal = useCallback(async (planId: string) => {
@@ -321,7 +337,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
   useEffect(() => {
     let active = true;
-    setImage(null); setMotion(null); setImageJob(null); setMotionJob(null); setMotionAssetJob(null); setError(null);
+    setImage(null); setMotion(null); setImageJob(null); setMotionJob(null); setMotionAssetJob(null); setImagePreviewFailure(null); setError(null);
     if (!scene) return;
     setAssetLoading(true);
     refreshScene(scene.id).catch(e => { if (active) setError(productionErrorMessage(e)); }).finally(() => { if (active) setAssetLoading(false); });
@@ -622,7 +638,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
           <div className="production-provider-note">
             <span className="panel-label">SCENE IMAGE</span>
             {imageHistory.length > 1 && <label>Saved image variants<select aria-label="Saved image variants" value={image?.id ?? ''} onChange={event => { assetChoice.current.imageId = event.target.value; void refreshScene(scene.id).catch(e => setError(productionErrorMessage(e))); }}>{imageHistory.map((asset, index) => <option key={asset.id} value={asset.id}>Variant {imageHistory.length - index} · {asset.status}</option>)}</select></label>}
-            {image?.image_url ? <img src={image.image_url} alt={scene.title} style={{ width: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 12 }} /> : <p>No real scene image exists yet. Generation is only enabled from the approved Scene Direction.</p>}
+            {image?.image_url ? <img src={image.image_url} alt={scene.title} style={{ width: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 12 }} />
+              : image ? <p role="alert">The approved scene image is preserved, but its preview is temporarily unavailable{imagePreviewFailure ? ": " + imagePreviewFailure : "."}</p>
+              : <p>No real scene image exists yet. Generation is only enabled from the approved Scene Direction.</p>}
             <div className="production-actions">
               <button className="primary-button" disabled={busy || pending(imageJob)} onClick={() => void generateImage()}>{generating ? "Generating…" : image ? "Generate Another Variant" : "Generate Scene Image"}</button>
               {pending(imageJob) && <button className="secondary-button" disabled={busy} onClick={() => void operateJob("scene_image", imageJob)}>Check Image Status</button>}
