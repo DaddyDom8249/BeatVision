@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HF_MOTION, hfEligibility, hfSubmit, hfPoll, hfEvent, hfDownload, validateMp4, hfInput } from '../../supabase/functions/beatvision-generation/hf-motion.ts';
+import { HF_MOTION, hfEligibility, hfSubmit, hfPoll, hfEvent, hfDownload, validateMp4, hfInput, hfJobSeed } from '../../supabase/functions/beatvision-generation/hf-motion.ts';
 import { loadGeneration } from './generation-runtime.mjs';
 const params = ['prompt','negative_prompt','input_image_filepath','input_video_filepath','height_ui','width_ui','mode','duration_ui','ui_frames_to_use','seed_ui','randomize_seed','ui_guidance_scale','improve_texture_flag'];
 function metadata({ pro=false, owner='DaddyDom8249', stage='RUNNING', revision=HF_MOTION.revision, contract=params, postStatus=200 }={}) {
@@ -14,17 +14,17 @@ function metadata({ pro=false, owner='DaddyDom8249', stage='RUNNING', revision=H
   }; return {request,calls};
 }
 for (const [name, options, code] of [['paid account',{pro:true},'HF_FREE_ACCOUNT_NOT_VERIFIED'],['wrong owner',{owner:'other'},'HF_FREE_ACCOUNT_NOT_VERIFIED'],['runtime changed',{stage:'PAUSED'},'HF_SPACE_ELIGIBILITY_CHANGED'],['source changed',{revision:'other'},'HF_SPACE_ELIGIBILITY_CHANGED'],['contract changed',{contract:[]},'HF_API_CONTRACT_CHANGED']]) test(name+' prevents GPU POST',async()=>{
-  const f=metadata(options);await assert.rejects(hfSubmit('test-secret','https://private.test/image.jpg','Character turns head',f.request),new RegExp(code));assert.equal(f.calls.filter(c=>c.init.method==='POST').length,0);
+  const f=metadata(options);await assert.rejects(hfSubmit('test-secret','https://private.test/image.jpg','Character turns head',42,f.request),new RegExp(code));assert.equal(f.calls.filter(c=>c.init.method==='POST').length,0);
 });
 test('missing secret fails without any request',async()=>{let called=false;await assert.rejects(hfEligibility('',async()=>{called=true}),/HF_VIDEO_TOKEN_MISSING/);assert.equal(called,false)});
 test('real API contract submits once and returns accepted event, never completed',async()=>{
-  const f=metadata();const result=await hfSubmit('test-secret','https://private.test/image.jpg','Character turns head',f.request);
+  const f=metadata();const result=await hfSubmit('test-secret','https://private.test/image.jpg','Character turns head',42,f.request);
   assert.equal(result.status,'processing');assert.equal(result.job_id,'a'.repeat(32));assert.equal(result.eligibility.cost_class,'free');
   const posts=f.calls.filter(c=>c.init.method==='POST');assert.equal(posts.length,1);assert.equal(posts[0].url,HF_MOTION.host+'/gradio_api/call/image_to_video');
   const payload=JSON.parse(posts[0].init.body).data;assert.equal(payload[2].meta._type,'gradio.FileData');assert.equal(payload[7],2);assert.equal(payload[6],'image-to-video');assert.equal(JSON.stringify(result).includes('test-secret'),false);
 });
-test('quota rejection does not retry or fall back',async()=>{const f=metadata({postStatus:429});await assert.rejects(hfSubmit('test-secret','https://private.test/image.jpg','move',f.request),/HF_QUOTA_EXHAUSTED/);assert.equal(f.calls.filter(c=>c.init.method==='POST').length,1)});
-test('ambiguous POST is not retried',async()=>{const f=metadata();let posts=0;const request=async(u,i)=>{if(i?.method==='POST'){posts++;throw new TypeError('network')}return f.request(u,i)};await assert.rejects(hfSubmit('test-secret','https://private.test/image.jpg','move',request),/HF_SUBMISSION_ACCEPTANCE_UNKNOWN/);assert.equal(posts,1)});
+test('quota rejection does not retry or fall back',async()=>{const f=metadata({postStatus:429});await assert.rejects(hfSubmit('test-secret','https://private.test/image.jpg','move',42,f.request),/HF_QUOTA_EXHAUSTED/);assert.equal(f.calls.filter(c=>c.init.method==='POST').length,1)});
+test('ambiguous POST is not retried',async()=>{const f=metadata();let posts=0;const request=async(u,i)=>{if(i?.method==='POST'){posts++;throw new TypeError('network')}return f.request(u,i)};await assert.rejects(hfSubmit('test-secret','https://private.test/image.jpg','move',42,request),/HF_SUBMISSION_ACCEPTANCE_UNKNOWN/);assert.equal(posts,1)});
 test('SSE heartbeat never completes; error wins and external output is rejected',()=>{
   assert.equal(hfEvent('event: heartbeat\ndata: null'),null);
   assert.throws(()=>hfEvent('event: error\ndata: "GPU quota exceeded"'),/HF_QUOTA_EXHAUSTED/);
@@ -141,4 +141,46 @@ test('free motion claim never PATCHes nonexistent generation_jobs.model', async 
     assert.equal(updates[0].provider_job_id, 'beatvision:job-queued');
     assert.equal(updates[0].status, 'submitted');
   } finally { await runtime.cleanup(); }
+});
+
+test('unique immutable job IDs provide distinct deterministic motion seeds', () => {
+  const first = '40042432-b17b-49c6-a357-c102ee1c475a';
+  const second = '9ab6559a-0a4d-4c5a-8f3a-b8e0b49449ed';
+  const a = hfJobSeed(first), b = hfJobSeed(second);
+  assert.ok(a >= 1 && a <= 2147483646);
+  assert.ok(b >= 1 && b <= 2147483646);
+  assert.notEqual(a, b, 'different append-only variants must not reuse seed 42');
+  assert.equal(hfJobSeed(first), a, 'same job retry must retain seed');
+  const imageUrl = 'https://private.test/scene.jpg';
+  assert.equal(hfInput(imageUrl, 'Actor walks', a)[9], a);
+  assert.equal(hfInput(imageUrl, 'Actor walks', b)[9], b);
+  assert.equal(hfInput(imageUrl, 'Actor walks', a)[10], false, 'server controls seed for retries');
+  assert.throws(() => hfJobSeed('not-a-job-uuid'), /HF_JOB_ID_INVALID/);
+  assert.throws(() => hfInput(imageUrl, 'Actor walks', 0), /HF_SEED_INVALID/);
+  assert.throws(() => hfInput(imageUrl, 'Actor walks', undefined), /HF_SEED_INVALID/);
+});
+
+test('verified free provider POST receives only caller-requested job seed', async () => {
+  const f = metadata();
+  const seed = hfJobSeed('9ab6559a-0a4d-4c5a-8f3a-b8e0b49449ed');
+  const result = await hfSubmit('test-secret', 'https://private.test/approved-scene.jpg', 'Subject moves', seed, f.request);
+  assert.equal(result.result.requested_seed, seed);
+  assert.equal(result.eligibility.cost_class, 'free');
+  const posts = f.calls.filter(c => c.init.method === 'POST');
+  assert.equal(posts.length, 1);
+  const data = JSON.parse(posts[0].init.body).data;
+  assert.equal(data[9], seed);
+  assert.equal(data[10], false);
+  assert.equal(data[2].url, 'https://private.test/approved-scene.jpg');
+  assert.equal(JSON.stringify(posts[0]).includes('test-secret'), true, 'request is authenticated');
+});
+
+test('invalid motion seed fails before provider eligibility or paid resource request', async () => {
+  let calls = 0;
+  await assert.rejects(
+    hfSubmit('test-secret', 'https://private.test/scene.jpg', 'Actor walks', NaN, async () => {
+      calls++; throw Error('network must not be called');
+    }), /HF_SEED_INVALID/
+  );
+  assert.equal(calls, 0);
 });

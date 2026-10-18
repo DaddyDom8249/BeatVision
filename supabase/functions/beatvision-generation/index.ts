@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { validateImage, readImage } from "./image-media.ts";
 import { verifyFinalMedia } from "./final-media.ts";
-import { HF_MOTION, hfEligibility, hfSubmit, hfPoll, hfDownload, HfMotionError } from "./hf-motion.ts";
+import { HF_MOTION, hfEligibility, hfSubmit, hfPoll, hfDownload, hfJobSeed, HfMotionError } from "./hf-motion.ts";
 
 const ALLOWED_ORIGINS = new Set([
   "https://beat-vision-theta.vercel.app",
@@ -492,8 +492,11 @@ async function hfBridgeSubmit(db: any, job: any) {
   if (signed.error || !signed.data?.signedUrl) throw new Error("HF_SOURCE_SIGNING_FAILED");
   const scene = job.input_snapshot.scene;
   const prompt = [scene.title, scene.visual_direction, scene.movement_direction, scene.location, scene.mood, scene.continuity_notes].filter(value => typeof value === "string" && value.trim()).join(". ");
+  // A new append-only job yields a distinct seed; a retry of the same job cannot
+  // change the seed, and the adapter still verifies free account + ZeroGPU first.
   const data = await hfSubmit(env("HF_VIDEO_TOKEN"), signed.data.signedUrl,
-    prompt + ". The character moves naturally, breathes and turns their head. Fixed camera. Preserve the approved character, face, wardrobe and setting. AI-generated video.");
+    prompt + ". The character moves naturally, breathes and turns their head. Fixed camera. Preserve the approved character, face, wardrobe and setting. AI-generated video.",
+    hfJobSeed(job.id));
   return { response: new Response(null, { status: 200 }), data: { ...data, source_image_id: image.data.id } };
 }
 
