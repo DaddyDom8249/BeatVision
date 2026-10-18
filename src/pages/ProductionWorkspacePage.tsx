@@ -9,6 +9,25 @@ const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id
 const imageFields = "id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,storage_path,status,approved,created_at,updated_at";
 const SIGNED_MEDIA_REUSE_MS = 50 * 60 * 1000; // Supabase signs clips and images for 60 minutes.
 
+/** Legacy completed renders may reside only at an external Shotstack stage URL.
+ * This is an explicit, owner-initiated read-only recovery link, never proof that
+ * the provider still hosts the file or that BeatVision owns a durable export.
+ */
+function legacyRenderHref(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" ||
+        url.hostname !== "shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com" ||
+        url.username || url.password || url.port || url.search || url.hash ||
+        !/^\/[a-z0-9_-]+\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.mp4$/i.test(url.pathname))
+      return null;
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
 function productionErrorMessage(error: unknown) {
   const message = typeof error === "string" ? error : getCreativeErrorMessage(error, "Production request failed.");
   if (message.includes("ASSEMBLY_MOTION_NOT_FULLY_APPROVED")) {
@@ -106,6 +125,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const selectedSceneId = useRef<string | undefined>(scene?.id);
   selectedSceneId.current = scene?.id;
   const busy = generating || motionGenerating || assemblyRunning || assetLoading;
+  const externalLegacyRenderHref = assemblyJob?.status === "completed" && finalVideo?.downloadable !== true
+    ? legacyRenderHref(finalVideo?.video_url) : null;
   const sceneSeconds = scene ? Math.max(0, Number(scene.end_time) - Number(scene.start_time)) : 0;
   const savedProof = motionAssetJob?.output?.arena_status_response?.result?.verification;
   const savedProofSeconds = Number(savedProof?.measured_duration_seconds ?? savedProof?.video_duration_seconds);
@@ -682,6 +703,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             {!finalVideo && <p role="status">{assemblyReadiness.message}</p>}
             {finalVideo?.video_url && finalPlayback?.url === finalVideo.video_url && finalPlayback?.state === "failed" && <p role="alert">The saved final-video URL could not be played on this device. A completed job does not establish that the file is still accessible.</p>}
             {finalVideo?.video_url && finalVideo.downloadable !== true && <p role="status">A final render is recorded, but its database record is marked non-downloadable. Do not assume the external render URL is a durable export.</p>}
+            {externalLegacyRenderHref && <p role="status">The original render may still be hosted externally. <a href={externalLegacyRenderHref} target="_blank" rel="noopener noreferrer">Open original render (availability unverified)</a>. If the file opens, use your browser's own save control. This does not start generation or change approvals.</p>}
             <div className="production-actions">
               {!finalVideo && !pending(assemblyJob) && <button className="primary-button" disabled={busy || !assemblyReadiness.ready} onClick={() => void assembleFinal()}>{assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}</button>}
               {pending(assemblyJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkAssemblyStatus()}>{assemblyRunning ? "Checking…" : "Check Assembly Status"}</button>}

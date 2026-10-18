@@ -454,3 +454,40 @@ test('downloadable final media requires successful browser playback before downl
     assert.ok(view.button('Download Video'));
   } finally { await view.cleanup(); }
 });
+
+test('legacy completed Shotstack render offers a read-only recovery link without a fake download', async () => {
+  const original = 'https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/eaf220ehc2/3afd25f2-995e-4b2b-97da-b39d8dad6dc8.mp4';
+  const view = await mount({ assemblyJob: { id: 'legacy-assembly', status: 'completed', output: {
+    final_video: { video_url: original, render_status: 'complete', downloadable: false }
+  } } });
+  try {
+    const link = [...document.querySelectorAll('a')].find(a => a.textContent.includes('Open original render'));
+    assert.ok(link, 'authorized owner must have a way to test the existing legacy provider URL');
+    assert.equal(link.href, original);
+    assert.equal(link.target, '_blank');
+    assert.match(link.rel, /noopener/);
+    assert.match(link.rel, /noreferrer/);
+    assert.equal(view.button('Download Video'), undefined, 'render record must remain non-downloadable');
+    assert.match(document.body.textContent, /availability unverified/i);
+    assert.equal(view.calls.length, 0, 'no new provider or signing calls');
+  } finally { await view.cleanup(); }
+});
+
+test('legacy recovery never links untrusted, signed, or malformed external URLs', async () => {
+  const rejected = [
+    'javascript:alert(1)',
+    'https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com.evil.test/foo/3afd25f2-995e-4b2b-97da-b39d8dad6dc8.mp4',
+    'https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/eaf220ehc2/3afd25f2-995e-4b2b-97da-b39d8dad6dc8.mp4?token=secret',
+    'https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/eaf220ehc2/other-video.mp4',
+    'http://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/eaf220ehc2/3afd25f2-995e-4b2b-97da-b39d8dad6dc8.mp4',
+  ];
+  for (const url of rejected) {
+    const view = await mount({ assemblyJob: { id: 'legacy-assembly', status: 'completed', output: {
+      final_video: { video_url: url, downloadable: false }
+    } } });
+    try {
+      assert.ok(![...document.querySelectorAll('a')].some(a => a.textContent.includes('Open original render')), url);
+      assert.equal(view.button('Download Video'), undefined);
+    } finally { await view.cleanup(); }
+  }
+});
