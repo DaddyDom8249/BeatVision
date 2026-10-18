@@ -47,3 +47,23 @@ Do not check generated signing material or developer credentials into Git. The `
 6. Export locally if the codec and capture APIs are supported.
 7. Verify decoded bytes and audio/video duration, not just a nonempty Blob.
 8. Verify mismatch, unsupported codec, unauthorized project and imported-video fallback errors.
+
+
+## Sign an installable iOS Ad Hoc IPA
+
+The automated native compilation passed on [GitHub Actions run 39099109906](https://github.com/DaddyDom8249/BeatVision/actions/runs/39099109906). That artifact is **unsigned** and will not install on an iPhone.
+
+The separate [secure signing workflow](../.github/workflows/ios-sign-ad-hoc.yml) builds a **signed Ad Hoc** IPA only when an Apple Distribution identity and valid provisioning profile are available. It validates the profile expiry, bundle ID, registered devices, and final embedded signature. No certificates or passwords belong in the repository or in chat.
+
+1. In your Apple Developer Program account, register an App ID with bundle identifier `com.beatvision.studio`, create an **Apple Distribution** certificate with its private key, and register the UDID(s) of iPhone(s) that will install the app.
+2. Create an **Ad Hoc** iOS provisioning profile for that App ID, distribution certificate and registered devices. Export the certificate **including its private key** to a password-protected `.p12` file. Download the `.mobileprovision` file.
+3. Under [GitHub Actions secrets](https://github.com/DaddyDom8249/BeatVision/settings/secrets/actions), add these **repository secrets**, never committed files:
+   - `APPLE_SIGNING_P12_BASE64`: the base64 representation of the entire `.p12` file, as one line.
+   - `APPLE_SIGNING_P12_PASSWORD`: the password protecting that `.p12` file.
+   - `APPLE_ADHOC_PROFILE_BASE64`: the base64 representation of the entire `.mobileprovision` file, as one line.
+4. On macOS, `base64 -i certificate.p12 | tr -d '\\n'` and `base64 -i profile.mobileprovision | tr -d '\\n'` can prepare the two secret values locally. Do **not** put signing assets in issues, logs, ChatGPT, PR descriptions or Git commits.
+5. After adding all three secrets, rerun [the gated signing workflow](https://github.com/DaddyDom8249/BeatVision/actions/workflows/ios-sign-ad-hoc.yml) on branch `feature/ios-local-cut-20261017`, or rerun the failed signing job. On success download artifact `BeatVision-iOS-SIGNED-AdHoc` (contains `BeatVision-SIGNED-AdHoc.ipa`). Installation works only on devices included in the Ad Hoc profile.
+
+**Strict $0 alternative:** An Apple Account without paid program membership can use an Xcode **Personal Team** to sign and install a development build directly on a locally connected personal iPhone. Apple's personal-team provisioning profiles expire after seven days and require repeated builds. This does **not** provide portable Ad Hoc/TestFlight distribution from the GitHub runner. If you do not have a paid Apple Developer Program membership, the Ad Hoc workflow cannot complete with a legitimate distribution certificate and Ad Hoc profile.
+
+**Evidence:** [First signing attempt](https://github.com/DaddyDom8249/BeatVision/actions/runs/39100183727) stopped at its missing-credentials gate. It did not produce a signed IPA. Keep original unsigned artifacts clearly labeled, and do not rename them as signed.
