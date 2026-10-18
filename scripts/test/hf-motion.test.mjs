@@ -41,11 +41,11 @@ test('provider SSE failures are safely classified without exposing raw errors', 
   ];
   for (const [detail, code] of cases) {
     let thrown;
-    try { hfEvent('event: error\\ndata: ' + JSON.stringify(detail)); }
+    try { hfEvent('event: error\ndata: ' + JSON.stringify(detail)); }
     catch (error) { thrown = error; }
     assert.equal(thrown?.code, code);
     assert.equal(thrown?.message, code);
-    assert.doesNotMatch(thrown?.message, /private\\.example/);
+    assert.doesNotMatch(thrown?.message, /private\.example/);
   }
 });
 test('typed Hugging Face terminal errors persist a distinct error code', async () => {
