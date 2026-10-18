@@ -38,3 +38,10 @@ test("Capacitor origin is explicitly allowed without a wildcard or weakened auth
     assert.match(source, /ALLOWED_ORIGINS\.has\(origin\)/);
   }
 });
+
+test("Native iOS workspace exposes Local Cut instead of blocked remote submissions", () => {
+  assert.match(workspace, /Capacitor\.isNativePlatform\(\) && Capacitor\.getPlatform\(\) === "ios"/);
+  assert.match(workspace, /\{!nativeIOS && <button[^\n]+generateImage/);
+  assert.match(workspace, /\{!nativeIOS && !finalVideo[^\n]+assembleFinal/);
+  assert.match(workspace, /Choose your own image in Local Cut/);
+});
