@@ -554,7 +554,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   }
 
   async function approveMotion() {
-    if (!motion || motion.status !== "generated" || !motion.video_url) return;
+    if (!scene || !motion || motion.status !== "generated" || !motion.video_url) return;
     setError(null);
     const result = await supabase.rpc("approve_motion_clip_asset", { p_asset_id: motion.id });
     if (result.error) setError(productionErrorMessage(result.error));
@@ -565,7 +565,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   }
 
   async function approveImage() {
-    if (!image || image.status !== "generated" || !image.image_url) return;
+    if (!scene || !image || image.status !== "generated" || !image.image_url) return;
     setError(null);
     const result = await supabase.rpc("approve_scene_image_asset", { p_asset_id: image.id });
     if (result.error) setError(productionErrorMessage(result.error)); else setImage({ ...result.data, image_url: image.image_url, __sceneId: scene.id });
