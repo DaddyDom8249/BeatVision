@@ -6,7 +6,7 @@
 
 **Safety:** No backend credentials exposed, no schema/data changes, no approved-media replacement, no runtime paid model attempt. This source-only change does NOT certify the Cloudflare account Free tier, deploy the updated Arena Worker, activate verification, fix assembly or retrospectively retry failed jobs.
 
-**Verification boundary:** Exact-head GitHub tests and production runtime validation pending. Release order: independently verify Workers Free entitlement and billing restrictions, review Arena PR #46, deploy verified Arena code and set its explicit Free-only certification, verify authenticated health response, then deploy tested Generation code. Never activate certification on assumption.
+**Verification boundary:** BeatVision PR #126 source head `a86319ad36c693214e0166612823c4160eefa456` passed Production CI `39095948595`: 335/335 tests, 0 fail; production audit and Vite build passed. Generation enqueue security `39095948648`, legacy storage ownership security `39095948638` and isolated database migration replay `39095948624` also passed. All evidence is mocked/source CI, not a free billing plan or a real production image. Production runtime validation pending. Release order: independently verify Workers Free entitlement and billing restrictions, review Arena PR #46, deploy verified Arena code and set its explicit Free-only certification, verify authenticated health response, then deploy tested Generation code. Never activate certification on assumption.
 
 ---
 
