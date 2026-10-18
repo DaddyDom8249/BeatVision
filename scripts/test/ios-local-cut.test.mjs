@@ -27,7 +27,8 @@ test("Local Cut refuses invalid local export and calls no paid provider", () => 
   assert.doesNotMatch(page, /fetch\(|apiKey|Bearer|shotstack/i);
 });
 test("Provider cost guard remains enforced for remote image and assembly", () => {
-  assert.match(generation, /PROVIDER_COST_UNVERIFIED: New image and assembly submissions are unavailable/);
+  assert.match(generation, /PROVIDER_COST_UNVERIFIED: Free scene-image generation has not been established/);
+  assert.match(generation, /job\.job_type === "scene_image"/);
 });
 
 test("Capacitor origin is explicitly allowed without a wildcard or weakened auth", () => {
@@ -42,6 +43,6 @@ test("Capacitor origin is explicitly allowed without a wildcard or weakened auth
 test("Native iOS workspace exposes Local Cut instead of blocked remote submissions", () => {
   assert.match(workspace, /Capacitor\.isNativePlatform\(\) && Capacitor\.getPlatform\(\) === "ios"/);
   assert.match(workspace, /\{!nativeIOS && <button[^\n]+generateImage/);
-  assert.match(workspace, /\{!nativeIOS && !finalVideo[^\n]+assembleFinal/);
+  assert.match(workspace, /\{!finalVideo && !pending\(assemblyJob\)[^\n]+assembleFinal/);
   assert.match(workspace, /Choose your own image in Local Cut/);
 });
