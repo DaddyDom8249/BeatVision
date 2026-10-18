@@ -1,5 +1,13 @@
 # BeatVision Project Log
 
+## 2026-10-18 — Preserve Hugging Face queue errors and identify exhausted quota
+
+**Evidence:** The user's new scene-motion job `b4e44ced-fa8f-485e-b008-eb39ea9f6618` failed after acceptance at 14:13 UTC. Gradio 5.42's simplified status endpoint returned `event: error` with `data: null`, discarding `output.error`. The actual approved source image succeeded through the Space's CPU-only image-preparation endpoint; a structured status request confirmed the matching event and successful dimensions.
+
+**Repair:** Keep the single existing generation POST and read the accepted event through `/queue/data?session_hash=<event_id>`. Parse structured completion/error data, require the exact event ID, and reuse safe quota/capacity/error classification and existing output-host checks. Raw provider text is not persisted or exposed. No model settings, account gating, approvals, images, migrations or fallback policy changed.
+
+**Verification:** Six new/updated regressions failed before the parser change; focused HF suite 37/37 and full suite 341/341 pass with zero skips; audit/build pass. Deployed controller v41 and verified all four source files match. One previously authorized 2-second production-browser diagnostic attempt (`7032cc7c-ff72-4719-8556-e59f0d70e453`, created 14:21:48 UTC, attempts=1) surfaced `HF_QUOTA_EXHAUSTED`; the browser now explains exhausted free GPU allowance. No clip was generated, automatically retried or approved; no paid fallback was attempted. Provider reset time and the exact cause of the earlier consumed generic failure remain unverified. Next: wait for free quota reset, then deliberately request a new variant.
+
 ## 2026-10-18 — Restore generation requests from the production origin
 
 **Cause:** The actual production origin `https://beat-vision-f8nn.vercel.app` was missing from the generation controller's CORS allowlist. Live OPTIONS returned 204 without `Access-Control-Allow-Origin`; authenticated browser image signing failed and the frontend's preserved approved asset had no preview. The earlier PR #132 repaired asset state only.

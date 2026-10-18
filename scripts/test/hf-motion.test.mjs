@@ -70,12 +70,71 @@ test('typed Hugging Face terminal errors persist a distinct error code', async (
     assert.equal(update?.error?.code, 'ARENA_GENERATION_FAILED');
   } finally { globalThis.fetch = previous; await runtime.cleanup(); }
 });
-test('SSE split across network chunks produces the real file output',async()=>{
-  const complete='event: heartbeat\ndata: null\n\nevent: complete\ndata: '+JSON.stringify([{video:{url:HF_MOTION.host+'/gradio_api/file=/tmp/video.mp4'}},42])+'\n\n';
+const motionEventId = 'a'.repeat(32);
+const queueEvent = (value) => 'data: ' + JSON.stringify(value) + '\n\n';
+const queueComplete = (output, success = true, eventId = motionEventId) => queueEvent({
+  msg: 'process_completed', event_id: eventId, success, output,
+});
+test('structured polling reads the accepted event without submitting another job', async () => {
+  const calls = [];
+  const submitted = metadata();
+  const request = async (url, init = {}) => {
+    calls.push({ url, init });
+    if (url.includes('/queue/data')) return new Response(queueComplete({ data: [
+      { video: { url: HF_MOTION.host + '/gradio_api/file=/tmp/video.mp4' } }, 42,
+    ] }));
+    return submitted.request(url, init);
+  };
+  const accepted = await hfSubmit('test-secret', 'https://private.test/image.jpg', 'Subject moves', 42, request);
+  const result = await hfPoll('test-secret', accepted.job_id, request);
+  assert.equal(result.status, 'completed');
+  assert.equal(calls.filter(call => call.init.method === 'POST').length, 1);
+  const polling = calls.at(-1);
+  assert.equal(polling.url, HF_MOTION.host + '/gradio_api/queue/data?session_hash=' + accepted.job_id);
+  assert.equal(polling.init.method ?? 'GET', 'GET');
+  assert.equal(polling.init.headers.Authorization, 'Bearer test-secret');
+  assert.equal(polling.init.redirect, 'error');
+});
+test('structured SSE split across network chunks produces the real file output',async()=>{
+  const complete=queueEvent({msg:'heartbeat'})+queueComplete({data:[{video:{url:HF_MOTION.host+'/gradio_api/file=/tmp/video.mp4'}},42]});
   const encoder=new TextEncoder();const request=async()=>new Response(new ReadableStream({start(c){c.enqueue(encoder.encode(complete.slice(0,57)));c.enqueue(encoder.encode(complete.slice(57)));c.close()}}));
   const result=await hfPoll('test-secret','a'.repeat(32),request);assert.equal(result.status,'completed');assert.equal(result.result.seed,42);assert.equal(result.result.generation_type,'GENERATIVE_VIDEO');
 });
-test('completed HTTP without SSE completion stays processing',async()=>{assert.equal((await hfPoll('test-secret','a'.repeat(32),async()=>new Response('event: heartbeat\ndata: null\n\n'))).status,'processing')});
+test('structured heartbeat and status messages stay processing',async()=>{
+  const stream=queueEvent({msg:'heartbeat'})+queueEvent({msg:'estimation',event_id:motionEventId,rank:0})+queueEvent({msg:'process_starts',event_id:motionEventId});
+  assert.equal((await hfPoll('test-secret',motionEventId,async()=>new Response(stream))).status,'processing');
+});
+test('structured failures preserve safe quota and capacity categories without raw provider details', async () => {
+  for (const [error, code] of [
+    ['You have exceeded your GPU quota. Try again later.', 'HF_QUOTA_EXHAUSTED'],
+    ['CUDA error: out of memory', 'HF_CAPACITY_UNAVAILABLE'],
+    ['GPU temporarily unavailable', 'HF_CAPACITY_UNAVAILABLE'],
+    ['Could not load image https://private.example/secret-token', 'HF_GENERATION_FAILED'],
+  ]) {
+    await assert.rejects(hfPoll('test-secret', motionEventId,
+      async () => new Response(queueComplete({ error }, false))), failure => {
+      assert.equal(failure.code, code);
+      assert.equal(failure.message, code);
+      assert.doesNotMatch(failure.message, /private\.example|secret-token/);
+      return true;
+    });
+  }
+});
+test('structured terminal messages without usable data or error fail generically', async () => {
+  for (const [output, success] of [[{error:null},false],[{},false],[{},true],[{data:[]},true]]) {
+    await assert.rejects(hfPoll('test-secret',motionEventId,
+      async()=>new Response(queueComplete(output,success))), /HF_GENERATION_FAILED/);
+  }
+});
+test('structured terminal messages must match the accepted event exactly', async () => {
+  const data=[{video:{url:HF_MOTION.host+'/gradio_api/file=/tmp/other.mp4'}},91];
+  const stream=queueComplete({data},true,'b'.repeat(32))+queueComplete({error:'GPU quota exceeded'},false,'b'.repeat(32))
+    +queueEvent({msg:'process_completed',success:true,output:{data}});
+  assert.equal((await hfPoll('test-secret',motionEventId,async()=>new Response(stream))).status,'processing');
+});
+test('malformed structured events cannot complete a job', async () => {
+  await assert.rejects(hfPoll('test-secret',motionEventId,async()=>new Response('data: {"msg":\n\n')), /HF_OUTPUT_INVALID/);
+});
 function box(type, payload=Buffer.alloc(0)){const b=Buffer.alloc(8);b.writeUInt32BE(8+payload.length);b.write(type,4);return Buffer.concat([b,payload])}
 function container(samples=2){const h=Buffer.alloc(12);h.write('vide',8);const sizes=Buffer.alloc(12);sizes.writeUInt32BE(samples,8);const desc=Buffer.alloc(16);desc.write('avc1',12);const duration=Buffer.alloc(20);duration.writeUInt32BE(30,12);duration.writeUInt32BE(60,16);return Buffer.concat([box('ftyp',Buffer.from('isom0000')),box('moov',box('trak',box('mdia',Buffer.concat([box('hdlr',h),box('mdhd',duration),box('minf',box('stbl',Buffer.concat([box('stsd',desc),box('stsz',sizes)])))])))),box('mdat',Buffer.alloc(1200))])}
 test('MP4 validator rejects HTML, truncation and a still-frame container',()=>{assert.throws(()=>validateMp4(Buffer.from('<html>failure</html>')),/HF_VIDEO_EMPTY/);assert.throws(()=>validateMp4(container().subarray(0,1100)),/HF_MP4_INVALID/);assert.throws(()=>validateMp4(container(1)),/HF_MP4_VIDEO_SAMPLES_MISSING/);assert.equal(validateMp4(container()).subject_motion_verified,false)});
@@ -108,8 +167,8 @@ test('model terms must be accepted before eligibility or any job write',async()=
 
 test('HF completion stores immutable private video and pins the generating image', async () => {
   const original = globalThis.fetch;
-  globalThis.fetch = async (url) => url.includes('/call/')
-    ? new Response('event: complete\ndata: '+JSON.stringify([{video:{url:HF_MOTION.host+'/gradio_api/file=/tmp/real.mp4'}},42])+'\n\n')
+  globalThis.fetch = async (url) => url.includes('/queue/data')
+    ? new Response(queueComplete({data:[{video:{url:HF_MOTION.host+'/gradio_api/file=/tmp/real.mp4'}},42]}))
     : new Response(container());
   let uploaded, inserted; const imageFilters = {};
   const client = {
