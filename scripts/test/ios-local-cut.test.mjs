@@ -29,3 +29,12 @@ test("Local Cut refuses invalid local export and calls no paid provider", () => 
 test("Provider cost guard remains enforced for remote image and assembly", () => {
   assert.match(generation, /PROVIDER_COST_UNVERIFIED: New image and assembly submissions are unavailable/);
 });
+
+test("Capacitor origin is explicitly allowed without a wildcard or weakened auth", () => {
+  for (const name of ["beatvision-analyze-song", "beatvision-world", "beatvision-style-draft", "beatvision-generation"]) {
+    const source = readFileSync(new URL("../../supabase/functions/" + name + "/index.ts", import.meta.url), "utf8");
+    assert.match(source, /"capacitor:\/\/localhost"/);
+    assert.doesNotMatch(source, /"Access-Control-Allow-Origin": "\*"/);
+    assert.match(source, /ALLOWED_ORIGINS\.has\(origin\)/);
+  }
+});
