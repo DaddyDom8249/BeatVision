@@ -1,5 +1,13 @@
 # BeatVision Project Log
 
+## 2026-10-18 — Restore generation requests from the production origin
+
+**Cause:** The actual production origin `https://beat-vision-f8nn.vercel.app` was missing from the generation controller's CORS allowlist. Live OPTIONS returned 204 without `Access-Control-Allow-Origin`; authenticated browser image signing failed and the frontend's preserved approved asset had no preview. The earlier PR #132 repaired asset state only.
+
+**Repair:** Add the exact production origin to `beatvision-generation`; retain all owner/session checks and the explicit origin allowlist. All four source files matched deployed controller v39 before the edit. Deployed v40 and retrieved it to verify all files equal the intended source, with the existing gateway JWT setting preserved.
+
+**Verification:** CORS regressions failed before the edit and pass afterward. Focused generation/auth/HF suite 59/59; full suite 336/336 with zero skips; production audit/build passed. Live preflight permits the exact origin, rejects a suffix-lookalike origin, and anonymous POST remains 401. Existing authenticated `Rr` scene 1 now gets image signing HTTP 200, renders its 1024px approved image, and no longer reports the Edge-request failure. The manual motion button enables after the existing terms checkbox is selected. No new generation, creative approval, database change or migration was performed. The prior failed HF attempt remains historical; successful new inference is not claimed. Supabase Preview migration drift is separate.
+
 ## 2026-10-18 — Motion failure diagnostics (scoped, no model calls)
 
 **Evidence:** Production showed multiple successful Hugging Face LTX image-to-video jobs, each approximately 1.9 seconds long, plus one failing Scene 8 request at 2026-10-18 05:27 UTC. Its frozen approved image exists, HF eligibility was verified, event was accepted, and the saved error was generic `HF_GENERATION_FAILED`. The provider's raw SSE error is not persisted, so exact internal failure (capacity vs inference failure vs input) cannot be proven. No automatically repeated GPU submission is justified.

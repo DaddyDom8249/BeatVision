@@ -40,6 +40,7 @@ test('browser preflight succeeds for production and does not permit arbitrary or
   const runtime = await loadGeneration();
   try {
     for (const origin of [
+      'https://beat-vision-f8nn.vercel.app',
       'https://beat-vision-theta.vercel.app',
       'https://beat-vision-beat-vision.vercel.app',
       'https://beat-vision-git-fix-style-description-genera-790bfa-beat-vision.vercel.app',
@@ -50,17 +51,19 @@ test('browser preflight succeeds for production and does not permit arbitrary or
       assert.equal(response.headers.get('Access-Control-Allow-Origin'), origin);
       assert.match(response.headers.get('Access-Control-Allow-Headers'), /authorization/);
     }
-    const response = await runtime.handler(new Request('https://test/function', { method: 'OPTIONS', headers: { Origin: 'https://evil.test' } }));
-    assert.notEqual(response.headers.get('Access-Control-Allow-Origin'), 'https://evil.test');
+    for (const origin of ['https://evil.test', 'https://beat-vision-f8nn.vercel.app.evil.test']) {
+      const response = await runtime.handler(new Request('https://test/function', { method: 'OPTIONS', headers: { Origin: origin } }));
+      assert.equal(response.headers.get('Access-Control-Allow-Origin'), null);
+    }
   } finally { await runtime.cleanup(); }
 });
 
 test('auth errors retain CORS without accepting unauthenticated requests', async () => {
   const runtime = await loadGeneration();
   try {
-    const response = await runtime.handler(new Request('https://test/function', { method: 'POST', headers: { Origin: 'https://beat-vision-theta.vercel.app' } }));
+    const response = await runtime.handler(new Request('https://test/function', { method: 'POST', headers: { Origin: 'https://beat-vision-f8nn.vercel.app' } }));
     assert.equal(response.status, 401);
-    assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://beat-vision-theta.vercel.app');
+    assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://beat-vision-f8nn.vercel.app');
   } finally { await runtime.cleanup(); }
 });
 
