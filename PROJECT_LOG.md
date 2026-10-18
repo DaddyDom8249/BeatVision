@@ -16,6 +16,9 @@
 
 **Next checkpoint:** Review PR CI; obtain a successful `:app:testDebugUnitTest :app:assembleDebug :app:lintDebug` with a real APK artifact, then test the device acceptance checklist in `android/README.md`.
 
+**Verified Android build (follow-up):** Initial candidate failed before Java compilation because android-actions/setup-android@v3 requested unavailable legacy SDK package `tools`. Replaced the setup action with the runner's preinstalled sdkmanager (smallest scoped CI repair). Run `39092988316` then PASSED unit tests, debug APK assembly and lint on commit `757027a67ea85ace79bd333584a6ea0acd254008`. Added Android 15+ display-inset padding to avoid studio controls under system bars; run `39093067825` PASSED the same commands and uploaded artifact `12123820901` from exact source commit `eb3966950a99f8f4923300a4e478defdf0fa6c41`. Downloaded the actual GitHub archive and verified `app-debug.apk` is a nonempty Android package (13,825 bytes), SHA-256 `d1db3b823b24bb76cd3c921229b369289d72d5c83a33b9439c5b7da23dd9b720`. Production app, backend, database and providers were not changed. Signed-in Android on-device operation still **UNVERIFIED**; this is a TEST debug APK, not a Play Store release.
+
+
 ---
 
 
