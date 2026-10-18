@@ -468,7 +468,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   useEffect(() => {
     if (!freePilotJob || freePilotJob.sceneId !== scene?.id) return;
     let active = true;
-    let timer: ReturnType<typeof window.setTimeout> | undefined;
+    let timer: number | undefined; // Browser window.setTimeout returns a numeric timer ID.
     const poll = async () => {
       const status = await checkFreePilotStatus(freePilotJob);
       if (active && status === "processing") timer = window.setTimeout(() => void poll(), 7000);
