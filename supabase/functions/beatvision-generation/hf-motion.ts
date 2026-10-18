@@ -33,23 +33,35 @@ export async function hfEligibility(token: string, request: typeof fetch = fetch
   if (JSON.stringify(endpoint?.parameters?.map((p: any) => p.parameter_name)) !== JSON.stringify(EXPECTED_PARAMS) || endpoint?.returns?.[0]?.component !== 'Video' || endpoint?.show_api === false) fail('HF_API_CONTRACT_CHANGED');
   return { cost_class: 'free', account: identity.name, space: HF_MOTION.space, revision: runtime.sha, checked_at: new Date().toISOString(), quota_policy: 'free personal account; 300 GPU seconds/day; xlarge consumes 2x; exhaustion fails without payment', license: HF_MOTION.license };
 }
-export function hfInput(imageUrl: string, prompt: string) {
-  if (!/^https:\/\//.test(imageUrl) || !prompt.trim() || prompt.length > 6000) fail('HF_INPUT_INVALID');
-  return [prompt, 'worst quality, inconsistent motion, blurry, jittery, distorted, static image, camera pan, camera zoom',
-    { path: imageUrl, url: imageUrl, meta: { _type: 'gradio.FileData' } }, null, 512, 704, 'image-to-video', HF_MOTION.duration, 9, 42, false, 1, true];
+/**
+ * Pin variation to the immutable generation job ID. A new queued variant gets
+ * a new seed; retries of the SAME job retain the same seed without re-randomizing.
+ * No provider requests or mutable database state are involved in this mapping.
+ */
+export function hfJobSeed(jobId: string): number {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(jobId))
+    fail('HF_JOB_ID_INVALID');
+  return (parseInt(jobId.slice(0, 8), 16) % 2147483646) + 1;
 }
-export async function hfSubmit(token: string, imageUrl: string, prompt: string, request: typeof fetch = fetch) {
+export function hfInput(imageUrl: string, prompt: string, seed: number) {
+  if (!/^https:\/\//.test(imageUrl) || !prompt.trim() || prompt.length > 6000) fail('HF_INPUT_INVALID');
+  if (!Number.isSafeInteger(seed) || seed < 1 || seed > 2147483646) fail('HF_SEED_INVALID');
+  return [prompt, 'worst quality, inconsistent motion, blurry, jittery, distorted, static image, camera pan, camera zoom',
+    { path: imageUrl, url: imageUrl, meta: { _type: 'gradio.FileData' } }, null, 512, 704, 'image-to-video', HF_MOTION.duration, 9, seed, false, 1, true];
+}
+export async function hfSubmit(token: string, imageUrl: string, prompt: string, seed: number, request: typeof fetch = fetch) {
+  const input = hfInput(imageUrl, prompt, seed); // reject an invalid/missing seed before any request
   const eligibility = await hfEligibility(token, request);
   // NEVER retry POST: a timeout can mean accepted work. Controller records an
   // ambiguous dispatch rather than creating another GPU request.
   let response: Response;
-  try { response = await request(HF_MOTION.host + '/gradio_api/call/' + HF_MOTION.endpoint, { method: 'POST', headers: { ...headers(token), 'Content-Type': 'application/json' }, body: JSON.stringify({ data: hfInput(imageUrl, prompt) }), signal: AbortSignal.timeout(20000), redirect: 'error' }); }
+  try { response = await request(HF_MOTION.host + '/gradio_api/call/' + HF_MOTION.endpoint, { method: 'POST', headers: { ...headers(token), 'Content-Type': 'application/json' }, body: JSON.stringify({ data: input }), signal: AbortSignal.timeout(20000), redirect: 'error' }); }
   catch { return fail('HF_SUBMISSION_ACCEPTANCE_UNKNOWN'); }
   if (!response.ok) fail(response.status === 429 ? 'HF_QUOTA_EXHAUSTED' : 'HF_SUBMIT_REJECTED');
   const data = await response.json();
   if (!/^[a-f0-9]{32}$/.test(data.event_id || '')) fail('HF_EVENT_ID_MISSING');
   return { ok: true, status: 'processing', provider: 'huggingface-zerogpu', model: HF_MOTION.model, job_id: data.event_id, eligibility,
-    result: { generation_type: 'GENERATIVE_VIDEO', duration_seconds: HF_MOTION.duration } };
+    result: { generation_type: 'GENERATIVE_VIDEO', duration_seconds: HF_MOTION.duration, requested_seed: seed } };
 }
 export function hfEvent(block: string) {
   const event = block.match(/^event:\s*(\S+)/m)?.[1];
