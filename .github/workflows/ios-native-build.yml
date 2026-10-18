@@ -1,0 +1,58 @@
+name: BeatVision iOS unsigned build
+on:
+  push:
+    branches: [feature/ios-local-cut-20261017]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-ios:
+    runs-on: macos-26
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate native iOS project
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          npm install --no-audit --no-fund
+          npm run build
+          npx cap add ios
+          npx cap sync ios
+          test -d ios/App/App.xcodeproj
+      - name: Compile iPhone device app without signing
+        run: |
+          set -euo pipefail
+          if [ -d ios/App/App.xcworkspace ]; then
+            xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Release \
+              -sdk iphoneos -destination 'generic/platform=iOS' \
+              -derivedDataPath "$RUNNER_TEMP/beatvision-ios" \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          else
+            xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+              -sdk iphoneos -destination 'generic/platform=iOS' \
+              -derivedDataPath "$RUNNER_TEMP/beatvision-ios" \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          fi
+          APP="$RUNNER_TEMP/beatvision-ios/Build/Products/Release-iphoneos/App.app"
+          test -d "$APP"
+          test -f "$APP/Info.plist"
+          mkdir -p artifacts/unsigned-ios/Payload
+          cp -R "$APP" artifacts/unsigned-ios/Payload/
+          (cd artifacts/unsigned-ios && zip -qr ../BeatVision-UNSIGNED-not-installable.ipa Payload)
+          echo 'UNSIGNED: Requires Apple Developer signing and provisioning to install on an iPhone.' > artifacts/README-SIGNING-REQUIRED.txt
+          ls -lh artifacts/BeatVision-UNSIGNED-not-installable.ipa
+      - name: Upload unsigned iOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: BeatVision-iOS-UNSIGNED-requires-signing
+          path: |
+            artifacts/BeatVision-UNSIGNED-not-installable.ipa
+            artifacts/README-SIGNING-REQUIRED.txt
+          if-no-files-found: error
+          retention-days: 3
