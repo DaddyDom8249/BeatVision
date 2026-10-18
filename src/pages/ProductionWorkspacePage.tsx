@@ -617,7 +617,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         <aside className="production-scene-list">
           <span className="panel-label">SCENES</span>
           {scenes.map((item, index) => (
-            <button disabled={busy} key={item.id} className={index === selectedIndex ? "production-scene selected" : "production-scene"} onClick={() => setSelectedIndex(index)}>
+            <button disabled={assetLoading} key={item.id} className={index === selectedIndex ? "production-scene selected" : "production-scene"} onClick={() => setSelectedIndex(index)}>
               <span>SCENE {String(item.scene_number).padStart(2, "0")}</span>
               <strong>{readableSceneTitle(item)}</strong>
               <small>{time(item.start_time)} — {time(item.end_time)}</small>
@@ -643,8 +643,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-actions">
             <button className="primary-button" onClick={() => void copyBrief()}>{copied ? "Copied" : "Copy Shot Brief"}</button>
-            <button className="secondary-button" disabled={busy || selectedIndex === 0} onClick={() => setSelectedIndex((value) => Math.max(0, value - 1))}>Previous Scene</button>
-            <button className="secondary-button" disabled={busy || selectedIndex === scenes.length - 1} onClick={() => setSelectedIndex((value) => Math.min(scenes.length - 1, value + 1))}>Next Scene</button>
+            <button className="secondary-button" disabled={assetLoading || selectedIndex === 0} onClick={() => setSelectedIndex((value) => Math.max(0, value - 1))}>Previous Scene</button>
+            <button className="secondary-button" disabled={assetLoading || selectedIndex === scenes.length - 1} onClick={() => setSelectedIndex((value) => Math.min(scenes.length - 1, value + 1))}>Next Scene</button>
           </div>
 
           <div className="production-provider-note">
@@ -679,7 +679,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   }} style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : motion
               ? <p>A saved motion clip exists, but its private playback link is unavailable. Retry the link without submitting another GPU job.</p>
               : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
-            {motion?.id === motionPlaybackFailure && <p role="alert">This saved motion clip could not be loaded or played. Its status does not prove browser playback. <button className="secondary-button" onClick={() => {
+            {motion?.id === motionPlaybackFailure && <p role="alert">This saved motion clip could not be played or loaded. Its status does not prove browser playback. <button className="secondary-button" onClick={() => {
               signedMediaCache.current.delete(projectId + ":motion:" + motion.id);
               if (scene) void refreshScene(scene.id).catch(e => setError(productionErrorMessage(e)));
             }}>Retry Motion Playback</button></p>}
