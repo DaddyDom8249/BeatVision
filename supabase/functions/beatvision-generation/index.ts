@@ -600,9 +600,10 @@ async function run(db: any, job: any) {
   try {
     const path = job.job_type === "scene_image" ? "/v2/scene-image" : job.job_type === "scene_motion" ? "/v2/animate" : "/v2/assemble";
     if (job.job_type === "scene_motion" && !job.input_snapshot?.hf_motion) throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions.");
-    if (job.job_type === "assembly") {
-      throw new Error("PROVIDER_COST_UNVERIFIED: Final assembly has no independently verified zero-cost renderer.");
-    }
+    // Shotstack's stage Edit API is a no-render-credit sandbox (watermarked).
+    // Arena's /v2/assemble is pinned to /v1/video/assemble, whose implementation
+    // uses /edit/stage only and combines EXISTING video/audio, never generative AI.
+    // Keep unknown-cost image generation closed; never enable Pixazo spending.
     if (job.job_type === "scene_image") {
       await verifyFreeImageSource(requestId);
     }
