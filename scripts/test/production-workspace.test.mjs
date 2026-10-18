@@ -26,7 +26,7 @@ await writeFile(join(dir, 'header.mjs'), 'export default function StudioHeader()
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, stored = false, rpcError = null, runJob = null, approvedMotionSceneIds = ['scene-1'], sceneRecord = null } = {}) {
+async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, imageUrlError = null, stored = false, rpcError = null, runJob = null, approvedMotionSceneIds = ['scene-1'], sceneRecord = null } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
@@ -58,7 +58,9 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
       calls.push(body);
       if (body.action === 'enqueue_ai_motion') return { data: { job: { id: 'job-1', status: 'queued', job_type: 'scene_motion' } }, error: runError ? new Error(runError) : null };
       if (body.action === 'motion_url') return { data: { video_url: 'https://fresh.test/motion.mp4' }, error: null };
-      if (body.action === 'image_url') return { data: { image_url: 'https://fresh.test/image.jpg' }, error: null };
+      if (body.action === 'image_url') return imageUrlError
+        ? { data: null, error: new Error(imageUrlError) }
+        : { data: { image_url: 'https://fresh.test/image.jpg' }, error: null };
       return { data: { job: runJob ?? { id: 'job-1', status: 'processing', job_type: 'scene_motion' } }, error: runError ? new Error(runError) : null };
     } },
   };
@@ -133,6 +135,21 @@ test('stored private images are re-signed before display', async () => {
   const view = await mount({ stored: true });
   try { assert.equal(document.querySelector('img').src, 'https://fresh.test/image.jpg'); }
   finally { await view.cleanup(); }
+});
+
+test('image preview signing failure preserves approved motion eligibility', async () => {
+  const view = await mount({ stored: true, imageUrlError: 'Failed to send a request to the Edge Function' });
+  try {
+    assert.match(document.body.textContent, /approved scene image is preserved/i);
+    assert.match(document.body.textContent, /preview is temporarily unavailable/i);
+    assert.doesNotMatch(document.body.textContent, /No real scene image exists yet/);
+    assert.match(document.body.textContent, /IMAGE APPROVED/);
+    await view.click('Generate Motion');
+    const enqueue = view.calls.find(call => call.action === 'enqueue_ai_motion');
+    assert.ok(enqueue, 'manual motion submission remains available');
+    assert.equal(enqueue.sourceImageId, 'image-1');
+    assert.equal(view.calls.filter(call => call.action === 'enqueue_ai_motion').length, 1);
+  } finally { await view.cleanup(); }
 });
 
 test('async assembly retains its job and exposes the status control', async () => {
