@@ -218,6 +218,30 @@ function extractImageBase64(data: any) {
   return candidates.find((value) => typeof value === "string" && value.trim())?.trim() || null;
 }
 
+/**
+ * Reject misleading "free" labels if the authenticated Arena bridge returns
+ * any provider other than its pinned Cloudflare Workers AI Flux Schnell path.
+ * The Worker itself checks the explicit Free entitlement BEFORE inference.
+ */
+function assertVerifiedFreeSceneImageResponse(data: any) {
+  const providers = data?.result?.provider_path;
+  const images = data?.result?.images;
+  if (data?.ok !== true ||
+      data?.bridge?.contract_version !== "2.0" ||
+      data?.bridge?.cost_class !== "free" ||
+      data?.bridge?.source_of_truth !== "beatvision" ||
+      data?.bridge?.generation_model !== "flux-schnell" ||
+      data?.result?.free_only !== true ||
+      !Array.isArray(providers) || providers.length !== 1 ||
+      providers[0] !== "cloudflare-workers-ai" ||
+      !Array.isArray(images) || images.length !== 1 ||
+      images[0]?.provider !== "cloudflare-workers-ai" ||
+      images[0]?.model !== "flux-1-schnell" ||
+      !extractImageBase64(data)) {
+    throw new Error("FREE_IMAGE_PROVIDER_MISMATCH: Image output was not proven to come from the pinned free Cloudflare FLUX path.");
+  }
+}
+
 function extractImageUrl(data: any) {
   const candidates = [
     data?.image_url,
@@ -288,8 +312,8 @@ async function persistSceneImage(db: any, job: any, responseData: any) {
     visual_plan_id: job.visual_plan_id,
     scene_id: job.visual_plan_scene_id,
     generation_job_id: job.id,
-    provider: String(responseData?.provider || "arena"),
-    model: String(responseData?.model || modelFor(job.job_type) || "unknown"),
+    provider: String(responseData?.result?.images?.[0]?.provider || responseData?.provider || "arena"),
+    model: String(responseData?.result?.images?.[0]?.model || responseData?.model || modelFor(job.job_type) || "unknown"),
     image_url: persistedUrl,
     storage_path: storagePath,
     status: "generated",
@@ -579,16 +603,16 @@ async function run(db: any, job: any) {
   try {
     const path = job.job_type === "scene_image" ? "/v2/scene-image" : job.job_type === "scene_motion" ? "/v2/animate" : "/v2/assemble";
     if (job.job_type === "scene_motion" && !job.input_snapshot?.hf_motion) throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions.");
-    // Shotstack's stage Edit API is a no-render-credit sandbox (watermarked).
-    // Arena's /v2/assemble is pinned to /v1/video/assemble, whose implementation
-    // uses /edit/stage only and combines EXISTING video/audio, never generative AI.
-    // Keep unknown-cost image generation closed; never enable Pixazo spending.
-    if (job.job_type === "scene_image") {
-      throw new Error("PROVIDER_COST_UNVERIFIED: Free scene-image generation has not been established on this provider account; existing approved images remain usable.");
-    }
+    // Assembly remains on the watermarked Shotstack sandbox.
+    // Arena /v2/scene-image forwards BeatVision-origin requests exclusively to
+    // Cloudflare FLUX Schnell when Workers Free is explicitly confirmed; it
+    // rejects missing eligibility with no Pixazo fallback. Check response
+    // provenance before storing any generated image.
     const result = job.job_type === "scene_motion"
       ? job.input_snapshot?.hf_motion ? await hfBridgeSubmit(db, job) : (() => { throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions."); })()
       : await arena(path, "POST", await bridgePayload(db, job), requestId);
+    if (job.job_type === "scene_image" && result.response.ok && result.data?.ok !== false)
+      assertVerifiedFreeSceneImageResponse(result.data);
     const state = terminalState(result.response, result.data, job.job_type);
 
     if (state === "failed") {
