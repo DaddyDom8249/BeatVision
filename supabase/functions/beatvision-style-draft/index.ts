@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ALLOWED_ORIGINS = new Set([
+  "capacitor://localhost", // Default Capacitor iOS WKWebView origin; JWT/owner checks unchanged.
   "https://beat-vision-beat-vision.vercel.app",
   "https://beat-vision-git-main-beat-vision.vercel.app",
   "https://beat-vision-theta.vercel.app",
