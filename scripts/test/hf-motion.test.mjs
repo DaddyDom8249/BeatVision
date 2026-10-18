@@ -31,6 +31,45 @@ test('SSE heartbeat never completes; error wins and external output is rejected'
   assert.throws(()=>hfEvent('event: complete\ndata: [{"video":{"url":"https://evil.test/video.mp4"}}]'),/HF_OUTPUT_HOST_REJECTED/);
   assert.throws(()=>hfEvent('event: complete\ndata: [null]'),/HF_OUTPUT_MISSING/);
 });
+test('provider SSE failures are safely classified without exposing raw errors', () => {
+  const cases = [
+    ['GPU quota exceeded', 'HF_QUOTA_EXHAUSTED'],
+    ['ZeroGPU daily quota used up', 'HF_QUOTA_EXHAUSTED'],
+    ['CUDA error: out of memory', 'HF_CAPACITY_UNAVAILABLE'],
+    ['GPU temporarily unavailable', 'HF_CAPACITY_UNAVAILABLE'],
+    ['Unexpected image generation exception: private.example/token/secret', 'HF_GENERATION_FAILED'],
+  ];
+  for (const [detail, code] of cases) {
+    let thrown;
+    try { hfEvent('event: error\\ndata: ' + JSON.stringify(detail)); }
+    catch (error) { thrown = error; }
+    assert.equal(thrown?.code, code);
+    assert.equal(thrown?.message, code);
+    assert.doesNotMatch(thrown?.message, /private\\.example/);
+  }
+});
+test('typed Hugging Face terminal errors persist a distinct error code', async () => {
+  const previous = globalThis.fetch;
+  let update = null;
+  const db = { from(table) {
+    assert.equal(table, 'generation_jobs');
+    return {
+      update(value) { update = value; return this; },
+      eq() { return this; }, in() { return this; }, select() { return this; },
+      then(resolve) { return Promise.resolve({ data: [{ id: 'job-1' }], error: null }).then(resolve); },
+    };
+  } };
+  const runtime = await loadGeneration(db);
+  try {
+    for (const code of ['HF_GENERATION_FAILED', 'HF_CAPACITY_UNAVAILABLE', 'HF_QUOTA_EXHAUSTED']) {
+      await runtime.setFailed(db, 'job-1', code);
+      assert.equal(update?.error?.code, code);
+      assert.equal(update?.status, 'failed');
+    }
+    await runtime.setFailed(db, 'job-1', 'HF_SOME_UNKNOWN_REMOTE_ERROR');
+    assert.equal(update?.error?.code, 'ARENA_GENERATION_FAILED');
+  } finally { globalThis.fetch = previous; await runtime.cleanup(); }
+});
 test('SSE split across network chunks produces the real file output',async()=>{
   const complete='event: heartbeat\ndata: null\n\nevent: complete\ndata: '+JSON.stringify([{video:{url:HF_MOTION.host+'/gradio_api/file=/tmp/video.mp4'}},42])+'\n\n';
   const encoder=new TextEncoder();const request=async()=>new Response(new ReadableStream({start(c){c.enqueue(encoder.encode(complete.slice(0,57)));c.enqueue(encoder.encode(complete.slice(57)));c.close()}}));

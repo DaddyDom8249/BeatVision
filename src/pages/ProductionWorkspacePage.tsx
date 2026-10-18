@@ -33,6 +33,15 @@ function productionErrorMessage(error: unknown) {
   if (message.includes("ASSEMBLY_MOTION_NOT_FULLY_APPROVED")) {
     return "Approve a real motion clip for every scene before assembling the final video.";
   }
+  if (/\\bHF_QUOTA_EXHAUSTED\\b/.test(message)) {
+    return "Hugging Face free GPU quota is exhausted. Try after the free allowance resets. No paid provider or automatic retry was used.";
+  }
+  if (/\\bHF_CAPACITY_UNAVAILABLE\\b/.test(message)) {
+    return "Hugging Face could not render motion because the free GPU was unavailable or out of memory. Existing clips are safe. Try a new variant manually when capacity returns; no automatic retry was sent.";
+  }
+  if (/\\bHF_GENERATION_FAILED\\b/.test(message)) {
+    return "Hugging Face accepted the motion job but did not produce a video. The approved image and saved clips are unchanged. You can generate another 2-second motion variant manually; no automatic retry was sent.";
+  }
   return message;
 }
 
