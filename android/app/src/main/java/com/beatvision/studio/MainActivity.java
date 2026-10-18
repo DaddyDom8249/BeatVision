@@ -48,6 +48,18 @@ public final class MainActivity extends Activity {
         FrameLayout.LayoutParams barParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(3), Gravity.TOP);
         root.addView(progressBar, barParams);
+        webView.setBackgroundColor(0xff08080a);
+        // Android 15+ targets draw behind system bars by default. Keep the
+        // studio's first/last controls out from under the status/navigation bars.
+        if (android.os.Build.VERSION.SDK_INT >= 35) {
+            root.setOnApplyWindowInsetsListener((view, insets) -> {
+                android.graphics.Insets safe = insets.getInsets(
+                        android.view.WindowInsets.Type.systemBars()
+                                | android.view.WindowInsets.Type.displayCutout());
+                root.setPadding(safe.left, safe.top, safe.right, safe.bottom);
+                return insets;
+            });
+        }
         setContentView(root);
 
         WebSettings settings = webView.getSettings();
