@@ -16,7 +16,9 @@
     "pngjs": "7.0.0",
     "posthog-js": "^1.435.1",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.9",
@@ -25,6 +27,7 @@
     "@vitejs/plugin-react": "^5.0.2",
     "jsdom": "^26.1.0",
     "typescript": "^5.9.2",
-    "vite": "^7.1.7"
+    "vite": "^7.1.7",
+    "@capacitor/cli": "8.5.3"
   }
 }
