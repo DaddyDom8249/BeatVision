@@ -84,12 +84,29 @@ export function hfEvent(block: string) {
   return { ok: true, status: 'completed', provider: 'huggingface-zerogpu', model: HF_MOTION.model,
     result: { video_url: parsed.href, seed: data[1], generation_type: 'GENERATIVE_VIDEO', duration_seconds: HF_MOTION.duration } };
 }
+function hfQueuedEvent(block: string, eventId: string) {
+  const raw = block.split('\n').filter(line => line.startsWith('data:')).map(line => line.slice(5).trim()).join('\n');
+  if (!raw) return null;
+  let message: any; try { message = JSON.parse(raw); } catch { return fail('HF_OUTPUT_INVALID'); }
+  // Status messages may omit an ID; terminal output must belong to this exact
+  // accepted request. A different event cannot complete or fail the local job.
+  if (message?.event_id !== eventId || message.msg !== 'process_completed') return null;
+  if (message.success !== true) {
+    const detail = typeof message.output?.error === 'string' ? message.output.error : null;
+    return hfEvent('event: error\ndata: ' + JSON.stringify(detail));
+  }
+  if (!Array.isArray(message.output?.data) || message.output.data.length === 0) fail('HF_GENERATION_FAILED');
+  return hfEvent('event: complete\ndata: ' + JSON.stringify(message.output.data));
+}
 export async function hfPoll(token: string, eventId: string, request: typeof fetch = fetch) {
   if (!token || !/^[a-f0-9]{32}$/.test(eventId)) fail('HF_POLL_INPUT_INVALID');
   const abort = new AbortController(); const timer = setTimeout(() => abort.abort(), 20000);
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   try {
-    const response = await request(HF_MOTION.host + '/gradio_api/call/' + HF_MOTION.endpoint + '/' + eventId, { headers: headers(token), signal: abort.signal, redirect: 'error' });
+    // Gradio 5.42's simplified /call stream drops output.error and emits null
+    // for failures. The existing /call POST defaults session_hash to event_id,
+    // so its structured queue stream retains details without submitting work.
+    const response = await request(HF_MOTION.host + '/gradio_api/queue/data?session_hash=' + eventId, { headers: headers(token), signal: abort.signal, redirect: 'error' });
     if (!response.ok) fail(response.status === 429 ? 'HF_QUOTA_EXHAUSTED' : 'HF_POLL_UNAVAILABLE', response.status >= 500);
     reader = response.body?.getReader(); if (!reader) fail('HF_POLL_EMPTY');
     let buffer = ''; const decoder = new TextDecoder();
@@ -100,10 +117,10 @@ export async function hfPoll(token: string, eventId: string, request: typeof fet
       let split: number;
       while ((split = buffer.indexOf('\n\n')) >= 0) {
         const block = buffer.slice(0, split); buffer = buffer.slice(split + 2);
-        const result = hfEvent(block); if (result) return result;
+        const result = hfQueuedEvent(block, eventId); if (result) return result;
       }
     }
-    const result = hfEvent(buffer); if (result) return result;
+    const result = hfQueuedEvent(buffer, eventId); if (result) return result;
   } catch (error) {
     if (!(abort.signal.aborted)) throw error;
   } finally { clearTimeout(timer); await reader?.cancel().catch(() => {}); }
