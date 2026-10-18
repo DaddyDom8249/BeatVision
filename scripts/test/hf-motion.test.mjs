@@ -112,12 +112,71 @@ for (const approvedPlan of [true,false]) test('HF enqueue '+(approvedPlan?'reuse
   }finally{globalThis.fetch=original;await runtime.cleanup()}
 });
 
-for(const type of ['scene_image']) test(type+' refuses unknown-cost inference before any network request',async()=>{
- let job={id:'cost-job',job_type:type,status:'queued',input_snapshot:{}};let requests=0;
- const db={from(){let change;return{select(){return this},eq(){return this},in(){return this},update(row){change=row;return this},async maybeSingle(){job={...job,...change};return{data:job}},async single(){if(change)job={...job,...change};return{data:job}},then(resolve){job={...job,...change};return Promise.resolve({data:[{id:job.id}]}).then(resolve)}}}};
- const original=globalThis.fetch;const runtime=await loadGeneration(db);globalThis.fetch=async()=>{requests++;throw Error('unexpected network')};
- try{const result=await runtime.run(db,job);assert.equal(result.status,'failed');assert.equal(result.error.code,'PROVIDER_COST_UNVERIFIED');assert.equal(requests,0)}finally{globalThis.fetch=original;await runtime.cleanup()}
+test('scene image dispatch uses authenticated Arena bridge, never Pixazo directly',async()=>{
+  const originalFetch=globalThis.fetch, calls=[];
+  let job={id:'scene-image-fixture',job_type:'scene_image',status:'queued',project_id:'project-1',
+    visual_plan_id:'plan-1',visual_plan_scene_id:'scene-1',attempts:0,output:{},input_snapshot:{
+      plan:{duration_seconds:8},scene:{id:'scene-1',scene_number:1,start_time:0,end_time:8},
+      vision_snapshot:{song:{id:'song-1',title:'Test song',artist:'Test artist',
+        analysis:{duration_seconds:8,analysis_method:'browser_audio_decode'}},world:{id:'world-1'},
+        style_bible:{id:'style-1'},revision_number:1}
+    }};
+  const db={from(table){
+    assert.equal(table,'generation_jobs');
+    let change={};
+    const apply=()=>{job={...job,...change};return job;};
+    return {update(x){change=x;return this},select(){return this},eq(){return this},in(){return this},
+      async maybeSingle(){return{data:apply(),error:null}},
+      async single(){return{data:apply(),error:null}},
+      then(resolve){apply();return Promise.resolve({data:[{id:job.id}],error:null}).then(resolve)}};
+  }};
+  globalThis.fetch=async(url,init)=>{
+    calls.push({url:String(url),init});
+    return Response.json({ok:false,status:'provider_unavailable',code:'PROVIDER_COST_UNVERIFIED',
+      error:'Workers Free entitlement or AI binding not available'}, {status:503});
+  };
+  const runtime=await loadGeneration(db,{ARENA_GATEWAY_URL:'https://arena.fixture.test',ARENA_GATEWAY_TOKEN:'fixture-secret'});
+  try {
+    const result=await runtime.run(db,job);
+    assert.equal(calls.length,1);
+    assert.equal(calls[0].url,'https://arena.fixture.test/v2/scene-image');
+    const payload=JSON.parse(calls[0].init.body).payload;
+    assert.equal(payload.source.application,'beatvision');
+    assert.equal(payload.source.contract,'2.0');
+    assert.equal(payload.generation.model,'flux-schnell');
+    assert.equal(payload.generation.cost_class,'free');
+    assert.equal(result.status,'failed','an unavailable free provider must never fabricate an image');
+    assert.match(result.error.message,/Workers Free entitlement/);
+  } finally {globalThis.fetch=originalFetch;await runtime.cleanup()}
 });
+
+test('image completion rejects any provider outside pinned Cloudflare Free FLUX path',async()=>{
+  const runtime=await loadGeneration();
+  const valid={
+    ok:true,bridge:{contract_version:'2.0',cost_class:'free',source_of_truth:'beatvision',
+      generation_model:'flux-schnell'},
+    result:{free_only:true,provider_path:['cloudflare-workers-ai'],
+      images:[{provider:'cloudflare-workers-ai',model:'flux-1-schnell',image_base64:'ZmFrZQ=='}]}
+  };
+  try {
+    assert.doesNotThrow(()=>runtime.assertVerifiedFreeSceneImageResponse(valid));
+    const cases=[
+      {result:{...valid.result,provider_path:['pixazo']}},
+      {result:{...valid.result,provider_path:['cloudflare-workers-ai','pixazo']}},
+      {result:{...valid.result,free_only:false}},
+      {result:{...valid.result,images:[{provider:'pixazo',model:'flux-1-schnell',image_base64:'ZmFrZQ=='}]}},
+      {result:{...valid.result,images:[{provider:'cloudflare-workers-ai',model:'sdxl',image_base64:'ZmFrZQ=='}]}},
+      {result:{...valid.result,images:[{provider:'cloudflare-workers-ai',model:'flux-1-schnell',image_url:'https://pixazo.test/image.png'}]}},
+      {bridge:{...valid.bridge,cost_class:'unknown'}},
+      {bridge:{...valid.bridge,source_of_truth:'external'}},
+      {bridge:{...valid.bridge,contract_version:'1.1'}},
+    ];
+    for(const mismatch of cases){
+      assert.throws(()=>runtime.assertVerifiedFreeSceneImageResponse({...valid,...mismatch}),/FREE_IMAGE_PROVIDER_MISMATCH/);
+    }
+  } finally {await runtime.cleanup()}
+});
+
 test('stale provider work fails from acceptance age despite recent poll timestamp',async()=>{
  let job={id:'stale-job',job_type:'assembly',status:'processing',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),output:{upstream_job_id:'existing',dispatch_started_at:new Date(Date.now()-31*60*1000).toISOString()}};let calls=0;
  const db={from(){return {select(){return this},eq(){return this},in(){return this},update(row){job={...job,...row};return this},async single(){return{data:job}},then(resolve){return Promise.resolve({data:[{id:job.id}]}).then(resolve)}}}};
