@@ -579,8 +579,12 @@ async function run(db: any, job: any) {
   try {
     const path = job.job_type === "scene_image" ? "/v2/scene-image" : job.job_type === "scene_motion" ? "/v2/animate" : "/v2/assemble";
     if (job.job_type === "scene_motion" && !job.input_snapshot?.hf_motion) throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions.");
-    if (job.job_type !== "scene_motion") {
-      throw new Error("PROVIDER_COST_UNVERIFIED: New image and assembly submissions are unavailable until their exact execution path is verified free.");
+    // Shotstack's stage Edit API is a no-render-credit sandbox (watermarked).
+    // Arena's /v2/assemble is pinned to /v1/video/assemble, whose implementation
+    // uses /edit/stage only and combines EXISTING video/audio, never generative AI.
+    // Keep unknown-cost image generation closed; never enable Pixazo spending.
+    if (job.job_type === "scene_image") {
+      throw new Error("PROVIDER_COST_UNVERIFIED: Free scene-image generation has not been established on this provider account; existing approved images remain usable.");
     }
     const result = job.job_type === "scene_motion"
       ? job.input_snapshot?.hf_motion ? await hfBridgeSubmit(db, job) : (() => { throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions."); })()

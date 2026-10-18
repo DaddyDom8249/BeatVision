@@ -112,7 +112,7 @@ for (const approvedPlan of [true,false]) test('HF enqueue '+(approvedPlan?'reuse
   }finally{globalThis.fetch=original;await runtime.cleanup()}
 });
 
-for(const type of ['scene_image','assembly']) test(type+' refuses unknown-cost inference before any network request',async()=>{
+for(const type of ['scene_image']) test(type+' refuses unknown-cost inference before any network request',async()=>{
  let job={id:'cost-job',job_type:type,status:'queued',input_snapshot:{}};let requests=0;
  const db={from(){let change;return{select(){return this},eq(){return this},in(){return this},update(row){change=row;return this},async maybeSingle(){job={...job,...change};return{data:job}},async single(){if(change)job={...job,...change};return{data:job}},then(resolve){job={...job,...change};return Promise.resolve({data:[{id:job.id}]}).then(resolve)}}}};
  const original=globalThis.fetch;const runtime=await loadGeneration(db);globalThis.fetch=async()=>{requests++;throw Error('unexpected network')};
@@ -183,4 +183,57 @@ test('invalid motion seed fails before provider eligibility or paid resource req
     }), /HF_SEED_INVALID/
   );
   assert.equal(calls, 0);
+});
+
+test('free Shotstack sandbox assembly passes controller cost guard without opening paid routes', async () => {
+  const calls = [];
+  const snapshot = {
+    plan: { title: 'Frozen visual plan', duration_seconds: 8 },
+    vision_snapshot: {
+      song: { id: 'song-1', title: 'Test', artist: 'Test', analysis: { duration_seconds: 8, analysis_method: 'browser_audio_decode' } },
+      world: { id: 'world-1' }, style_bible: { id: 'style-1' }, revision_number: 1,
+    },
+    scenes: [{ scene_number: 1, start_time: 0, end_time: 8 }],
+    motion_clips: [{ scene: 1, asset_id: 'approved-clip-1', video_url: 'https://existing.example.test/clip.mp4' }],
+    audio_path: 'song-1/audio.wav',
+  };
+  let job = { id: 'assembly-test-job', project_id: 'project-1', visual_plan_id: 'plan-1',
+    vision_lock_id: 'lock-1', job_type: 'assembly', status: 'queued',
+    attempts: 0, input_snapshot: snapshot, output: {} };
+  const db = {
+    storage: { from(bucket) {
+      assert.equal(bucket, 'songs');
+      return { createSignedUrl: async () => ({ data: { signedUrl: 'https://private.example.test/song.wav' }, error: null }) };
+    } },
+    from(table) {
+      assert.equal(table, 'generation_jobs');
+      let changes = null;
+      const apply = () => { if (changes) job = { ...job, ...changes }; return job; };
+      return {
+        update(next) { changes = next; return this; },
+        select() { return this; }, eq() { return this; }, in() { return this; },
+        async maybeSingle() { return { data: apply(), error: null }; },
+        async single() { return { data: apply(), error: null }; },
+        then(resolve) { apply(); return Promise.resolve({ data: [{ id: job.id }], error: null }).then(resolve); },
+      };
+    },
+  };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init });
+    return Response.json({ ok: false, status: 'provider_unavailable', error: 'Sandbox stage unavailable in fixture' }, { status: 503 });
+  };
+  const runtime = await loadGeneration(db, { ARENA_GATEWAY_URL: 'https://arena.fixture.test', ARENA_GATEWAY_TOKEN: 'fixture-secret' });
+  try {
+    const result = await runtime.run(db, job);
+    assert.equal(calls.length, 1, 'one gateway request only; no Pixazo, production Shotstack, or second attempt');
+    assert.equal(calls[0].url, 'https://arena.fixture.test/v2/assemble');
+    assert.equal(calls[0].init.method, 'POST');
+    const body = JSON.parse(calls[0].init.body);
+    assert.equal(body.payload.generation.cost_class, 'free');
+    assert.equal(body.payload.generation.model, null, 'assembly does not request a paid AI model');
+    assert.equal(body.payload.motion.clips.length, 1);
+    assert.equal(result.status, 'failed', 'provider failure must not be passed off as a completed video');
+    assert.match(result.error.message, /Sandbox stage unavailable/);
+  } finally { globalThis.fetch = originalFetch; await runtime.cleanup(); }
 });

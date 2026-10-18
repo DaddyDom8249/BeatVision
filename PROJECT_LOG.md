@@ -1,5 +1,14 @@
 # BeatVision Project Log
 
+## 2026-10-17 — Remove blanket cost block from sandbox final assembly only
+
+**Evidence:** BeatVision Arena worker routes /v2/assemble through the existing /v1/video/assemble handler using Shotstack Edit **/edit/stage/render** (sandbox), not its billed production endpoint. The assembly edit uses pre-existing approved video clips and frozen song audio; no Shotstack generative AI elements are requested. Shotstack's current official docs state ordinary sandbox renders do not debit rendering credits; output is watermarked and limited to 10 minutes, and the account needs at least one active credit. A missing balance can fail closed with 403, without authorizing a paid request.
+
+**Change:** Remove the blanket PROVIDER_COST_UNVERIFIED branch for `assembly` only. Preserve enqueue ownership, frozen timeline, approvals, manifest integrity, provider evidence, 30-minute timeout, and explicit failed/provider-unavailable states. Keep the paid or unknown-cost `scene_image` execution path blocked until a verifiably nonbilling path is configured; do not use Pixazo or Cloudflare Workers Paid as a speculative workaround. This changes eligibility only; it does NOT submit any new job.
+
+**Verification:** Unit test exercises the real controller on a frozen assembly snapshot with fake gateway and checks it calls exactly /v2/assemble with `generation.cost_class=free` and no image model, while retaining the fail-closed image regression. End-to-end user-authenticated playback and final MP4 storage/durability remain unverified. Do not mark a sandbox render as downloadable unless a valid durable output is independently verified.
+
+
 ## 2026-10-17 — Verified Ghast media URL churn, truthful playback/export status
 
 **Observed authenticated Android workflow:** 8-scene Ghast approved Visual Plan. Scene 1 approved Hugging Face MP4 is physically present in the private `visual-assets` storage bucket and was served via valid 200/206 responses at 21:03 UTC. The browser's five-second job-status polls repeatedly called the Edge signing action and reloaded a different short-lived signed video URL, interrupting media decoder loading; job state never reached a terminal status because a different queued AI motion attempt is stuck with PostgREST 400 on scheduler dispatch. Those database and storage records are not altered by the frontend fix.
