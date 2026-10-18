@@ -1,5 +1,15 @@
 # BeatVision Project Log
 
+## 2026-10-18 — Motion failure diagnostics (scoped, no model calls)
+
+**Evidence:** Production showed multiple successful Hugging Face LTX image-to-video jobs, each approximately 1.9 seconds long, plus one failing Scene 8 request at 2026-10-18 05:27 UTC. Its frozen approved image exists, HF eligibility was verified, event was accepted, and the saved error was generic `HF_GENERATION_FAILED`. The provider's raw SSE error is not persisted, so exact internal failure (capacity vs inference failure vs input) cannot be proven. No automatically repeated GPU submission is justified.
+
+**Changes:** Classify LTX ZeroGPU SSE errors into sanitized quota-exhausted, capacity-unavailable and generic-generation-failed codes; propagate only allowlisted adapter codes through generation_jobs.error.code. Display actionable motion messages for existing and new failed jobs, explicitly distinguish manual retry from automatic resubmission, preserve approved assets and the existing 2-second motion design. No provider change, quota bypass, schema modification, automatic retry, or production data rewrite.
+
+**Verification boundary:** Pending CI on exact source revision and a manual creator device check. No claim that provider-generated motion is fixed merely by improving diagnostics. Running the UI does not submit an AI job until creator explicitly selects Generate Motion.
+
+---
+
 ## 2026-10-17 — Restore pinned free FLUX Schnell scene-image generation
 
 **Production reproduction:** Ghast approved Scene 1 shows the most recent failed scene-image job `09465b07-850f-4e4a-b3d4-6585984af075` with `PROVIDER_COST_UNVERIFIED` although a prior image is approved. This failure is produced by the unconditional Supabase `scene_image` rejection, not by the active free Cloudflare provider.

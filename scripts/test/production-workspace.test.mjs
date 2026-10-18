@@ -97,6 +97,29 @@ test('pending motion is restored from the database after reload', async () => {
   } finally { await view.cleanup(); }
 });
 
+test('a failed Hugging Face motion job explains manual retry without automatic GPU resubmission', async () => {
+  const view = await mount({
+    motionJob: { id: 'failed-motion-8', status: 'failed', error: { code: 'ARENA_GENERATION_FAILED', message: 'HF_GENERATION_FAILED' } },
+  });
+  try {
+    const alert = [...document.querySelectorAll('[role="alert"]')].find(x => x.textContent.includes('Scene motion'));
+    assert.ok(alert);
+    assert.match(alert.textContent, /Hugging Face accepted the motion job but did not produce a video/);
+    assert.match(alert.textContent, /no automatic retry was sent/i);
+    assert.equal(view.calls.filter(x => x.action === 'enqueue_ai_motion').length, 0);
+    assert.ok(view.button('Generate Motion'), 'creator must retain explicit manual retry');
+  } finally { await view.cleanup(); }
+});
+test('free GPU quota errors request no fallback and retain the production workspace', async () => {
+  const view = await mount({
+    motionJob: { id: 'failed-quota-motion', status: 'failed', error: { code: 'HF_QUOTA_EXHAUSTED', message: 'HF_QUOTA_EXHAUSTED' } },
+  });
+  try {
+    assert.match(document.body.textContent, /free GPU quota is exhausted/);
+    assert.match(document.body.textContent, /No paid provider/);
+    assert.equal(view.calls.length, 0);
+  } finally { await view.cleanup(); }
+});
 test('recoverable provider errors do not hide the workspace', async () => {
   const view = await mount({ runError: 'Provider unavailable' });
   try {

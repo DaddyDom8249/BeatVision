@@ -451,7 +451,12 @@ function terminalState(response: Response, data: any, jobType?: string) {
 async function setFailed(db: any, id: string, message: string, detail?: unknown) {
   const res = await db.from("generation_jobs").update({
     status: "failed",
-    error: { code: message.startsWith("PROVIDER_COST_UNVERIFIED:") ? "PROVIDER_COST_UNVERIFIED" : message.startsWith("PROVIDER_TIMEOUT:") ? "PROVIDER_TIMEOUT" : "ARENA_GENERATION_FAILED", message: message.slice(0, 1200), detail },
+    // Preserve known, sanitized HF adapter codes for creator-readable failures,
+    // without promoting arbitrary upstream text into error.code.
+    error: { code: message.startsWith("PROVIDER_COST_UNVERIFIED:") ? "PROVIDER_COST_UNVERIFIED"
+      : message.startsWith("PROVIDER_TIMEOUT:") ? "PROVIDER_TIMEOUT"
+      : ["HF_GENERATION_FAILED", "HF_CAPACITY_UNAVAILABLE", "HF_QUOTA_EXHAUSTED"].includes(message) ? message
+      : "ARENA_GENERATION_FAILED", message: message.slice(0, 1200), detail },
   }).eq("id", id).in("status", ["queued", "submitted", "processing"]).select("id");
   if (res.error) throw new Error("SET_FAILED_PERSIST_FAILED: " + res.error.message);
   if (!res.data || res.data.length === 0) {
