@@ -133,6 +133,12 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const scene = scenes[selectedIndex] ?? null;
   const selectedSceneId = useRef<string | undefined>(scene?.id);
   selectedSceneId.current = scene?.id;
+  // Every scene-owned result carries the scene that produced it, so stale
+  // async responses never appear under another scene's controls.
+  const image = storedImage?.__sceneId === scene?.id ? storedImage : null;
+  const motion = storedMotion?.__sceneId === scene?.id ? storedMotion : null;
+  const imageJob = storedImageJob?.__sceneId === scene?.id ? storedImageJob : null;
+  const motionJob = storedMotionJob?.__sceneId === scene?.id ? storedMotionJob : null;
   const busy = generating || motionGenerating || assemblyRunning || assetLoading;
   const externalLegacyRenderHref = assemblyJob?.status === "completed" && finalVideo?.downloadable !== true
     ? legacyRenderHref(finalVideo?.video_url) : null;
@@ -201,12 +207,6 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [storedImageHistory, setImageHistory] = useState<any[]>([]);
   const [storedMotionHistory, setMotionHistory] = useState<any[]>([]);
   const [historySceneId, setHistorySceneId] = useState<string | null>(null);
-  // Every scene-owned result carries the scene that produced it, so stale
-  // async responses never appear under another scene's controls.
-  const image = storedImage?.__sceneId === scene?.id ? storedImage : null;
-  const motion = storedMotion?.__sceneId === scene?.id ? storedMotion : null;
-  const imageJob = storedImageJob?.__sceneId === scene?.id ? storedImageJob : null;
-  const motionJob = storedMotionJob?.__sceneId === scene?.id ? storedMotionJob : null;
   const imageHistory = historySceneId === scene?.id ? storedImageHistory : [];
   const motionHistory = historySceneId === scene?.id ? storedMotionHistory : [];
   const sceneRefreshSequence = useRef(0);
