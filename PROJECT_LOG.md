@@ -1,5 +1,19 @@
 # BeatVision Project Log
 
+## 2026-10-18 — Verified-free scene image dispatch preparation
+
+**Observed production failure:** 14 scene_image jobs failed with `PROVIDER_COST_UNVERIFIED` in the past seven days; deployed Generation v36 has a fail-closed explicit refusal for scene_image and assembly. The source may label Pixazo Flux Schnell "free" but Arena's canonical /v2 route was still Pixazo-first. Active Cloudflare Arena Worker has an AI binding; account subscription read was denied (Cloudflare API error 10000), so billing plan is unverified.
+
+**Scoped source change:** Image submissions now first request an authenticated Arena /health capability using the existing gateway secret and require a confirmed Cloudflare Workers AI-only Flux Schnell route with exactly one model. Anything missing, insecure, untrusted or unverified fails with PROVIDER_COST_UNVERIFIED; assembly remains blocked until a separate no-charge renderer exists. Related Arena PR #46 changes BeatVision canonical generation to the dedicated Cloudflare-only path with positive operator certification. Tests mock health and assert fail-closed behavior without making any model requests.
+
+**Safety:** No backend credentials exposed, no schema/data changes, no approved-media replacement, no runtime paid model attempt. This source-only change does NOT certify the Cloudflare account Free tier, deploy the updated Arena Worker, activate verification, fix assembly or retrospectively retry failed jobs.
+
+**Live v37 reconciliation (2026-10-18):** Production `beatvision-generation` v37 differs from repository `main` only in its deliberate Shotstack stage sandbox assembly enabling; preserve that live assembly behavior when replacing the image gate. Owner explicitly confirms Cloudflare Workers on Free. Arena candidate version `1b9182b8-c1b1-46db-8b59-a5f6e50a3da8` deployed as `db3b1d0f-c7f8-44c5-bbde-eda2b3cc7991`, with 20 existing bindings intact including Durable Object namespace `d6bf26572a32437aa95d86e30e2d84d4`, and BEATVISION_FREE_WORKERS_AI_CONFIRMED=true. Cloudflare control-plane confirmed. Authenticated live health, exact image generation, and Supabase controller v38 remain unverified at the time of this log; only live v37 index is altered for candidate controller, sibling dependencies identical to GitHub baseline.
+
+**Verification boundary:** BeatVision PR #126 source head `a86319ad36c693214e0166612823c4160eefa456` passed Production CI `39095948595`: 335/335 tests, 0 fail; production audit and Vite build passed. Generation enqueue security `39095948648`, legacy storage ownership security `39095948638` and isolated database migration replay `39095948624` also passed. All evidence is mocked/source CI, not a free billing plan or a real production image. Production runtime validation pending. Release order: independently verify Workers Free entitlement and billing restrictions, review Arena PR #46, deploy verified Arena code and set its explicit Free-only certification, verify authenticated health response, then deploy tested Generation code. Never activate certification on assumption.
+
+---
+
 ## 2026-10-17 — Remove blanket cost block from sandbox final assembly only
 
 **Evidence:** BeatVision Arena worker routes /v2/assemble through the existing /v1/video/assemble handler using Shotstack Edit **/edit/stage/render** (sandbox), not its billed production endpoint. The assembly edit uses pre-existing approved video clips and frozen song audio; no Shotstack generative AI elements are requested. Shotstack's current official docs state ordinary sandbox renders do not debit rendering credits; output is watermarked and limited to 10 minutes, and the account needs at least one active credit. A missing balance can fail closed with 403, without authorizing a paid request.
