@@ -1,5 +1,18 @@
 # BeatVision Project Log
 
+## 2026-10-17 — iOS Capacitor and isolated local manual cut (UNVERIFIED on device)
+
+**Objective:** Provide an iOS-compatible BeatVision build path and a useful no-provider alternative to blocked image/assembly submissions, without permitting unknown-cost external models.
+
+**Baseline:** GitHub main was `f3523c9ab0f57ca2cf116e635eef28374f223cdb`; `AGENTS.md`, the project log, and generation/approval/audit sources were read. Existing controller rejects new image/assembly dispatch with `PROVIDER_COST_UNVERIFIED`. Canonical approved image/motion tables require generation-job lineage and block user inserts; they must not be modified for manually imported files.
+
+**Change:** Add Capacitor v8 iOS configuration and dependencies with Mac/Xcode build instructions. Add `Local Cut` read-only approved-plan route and production link. Local song/photo/video import previews against approved timing; optional 720p image-only animatic export uses on-device canvas recording and WebAudio when the WKWebView provides the required capture/encoding support. Invalid timeline, audio-duration mismatch, absent codec and missing imagery stop with visible errors. No local files are uploaded, and no `generation_jobs`, creative approvals, or `final_videos` state is written. Add exact Capacitor WKWebView origin to four existing Edge CORS allowlists while retaining JWT, RLS, owner checks, and the remote provider cost guard. Add static isolation/CORS regressions and docs.
+
+**Verification:** At creation time no Mac/Xcode, iPhone, authenticated E2E session, or project dependency installation was available; native compile, capture/render bytes, persistence and TestFlight are **UNVERIFIED**. GitHub CI status must be checked on this exact branch head; no successful test run has yet been claimed. No paid provider calls, migrations, production deployment or service cost changes.
+
+**Next:** Verify CI and test on a physical iPhone. If `canvas.captureStream` / `MediaRecorder` are not supported by WKWebView, implement and test a native AVFoundation exporter before claiming provider-free final output. Native Files sharing and entitlement/deep-link auth also require real-device verification.
+
+
 ## 2026-10-17 — Verified Ghast media URL churn, truthful playback/export status
 
 **Observed authenticated Android workflow:** 8-scene Ghast approved Visual Plan. Scene 1 approved Hugging Face MP4 is physically present in the private `visual-assets` storage bucket and was served via valid 200/206 responses at 21:03 UTC. The browser's five-second job-status polls repeatedly called the Edge signing action and reloaded a different short-lived signed video URL, interrupting media decoder loading; job state never reached a terminal status because a different queued AI motion attempt is stuck with PostgREST 400 on scheduler dispatch. Those database and storage records are not altered by the frontend fix.
