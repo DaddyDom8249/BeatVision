@@ -1,5 +1,18 @@
 # BeatVision Project Log
 
+## 2026-10-18 — Sponsor-readiness public documentation proposal (documentation only)
+
+**Objective:** Remove sponsor-facing inaccuracies in the repository README and record a verified pre-send checklist.
+
+**Baseline:** Main `4a109a359b0938073ee9c1af7a40aea18bcbf6ed` (verified before branch creation); the prior README still says “BeatVision Skeleton” and lists Pixazo first, whereas the recent product log documents current conditional Cloudflare FLUX Schnell and Hugging Face paths. The current production Vercel project `beat-vision-f8nn` is READY at this SHA; the former `beat-vision-theta` site remains on an older SHA.
+
+**Change:** Rewrite README to describe the product as a working prototype, present the current design/architecture, document free-provider quota limitations, expose only the founder-approved partnerships Gmail, and avoid false claims of complete final-video export or incorporated status. Add `docs/sponsorship/PRE_SEND_CHECKLIST.md` with owner/agent responsibilities and verifiable gates.
+
+**Evidence / verification:** Source-only documentation based on repository instructions and project-log findings, current main/head and Vercel deployment records, and PR #131/#134 evidence. No authenticated full-song export or fresh motion inference was performed. Documentation assertions and GitHub PR CI are to be checked on the exact revision before merge.
+
+**Security / scope:** No app code, database/schema, credentials, private assets, approved creative work, provider requests or production deployments changed. Public policy pages remain pending privacy/data-flow fact checking and owner approval.
+
+
 ## 2026-10-18 — Restore generation requests from the production origin
 
 **Cause:** The actual production origin `https://beat-vision-f8nn.vercel.app` was missing from the generation controller's CORS allowlist. Live OPTIONS returned 204 without `Access-Control-Allow-Origin`; authenticated browser image signing failed and the frontend's preserved approved asset had no preview. The earlier PR #132 repaired asset state only.
