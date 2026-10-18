@@ -26,7 +26,7 @@ await writeFile(join(dir, 'header.mjs'), 'export default function StudioHeader()
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, stored = false, rpcError = null, runJob = null, approvedMotionSceneIds = ['scene-1'], sceneRecord = null } = {}) {
+async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, stored = false, rpcError = null, runJob = null, approvedMotionSceneIds = ['scene-1'], sceneRecord = null, sceneRecords = null, motionJobByScene = null, motionAssetsByScene = null, motionUrlFailure = false, actionHandler = null } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
@@ -43,11 +43,11 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
         single() { return this; }, maybeSingle() { return this; },
         then(resolve) {
           const data = table === 'visual_plans' ? { id: 'plan-1', status: 'approved', title: 'Locked plan' }
-            : table === 'visual_plan_scenes' ? [sceneRecord ?? { id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved' }]
+            : table === 'visual_plan_scenes' ? (sceneRecords ?? [sceneRecord ?? { id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved' }])
             : table === 'scene_image_assets' ? imageAssets ?? image
-            : table === 'motion_clip_assets' ? (filters.approved === true ? approvedMotionSceneIds.map((scene_id,i)=>({id:'approved-'+i,scene_id,status:'approved',approved:true,video_url:'https://fixture.test/'+i+'.mp4'})) : motionAssets ?? motionAsset)
+            : table === 'motion_clip_assets' ? (filters.approved === true ? approvedMotionSceneIds.map((scene_id,i)=>({id:'approved-'+i,scene_id,status:'approved',approved:true,video_url:'https://fixture.test/'+i+'.mp4'})) : motionAssetsByScene ? (motionAssetsByScene[filters.scene_id] ?? null) : motionAssets ?? motionAsset)
             : table === 'generation_jobs' && filters.id ? (historicalQueries.push({ ...filters }), historicalJob?.id === filters.id ? historicalJob : null)
-            : table === 'generation_jobs' ? (filters.job_type === 'scene_motion' ? motionJob : filters.job_type === 'scene_image' ? imageJob : assemblyJob) : null;
+            : table === 'generation_jobs' ? (filters.job_type === 'scene_motion' ? (motionJobByScene ? motionJobByScene[filters.visual_plan_scene_id] ?? null : motionJob) : filters.job_type === 'scene_image' ? imageJob : assemblyJob) : null;
           return Promise.resolve({ data, error: null }).then(resolve);
         },
       };
@@ -57,8 +57,11 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
     functions: { invoke: async (_name, { body }) => {
       calls.push(body);
       if (body.action === 'enqueue_ai_motion') return { data: { job: { id: 'job-1', status: 'queued', job_type: 'scene_motion' } }, error: runError ? new Error(runError) : null };
-      if (body.action === 'motion_url') return { data: { video_url: 'https://fresh.test/motion.mp4' }, error: null };
+      if (body.action === 'motion_url') return motionUrlFailure
+        ? { data: null, error: new Error('temporary signed URL failure') }
+        : { data: { video_url: 'https://fresh.test/motion.mp4' }, error: null };
       if (body.action === 'image_url') return { data: { image_url: 'https://fresh.test/image.jpg' }, error: null };
+      if (actionHandler && ['run', 'poll'].includes(body.action)) return actionHandler(body);
       return { data: { job: runJob ?? { id: 'job-1', status: 'processing', job_type: 'scene_motion' } }, error: runError ? new Error(runError) : null };
     } },
   };
@@ -78,6 +81,64 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
     cleanup: async () => { await act(async () => root.unmount()); dom.window.close(); delete globalThis.__uiDb; },
   };
 }
+
+test('older scene motion poll cannot replace selected scene job or completed clip', async () => {
+  let resolvePoll;
+  const delayed = new Promise(resolve => { resolvePoll = resolve; });
+  const view = await mount({
+    sceneRecords: [
+      { id: 'scene-1', scene_number: 1, start_time: 0, end_time: 16, title: 'Section 1', status: 'approved' },
+      { id: 'scene-8', scene_number: 8, start_time: 343, end_time: 383, title: 'Section 8', status: 'approved' },
+    ],
+    motionJobByScene: {
+      'scene-1': { id: 'saved-job-1', job_type: 'scene_motion', status: 'completed' },
+      'scene-8': { id: 'pending-job-8', job_type: 'scene_motion', status: 'processing' },
+    },
+    motionAssetsByScene: {
+      'scene-1': [{ id: 'saved-clip-1', generation_job_id: 'saved-job-1', scene_id: 'scene-1', status: 'generated', approved: false, provider: 'huggingface-zerogpu', model: 'ltxv-13b-0.9.8-distilled' }],
+      'scene-8': [],
+    },
+    actionHandler: body => body.jobId === 'pending-job-8' ? delayed
+      : Promise.resolve({ data: { job: { id: body.jobId, status: 'completed' } }, error: null }),
+  });
+  try {
+    const nav = document.querySelectorAll('.production-scene-list button');
+    await act(async () => { nav[1].dispatchEvent(new window.MouseEvent('click', { bubbles: true })); });
+    assert.ok(view.button('Check Motion Status'));
+    await act(async () => { view.button('Check Motion Status').dispatchEvent(new window.MouseEvent('click', { bubbles: true })); });
+    await act(async () => { nav[0].dispatchEvent(new window.MouseEvent('click', { bubbles: true })); });
+    assert.equal(document.querySelector('.production-detail h2').textContent, 'Section 1');
+    assert.equal(document.querySelector('video')?.getAttribute('src'), 'https://fresh.test/motion.mp4');
+    await act(async () => resolvePoll({ data: { job: { id: 'pending-job-8', status: 'failed', error: { message: 'HF_GENERATION_FAILED' } } }, error: null }));
+    assert.equal(document.querySelector('.production-detail h2').textContent, 'Section 1');
+    assert.ok(!view.button('Check Motion Status'), 'Scene 8 pending job must not control Scene 1');
+    assert.ok(view.button('Approve Motion'), 'Scene 1 saved clip must remain available');
+    assert.doesNotMatch(document.body.textContent, /Scene motion: Hugging Face accepted the motion job but did not produce a video/);
+    assert.equal(view.calls.filter(x => x.action === 'enqueue_ai_motion').length, 0);
+  } finally { await view.cleanup(); }
+});
+
+test('signed motion playback failure keeps saved clip recoverable without new generation', async () => {
+  const view = await mount({
+    motionAssets: [{
+      id: 'saved-ai-clip', scene_id: 'scene-1', generation_job_id: 'saved-ai-job',
+      provider: 'huggingface-zerogpu', model: 'ltxv-13b-0.9.8-distilled',
+      status: 'generated', approved: false,
+    }],
+    motionJob: { id: 'saved-ai-job', status: 'completed', job_type: 'scene_motion' },
+    motionUrlFailure: true,
+  });
+  try {
+    assert.match(document.body.textContent, /A saved motion clip exists, but its private playback link is unavailable/);
+    assert.ok(view.button('Retry Motion Playback'));
+    assert.equal(document.querySelector('video'), null);
+    assert.equal(view.calls.filter(x => x.action === 'motion_url').length, 1);
+    assert.equal(view.calls.filter(x => x.action === 'enqueue_ai_motion').length, 0);
+    await view.click('Retry Motion Playback');
+    assert.equal(view.calls.filter(x => x.action === 'motion_url').length, 2);
+    assert.equal(view.calls.filter(x => x.action === 'enqueue_ai_motion').length, 0);
+  } finally { await view.cleanup(); }
+});
 
 test('async motion keeps the workspace and exposes status without a completed asset', async () => {
   const view = await mount();

@@ -99,9 +99,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [image, setImage] = useState<any>(null);
+  const [storedImage, setImage] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
-  const [motion, setMotion] = useState<any>(null);
+  const [storedMotion, setMotion] = useState<any>(null);
   const [motionMeasured, setMotionMeasured] = useState<{ assetId: string; seconds: number } | null>(null);
   const [pilotMeasured, setPilotMeasured] = useState<{ url: string; seconds: number } | null>(null);
   const [motionGenerating, setMotionGenerating] = useState(false);
@@ -125,8 +125,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   // URL every five seconds restarts browser MP4 decoding, even when bytes exist.
   const signedMediaCache = useRef(new Map<string, { url: string; createdAt: number }>());
 
-  const [imageJob, setImageJob] = useState<any>(null);
-  const [motionJob, setMotionJob] = useState<any>(null);
+  const [storedImageJob, setImageJob] = useState<any>(null);
+  const [storedMotionJob, setMotionJob] = useState<any>(null);
   const [motionAssetJob, setMotionAssetJob] = useState<any>(null);
   const [assetLoading, setAssetLoading] = useState(false);
   const [motionTermsAccepted, setMotionTermsAccepted] = useState(false);
@@ -198,13 +198,25 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     return { ...asset, image_url: url };
   }
 
-  const [imageHistory, setImageHistory] = useState<any[]>([]);
-  const [motionHistory, setMotionHistory] = useState<any[]>([]);
+  const [storedImageHistory, setImageHistory] = useState<any[]>([]);
+  const [storedMotionHistory, setMotionHistory] = useState<any[]>([]);
+  const [historySceneId, setHistorySceneId] = useState<string | null>(null);
+  // Every scene-owned result carries the scene that produced it, so stale
+  // async responses never appear under another scene's controls.
+  const image = storedImage?.__sceneId === scene?.id ? storedImage : null;
+  const motion = storedMotion?.__sceneId === scene?.id ? storedMotion : null;
+  const imageJob = storedImageJob?.__sceneId === scene?.id ? storedImageJob : null;
+  const motionJob = storedMotionJob?.__sceneId === scene?.id ? storedMotionJob : null;
+  const imageHistory = historySceneId === scene?.id ? storedImageHistory : [];
+  const motionHistory = historySceneId === scene?.id ? storedMotionHistory : [];
+  const sceneRefreshSequence = useRef(0);
   const assetChoice = useRef<{sceneId: string; imageId?: string; motionId?: string}>({sceneId: ''});
   const attemptId = useRef<string | null>(null);
   const rows = (data: any) => Array.isArray(data) ? data : data ? [data] : [];
 
   const refreshScene = useCallback(async (sceneId: string) => {
+    const sequence = ++sceneRefreshSequence.current;
+    const isCurrent = () => selectedSceneId.current === sceneId && sceneRefreshSequence.current === sequence;
     const [images, motions, imageJobs, motionJobs] = await Promise.all([
       supabase.from("scene_image_assets").select(imageFields).eq("project_id", projectId).eq("visual_plan_id", plan?.id).eq("scene_id", sceneId).order("created_at", { ascending: false }),
       supabase.from("motion_clip_assets").select("*").eq("project_id", projectId).eq("visual_plan_id", plan?.id).eq("scene_id", sceneId).order("created_at", { ascending: false }),
@@ -212,13 +224,13 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       supabase.from("generation_jobs").select("id,status,error,job_type,output,input_snapshot").eq("project_id", projectId).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_motion").order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
     for (const result of [images, motions, imageJobs, motionJobs]) if (result.error) throw result.error;
-    if (selectedSceneId.current !== sceneId) return;
+    if (!isCurrent()) return;
     if (assetChoice.current.sceneId !== sceneId) assetChoice.current = {sceneId};
     const imageRows = rows(images.data), motionRows = rows(motions.data);
     const choose = (all: any[], id?: string) => all.find(a => a.id === id) ?? all.find(a => a.approved && a.status === 'approved') ?? all.find(a => a.status !== 'rejected') ?? all[0] ?? null;
     const selectedImage = choose(imageRows, assetChoice.current.imageId);
     const selectedMotion = choose(motionRows, assetChoice.current.motionId);
-    setImageHistory(imageRows); setMotionHistory(motionRows);
+    setHistorySceneId(sceneId); setImageHistory(imageRows); setMotionHistory(motionRows);
     let sourceJob: any = null;
     if (selectedMotion?.generation_job_id) {
       if (motionJobs.data?.id === selectedMotion.generation_job_id) {
@@ -235,21 +247,33 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         sourceJob = relatedJob.data;
       }
     }
-    if (selectedSceneId.current !== sceneId) return;
+    if (!isCurrent()) return;
     let freshMotion = selectedMotion;
+    let playbackUnavailable = false;
     if (freshMotion?.provider === "huggingface-zerogpu") {
-      const url = await reuseSignedMedia("motion", freshMotion.id, async () => {
-        const signed = await supabase.functions.invoke("beatvision-generation", { body: { action: "motion_url", projectId, assetId: freshMotion.id } });
-        if (signed.error || !signed.data?.video_url) throw signed.error || new Error("Motion playback URL unavailable.");
-        return String(signed.data.video_url);
-      });
-      freshMotion = { ...freshMotion, video_url: url };
+      try {
+        const url = await reuseSignedMedia("motion", freshMotion.id, async () => {
+          const signed = await supabase.functions.invoke("beatvision-generation", { body: { action: "motion_url", projectId, assetId: freshMotion.id } });
+          if (signed.error || !signed.data?.video_url) throw signed.error || new Error("Motion playback URL unavailable.");
+          return String(signed.data.video_url);
+        });
+        freshMotion = { ...freshMotion, video_url: url };
+      } catch {
+        // Keep the database-owned saved clip visible, but do not use its
+        // stale/unsigned raw URL or mark it approved/playable.
+        playbackUnavailable = true;
+        signedMediaCache.current.delete(projectId + ":motion:" + freshMotion.id);
+        freshMotion = { ...freshMotion, video_url: null };
+      }
     }
-    if (selectedSceneId.current !== sceneId) return;
-    setMotion(freshMotion); setImageJob(imageJobs.data); setMotionJob(motionJobs.data);
+    if (!isCurrent()) return;
+    setMotion(freshMotion ? { ...freshMotion, __sceneId: sceneId } : null);
+    setMotionPlaybackFailure(playbackUnavailable ? freshMotion.id : null);
+    setImageJob(imageJobs.data ? { ...imageJobs.data, __sceneId: sceneId } : null);
+    setMotionJob(motionJobs.data ? { ...motionJobs.data, __sceneId: sceneId } : null);
     setMotionAssetJob(sourceJob);
     const freshImage = await displayImage(selectedImage);
-    if (selectedSceneId.current === sceneId) setImage(freshImage);
+    if (isCurrent()) setImage(freshImage ? { ...freshImage, __sceneId: sceneId } : null);
   }, [projectId, plan?.id]);
 
   const refreshFinal = useCallback(async (planId: string) => {
@@ -363,7 +387,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         job = type === "scene_motion" ? queued.data?.job : queued.data;
       }
       if (!job?.id) throw new Error("No generation job was returned.");
-      setJob(job);
+      if (type === "assembly" || selectedSceneId.current === sceneId)
+        setJob(type === "assembly" ? job : { ...job, __sceneId: sceneId });
       attemptId.current = null;
       const run = await supabase.functions.invoke("beatvision-generation", { body: { projectId, jobId: job.id, action: ["submitted", "processing"].includes(job.status) ? "poll" : "run" } });
       if (run.error) throw run.error;
@@ -372,11 +397,14 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       // Fetch persisted assets, then retain the authoritative response if a replica
       // has not observed the latest job write yet.
       if (type === "assembly") await refreshFinal(plan.id); else await refreshScene(sceneId);
-      setJob(result);
+      if (type === "assembly" || selectedSceneId.current === sceneId)
+        setJob(type === "assembly" ? result : { ...result, __sceneId: sceneId });
       // Persisted failure state owns the alert; request errors remain global.
       // Do not duplicate a job-level provider alert for this same failure.
       if (type === "assembly" && result.status === "completed") setFinalVideo(result.output?.final_video ?? null);
-    } catch (e) { setError(productionErrorMessage(e)); }
+    } catch (e) {
+      if (type === "assembly" || selectedSceneId.current === sceneId) setError(productionErrorMessage(e));
+    }
     finally { setBusy(false); }
   }
 
@@ -531,7 +559,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     const result = await supabase.rpc("approve_motion_clip_asset", { p_asset_id: motion.id });
     if (result.error) setError(productionErrorMessage(result.error));
     else {
-      setMotion(result.data);
+      setMotion({ ...result.data, __sceneId: scene.id, video_url: motion.video_url });
       if (plan) await refreshAssemblyReadiness(plan.id);
     }
   }
@@ -540,7 +568,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     if (!image || image.status !== "generated" || !image.image_url) return;
     setError(null);
     const result = await supabase.rpc("approve_scene_image_asset", { p_asset_id: image.id });
-    if (result.error) setError(productionErrorMessage(result.error)); else setImage({ ...result.data, image_url: image.image_url });
+    if (result.error) setError(productionErrorMessage(result.error)); else setImage({ ...result.data, image_url: image.image_url, __sceneId: scene.id });
   }
 
   async function copyBrief() {
@@ -648,8 +676,13 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     signedMediaCache.current.delete(projectId + ":motion:" + motion.id);
     setMotionMeasured(null);
     setMotionPlaybackFailure(motion.id);
-  }} style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
-            {motion?.id === motionPlaybackFailure && <p role="alert">This approved motion clip could not be played. Its status does not prove browser playback. <button className="secondary-button" onClick={() => { if (scene) void refreshScene(scene.id).catch(e => setError(productionErrorMessage(e))); }}>Retry Motion Playback</button></p>}
+  }} style={{ width: "100%", maxHeight: 520, borderRadius: 12 }} /> : motion
+              ? <p>A saved motion clip exists, but its private playback link is unavailable. Retry the link without submitting another GPU job.</p>
+              : <p>No real motion clip exists yet. Motion requires an approved real scene image.</p>}
+            {motion?.id === motionPlaybackFailure && <p role="alert">This saved motion clip could not be loaded or played. Its status does not prove browser playback. <button className="secondary-button" onClick={() => {
+              signedMediaCache.current.delete(projectId + ":motion:" + motion.id);
+              if (scene) void refreshScene(scene.id).catch(e => setError(productionErrorMessage(e)));
+            }}>Retry Motion Playback</button></p>}
             {motion && <p role="status">
               {motionAssetJob?.input_snapshot?.hf_motion?.duration_seconds
                 ? "LTX requested " + Number(motionAssetJob.input_snapshot.hf_motion.duration_seconds).toFixed(2) + "s. " : ""}
