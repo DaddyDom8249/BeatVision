@@ -204,6 +204,27 @@ async function arena(path: string, method: "GET" | "POST", payload: unknown, req
   return { response, data };
 }
 
+// The operator-certified Arena Worker must advertise a Cloudflare-only,
+ // Workers-Free Flux execution path. A "free" label in a job or model name
+ // alone is never sufficient to permit an external generation request.
+async function verifyFreeImageSource(requestId: string) {
+  let capability: any;
+  try {
+    const result = await arena("/health", "GET", null, requestId + ":free-image-check");
+    if (!result.response.ok) throw new Error("Arena capability lookup failed.");
+    capability = result.data?.beatvision_bridge?.image;
+  } catch {
+    throw new Error("PROVIDER_COST_UNVERIFIED: Could not verify a free-only scene-image provider.");
+  }
+  if (capability?.provider !== "cloudflare-workers-ai" ||
+      capability?.execution_mode !== "cloudflare-only" ||
+      capability?.verified_free !== true ||
+      !Array.isArray(capability?.models) ||
+      capability.models.length !== 1 || capability.models[0] !== "flux-schnell") {
+    throw new Error("PROVIDER_COST_UNVERIFIED: Arena scene images require an independently certified Workers Free Flux Schnell route.");
+  }
+}
+
 function extractImageBase64(data: any) {
   const candidates = [
     data?.image_base64,
@@ -579,8 +600,11 @@ async function run(db: any, job: any) {
   try {
     const path = job.job_type === "scene_image" ? "/v2/scene-image" : job.job_type === "scene_motion" ? "/v2/animate" : "/v2/assemble";
     if (job.job_type === "scene_motion" && !job.input_snapshot?.hf_motion) throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions.");
-    if (job.job_type !== "scene_motion") {
-      throw new Error("PROVIDER_COST_UNVERIFIED: New image and assembly submissions are unavailable until their exact execution path is verified free.");
+    if (job.job_type === "assembly") {
+      throw new Error("PROVIDER_COST_UNVERIFIED: Final assembly has no independently verified zero-cost renderer.");
+    }
+    if (job.job_type === "scene_image") {
+      await verifyFreeImageSource(requestId);
     }
     const result = job.job_type === "scene_motion"
       ? job.input_snapshot?.hf_motion ? await hfBridgeSubmit(db, job) : (() => { throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions."); })()

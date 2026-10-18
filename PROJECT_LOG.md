@@ -1,3 +1,15 @@
+## 2026-10-18 — Verified-free scene image dispatch preparation
+
+**Observed production failure:** 14 scene_image jobs failed with `PROVIDER_COST_UNVERIFIED` in the past seven days; deployed Generation v36 has a fail-closed explicit refusal for scene_image and assembly. The source may label Pixazo Flux Schnell "free" but Arena's canonical /v2 route was still Pixazo-first. Active Cloudflare Arena Worker has an AI binding; account subscription read was denied (Cloudflare API error 10000), so billing plan is unverified.
+
+**Scoped source change:** Image submissions now first request an authenticated Arena /health capability using the existing gateway secret and require a confirmed Cloudflare Workers AI-only Flux Schnell route with exactly one model. Anything missing, insecure, untrusted or unverified fails with PROVIDER_COST_UNVERIFIED; assembly remains blocked until a separate no-charge renderer exists. Related Arena PR #46 changes BeatVision canonical generation to the dedicated Cloudflare-only path with positive operator certification. Tests mock health and assert fail-closed behavior without making any model requests.
+
+**Safety:** No backend credentials exposed, no schema/data changes, no approved-media replacement, no runtime paid model attempt. This source-only change does NOT certify the Cloudflare account Free tier, deploy the updated Arena Worker, activate verification, fix assembly or retrospectively retry failed jobs.
+
+**Verification boundary:** Exact-head GitHub tests and production runtime validation pending. Release order: independently verify Workers Free entitlement and billing restrictions, review Arena PR #46, deploy verified Arena code and set its explicit Free-only certification, verify authenticated health response, then deploy tested Generation code. Never activate certification on assumption.
+
+---
+
 # BeatVision Project Log
 
 ## 2026-10-17 — Verified Ghast media URL churn, truthful playback/export status
