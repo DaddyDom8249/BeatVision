@@ -32,7 +32,7 @@ Do not check generated signing material or developer credentials into Git. The `
 
 ## Security and approval invariants
 
-- New images and assembly jobs still stop with `PROVIDER_COST_UNVERIFIED`; this restriction is intentional until their **actual execution path** is verified zero-cost.
+- New remote scene-image generation still stops with `PROVIDER_COST_UNVERIFIED`. Current main treats stage-only assembly separately. Local Cut invokes neither and does not alter either controller path.
 - No project, audio, approvals, asset rows, `generation_jobs`, RLS, storage or migrations are modified by Local Cut.
 - Local export is an unapproved **manual animatic**, not a canonical `final_videos` row; it cannot be used to bypass owner or Vision Lock checks.
 - No Xcode/device build, local export on an actual iPhone, provider call, paid action, migration or production deployment was performed by this change.
