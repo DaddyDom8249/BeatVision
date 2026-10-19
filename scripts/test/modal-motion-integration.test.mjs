@@ -62,6 +62,12 @@ test('Existing call polling never spawns a new GPU job',async()=>{
 test('App explicitly selects Modal and retains HF as the default',()=>{
   assert.match(ui,/useState<"huggingface" \| "modal">\("huggingface"\)/);
   assert.match(ui,/provider: motionProvider/);
+  assert.match(ui,/action: "modal_capability", projectId/);
+  assert.match(ui,/modal_supported !== true \|\| probe\.data\?\.modal_available !== true/);
+  assert.match(ui,/!job\?\.input_snapshot\?\.modal_motion/);
+  assert.match(edge,/modal_supported: true, modal_available: available/);
+  assert.match(edge,/\["image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility", "modal_capability"\]/);
+
   assert.match(ui,/Modal LTX 0\.9\.5 \(account-gated\)/);
   assert.match(edge,/if \(provider === "modal"\)/);
   assert.match(edge,/assertModalSubmissionEnabled\(\)/);
