@@ -30,7 +30,7 @@ The artist directs; AI providers produce candidate media. Approved creative stat
 Production project records and engineering logs show authenticated project flows, world/style planning, approved scene imagery, and saved short AI motion clips. A production-origin CORS correction allowed an existing approved image to be signed and displayed. These are useful integration milestones, **not** proof that an arbitrary new song produces a complete downloadable video.
 
 - **Image generation:** Cloudflare Workers AI FLUX Schnell is configured behind a server-controlled, confirmed-free execution path; live availability remains subject to provider quota and specific runtime verification.
-- **Motion:** Hugging Face ZeroGPU has produced short motion in existing projects, but a recent authorized generation attempt returned `HF_QUOTA_EXHAUSTED`. New motion is **not reliably available** on the current free quota.
+- **Motion:** Hugging Face ZeroGPU has produced short motion in existing projects. A recent authorized attempt recorded `HF_GENERATION_FAILED`, but the provider's raw error was not saved, so quota exhaustion, capacity limits, and inference/input failures cannot be distinguished. Remaining free quota and reliable availability are **unverified**.
 - **Assembly:** Sandbox/stage output has existed; its watermark, durability, access, and downloadable eligibility are distinct from production-ready final export. A complete new-song-to-final-MP4 run is **not verified**.
 - **In-flight improvements:** Separate source reviews address scene-specific motion UI state, signing recovery, quota messages, and output status. An open PR or passing unit tests are not production proof.
 
@@ -66,7 +66,7 @@ Provider access is conditional, never guaranteed. No paid or unverified-cost fal
 ## Local development
 
 ```bash
-npm ci
+npm install
 npm test
 npm run production-audit
 npm run build

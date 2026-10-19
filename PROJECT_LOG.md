@@ -1,5 +1,13 @@
 # BeatVision Project Log
 
+## 2026-10-19 — PR #135 README accuracy repairs (documentation only)
+
+**Issue:** Sponsor-facing README instructed `npm ci` despite the intentionally uncommitted `package-lock.json` and described a Hugging Face motion failure as verified `HF_QUOTA_EXHAUSTED`, although the recorded job error was `HF_GENERATION_FAILED` and raw provider cause was not persisted.
+
+**Repair:** On the existing PR #135 documentation branch, change install guidance to `npm install` and describe the saved motion error with quota/capacity/inference causes and remaining quota explicitly unverified. Preserve application code, provider controls, approved creative assets, and production state.
+
+**Verification boundary:** README wording checked against `package.json`, `.gitignore`, `AGENTS.md` and this log. Source-only checks were performed before publication; repository CI must be evaluated on the new PR head. No local dependency install, provider requests, data changes, merge or deployment made.
+
 ## 2026-10-18 — Sponsor-readiness public documentation proposal (documentation only)
 
 **Objective:** Remove sponsor-facing inaccuracies in the repository README and record a verified pre-send checklist.
