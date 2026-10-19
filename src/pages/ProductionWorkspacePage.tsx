@@ -370,6 +370,15 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
       }
       if (!job) {
         if (type === "scene_motion" && !motionTermsAccepted) throw new Error("Accept the LTX model use restrictions before AI motion.");
+        if (type === "scene_motion" && motionProvider === "modal") {
+          // A preview UI can temporarily be newer than the deployed Edge controller.
+          // Fail closed: old controllers ignore provider and would silently use HF.
+          const probe = await supabase.functions.invoke("beatvision-generation", {
+            body: { action: "modal_capability", projectId },
+          });
+          if (probe.error || probe.data?.modal_supported !== true || probe.data?.modal_available !== true)
+            throw new Error("Modal GPU is not connected to this Studio deployment. No generation was submitted.");
+        }
         attemptId.current ??= crypto.randomUUID();
         const queued = type === "assembly"
           ? await supabase.rpc("enqueue_assembly_generation", { p_project_id: projectId, p_visual_plan_id: plan.id })
@@ -378,6 +387,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             : await supabase.rpc("enqueue_scene_image_variant", { p_project_id: projectId, p_scene_id: sceneId, p_request_id: attemptId.current });
         if (queued.error) throw queued.error;
         job = type === "scene_motion" ? queued.data?.job : queued.data;
+        if (type === "scene_motion" && motionProvider === "modal" &&
+            (!job?.input_snapshot?.modal_motion || job?.provider === "huggingface-zerogpu"))
+          throw new Error("MODAL_PROVIDER_MISMATCH: No motion job was submitted.");
       }
       if (!job?.id) throw new Error("No generation job was returned.");
       setJob(job);
