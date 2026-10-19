@@ -1321,3 +1321,15 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 **Deployment:** Created Vercel production deployment `dpl_GWVYyY2SYfc3HGNY1ueiHfQgKBv4` from GitHub `main` pinned to SHA `eafb6529d6356fe4af05385c8981c334960182d3`. TypeScript/Vite build succeeded, deployment reached READY, and an independent production-domain lookup confirmed `beat-vision-theta.vercel.app` resolves to that deployment and exact SHA. The pre-existing bundle-size warning remains.
 
 **Limits and next action:** No production song analysis was invoked by the agent. The affected song was last seen in `failed` state with audio path preserved. The creator must retry **Analyze Music Signal** while signed in; a successful real-user save of `songs.analysis` and subsequent flow remains UNVERIFIED. No data/approval changes, SQL migration, RLS edits, paid provider calls, or unrelated Arcane-theme PR merge were made for this fix.
+
+## 2026-10-19 — Isolated Modal image-to-video proof worker (source-only)
+
+**Objective:** Evaluate a bounded Modal L4 GPU alternative without replacing functioning Hugging Face ZeroGPU motion. Owner's Modal screenshot: Starter workspace beatvision, $1 usage cap, $0 charges, no added payment method; spendable promotional credits and $0-out-of-pocket limits unverified.
+
+**Baseline:** main 3e26d8556e62b40e9f20823cb253854ae5efcec6. Reviewed full AGENTS.md and PROJECT_LOG.md. Reused exactly existing Jules session 8349488310053633241; after waiting Jules reported COMPLETED but had published neither a Modal branch nor PR. No extra Jules tasks created.
+
+**Change:** New isolated providers/modal_motion Python module: request image-byte SHA256 and UUID validation, manual LTX Video 2B image-to-video proof, explicit two-part execution gates, bounded 8 MiB media, pinned Python dependencies and model revision, one L4 GPU at most, no warm containers, no automatic retry, no public endpoint. No production controller or Supabase schema modified. No production media or creator approvals changed.
+
+**Tests:** Local python -m unittest discover -s providers/modal_motion/tests -v: 11 passed, exit 0. python -m py_compile: exit 0. Tests mock Modal boundary and do not download model or generate a real clip. Full repo npm suite, production audit, and TypeScript build require a full checkout/network in this environment and remain NOT VERIFIED here; verify with GitHub Actions after PR.
+
+**Deployment and production:** NOT DEPLOYED, no Modal account API/token access, no GPU called. First run blocked pending independent confirmation of credits/cost cap, real approved source and owner context, pinned model dependency boot and license, and a separately authorized budget. Full-song video remains UNVERIFIED.
