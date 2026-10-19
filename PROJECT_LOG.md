@@ -1,5 +1,16 @@
 # BeatVision Project Log
 
+## 2026-10-18 — Prepare server-authoritative Arena rate-limit hardening (PR; pending release)
+
+**Production reproduction:** Read-only SQL confirmed `public.beatvision_arena_rate_limits` grants authenticated INSERT/UPDATE/DELETE with own-user RLS policies; callers can change their own `request_count`. `public.consume_beatvision_arena_rate_limit()` is currently SECURITY INVOKER, invoked from the deployed `beatvision-arena` Edge Function v36 with the authenticated caller's JWT. Existing function is fixed to user auth.uid(), 60-second windows and 30 requests/window, with zero current counter rows. This proves a counter-bypass permission defect, not that the limit was exploited.
+
+**Scoped source proposal:** Add an idempotent fresh-install-compatible migration that retains the exact RPC signature, fixed window arithmetic and JWT identity, moves table writes behind a narrow SECURITY DEFINER function with empty search_path, revokes client counter DML, and preserves SELECT-own and backend access. Add isolated PostgreSQL regressions covering 30 allowed/31st rejected, direct client write denials, cross-user read isolation, and anonymous RPC denial. All existing storage objects, public bucket modes and generation providers remain unchanged.
+
+**Exact source-head verification (2026-10-18):** Candidate `e34dcda1d5593abe119dffbaf8d0a54c55dbe903` passed [Production CI run 39178737293](https://github.com/DaddyDom8249/BeatVision/actions/runs/39178737293), [isolated database migration replay 39178737319](https://github.com/DaddyDom8249/BeatVision/actions/runs/39178737319), [generation enqueue security 39178737272](https://github.com/DaddyDom8249/BeatVision/actions/runs/39178737272), and [legacy storage security 39178737269](https://github.com/DaddyDom8249/BeatVision/actions/runs/39178737269): all completed SUCCESS on that SHA. The replay executes the fresh-install migration, 30/31 RPC-limit checks, direct client counter-write denials, account isolation, and anonymous RPC denial. This records **source/test proof only**; the PR is unmerged, and production RPC/permissions remain unchanged. The subsequent documentation-only log update requires its own exact-head checks.
+
+**Evidence boundary:** Source branch and GitHub CI under review. No production SQL, database rows, object data, privacy/bucket flags, provider inference or paid service changed. Do not merge or apply until isolated replay and real deployed Edge/RPC contract review pass. Remaining separate risk: 100 legacy public bucket objects require actual publishing-rights classification; don't privatize or delete blindly.
+
+
 ## 2026-10-18 — Preserve Hugging Face queue errors and identify exhausted quota
 
 **Evidence:** The user's new scene-motion job `b4e44ced-fa8f-485e-b008-eb39ea9f6618` failed after acceptance at 14:13 UTC. Gradio 5.42's simplified status endpoint returned `event: error` with `data: null`, discarding `output.error`. The actual approved source image succeeded through the Space's CPU-only image-preparation endpoint; a structured status request confirmed the matching event and successful dimensions.
