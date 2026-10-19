@@ -1321,3 +1321,18 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 **Deployment:** Created Vercel production deployment `dpl_GWVYyY2SYfc3HGNY1ueiHfQgKBv4` from GitHub `main` pinned to SHA `eafb6529d6356fe4af05385c8981c334960182d3`. TypeScript/Vite build succeeded, deployment reached READY, and an independent production-domain lookup confirmed `beat-vision-theta.vercel.app` resolves to that deployment and exact SHA. The pre-existing bundle-size warning remains.
 
 **Limits and next action:** No production song analysis was invoked by the agent. The affected song was last seen in `failed` state with audio path preserved. The creator must retry **Analyze Music Signal** while signed in; a successful real-user save of `songs.analysis` and subsequent flow remains UNVERIFIED. No data/approval changes, SQL migration, RLS edits, paid provider calls, or unrelated Arcane-theme PR merge were made for this fix.
+
+
+## 2026-10-19 — BragoraForge Modal private LTX 2B worker prototype
+
+**Objective:** Prepare a real image-to-video Modal GPU alternative without replacing working Hugging Face ZeroGPU motion. User requested full execution and triple verification, with $0 out-of-pocket constraint.
+
+**Investigation:** Existing Jules session 8349488310053633241 completed but returned a >1 MB patch against obsolete d519b0c, sweeping unrelated changes and only a dry-run simulation. Rejected that patch. Verified main 3e26d8556e62b40e9f20823cb253854ae5efcec6, read AGENTS.md and this log, inspected existing HF adapter.
+
+**Smallest safe change:** New, isolated private Modal worker `modal_workers/ltx_motion_worker.py`: genuinely invokes Diffusers LTXConditionPipeline for documented 2B `Lightricks/LTX-Video-0.9.5` when explicitly activated. No arbitrary URL fetch; checks image bytes/lineage UUIDs; one L4 GPU worker; 300-second timeout; private Modal RPC; output returned as unapproved MP4 without production DB mutations. Four owner-side prerequisites (billing, weight-license review, source approval, durable ingestion) remain external to this isolated prototype.
+
+**Evidence:** Local Python 3.13, Pillow 12.3: `python -m unittest discover -s scripts/test -p modal_ltx_worker_test.py -v` exit 0, 7/7 tests pass; `python -m py_compile modal_workers/ltx_motion_worker.py` exit 0. No CUDA, Modal account SDK/authenticated execution or full-repository npm installation available in local tool runtime; no actual GPU run, model weight download, browser test, storage upload, or final video asserted.
+
+**Cost gate:** Owner screenshot showed Modal Starter workspace `beatvision`, $1 workspace total usage cap, $0 current usage/charges, no payment method. No confirmed $0 out-of-pocket spend cap nor usable free GPU credits. Live worker launch/deployment remain BLOCKED until exact cost authorization and accessible Modal credentials/tooling.
+
+**Production:** NO changes, NO spend, NO approval, NO migration, NO deploy. Existing Hugging Face adapter stays authoritative. Next: review PR CI, verify Modal owner billing controls/credential in secure environment, run one permitted live GPU proof, validate resulting MP4 and integration behind disabled provider flag.
