@@ -105,6 +105,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [motionMeasured, setMotionMeasured] = useState<{ assetId: string; seconds: number } | null>(null);
   const [pilotMeasured, setPilotMeasured] = useState<{ url: string; seconds: number } | null>(null);
   const [motionGenerating, setMotionGenerating] = useState(false);
+  const [motionProvider, setMotionProvider] = useState<"huggingface" | "modal">("huggingface");
   // Wan ZeroGPU start returns WAN_ELIGIBILITY_UNVERIFIED. Do not submit.
   const wanPreviewEligibilityVerified = false;
   const [freePilotBusy, setFreePilotBusy] = useState(false);
@@ -238,7 +239,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     }
     if (selectedSceneId.current !== sceneId) return;
     let freshMotion = selectedMotion;
-    if (freshMotion?.provider === "huggingface-zerogpu") {
+    if (freshMotion?.provider === "huggingface-zerogpu" || freshMotion?.provider === "modal") {
       const url = await reuseSignedMedia("motion", freshMotion.id, async () => {
         const signed = await supabase.functions.invoke("beatvision-generation", { body: { action: "motion_url", projectId, assetId: freshMotion.id } });
         if (signed.error || !signed.data?.video_url) throw signed.error || new Error("Motion playback URL unavailable.");
@@ -373,7 +374,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         const queued = type === "assembly"
           ? await supabase.rpc("enqueue_assembly_generation", { p_project_id: projectId, p_visual_plan_id: plan.id })
           : type === "scene_motion"
-            ? await supabase.functions.invoke("beatvision-generation", { body: { action: "enqueue_ai_motion", projectId, sceneId, sourceImageId: image?.id, requestId: attemptId.current, acceptedTerms: motionTermsAccepted } })
+            ? await supabase.functions.invoke("beatvision-generation", { body: { action: "enqueue_ai_motion", projectId, sceneId, sourceImageId: image?.id, requestId: attemptId.current, acceptedTerms: motionTermsAccepted, provider: motionProvider } })
             : await supabase.rpc("enqueue_scene_image_variant", { p_project_id: projectId, p_scene_id: sceneId, p_request_id: attemptId.current });
         if (queued.error) throw queued.error;
         job = type === "scene_motion" ? queued.data?.job : queued.data;
@@ -652,6 +653,14 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-provider-note">
             <span className="panel-label">MOTION</span>
+            <label>Motion generator
+              <select aria-label="Motion generator" value={motionProvider}
+                disabled={busy || pending(motionJob)}
+                onChange={event => { setMotionProvider(event.target.value as "huggingface" | "modal"); attemptId.current = null; }}>
+                <option value="huggingface">Hugging Face (existing)</option>
+                <option value="modal">Modal LTX 0.9.5 (account-gated)</option>
+              </select>
+            </label>
             {motionHistory.length > 1 && <label>Saved motion variants<select aria-label="Saved motion variants" value={motion?.id ?? ''} onChange={event => { assetChoice.current.motionId = event.target.value; void refreshScene(scene.id).catch(e => setError(productionErrorMessage(e))); }}>{motionHistory.map((asset, index) => <option key={asset.id} value={asset.id}>Variant {motionHistory.length - index} · {asset.status}</option>)}</select></label>}
             {motion?.provider === "huggingface-zerogpu" && <p>Saved AI-generated motion · LTX 0.9.8 distilled. Two seconds requested; actual media duration is measured below. Singing lip sync is not verified.</p>}
             {motion && <p>{isProceduralMotion ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
@@ -678,7 +687,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             </p>}
             <div className="production-actions">
               {!pending(motionJob) && <label><input type="checkbox" checked={motionTermsAccepted} onChange={event => setMotionTermsAccepted(event.target.checked)} /> I agree to the <a href="https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt" target="_blank" rel="noreferrer">LTX model license and use restrictions</a>, including AI disclosure.</label>}
-              {!pending(motionJob) && <p>Generate a 2-second AI motion preview. Existing approved clips remain saved; this preview is not full-scene coverage.</p>}
+              {!pending(motionJob) && <p>{motionProvider === "modal"
+                ? "Modal GPU is an opt-in 2-second LTX preview. It starts only if server credentials and the account budget gate are enabled. Existing approved clips are preserved."
+                : "Generate a 2-second AI motion preview. Existing approved clips remain saved; this preview is not full-scene coverage."}</p>}
               {!pending(motionJob) && <button className="primary-button" disabled={busy || image?.status !== "approved" || !motionTermsAccepted} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
               {pending(motionJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkMotionStatus()}>{motionGenerating ? "Checking…" : "Check Motion Status"}</button>}
               {motion?.status === "generated" && <button className="secondary-button" onClick={() => void approveMotion()}>Approve Motion</button>}
