@@ -1,0 +1,28 @@
+name: Modal motion offline contracts
+
+on:
+  pull_request:
+    paths:
+      - "modal_workers/**"
+      - "scripts/test/modal_ltx_worker_test.py"
+      - ".github/workflows/modal-worker-offline.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install minimal local-only image validator
+        run: python -m pip install Pillow==11.3.0
+      - name: Compile worker without Modal access
+        run: python -m py_compile modal_workers/ltx_motion_worker.py
+      - name: Offline contract tests (no GPU and no credentials)
+        run: python -m unittest discover -s scripts/test -p modal_ltx_worker_test.py -v
