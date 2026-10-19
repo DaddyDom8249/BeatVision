@@ -14,7 +14,8 @@ const ACK = "I_AUTHORIZE_ONE_MODAL_GPU_PROOF_WITHIN_MY_CONFIRMED_BUDGET";
 type EnvReader = (key: string) => string;
 const readEnv: EnvReader = (key) => String(Deno.env.get(key) || "").trim();
 export class ModalMotionError extends Error {
-  constructor(public code: string) { super(code); }
+  code: string;
+  constructor(code: string) { super(code); this.code = code; }
 }
 function requireCredentials(env: EnvReader) {
   if (!env("MODAL_TOKEN_ID") || !env("MODAL_TOKEN_SECRET"))
