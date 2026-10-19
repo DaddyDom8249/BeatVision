@@ -2,7 +2,7 @@
 
 Status: **SOURCE PROTOTYPE ONLY; UNDEPLOYED; NO MODAL GPU CALL VERIFIED.**
 
-This manual, opt-in image-to-video worker leaves the production Hugging Face route, approved images, Supabase generation queues and frontend unchanged. Model: pinned Lightricks LTX Video 2B (not the 13B production model). It generates 49 frames at 24 fps (~2 seconds) from a locally supplied approved image, returning a private local MP4 and provenance JSON whose approval flags remain false.
+This manual, opt-in image-to-video worker leaves the production Hugging Face route, approved images, Supabase generation queues and frontend unchanged. Model: Lightricks LTX Video **0.9.5 2B**, at pinned commit `e58e28c39631af4d1468ee57a853764e11c1d37e` (not the 13B production model). It generates 49 frames at 24 fps (~2 seconds) from a locally supplied approved image, returning a private local MP4 and provenance JSON whose approval flags remain false.
 
 ## Zero-GPU verification
 
@@ -37,3 +37,7 @@ The local entrypoint prints DRY_RUN_VALID without invoking the GPU. A real GPU c
 - Commercial use of Lightricks model weights requires checking the actual non-Apache license.
 
 References: https://modal.com/docs/sdk/py/latest/App , https://modal.com/pricing , https://huggingface.co/docs/diffusers/api/pipelines/ltx_video , https://huggingface.co/Lightricks/LTX-Video .
+
+## Exact-snapshot loader repair (2026-10-19)
+
+The initial proof branch pinned `Lightricks/LTX-Video` at `84631c2`, a legacy weights tree without `model_index.json`. A Diffusers `from_pretrained` call therefore could not boot from that snapshot. The worker now pins `Lightricks/LTX-Video-0.9.5` at `e58e28c39631af4d1468ee57a853764e11c1d37e`, whose tree includes `model_index.json`, text encoder, tokenizer, transformer and VAE. This fixes the source/model contract, **not** a remotely verified cold start, license compliance, GPU output, runtime cost or full-song export. Never launch without a separately verified no-overage billing policy.

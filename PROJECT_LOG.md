@@ -1333,3 +1333,10 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 **Tests:** Local python -m unittest discover -s providers/modal_motion/tests -v: 11 passed, exit 0. python -m py_compile: exit 0. Tests mock Modal boundary and do not download model or generate a real clip. Full repo npm suite, production audit, and TypeScript build require a full checkout/network in this environment and remain NOT VERIFIED here; verify with GitHub Actions after PR.
 
 **Deployment and production:** NOT DEPLOYED, no Modal account API/token access, no GPU called. First run blocked pending independent confirmation of credits/cost cap, real approved source and owner context, pinned model dependency boot and license, and a separately authorized budget. Full-song video remains UNVERIFIED.
+
+
+## 2026-10-19 — Modal model-index source contract correction (PR #138)
+
+**Confirmed root cause:** Prototype Modal LTX worker pinned an old `Lightricks/LTX-Video` revision (`84631c2`) lacking Diffusers `model_index.json` and transformer layout, even though it calls `LTXImageToVideoPipeline.from_pretrained`. Offline unit tests could not catch the remote loader failure. Official Lightricks model trees confirm `Lightricks/LTX-Video-0.9.5` at `e58e28c39631af4d1468ee57a853764e11c1d37e` contains the required Diffusers components.
+
+**Smallest isolated repair:** Changed only the prototype's model repository/SHA, added a contract regression that rejects the previous mismatch, updated isolated worker docs. Existing Hugging Face production, API/SQL, approved media, billing configuration and source images unchanged. This proves compatibility of the pinned *repository layout* only. Full SDK/model bootstrap, billing safety, actual GPU inference and private production ingestion remain **NOT VERIFIED** and blocked until cost and authorization gates are resolved. Source tests/build/CI must be checked on exact repaired head; no GPU request or deployment made by this repair.

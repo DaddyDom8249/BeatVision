@@ -77,6 +77,15 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(keywords['min_containers'], 0)
         self.assertEqual(keywords['retries'], 0)
 
+
+    def test_pinned_diffusers_i2v_snapshot_has_expected_reference(self):
+        # Regression: previous source pinned an older LTX-Video tree with no
+        # model_index.json, so from_pretrained would fail before inference.
+        source = (ROOT/'worker.py').read_text()
+        self.assertIn("MODEL = 'Lightricks/LTX-Video-0.9.5'", source)
+        self.assertIn("MODEL_REVISION = 'e58e28c39631af4d1468ee57a853764e11c1d37e'", source)
+        self.assertIn('LTXImageToVideoPipeline.from_pretrained(', source)
+
     def test_no_automatic_remote_call_in_worker_module(self):
         tree=ast.parse((ROOT/'worker.py').read_text())
         top_level_calls=[n for n in tree.body if isinstance(n,ast.Expr) and isinstance(n.value,ast.Call)]

@@ -25,10 +25,11 @@ from providers.modal_motion.contracts import (
 import modal
 
 APP_NAME = 'bragoraforge-modal-motion-proof'
-MODEL = 'Lightricks/LTX-Video'
-# Pinned open-weights repository snapshot; must be checked against the license
-# before any commercial/production deployment.
-MODEL_REVISION = '84631c28b7e1641c029fe5d8d8e9b75c2735cb89'
+MODEL = 'Lightricks/LTX-Video-0.9.5'
+# Full, source-verified Diffusers image-to-video snapshot (model_index.json,
+# transformer, text encoder and VAE). The older LTX-Video SHA omitted model_index.
+# Model weights have a separate license; commercial terms must be reviewed.
+MODEL_REVISION = 'e58e28c39631af4d1468ee57a853764e11c1d37e'
 
 app = modal.App(APP_NAME)
 image = modal.Image.debian_slim(python_version='3.11').pip_install(
