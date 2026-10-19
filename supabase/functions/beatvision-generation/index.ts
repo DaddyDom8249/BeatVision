@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { validateImage, readImage } from "./image-media.ts";
 import { verifyFinalMedia } from "./final-media.ts";
-import { HF_MOTION, hfEligibility, hfSubmit, hfPoll, hfDownload, hfJobSeed, HfMotionError } from "./hf-motion.ts";
+import { HF_MOTION, hfEligibility, hfSubmit, hfPoll, hfDownload, hfJobSeed, HfMotionError, validateMp4 } from "./hf-motion.ts";
+import { MODAL_MOTION, assertModalSubmissionEnabled, submitModalMotion, pollModalMotion, sha256Hex, ModalMotionError } from "./modal-motion.ts";
 
 const ALLOWED_ORIGINS = new Set([
   "https://beat-vision-f8nn.vercel.app",
@@ -397,6 +398,7 @@ async function persistMotionClip(db: any, job: any, responseData: any) {
   if (!job.visual_plan_scene_id) throw new Error("ARENA_MOTION_SCENE_MISSING: scene_motion job has no approved scene.");
   let imageQuery = db.from("scene_image_assets").select("id").eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).eq("scene_id", job.visual_plan_scene_id).eq("approved", true).eq("status", "approved");
   if (job.input_snapshot?.hf_motion) imageQuery = imageQuery.eq("id", job.input_snapshot.hf_motion.source_image_id);
+  if (job.input_snapshot?.modal_motion) imageQuery = imageQuery.eq("id", job.input_snapshot.modal_motion.source_image_id);
   const imageResult = await imageQuery.order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (imageResult.error) throw new Error("APPROVED_SCENE_IMAGE_LOOKUP_FAILED: " + imageResult.error.message);
   if (!imageResult.data?.id) throw new Error("APPROVED_SCENE_IMAGE_REQUIRED: Motion completed without an approved source image.");
@@ -479,9 +481,13 @@ async function inspectApprovedImage(db: any,projectId: string,assetId: string) {
 
 // Append a model-specific attempt; reuse the canonical RPC's frozen lineage.
 // Existing approved procedural assets/jobs are never edited or deleted.
-async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acceptedTerms: boolean, sourceImageId?: string, requestId?: string) {
-  if (!acceptedTerms) throw new HttpError(400, "HF_TERMS_REQUIRED", "Accept the LTX model use restrictions before AI motion.");
-  await hfEligibility(env("HF_VIDEO_TOKEN"));
+async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acceptedTerms: boolean, sourceImageId?: string, requestId?: string, provider = "huggingface") {
+  if (!acceptedTerms) throw new HttpError(400,"HF_TERMS_REQUIRED","Accept the LTX model use restrictions before AI motion.");
+  if (provider !== "huggingface" && provider !== "modal") throw new HttpError(400,"MOTION_PROVIDER_INVALID","Unsupported motion provider.");
+  if (provider === "modal") {
+    try { assertModalSubmissionEnabled(); }
+    catch { throw new HttpError(503,"MODAL_GPU_UNAVAILABLE","Modal worker or spending safeguard is not configured."); }
+  } else await hfEligibility(env("HF_VIDEO_TOKEN"));
   const scene = await db.from("visual_plan_scenes").select("id,visual_plan_id,status").eq("id", sceneId).eq("project_id", projectId).eq("status", "approved").maybeSingle();
   if (scene.error || !scene.data) throw new HttpError(409, "APPROVED_SCENE_REQUIRED", "Motion requires an approved scene.");
   const plan = await db.from("visual_plans").select("id,vision_lock_id,status").eq("id", scene.data.visual_plan_id).eq("project_id", projectId).eq("status", "approved").maybeSingle();
@@ -495,14 +501,19 @@ async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acce
   if (template.error || template.data?.status !== "completed" || template.data?.input_snapshot?.scene?.id !== sceneId || template.data.vision_lock_id !== plan.data.vision_lock_id) throw new HttpError(409, "FROZEN_LINEAGE_REQUIRED", "Approved image must have its original generation snapshot.");
   const base = template.data;
   if (requestId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) throw new HttpError(400,"GENERATION_REQUEST_ID_INVALID","Invalid request ID.");
-  const key = "hf-motion:" + sceneId + ":" + image.data.id + ":" + HF_MOTION.revision + (requestId ? ":variant:" + requestId : "");
+  const key = (provider === "modal" ? "modal-motion:" : "hf-motion:") + sceneId + ":" + image.data.id + ":" +
+    (provider === "modal" ? MODAL_MOTION.revision : HF_MOTION.revision) + (requestId ? ":variant:" + requestId : "");
   const existing = await db.from("generation_jobs").select("*").eq("project_id", projectId).eq("idempotency_key", key).maybeSingle();
   if (existing.error) throw new Error("HF_JOB_LOOKUP_FAILED");
   if (existing.data) return existing.data;
   const inserted = await db.from("generation_jobs").insert({
     project_id: projectId, vision_lock_id: base.vision_lock_id, visual_plan_id: base.visual_plan_id,
     visual_plan_scene_id: sceneId, job_type: "scene_motion", idempotency_key: key,
-    input_snapshot: { ...base.input_snapshot, hf_motion: { source_image_id: image.data.id, space: HF_MOTION.space, revision: HF_MOTION.revision, duration_seconds: HF_MOTION.duration, terms_accepted_at: new Date().toISOString() } },
+    input_snapshot: {...base.input_snapshot, ...(provider === "modal"
+      ? {modal_motion:{source_image_id:image.data.id,model:MODAL_MOTION.model,revision:MODAL_MOTION.revision,
+          duration_seconds:MODAL_MOTION.frames/MODAL_MOTION.fps,terms_accepted_at:new Date().toISOString()}}
+      : {hf_motion:{source_image_id:image.data.id,space:HF_MOTION.space,revision:HF_MOTION.revision,
+          duration_seconds:HF_MOTION.duration,terms_accepted_at:new Date().toISOString()}})},
   }).select("*").single();
   if (inserted.error) {
     if (inserted.error.code !== "23505") throw new Error("HF_JOB_INSERT_FAILED");
@@ -560,6 +571,65 @@ async function hfBridgePoll(db: any, job: any) {
     result: { ...data.result, video_url: signed.data.signedUrl, storage_path: path, verification, ai_generated: true } } };
 }
 
+
+async function modalBridgeSubmit(db: any,job: any) {
+  const frozen=job.input_snapshot?.modal_motion;
+  if (!frozen || frozen.revision!==MODAL_MOTION.revision || frozen.model!==MODAL_MOTION.model)
+    throw new ModalMotionError("MODAL_SNAPSHOT_INVALID");
+  const source=await db.from("scene_image_assets").select("id,storage_path")
+    .eq("id",frozen.source_image_id).eq("project_id",job.project_id)
+    .eq("visual_plan_id",job.visual_plan_id).eq("scene_id",job.visual_plan_scene_id)
+    .eq("approved",true).eq("status","approved").single();
+  if (source.error || !source.data?.storage_path) throw new ModalMotionError("MODAL_APPROVED_IMAGE_REQUIRED");
+  const path=String(source.data.storage_path);
+  if (!path.startsWith(job.project_id+"/scene-images/") || path.includes(".."))
+    throw new ModalMotionError("MODAL_IMAGE_PATH_INVALID");
+  const downloaded=await db.storage.from("visual-assets").download(path);
+  if (downloaded.error || !downloaded.data) throw new ModalMotionError("MODAL_IMAGE_DOWNLOAD_FAILED");
+  const bytes=new Uint8Array(await downloaded.data.arrayBuffer());
+  if (bytes.length<16 || bytes.length>MODAL_MOTION.maxBytes) throw new ModalMotionError("MODAL_IMAGE_SIZE_INVALID");
+  const scene=job.input_snapshot?.scene || {};
+  const prompt=[scene.title,scene.visual_direction,scene.movement_direction,scene.location,
+    scene.mood,scene.continuity_notes,"Preserve character, face, wardrobe, setting and natural physical motion."]
+    .filter(x=>typeof x==="string" && x.trim()).join(". ").slice(0,1600);
+  const payload={project_id:job.project_id,scene_id:job.visual_plan_scene_id,
+    source_image_id:frozen.source_image_id,generation_job_id:job.id,
+    image_sha256:await sha256Hex(bytes),prompt,seed:parseInt(job.id.replace(/-/g,"").slice(0,7),16)||42};
+  const data=await submitModalMotion(payload,bytes);
+  return {response:new Response(null,{status:200}),data};
+}
+async function modalBridgePoll(db: any,job: any) {
+  const result=await pollModalMotion(String(job.output?.upstream_job_id||""));
+  if(result.status==="processing") return {response:new Response(null),data:result};
+  const manifest: any=result.manifest;
+  if(manifest.project_id!==job.project_id || manifest.scene_id!==job.visual_plan_scene_id ||
+      manifest.generation_job_id!==job.id ||
+      manifest.source_image_id!==job.input_snapshot?.modal_motion?.source_image_id ||
+      manifest.source_sha256!==job.output?.arena_response?.source_sha256 ||
+      manifest.video_sha256!==await sha256Hex(result.video) ||
+      manifest.model!==MODAL_MOTION.model || manifest.revision!==MODAL_MOTION.revision ||
+      manifest.creator_approved!==false)
+    throw new ModalMotionError("MODAL_PROVENANCE_INVALID");
+  const verification=validateMp4(result.video);
+  const path=job.project_id+"/scene-motion/"+job.visual_plan_id+"/"+job.visual_plan_scene_id+"/"+job.id+".mp4";
+  const storage=db.storage.from("visual-assets");
+  const existing=await storage.download(path);
+  if(existing.error || !existing.data) {
+    const upload=await storage.upload(path,result.video,{contentType:"video/mp4",upsert:false});
+    if(upload.error) {
+      const winner=await storage.download(path);
+      if(winner.error || !winner.data || await sha256Hex(new Uint8Array(await winner.data.arrayBuffer()))!==manifest.video_sha256)
+        throw new ModalMotionError("MODAL_MP4_STORAGE_FAILED");
+    }
+  } else if(await sha256Hex(new Uint8Array(await existing.data.arrayBuffer()))!==manifest.video_sha256)
+    throw new ModalMotionError("MODAL_MP4_STORAGE_CONFLICT");
+  const signed=await storage.createSignedUrl(path,3600);
+  if(signed.error || !signed.data?.signedUrl) throw new ModalMotionError("MODAL_MP4_SIGN_FAILED");
+  return {response:new Response(null),data:{status:"completed",provider:"modal",model:MODAL_MOTION.model,
+    source_image_id:manifest.source_image_id,
+    result:{video_url:signed.data.signedUrl,storage_path:path,verification,ai_generated:true}}};
+}
+
 async function motionUrl(db: any, projectId: string, assetId: string) {
   const asset = await db.from("motion_clip_assets").select("id,video_url,generation_job_id,scene_id,visual_plan_id").eq("id", assetId).eq("project_id", projectId).maybeSingle();
   if (asset.error || !asset.data) throw new HttpError(404, "NOT_FOUND", "Motion asset not found.");
@@ -583,7 +653,7 @@ async function run(db: any, job: any) {
   const claim = await db.from("generation_jobs")
     .update({
       status: "submitted",
-      provider: job.input_snapshot?.hf_motion ? "huggingface-zerogpu" : "arena",
+      provider: job.input_snapshot?.modal_motion ? "modal" : job.input_snapshot?.hf_motion ? "huggingface-zerogpu" : "arena",
       provider_job_id: requestId,
       output: {...job.output, dispatch_started_at: new Date().toISOString()},
       attempts: Number(job.attempts || 0) + 1,
@@ -608,14 +678,14 @@ async function run(db: any, job: any) {
 
   try {
     const path = job.job_type === "scene_image" ? "/v2/scene-image" : job.job_type === "scene_motion" ? "/v2/animate" : "/v2/assemble";
-    if (job.job_type === "scene_motion" && !job.input_snapshot?.hf_motion) throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions.");
+    if (job.job_type === "scene_motion" && !job.input_snapshot?.hf_motion && !job.input_snapshot?.modal_motion) throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions.");
     // Assembly remains on the watermarked Shotstack sandbox.
     // Arena /v2/scene-image forwards BeatVision-origin requests exclusively to
     // Cloudflare FLUX Schnell when Workers Free is explicitly confirmed; it
     // rejects missing eligibility with no Pixazo fallback. Check response
     // provenance before storing any generated image.
     const result = job.job_type === "scene_motion"
-      ? job.input_snapshot?.hf_motion ? await hfBridgeSubmit(db, job) : (() => { throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions."); })()
+      ? job.input_snapshot?.modal_motion ? await modalBridgeSubmit(db,job) : job.input_snapshot?.hf_motion ? await hfBridgeSubmit(db,job) : (() => { throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions."); })()
       : await arena(path, "POST", await bridgePayload(db, job), requestId);
     if (job.job_type === "scene_image" && result.response.ok && result.data?.ok !== false)
       assertVerifiedFreeSceneImageResponse(result.data);
@@ -740,9 +810,11 @@ async function poll(db: any, job: any) {
 
   try {
     const pollPayload = job.job_type === "assembly" ? { target_duration_seconds: Number(job.input_snapshot?.plan?.duration_seconds || 0) } : null;
-    const result = job.job_type === "scene_motion" && job.input_snapshot?.hf_motion
-      ? await hfBridgePoll(db, job)
-      : await arena(path, job.job_type === "assembly" ? "POST" : "GET", pollPayload, "beatvision:" + job.id + ":poll");
+    const result = job.job_type === "scene_motion" && job.input_snapshot?.modal_motion
+      ? await modalBridgePoll(db,job)
+      : job.job_type === "scene_motion" && job.input_snapshot?.hf_motion
+        ? await hfBridgePoll(db,job)
+        : await arena(path,job.job_type === "assembly" ? "POST" : "GET",pollPayload,"beatvision:"+job.id+":poll");
     const state = terminalState(result.response, result.data);
     if (state === "failed") {
       await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena provider job failed."), result.data);
@@ -845,7 +917,7 @@ Deno.serve(async (req) => {
     });
     if (action === "enqueue_ai_motion") {
       // Same project-owner gate above applies; system is the private scheduler.
-      const job = await enqueueHfMotion(db, projectId, String(body.sceneId || ""), body.acceptedTerms === true, body.sourceImageId, body.requestId);
+      const job = await enqueueHfMotion(db,projectId,String(body.sceneId || ""),body.acceptedTerms === true,body.sourceImageId,body.requestId,String(body.provider || "huggingface"));
       return json(req, { job });
     }
     if (action === "motion_url") return json(req, { video_url: await motionUrl(db, projectId, String(body.assetId || "")) });
