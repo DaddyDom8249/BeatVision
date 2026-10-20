@@ -1,7 +1,8 @@
 """Single-proof Modal LTX image-to-video worker (NOT connected to production).
 
-No public HTTP endpoint. Modal authentication is required to call the remote function.
-No signed storage URLs, API keys, or private Supabase credentials are transmitted.
+The GPU function remains private. A proxy-authenticated HTTP bridge submits and
+polls durable calls from the server-side generation controller. No browser receives
+Modal credentials, signed storage URLs, API keys, or private Supabase credentials.
 All image bytes originate from a locally supplied file and are bounded.
 
 SAFETY: Deploying or running may consume chargeable Modal compute. NO invocation
@@ -38,6 +39,9 @@ image = modal.Image.debian_slim(python_version='3.11').pip_install(
     'safetensors==0.6.2', 'sentencepiece==0.2.1',
     'Pillow==11.3.0', 'imageio==2.37.0', 'imageio-ffmpeg==0.6.0',
 ).add_local_python_source('providers.modal_motion')
+web_image = modal.Image.debian_slim(python_version='3.11').pip_install(
+    'fastapi[standard]==0.139.2',
+)
 
 
 @app.function(
@@ -111,6 +115,79 @@ def single_motion_proof(payload: dict, image_bytes: bytes, ack: str) -> dict:
     # A container signature alone does NOT prove decoded motion or successful
     # browser playback. These must be checked separately before acceptance.
     return {'manifest': record, 'video': video_bytes}
+
+
+@app.function(
+    image=web_image,
+    min_containers=0,
+    max_containers=1,
+    buffer_containers=0,
+    scaledown_window=2,
+    timeout=30,
+    retries=0,
+    name='motion_api',
+)
+@modal.asgi_app(requires_proxy_auth=True)
+def motion_api():
+    """Proxy-authenticated submit/poll bridge; only the spawned call uses a GPU."""
+    import base64
+    import binascii
+    import re
+
+    import fastapi
+    from fastapi.responses import JSONResponse
+
+    web = fastapi.FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+
+    @web.post('/submit')
+    async def submit(request: fastapi.Request):
+        try:
+            body = await request.json()
+            if not isinstance(body, dict):
+                raise MotionContractError('HTTP_BODY_INVALID')
+            payload = body.get('payload')
+            encoded = body.get('image_base64')
+            ack = body.get('ack')
+            if not isinstance(payload, dict) or not isinstance(encoded, str):
+                raise MotionContractError('HTTP_BODY_INVALID')
+            if len(encoded) > ((MAX_IMAGE_BYTES + 2) // 3) * 4:
+                raise MotionContractError('IMAGE_BYTES_INVALID')
+            try:
+                source = base64.b64decode(encoded, validate=True)
+            except (ValueError, binascii.Error) as exc:
+                raise MotionContractError('IMAGE_BASE64_INVALID') from exc
+            require_execution_authorization(ack, 'true')
+            validated = MotionRequest(**payload)
+            validate_request(validated, source)
+            call = single_motion_proof.spawn(payload, source, ack)
+            if not re.fullmatch(r'fc-[A-Za-z0-9_-]+', call.object_id):
+                raise MotionContractError('MODAL_JOB_RECEIPT_INVALID')
+            return {'status': 'processing', 'job_id': call.object_id}
+        except (MotionContractError, TypeError, ValueError) as exc:
+            return JSONResponse({'error': str(exc)}, status_code=400)
+
+    @web.get('/poll/{call_id}')
+    async def poll(call_id: str):
+        if not re.fullmatch(r'fc-[A-Za-z0-9_-]+', call_id):
+            return JSONResponse({'error': 'MODAL_JOB_ID_INVALID'}, status_code=400)
+        call = modal.FunctionCall.from_id(call_id)
+        try:
+            result = call.get(timeout=0)
+        except TimeoutError:
+            return JSONResponse({'status': 'processing'}, status_code=202)
+        video = result.get('video') if isinstance(result, dict) else None
+        record = result.get('manifest') if isinstance(result, dict) else None
+        if not isinstance(video, bytes) or not 16 <= len(video) <= MAX_VIDEO_BYTES:
+            return JSONResponse({'error': 'MODAL_MEDIA_SIZE_INVALID'}, status_code=502)
+        if not isinstance(record, dict):
+            return JSONResponse({'error': 'MODAL_MANIFEST_MISSING'}, status_code=502)
+        return {
+            'status': 'completed',
+            'video_base64': base64.b64encode(video).decode('ascii'),
+            'manifest': record,
+        }
+
+    return web
 
 
 @app.local_entrypoint()
