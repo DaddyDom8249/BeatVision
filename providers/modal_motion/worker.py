@@ -41,7 +41,7 @@ image = modal.Image.debian_slim(python_version='3.11').pip_install(
 ).add_local_python_source('providers.modal_motion')
 web_image = modal.Image.debian_slim(python_version='3.11').pip_install(
     'fastapi[standard]==0.139.2',
-)
+).add_local_python_source('providers.modal_motion')
 
 
 @app.function(
