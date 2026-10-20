@@ -165,7 +165,9 @@ def main():
         print("FRESH_SIGN_HTTP:", status)
         if status == 200 and (signed.get("signedURL") or signed.get("signedUrl")):
             path_or_url = signed.get("signedURL") or signed.get("signedUrl")
-            signed_url = urljoin(BASE, path_or_url)
+            if path_or_url.startswith("/object/sign/"):
+                path_or_url = "/storage/v1" + path_or_url
+            signed_url = urljoin(BASE + "/", path_or_url)
         else:
             signed_url = asset.get("video_url")
         require(isinstance(signed_url, str), "NO_AUTHORIZED_DOWNLOAD_URL")
