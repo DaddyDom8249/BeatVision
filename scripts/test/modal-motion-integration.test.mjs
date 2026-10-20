@@ -21,43 +21,110 @@ test('Modal cannot submit without credentials and budget enablement',()=>{
   assert.throws(()=>assertModalSubmissionEnabled(noSpendEnv),/MODAL_GPU_NOT_ENABLED/);
   assert.throws(()=>assertModalSubmissionEnabled(()=>''),/MODAL_CREDENTIALS_UNAVAILABLE/);
 });
-test('Modal worker submit makes exactly one authenticated spawn and preserves digest',async()=>{
-  let spawns=0, args=null, closed=false, auth=null;
-  const sdk={ModalClient:class {
-    constructor(c){auth=c;}
-    functions={fromName:async(app,fn)=>{assert.equal(app,MODAL_MOTION.app);assert.equal(fn,MODAL_MOTION.function);return {
-      spawn:async(a)=>{spawns++;args=a;return {functionCallId:'fc-testproof01'};}
-    }}};
-    close(){closed=true;}
-  }};
-  const image=new Uint8Array(64);image.set([137,80,78,71,13,10,26,10]);
-  const digest=await sha256Hex(image);
-  const payload={project_id:uuids[0],scene_id:uuids[1],source_image_id:uuids[2],generation_job_id:uuids[3],
-    image_sha256:digest,prompt:'A character moves within the approved location.',seed:42};
-  const result=await submitModalMotion(payload,image,safeEnv,sdk);
-  assert.equal(result.status,'processing');assert.equal(result.job_id,'fc-testproof01');
-  assert.equal(result.source_sha256,digest);
-  assert.equal(spawns,1);assert.deepEqual(args[0],payload);
-  assert.deepEqual(args[1],image);
-  assert.equal(auth.tokenId,'fixture-id');
-  assert.equal(auth.tokenSecret,'fixture-secret');
-  assert.equal(auth.maxRetries,0);
-  assert.equal(closed,true);
+function fixtureImage() {
+  const image = new Uint8Array(64);
+  image.set([137,80,78,71,13,10,26,10]);
+  return image;
+}
+async function fixturePayload(image = fixtureImage()) {
+  return {
+    project_id:uuids[0],scene_id:uuids[1],source_image_id:uuids[2],generation_job_id:uuids[3],
+    image_sha256:await sha256Hex(image),prompt:'A character moves within the approved location.',seed:42,
+  };
+}
+test('Modal submit sends exactly one proxy-authenticated HTTPS request with approved input',async()=>{
+  const image=fixtureImage(), payload=await fixturePayload(image);
+  const calls=[];
+  const requester=async (url,options)=>{
+    calls.push({url,options});
+    return new Response(JSON.stringify({job_id:'fc-testproof01'}),{status:200});
+  };
+  const result=await submitModalMotion(payload,image,safeEnv,requester);
+  assert.deepEqual(result,{status:'processing',job_id:'fc-testproof01',
+    provider:MODAL_MOTION.provider,model:MODAL_MOTION.model,source_sha256:payload.image_sha256});
+  assert.equal(calls.length,1);
+  const {url,options}=calls[0];
+  assert.equal(url,MODAL_MOTION.apiBase+'/submit');
+  assert.equal(options.method,'POST');
+  assert.equal(options.headers['Modal-Key'],'fixture-id');
+  assert.equal(options.headers['Modal-Secret'],'fixture-secret');
+  assert.equal(options.headers['Content-Type'],'application/json');
+  assert.ok(options.signal instanceof AbortSignal);
+  const body=JSON.parse(options.body);
+  assert.deepEqual(body.payload,payload);
+  assert.equal(body.ack,'I_AUTHORIZE_ONE_MODAL_GPU_PROOF_WITHIN_MY_CONFIRMED_BUDGET');
+  assert.deepEqual(new Uint8Array(Buffer.from(body.image_base64,'base64')),image);
+  assert.equal(url.includes('fixture-secret'),false);
+  assert.equal(options.body.includes('fixture-secret'),false);
 });
-test('Bad content or invalid provenance rejects before any Modal spawn',async()=>{
-  let spawns=0;const sdk={ModalClient:class {functions={fromName:async()=>({spawn:async()=>{spawns++;}})};close(){}}};
-  const bytes=new Uint8Array(64);
-  await assert.rejects(submitModalMotion({project_id:uuids[0],scene_id:uuids[1],source_image_id:uuids[2],
-    generation_job_id:uuids[3],image_sha256:'f'.repeat(64),prompt:'Character moves',seed:42},bytes,safeEnv,sdk),/MODAL_IMAGE_DIGEST_INVALID/);
-  assert.equal(spawns,0);
+test('Invalid source provenance fails before any Modal HTTP request',async()=>{
+  const image=fixtureImage(), payload=await fixturePayload(image);
+  let requests=0;
+  const requester=async()=>{requests++;throw new Error('unexpected request');};
+  const cases=[
+    [{...payload,image_sha256:'f'.repeat(64)},image,'MODAL_IMAGE_DIGEST_INVALID'],
+    [{...payload,scene_id:'invalid'},image,'MODAL_REQUEST_ID_INVALID'],
+    [{...payload,prompt:'short'},image,'MODAL_PROMPT_INVALID'],
+    [{...payload,seed:0},image,'MODAL_SEED_INVALID'],
+    [payload,new Uint8Array(4),'MODAL_MEDIA_SIZE_INVALID'],
+  ];
+  for(const [candidate,source,code] of cases)
+    await assert.rejects(submitModalMotion(candidate,source,safeEnv,requester),
+      error=>error.code===code);
+  assert.equal(requests,0);
 });
-test('Existing call polling never spawns a new GPU job',async()=>{
-  let looked=0,closed=0;const sdk={ModalClient:class {
-    functionCalls={fromId:async(id)=>{looked++;assert.equal(id,'fc-existing01');return {get:async()=>{const err=new Error('pending');err.name='TimeoutError';throw err;}}}};
-    close(){closed++;}
-  }};
-  const result=await pollModalMotion('fc-existing01',noSpendEnv,sdk);
-  assert.deepEqual(result,{status:'processing'});assert.equal(looked,1);assert.equal(closed,1);
+test('Invalid Modal submit receipt is rejected without retry',async()=>{
+  const image=fixtureImage(),payload=await fixturePayload(image);
+  let requests=0;
+  const requester=async()=>{requests++;return new Response(JSON.stringify({job_id:'bad-id'}),{status:200});};
+  await assert.rejects(submitModalMotion(payload,image,safeEnv,requester),/MODAL_JOB_RECEIPT_INVALID/);
+  assert.equal(requests,1);
+});
+test('Modal HTTP failure does not retry or silently fall back to Hugging Face',async()=>{
+  const image=fixtureImage(),payload=await fixturePayload(image);
+  let requests=0;
+  const requester=async()=>{requests++;return new Response(JSON.stringify({error:'UNAVAILABLE'}),{status:503});};
+  await assert.rejects(submitModalMotion(payload,image,safeEnv,requester),/MODAL_HTTP_503/);
+  assert.equal(requests,1);
+  let failures=0;
+  await assert.rejects(submitModalMotion(payload,image,safeEnv,async()=>{
+    failures++;throw new TypeError('network unavailable');
+  }),/MODAL_HTTP_UNAVAILABLE/);
+  assert.equal(failures,1);
+});
+test('Modal polling performs one authenticated GET; HTTP 202 remains processing',async()=>{
+  const requests=[];
+  const requester=async(url,options)=>{
+    requests.push({url,options});
+    return new Response(JSON.stringify({status:'processing'}),{status:202});
+  };
+  const result=await pollModalMotion('fc-existing01',noSpendEnv,requester);
+  assert.deepEqual(result,{status:'processing'});
+  assert.equal(requests.length,1);
+  assert.equal(requests[0].url,MODAL_MOTION.apiBase+'/poll/fc-existing01');
+  assert.equal(requests[0].options.method,'GET');
+  assert.equal(requests[0].options.body,undefined);
+  assert.equal(requests[0].options.headers['Modal-Key'],'fixture-id');
+  assert.equal(requests[0].options.headers['Modal-Secret'],'fixture-secret');
+});
+test('Invalid poll call ID cannot reach Modal; completed poll decodes returned video',async()=>{
+  let calls=0;
+  const requester=async(url,options)=>{
+    calls++;
+    assert.equal(url,MODAL_MOTION.apiBase+'/poll/fc-complete01');
+    assert.equal(options.method,'GET');
+    return new Response(JSON.stringify({
+      status:'completed',video_base64:Buffer.from(fixtureImage()).toString('base64'),
+      manifest:{provider:'modal',model:MODAL_MOTION.model},
+    }),{status:200});
+  };
+  await assert.rejects(pollModalMotion('invalid',noSpendEnv,requester),/MODAL_JOB_ID_INVALID/);
+  assert.equal(calls,0);
+  const result=await pollModalMotion('fc-complete01',noSpendEnv,requester);
+  assert.equal(calls,1);
+  assert.equal(result.status,'completed');
+  assert.deepEqual(result.video,fixtureImage());
+  assert.equal(result.manifest.model,MODAL_MOTION.model);
 });
 test('App explicitly selects Modal and retains HF as the default',()=>{
   assert.match(ui,/useState<"huggingface" \| "modal">\("huggingface"\)/);
