@@ -124,7 +124,6 @@ def single_motion_proof(payload: dict, image_bytes: bytes, ack: str) -> dict:
     buffer_containers=0,
     scaledown_window=2,
     timeout=30,
-    retries=0,
     name='motion_api',
 )
 @modal.asgi_app(requires_proxy_auth=True)
