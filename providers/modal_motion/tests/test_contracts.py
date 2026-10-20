@@ -66,16 +66,31 @@ class ContractTests(unittest.TestCase):
         with self.assertRaisesRegex(MotionContractError, 'VIDEO_CONTAINER_INVALID'):
             manifest(valid_request(), b'0'*2048, model='ltx', revision='test')
 
-    def test_no_web_endpoint_or_automatic_retry(self):
+    def test_proxy_authenticated_web_bridge_and_no_automatic_retry(self):
         tree = ast.parse((ROOT/'worker.py').read_text())
-        calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)]
-        self.assertFalse(any(isinstance(c.func, ast.Attribute) and c.func.attr in ('web_endpoint','asgi_app','fastapi_endpoint') for c in calls))
-        decorators = [d for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) for d in n.decorator_list if isinstance(d,ast.Call)]
-        remote = next(d for d in decorators if isinstance(d.func,ast.Attribute) and d.func.attr=='function')
-        keywords = {kw.arg:kw.value.value for kw in remote.keywords if isinstance(kw.value,ast.Constant)}
+        decorators = [d for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)
+                      for d in n.decorator_list if isinstance(d, ast.Call)]
+        asgi = [d for d in decorators
+                if isinstance(d.func, ast.Attribute) and d.func.attr == 'asgi_app']
+        self.assertEqual(len(asgi), 1)
+        asgi_keywords = {kw.arg: kw.value.value for kw in asgi[0].keywords
+                         if isinstance(kw.value, ast.Constant)}
+        self.assertIs(asgi_keywords['requires_proxy_auth'], True)
+        functions = [d for d in decorators
+                     if isinstance(d.func, ast.Attribute) and d.func.attr == 'function']
+        gpu = next(d for d in functions if any(
+            kw.arg == 'name' and isinstance(kw.value, ast.Constant)
+            and kw.value.value == 'single_motion_proof' for kw in d.keywords))
+        keywords = {kw.arg: kw.value.value for kw in gpu.keywords
+                    if isinstance(kw.value, ast.Constant)}
         self.assertEqual(keywords['max_containers'], 1)
         self.assertEqual(keywords['min_containers'], 0)
         self.assertEqual(keywords['retries'], 0)
+        source = (ROOT/'worker.py').read_text()
+        self.assertIn("@web.post('/submit')", source)
+        self.assertIn("@web.get('/poll/{call_id}')", source)
+        self.assertIn('single_motion_proof.spawn(payload, source, ack)', source)
+        self.assertIn('call.get(timeout=0)', source)
 
 
     def test_pinned_diffusers_i2v_snapshot_has_expected_reference(self):
@@ -124,7 +139,10 @@ class LocalEntryPointTests(unittest.TestCase):
                 return decorate
             def local_entrypoint(self): return lambda fn: fn
 
-        fake_modal = SimpleNamespace(App=FakeApp, Image=FakeImage)
+        fake_modal = SimpleNamespace(
+            App=FakeApp, Image=FakeImage,
+            asgi_app=lambda **kwargs: (lambda fn: fn),
+        )
         spec = importlib.util.spec_from_file_location('modal_motion_test_worker', ROOT/'worker.py')
         module = importlib.util.module_from_spec(spec)
         with patch.dict(sys.modules, {'modal': fake_modal}):
