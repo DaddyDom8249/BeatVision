@@ -79,13 +79,15 @@ export function useWorld(projectId: string) {
     void load();
   }, [load]);
 
-  const revealWorld = useCallback(async () => {
+  const revealWorld = useCallback(async (regenerateForInterpretation = false) => {
     if (generating || saving || confirming) return;
     const version = ++requestVersion.current;
     setGenerating(true);
     setError(null);
     try {
-      const result = await request("POST", { projectId }, version);
+      const result = await request("POST", regenerateForInterpretation
+        ? { projectId, action: "regenerate_for_interpretation" }
+        : { projectId }, version);
       if (mounted.current && result.version === requestVersion.current) setReport(result.report);
     } catch (e) {
       if (mounted.current && version === requestVersion.current) setError(formatFailure("Reveal World", e, { projectId }));

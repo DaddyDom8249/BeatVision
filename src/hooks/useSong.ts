@@ -11,7 +11,7 @@ export function useSong(projectId?: string) {
     if (!projectId) return;
     setError(null);
     const { data, error } = await supabase.from("songs")
-      .select("id,project_id,title,artist,audio_path,audio_revision,lyrics,creative_direction,notes,analysis_status,analysis,analyzed_at,created_at,updated_at")
+      .select("id,project_id,title,artist,audio_path,audio_revision,lyrics,creative_direction,notes,visual_style_preferences,analysis_status,analysis,audio_source_fingerprint,audio_source_fingerprint_algorithm,audio_source_size,audio_source_fingerprinted_at,current_interpretation_id,interpretation_confirmed_at,analyzed_at,created_at,updated_at")
       .eq("project_id", projectId).maybeSingle();
     if (error) {
       // Preserve the last known DB state during a transient reload failure.

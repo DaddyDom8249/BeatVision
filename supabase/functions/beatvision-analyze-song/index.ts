@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
 
     // The owner confirmed this separate key belongs to their Free-plan
     // account. Never fall back to the legacy paid GROQ_API_KEY.
-    const freeAccountVerified = Boolean(groqKey);
+    const freeAccountVerified = Boolean(groqKey) && env("GROQ_FREE_ACCOUNT_VERIFIED") === "true";
     if (!freeAccountVerified) return json({error:"PROVIDER_COST_UNVERIFIED: The dedicated free-account key is not configured. Local analysis remains available."},503);
 
     // Production stores audio in the `songs` bucket (see SongPage/useSong);

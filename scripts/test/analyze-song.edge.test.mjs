@@ -99,6 +99,7 @@ async function bootFunction({ authUserId = USER_ID, ownerId = USER_ID, analysis 
           SUPABASE_SERVICE_ROLE_KEY: "stub-service",
           GROQ_API_KEY: "stub-groq",
           GROQ_FREE_API_KEY: freeKey,
+          GROQ_FREE_ACCOUNT_VERIFIED: freeKey ? "true" : "",
         })[key] ?? "",
     },
     serve: (fn) => {

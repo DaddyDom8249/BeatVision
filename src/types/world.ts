@@ -7,6 +7,7 @@ export interface WorldReport {
   motifs: unknown; atmosphere: unknown; movement: unknown;
   continuity_rules: unknown; immutable_continuity: unknown; raw_report: unknown;
   provider: string | null; provider_request_id: string | null;
+  interpretation_id?: string | null; interpretation_source_fingerprint?: string | null;
   error_code: string | null; error_message: string | null;
   confirmed_at: string | null; created_at: string; updated_at: string;
 }

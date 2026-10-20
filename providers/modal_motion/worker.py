@@ -18,9 +18,10 @@ from pathlib import Path
 
 from providers.modal_motion.contracts import (
     ACKNOWLEDGEMENT, FPS, FRAMES, HEIGHT, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES,
-    STEPS, WIDTH, MotionContractError, MotionRequest, manifest,
+    STEPS, WIDTH, MotionContractError, MotionRequest, budget_ltx_prompt, manifest,
     manifest_json, require_execution_authorization, validate_request,
 )
+from providers.modal_motion.media import prepare_source_image
 
 # Modal SDK is only needed when running "modal run" or deploying this file.
 import modal
@@ -84,8 +85,7 @@ def single_motion_proof(payload: dict, image_bytes: bytes, ack: str) -> dict:
         with Image.open(io.BytesIO(image_bytes)) as opened:
             if opened.width * opened.height > 12_000_000:
                 raise MotionContractError('IMAGE_DIMENSIONS_INVALID')
-            source = opened.convert('RGB')
-            source.thumbnail((WIDTH, HEIGHT))
+            source = prepare_source_image(opened, WIDTH, HEIGHT)
     except (OSError, UnidentifiedImageError, ValueError) as exc:
         raise MotionContractError('IMAGE_DECODE_FAILED') from exc
 
@@ -96,10 +96,18 @@ def single_motion_proof(payload: dict, image_bytes: bytes, ack: str) -> dict:
     )
     pipeline.enable_model_cpu_offload()
     pipeline.vae.enable_tiling()
+    prompt = budget_ltx_prompt(
+        request.prompt, pipeline.tokenizer,
+        required_prefix=(
+            'Preserve approved source-image identities, clothing, background, '
+            'geometry and composition. Animate subjects naturally without '
+            'introducing unrelated characters or settings.'
+        ),
+    )
     # Diffusers creates latent noise on CUDA; the generator must match that device.
     generator = torch.Generator(device='cuda').manual_seed(request.seed)
     output = pipeline(
-        image=source, prompt=request.prompt,
+        image=source, prompt=prompt,
         negative_prompt='worst quality, jittery, distorted, static image',
         width=WIDTH, height=HEIGHT, num_frames=FRAMES,
         num_inference_steps=STEPS, guidance_scale=3.0,

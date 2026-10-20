@@ -3,9 +3,11 @@ import type { FormEvent } from "react";
 import { supabase } from "../lib/supabase/client";
 import { useProject } from "../hooks/useProject";
 import { useSong } from "../hooks/useSong";
+import { useSongInterpretation } from "../hooks/useSongInterpretation";
 import { analyzeAudioLocally } from "../lib/musicAnalysis";
 import { formatFailure } from "../lib/errorDetails";
 import StudioHeader from "../components/navigation/StudioHeader";
+import SongInterpretationPanel from "../components/song/SongInterpretationPanel";
 
 interface Props {
   projectId: string;
@@ -14,11 +16,16 @@ interface Props {
 export default function SongPage({ projectId }: Props) {
   const { project, loading: projectLoading, error: projectError } = useProject(projectId);
   const { song, loading: songLoading, error: songError, reload } = useSong(projectId);
+  const interpretation = useSongInterpretation(projectId, song?.id, song?.current_interpretation_id);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [lyrics, setLyrics] = useState("");
   const [creativeDirection, setCreativeDirection] = useState("");
   const [notes, setNotes] = useState("");
+  const [preferredVisualStyle, setPreferredVisualStyle] = useState("");
+  const [imageryMode, setImageryMode] = useState("");
+  const [narrativeMode, setNarrativeMode] = useState("");
+  const [unwantedThemes, setUnwantedThemes] = useState("");
   const [audio, setAudio] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -32,7 +39,11 @@ export default function SongPage({ projectId }: Props) {
     setLyrics(song.lyrics ?? "");
     setCreativeDirection(song.creative_direction ?? "");
     setNotes(song.notes ?? "");
-  }, [song?.id, song?.title, song?.artist, song?.lyrics, song?.creative_direction, song?.notes]);
+    setPreferredVisualStyle(song.visual_style_preferences?.preferred_visual_style ?? "");
+    setImageryMode(song.visual_style_preferences?.imagery_mode ?? "");
+    setNarrativeMode(song.visual_style_preferences?.narrative_mode ?? "");
+    setUnwantedThemes(song.visual_style_preferences?.unwanted_themes ?? "");
+  }, [song?.id, song?.title, song?.artist, song?.lyrics, song?.creative_direction, song?.notes, song?.visual_style_preferences]);
 
   async function analyzeAudio() {
     if (saving || analyzing || song?.analysis_status === "analyzing") return;
@@ -136,7 +147,13 @@ export default function SongPage({ projectId }: Props) {
         artist: artist.trim(),
         lyrics: lyrics.trim() || null,
         creative_direction: creativeDirection.trim() || null,
-        notes: notes.trim() || null
+        notes: notes.trim() || null,
+        visual_style_preferences: {
+          preferred_visual_style: preferredVisualStyle.trim(),
+          imagery_mode: imageryMode || null,
+          narrative_mode: narrativeMode || null,
+          unwanted_themes: unwantedThemes.trim(),
+        }
       };
       if (audio) payload.audio_path = audioPath;
       const result = song
@@ -157,6 +174,15 @@ export default function SongPage({ projectId }: Props) {
       setSaving(false);
     }
   }
+
+  const songIntakeDirty = Boolean(audio || (song && (
+    title !== song.title || artist !== song.artist || lyrics !== (song.lyrics ?? "") ||
+    creativeDirection !== (song.creative_direction ?? "") || notes !== (song.notes ?? "") ||
+    preferredVisualStyle !== (song.visual_style_preferences?.preferred_visual_style ?? "") ||
+    imageryMode !== (song.visual_style_preferences?.imagery_mode ?? "") ||
+    narrativeMode !== (song.visual_style_preferences?.narrative_mode ?? "") ||
+    unwantedThemes !== (song.visual_style_preferences?.unwanted_themes ?? "")
+  )));
 
   if (projectLoading || songLoading) {
     return (
@@ -268,6 +294,28 @@ export default function SongPage({ projectId }: Props) {
               />
             </label>
 
+            <fieldset className="song-style-preferences">
+              <legend>Artist-directed visual style (optional)</legend>
+              <label>Preferred visual style
+                <input value={preferredVisualStyle} onChange={(event) => { setPreferredVisualStyle(event.target.value); setSaved(false); }}
+                  placeholder="Naturalistic, ink illustration, film noir, etc." />
+              </label>
+              <label>Imagery
+                <select value={imageryMode} onChange={(event) => { setImageryMode(event.target.value); setSaved(false); }}>
+                  <option value="">Artist decides later</option><option value="realistic">Realistic</option><option value="stylized">Stylized</option>
+                </select>
+              </label>
+              <label>Visual storytelling
+                <select value={narrativeMode} onChange={(event) => { setNarrativeMode(event.target.value); setSaved(false); }}>
+                  <option value="">Artist decides later</option><option value="narrative">Narrative</option><option value="abstract">Abstract</option>
+                </select>
+              </label>
+              <label>Unwanted visual themes
+                <textarea rows={2} value={unwantedThemes} onChange={(event) => { setUnwantedThemes(event.target.value); setSaved(false); }}
+                  placeholder="Things Bragora must not introduce without approval" />
+              </label>
+            </fieldset>
+
             <label>
               Notes
               <textarea
@@ -277,6 +325,21 @@ export default function SongPage({ projectId }: Props) {
                 placeholder="Additional notes for production..."
               />
             </label>
+
+            <SongInterpretationPanel
+              song={song}
+              loading={interpretation.loading}
+              working={interpretation.working}
+              error={interpretation.error}
+              manualFallback={interpretation.manualFallback}
+              latestDraft={interpretation.latestDraft}
+              confirmed={interpretation.confirmed}
+              saveDraft={interpretation.saveDraft}
+              propose={interpretation.propose}
+              confirm={interpretation.confirm}
+              onConfirmed={reload}
+              songIntakeDirty={songIntakeDirty}
+            />
 
             <button className="primary-button large" disabled={saving || analyzing}>
               {saving ? "Saving Song…" : saved ? "Song Saved ✓" : "Save Song Details →"}

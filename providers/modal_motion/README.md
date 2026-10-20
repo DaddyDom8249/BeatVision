@@ -29,7 +29,7 @@ The local entrypoint prints DRY_RUN_VALID without invoking the GPU. A real GPU c
 
 ## Hard limits / verification
 
-- 8 MiB input and output limits, PNG/JPEG signature and SHA256 check, UUID and prompt checks. Image is decoded and dimension-limited by Pillow remotely.
+- 8 MiB input and output limits, PNG/JPEG signature and SHA256 check, UUID and prompt checks. Image is decoded and dimension-limited by Pillow remotely, then contained on an exact 704x480 RGB canvas so aspect ratio is preserved. The loaded LTX tokenizer bounds the final prompt to 128 tokens; character length alone is not treated as a token budget.
 - Modal-authenticated Function with L4, max_containers=1, min_containers=0, buffer_containers=0, scaledown_window=2, 300s timeout, retries=0.
 - No public HTTP endpoint, no paid fallback, no automatic cron, no production database writes, no approved-asset mutation.
 - Source checks **PASS** locally; real Modal dependency resolution, image boot, GPU memory/latency, cost, generated motion, full-song export and browser playback remain **UNVERIFIED**.
