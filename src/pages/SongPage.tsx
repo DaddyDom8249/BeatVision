@@ -43,7 +43,9 @@ export default function SongPage({ projectId }: Props) {
     setImageryMode(song.visual_style_preferences?.imagery_mode ?? "");
     setNarrativeMode(song.visual_style_preferences?.narrative_mode ?? "");
     setUnwantedThemes(song.visual_style_preferences?.unwanted_themes ?? "");
-  }, [song?.id, song?.title, song?.artist, song?.lyrics, song?.creative_direction, song?.notes, song?.visual_style_preferences]);
+  }, [song?.id, song?.title, song?.artist, song?.lyrics, song?.creative_direction, song?.notes,
+    song?.visual_style_preferences?.preferred_visual_style, song?.visual_style_preferences?.imagery_mode,
+    song?.visual_style_preferences?.narrative_mode, song?.visual_style_preferences?.unwanted_themes]);
 
   async function analyzeAudio() {
     if (saving || analyzing || song?.analysis_status === "analyzing") return;

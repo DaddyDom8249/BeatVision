@@ -17,5 +17,7 @@ jobs:
           python-version: '3.11'
       - name: Validate Python source
         run: python -m py_compile providers/modal_motion/contracts.py providers/modal_motion/worker.py
+      - name: Install Pillow for offline image geometry tests
+        run: python -m pip install --disable-pip-version-check --no-input Pillow==11.3.0
       - name: Run offline contract regressions
         run: python -m unittest discover -s providers/modal_motion/tests -v
