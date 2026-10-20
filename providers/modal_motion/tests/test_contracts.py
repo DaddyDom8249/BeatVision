@@ -133,6 +133,25 @@ class ContractTests(unittest.TestCase):
             'fastapi.Request',
         )
 
+    def test_ltx_generator_device_matches_cuda_latent_noise(self):
+        # Remote LTX inference reached all 20 steps then failed because
+        # torch.randn(... device='cuda', generator=cpu_generator) cannot run.
+        tree = ast.parse((ROOT/'worker.py').read_text())
+        worker = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                      and node.name == 'single_motion_proof')
+        generators = [
+            node for node in ast.walk(worker)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == 'Generator'
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == 'torch'
+        ]
+        self.assertEqual(len(generators), 1)
+        device = next(kw.value.value for kw in generators[0].keywords
+                      if kw.arg == 'device' and isinstance(kw.value, ast.Constant))
+        self.assertEqual(device, 'cuda')
+
     def test_pinned_diffusers_i2v_snapshot_has_expected_reference(self):
         # Regression: previous source pinned an older LTX-Video tree with no
         # model_index.json, so from_pretrained would fail before inference.
