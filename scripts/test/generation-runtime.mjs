@@ -12,6 +12,7 @@ export async function loadGeneration(client = {}, envVars = {}) {
   try {
     await writeFile(join(dir, 'stub.mjs'), 'const client = globalThis.__generationTestClient; export const createClient = () => client;');
     await writeFile(join(dir, 'hf-motion.ts'), await readFile(new URL('../../supabase/functions/beatvision-generation/hf-motion.ts', import.meta.url), 'utf8'));
+    await writeFile(join(dir, 'modal-motion.ts'), await readFile(new URL('../../supabase/functions/beatvision-generation/modal-motion.ts', import.meta.url), 'utf8'));
     await writeFile(join(dir, 'image-media.ts'), (await readFile(new URL('../../supabase/functions/beatvision-generation/image-media.ts', import.meta.url), 'utf8')).replace('npm:jpeg-js@0.4.4', new URL('../../node_modules/jpeg-js/index.js', import.meta.url).href).replace('npm:pngjs@7.0.0', new URL('../../node_modules/pngjs/lib/png.js', import.meta.url).href));
     await writeFile(join(dir, 'final-media.ts'), await readFile(new URL('../../supabase/functions/beatvision-generation/final-media.ts', import.meta.url), 'utf8'));
     const source = await readFile(new URL('../../supabase/functions/beatvision-generation/index.ts', import.meta.url), 'utf8');

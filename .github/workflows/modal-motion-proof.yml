@@ -1,0 +1,21 @@
+name: Modal Motion Proof (Offline)
+on:
+  pull_request:
+    paths:
+      - 'providers/modal_motion/**'
+      - '.github/workflows/modal-motion-proof.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate Python source
+        run: python -m py_compile providers/modal_motion/contracts.py providers/modal_motion/worker.py
+      - name: Run offline contract regressions
+        run: python -m unittest discover -s providers/modal_motion/tests -v
