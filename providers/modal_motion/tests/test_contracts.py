@@ -93,6 +93,28 @@ class ContractTests(unittest.TestCase):
         self.assertIn('call.get(timeout=0)', source)
 
 
+    def test_both_modal_images_ship_contracts_package(self):
+        # The web image is separate from the GPU image. If only the GPU image
+        # mounts the local package, /submit hangs while Modal repeatedly fails
+        # to hydrate /root/worker.py: ModuleNotFoundError('providers').
+        tree = ast.parse((ROOT/'worker.py').read_text())
+        assignments = {
+            node.targets[0].id: node.value
+            for node in tree.body
+            if isinstance(node, ast.Assign) and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+        }
+        for image_name in ('image', 'web_image'):
+            with self.subTest(image=image_name):
+                image_expr = assignments[image_name]
+                self.assertIsInstance(image_expr, ast.Call)
+                self.assertIsInstance(image_expr.func, ast.Attribute)
+                self.assertEqual(image_expr.func.attr, 'add_local_python_source')
+                self.assertIn(
+                    'providers.modal_motion',
+                    [arg.value for arg in image_expr.args if isinstance(arg, ast.Constant)],
+                )
+
     def test_asgi_submit_request_annotation_resolves_globally(self):
         # FastAPI evaluates postponed annotations using the function module
         # globals. A nested-only 'import fastapi' caused HTTP 422 for every
