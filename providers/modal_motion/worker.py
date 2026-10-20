@@ -133,6 +133,9 @@ def motion_api():
     import binascii
     import re
 
+    # FastAPI resolves postponed annotations against module globals. Keep the
+    # runtime-only import visible so `request: fastapi.Request` is not a query field.
+    global fastapi
     import fastapi
     from fastapi.responses import JSONResponse
 
