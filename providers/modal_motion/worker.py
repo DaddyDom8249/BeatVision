@@ -96,7 +96,8 @@ def single_motion_proof(payload: dict, image_bytes: bytes, ack: str) -> dict:
     )
     pipeline.enable_model_cpu_offload()
     pipeline.vae.enable_tiling()
-    generator = torch.Generator(device='cpu').manual_seed(request.seed)
+    # Diffusers creates latent noise on CUDA; the generator must match that device.
+    generator = torch.Generator(device='cuda').manual_seed(request.seed)
     output = pipeline(
         image=source, prompt=request.prompt,
         negative_prompt='worst quality, jittery, distorted, static image',
