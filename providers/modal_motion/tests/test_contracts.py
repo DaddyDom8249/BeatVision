@@ -93,6 +93,24 @@ class ContractTests(unittest.TestCase):
         self.assertIn('call.get(timeout=0)', source)
 
 
+    def test_asgi_submit_request_annotation_resolves_globally(self):
+        # FastAPI evaluates postponed annotations using the function module
+        # globals. A nested-only 'import fastapi' caused HTTP 422 for every
+        # /submit request: missing query parameter 'request'.
+        tree = ast.parse((ROOT/'worker.py').read_text())
+        asgi = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                    and node.name == 'motion_api')
+        self.assertTrue(any(
+            isinstance(node, ast.Global) and 'fastapi' in node.names
+            for node in asgi.body
+        ), 'The lazy FastAPI import must be visible in module globals.')
+        submit = next(node for node in asgi.body
+                      if isinstance(node, ast.AsyncFunctionDef) and node.name == 'submit')
+        self.assertEqual(
+            ast.unparse(submit.args.args[0].annotation),
+            'fastapi.Request',
+        )
+
     def test_pinned_diffusers_i2v_snapshot_has_expected_reference(self):
         # Regression: previous source pinned an older LTX-Video tree with no
         # model_index.json, so from_pretrained would fail before inference.
