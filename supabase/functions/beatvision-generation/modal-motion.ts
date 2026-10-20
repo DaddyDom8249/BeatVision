@@ -3,6 +3,7 @@
 export const MODAL_MOTION = Object.freeze({
   app: "bragoraforge-modal-motion-proof",
   function: "single_motion_proof",
+  apiBase: "https://beatvision--bragoraforge-modal-motion-proof-motion-api.us-east.modal.run",
   provider: "modal",
   model: "Lightricks/LTX-Video-0.9.5",
   revision: "e58e28c39631af4d1468ee57a853764e11c1d37e",
@@ -12,6 +13,7 @@ export const MODAL_MOTION = Object.freeze({
 });
 const ACK = "I_AUTHORIZE_ONE_MODAL_GPU_PROOF_WITHIN_MY_CONFIRMED_BUDGET";
 type EnvReader = (key: string) => string;
+type Fetcher = typeof fetch;
 const readEnv: EnvReader = (key) => String(Deno.env.get(key) || "").trim();
 export class ModalMotionError extends Error {
   code: string;
@@ -46,9 +48,54 @@ export function checkedBytes(raw: unknown): Uint8Array {
     throw new ModalMotionError("MODAL_MEDIA_SIZE_INVALID");
   return raw;
 }
+function encodeBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += 0x8000)
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  return btoa(binary);
+}
+function decodeBase64(value: unknown): Uint8Array {
+  if (typeof value !== "string" || !value) throw new ModalMotionError("MODAL_MEDIA_MISSING");
+  let binary: string;
+  try { binary = atob(value); }
+  catch { throw new ModalMotionError("MODAL_MEDIA_BASE64_INVALID"); }
+  const output = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) output[i] = binary.charCodeAt(i);
+  return checkedBytes(output);
+}
+async function modalFetch(
+  path: string, env: EnvReader, requester: Fetcher, init: RequestInit,
+): Promise<{response: Response; data: any}> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20_000);
+  let response: Response;
+  try {
+    response = await requester(MODAL_MOTION.apiBase + path, {
+      ...init,
+      headers: {
+        "Modal-Key": env("MODAL_TOKEN_ID"),
+        "Modal-Secret": env("MODAL_TOKEN_SECRET"),
+        ...(init.headers || {}),
+      },
+      signal: controller.signal,
+    });
+  } catch (error) {
+    const name = error && typeof error === "object" ? String((error as Error).name || "") : "";
+    throw new ModalMotionError(name === "AbortError" ? "MODAL_HTTP_TIMEOUT" : "MODAL_HTTP_UNAVAILABLE");
+  } finally {
+    clearTimeout(timer);
+  }
+  const raw = await response.text();
+  let data: any = {};
+  try { data = raw ? JSON.parse(raw) : {}; }
+  catch { throw new ModalMotionError("MODAL_HTTP_RESPONSE_INVALID"); }
+  if (!response.ok && response.status !== 202)
+    throw new ModalMotionError("MODAL_HTTP_" + response.status + ":" + String(data?.error || "REQUEST_FAILED"));
+  return { response, data };
+}
 export async function submitModalMotion(
   payload: Record<string, unknown>, source: Uint8Array, env: EnvReader = readEnv,
-  sdk?: any,
+  requester: Fetcher = fetch,
 ): Promise<{status: string; job_id: string; provider: string; model: string; source_sha256: string}> {
   assertModalSubmissionEnabled(env);
   checkedBytes(source);
@@ -60,42 +107,28 @@ export async function submitModalMotion(
     throw new ModalMotionError("MODAL_PROMPT_INVALID");
   if (!Number.isInteger(payload.seed) || Number(payload.seed) < 1 || Number(payload.seed) > 2147483646)
     throw new ModalMotionError("MODAL_SEED_INVALID");
-  const { ModalClient } = sdk ?? await import("npm:modal@0.11.1");
-  const client = new ModalClient({ tokenId: env("MODAL_TOKEN_ID"), tokenSecret: env("MODAL_TOKEN_SECRET"), maxRetries: 0 });
-  try {
-    const worker = await client.functions.fromName(MODAL_MOTION.app, MODAL_MOTION.function);
-    // .spawn makes exactly one provider submission; a lost receipt must not be retried.
-    const call = await worker.spawn([payload, source, ACK]);
-    if (!/^fc-[a-zA-Z0-9_-]+$/.test(String(call.functionCallId || "")))
-      throw new ModalMotionError("MODAL_JOB_RECEIPT_INVALID");
-    return { status: "processing", job_id: call.functionCallId,
-      provider: MODAL_MOTION.provider, model: MODAL_MOTION.model,
-      source_sha256: String(payload.image_sha256) };
-  } finally {
-    client.close();
-  }
+  const { data } = await modalFetch("/submit", env, requester, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ payload, image_base64: encodeBase64(source), ack: ACK }),
+  });
+  if (!/^fc-[a-zA-Z0-9_-]+$/.test(String(data?.job_id || "")))
+    throw new ModalMotionError("MODAL_JOB_RECEIPT_INVALID");
+  return { status: "processing", job_id: data.job_id,
+    provider: MODAL_MOTION.provider, model: MODAL_MOTION.model,
+    source_sha256: String(payload.image_sha256) };
 }
 export async function pollModalMotion(
-  callId: string, env: EnvReader = readEnv, sdk?: any,
+  callId: string, env: EnvReader = readEnv, requester: Fetcher = fetch,
 ): Promise<{status: "processing"} | {status: "completed"; video: Uint8Array; manifest: Record<string, unknown>}> {
   assertModalPollEnabled(env);
   if (!/^fc-[a-zA-Z0-9_-]+$/.test(callId)) throw new ModalMotionError("MODAL_JOB_ID_INVALID");
-  const { ModalClient } = sdk ?? await import("npm:modal@0.11.1");
-  const client = new ModalClient({ tokenId: env("MODAL_TOKEN_ID"), tokenSecret: env("MODAL_TOKEN_SECRET"), maxRetries: 0 });
-  try {
-    const call = await client.functionCalls.fromId(callId);
-    let data: any;
-    try { data = await call.get({ timeoutMs: 750 }); }
-    catch (err) {
-      if (err && typeof err === "object" && (err as Error).name === "TimeoutError")
-        return { status: "processing" };
-      throw err;
-    }
-    const video = checkedBytes(data?.video);
-    if (!data?.manifest || typeof data.manifest !== "object")
-      throw new ModalMotionError("MODAL_MANIFEST_MISSING");
-    return { status: "completed", video, manifest: data.manifest };
-  } finally {
-    client.close();
-  }
+  const { response, data } = await modalFetch("/poll/" + encodeURIComponent(callId), env, requester, {
+    method: "GET",
+  });
+  if (response.status === 202 || data?.status === "processing") return { status: "processing" };
+  const video = decodeBase64(data?.video_base64);
+  if (!data?.manifest || typeof data.manifest !== "object")
+    throw new ModalMotionError("MODAL_MANIFEST_MISSING");
+  return { status: "completed", video, manifest: data.manifest };
 }
