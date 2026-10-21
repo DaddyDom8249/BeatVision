@@ -40,7 +40,7 @@ function makeDb({ confirmed = true, ownerId = USER_ID } = {}) {
   };
 }
 
-async function boot({ confirmed = true, providerVerified = false, authUserId = USER_ID } = {}) {
+async function boot({ confirmed = true, providerVerified = false, authUserId = USER_ID, providerOutput = { answer: "Use the confirmed return arc as a gradual visual opening.", evidence_refs: ["confirmed.interpretation"] } } = {}) {
   const db = makeDb({ confirmed, ownerId: USER_ID });
   const source = await readFile(FUNCTION_PATH, "utf8");
   assert.ok(source.includes(REMOTE_IMPORT));
@@ -77,7 +77,7 @@ async function boot({ confirmed = true, providerVerified = false, authUserId = U
   globalThis.fetch = async (input, options) => {
     if (String(input).endsWith("/auth/v1/user")) return new Response(JSON.stringify({ id: authUserId }), { status: 200 });
     providerCalls.push({ input: String(input), options });
-    return new Response(JSON.stringify({ choices: [{ message: { content: "Use the confirmed return arc as a gradual visual opening." } }] }), { status: 200 });
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(providerOutput) } }] }), { status: 200 });
   };
   await import(pathToFileURL(join(dir, "function.ts")).href);
   return { handler, db, providerCalls };
@@ -112,11 +112,34 @@ test("verified Director mock receives server-confirmed lineage and returns an an
   const body = await response.json();
   assert.equal(body.answer, "Use the confirmed return arc as a gradual visual opening.");
   assert.equal(body.interpretation_id, INTERPRETATION_ID);
-  assert.deepEqual(body.evidence_ids, ["signal.duration"]);
+  assert.deepEqual(body.evidence_ids, ["confirmed.interpretation"]);
   assert.equal(providerCalls.length, 1);
   const providerBody = JSON.parse(providerCalls[0].options.body);
   assert.match(providerBody.messages[1].content, /confirmed_interpretation/);
   assert.match(providerBody.messages[1].content, /How should the emotional turn/);
+  assert.deepEqual(providerBody.response_format, { type: "json_object" });
+});
+
+test("Director rejects fabricated evidence references and never labels all sources as cited", async () => {
+  const { handler, providerCalls } = await boot({
+    providerVerified: true,
+    providerOutput: { answer: "Invented detail.", evidence_refs: ["fabricated.fact"] },
+  });
+  const response = await request(handler, { projectId: PROJECT_ID, songId: SONG_ID, question: "What supports this scene?" });
+  assert.equal(response.status, 502);
+  assert.equal((await response.json()).error.code, "DIRECTOR_PROVIDER_INVALID");
+  assert.equal(providerCalls.length, 1);
+});
+
+test("Director rejects an uncited output instead of implying the artist approved it", async () => {
+  const { handler, providerCalls } = await boot({
+    providerVerified: true,
+    providerOutput: { answer: "Unattributed advice.", evidence_refs: [] },
+  });
+  const response = await request(handler, { projectId: PROJECT_ID, songId: SONG_ID, question: "Why this direction?" });
+  assert.equal(response.status, 502);
+  assert.equal((await response.json()).error.code, "DIRECTOR_PROVIDER_INVALID");
+  assert.equal(providerCalls.length, 1);
 });
 
 test("Director remains owner-bound", async () => {
