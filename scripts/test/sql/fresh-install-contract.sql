@@ -56,6 +56,34 @@ begin
 end $test$;
 reset role;
 
+-- An AI proposal captured against an obsolete creative snapshot must never
+-- supersede the artist's existing draft, even with valid audio lineage.
+set role service_role;
+do $test$
+declare fixture_song public.songs;
+begin
+ select * into fixture_song from public.songs
+  where project_id='00000000-0000-0000-0000-000000000100';
+ begin
+  perform public.save_song_interpretation_draft(
+   fixture_song.project_id, fixture_song.id,
+   '00000000-0000-0000-0000-000000000001',
+   fixture_song.audio_revision, fixture_song.audio_source_fingerprint,
+   '{"summary":"Stale inference"}'::jsonb, '[]'::jsonb,
+   'ai', 'groq', 'openai/gpt-oss-20b',
+   '{"expected_creative_source_fingerprint":"0000000000000000000000000000000000000000000000000000000000000000","source_snapshot":{}}'::jsonb
+  );
+  raise exception 'STALE_AI_DRAFT_WAS_SAVED';
+ exception when sqlstate '40901' then
+  if sqlerrm <> 'SONG_INTERPRETATION_CREATIVE_SOURCE_STALE' then raise; end if;
+ end;
+ if (select count(*) from public.song_interpretations
+      where song_id=fixture_song.id) <> 1 then
+  raise exception 'STALE_AI_DRAFT_CHANGED_HISTORY';
+ end if;
+end $test$;
+reset role;
+
 -- Even a privileged direct insert must not bypass interpretation confirmation.
 -- The BEFORE INSERT guard rejects it before checking the later World/Style FKs.
 do $test$ begin
@@ -107,6 +135,50 @@ begin
        '00000000-0000-0000-0000-000000000001'::uuid then
     raise exception 'FIXTURE_INTERPRETATION_APPROVAL_INVALID';
   end if;
+end $test$;
+reset role;
+
+-- A current, confirmed artist interpretation permits an atomic initial World.
+-- Roll the synthetic World back so the rest of this preexisting fixture remains unchanged.
+set role service_role;
+do $test$
+declare fixture_song public.songs;
+        created public.world_reports;
+        payload jsonb := '{"status":"completed","provider":"groq","mood":"fixture","emotional_arc":"fixture","visual_language":"fixture","cinematography":"fixture","environments":"fixture","color_lighting":"fixture","motifs":"fixture","atmosphere":"fixture","movement":"fixture","continuity_rules":"fixture","immutable_continuity":"fixture"}'::jsonb;
+begin
+ select * into fixture_song from public.songs
+  where project_id='00000000-0000-0000-0000-000000000100';
+ begin
+  select * into created from public.persist_current_interpretation_world(
+    fixture_song.project_id, '00000000-0000-0000-0000-000000000001',
+    fixture_song.current_interpretation_id,
+    public.song_creative_fingerprint(fixture_song.id), null, payload
+  );
+  if created.id is null or created.interpretation_id is distinct from fixture_song.current_interpretation_id
+     or created.status <> 'completed' then
+    raise exception 'ATOMIC_WORLD_NOT_LINEAGED';
+  end if;
+  raise exception 'ROLLBACK_ATOMIC_WORLD_FIXTURE';
+ exception when raise_exception then
+  if sqlerrm <> 'ROLLBACK_ATOMIC_WORLD_FIXTURE' then raise; end if;
+ end;
+ if exists(select 1 from public.world_reports where project_id=fixture_song.project_id) then
+  raise exception 'ROLLBACK_WORLD_FIXTURE_LEAKED';
+ end if;
+ begin
+  perform public.persist_current_interpretation_world(
+    fixture_song.project_id, '00000000-0000-0000-0000-000000000001',
+    fixture_song.current_interpretation_id,
+    'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+    null, payload
+  );
+  raise exception 'STALE_WORLD_WAS_SAVED';
+ exception when check_violation then
+  if sqlerrm <> 'WORLD_INTERPRETATION_SOURCE_STALE' then raise; end if;
+ end;
+ if exists(select 1 from public.world_reports where project_id=fixture_song.project_id) then
+  raise exception 'STALE_WORLD_INSERTED';
+ end if;
 end $test$;
 reset role;
 
