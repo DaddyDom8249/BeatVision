@@ -789,6 +789,122 @@ button { cursor: pointer; border: none; background: none; }
   color: var(--text-main);
 }
 
+.song-intelligence-panel {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  background: var(--bg-surface-0);
+  border: 1px solid var(--border-accent);
+  border-radius: 8px;
+}
+
+.song-intelligence-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.song-intelligence-heading h2 {
+  color: #fff;
+  font-size: clamp(18px, 3vw, 24px);
+  line-height: 1.25;
+  margin-top: 6px;
+}
+
+.song-intelligence-copy, .field-hint {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.field-hint { font-weight: 400; }
+
+.song-intelligence-evidence {
+  margin: 0;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.fingerprint-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.song-intelligence-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.song-intelligence-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.song-intelligence-fields label:first-child,
+.song-intelligence-fields label:last-child { grid-column: 1 / -1; }
+
+.song-intelligence-fields textarea { width: 100%; resize: vertical; min-height: 72px; }
+
+.song-intelligence-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.song-intelligence-actions button { min-height: 42px; }
+
+.song-intelligence-confirmation {
+  color: var(--color-success);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.song-director-chat {
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 22px;
+  padding-top: 22px;
+}
+
+.song-director-chat h3 {
+  color: #ffffff;
+  font-size: 18px;
+  margin: 6px 0 0;
+}
+
+.song-director-transcript {
+  display: grid;
+  gap: 10px;
+  max-height: 360px;
+  overflow: auto;
+  margin: 14px 0;
+  padding: 4px;
+}
+
+.song-director-message {
+  max-width: 90%;
+  padding: 11px 13px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-surface-0);
+}
+
+.song-director-message.artist { justify-self: end; }
+.song-director-message.director { justify-self: start; border-color: rgba(199, 164, 92, .4); }
+.song-director-message p { margin: 4px 0 0; line-height: 1.5; white-space: pre-wrap; }
+.song-director-message small { display: block; margin-top: 8px; color: var(--text-muted); overflow-wrap: anywhere; }
+.song-director-speaker { color: var(--accent-gold); font: 600 10px var(--font-mono); text-transform: uppercase; letter-spacing: .08em; }
+
+.song-director-compose { display: grid; gap: 8px; }
+.song-director-compose label { color: var(--text-main); font-size: 12px; font-weight: 600; }
+.song-director-compose textarea { width: 100%; resize: vertical; min-height: 72px; }
+.song-director-compose button { justify-self: start; min-height: 42px; }
+
 /* World Report Surfaces */
 .world-report-card {
   background: var(--bg-surface-1);
@@ -1269,6 +1385,15 @@ button { cursor: pointer; border: none; background: none; }
   .studio-topbar-right { min-width: 0; max-width: 50%; }
   .studio-user-badge { max-width: 100%; }
   .user-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .song-intelligence-panel { padding: 16px; }
+  .song-intelligence-heading { flex-direction: column; }
+  .song-intelligence-fields { grid-template-columns: minmax(0, 1fr); }
+  .song-intelligence-fields label:first-child,
+  .song-intelligence-fields label:last-child { grid-column: auto; }
+  .song-intelligence-actions { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .song-intelligence-actions button { width: 100%; }
+  .song-director-message { max-width: 100%; }
+  .song-director-compose button { width: 100%; }
 }
 
 .style-header, .world-report-header { flex-wrap: wrap; gap: 16px; }
@@ -1279,3 +1404,12 @@ button { cursor: pointer; border: none; background: none; }
 }
 
 @media(max-width:700px){.style-record-card{padding:16px}.style-record-card>form{grid-template-columns:minmax(0,1fr)}.style-record-card>button{display:block;width:100%;text-align:center}}
+
+/* Song Intake style controls remain usable on Android portrait screens. */
+.song-style-preferences { display:grid; gap:12px; border:1px solid var(--border-subtle); border-radius:8px; padding:16px; min-width:0; }
+.song-style-preferences legend { padding:0 8px; font-weight:600; }
+.song-style-preferences label { display:flex; flex-direction:column; gap:5px; min-width:0; }
+.song-style-preferences input,.song-style-preferences select,.song-style-preferences textarea { max-width:100%; min-width:0; }
+.song-read-aloud { display:grid; gap:12px; padding:12px 0; }
+.song-read-aloud .song-intelligence-actions { display:flex; flex-wrap:wrap; gap:10px; }
+.song-read-aloud button { min-height:44px; }

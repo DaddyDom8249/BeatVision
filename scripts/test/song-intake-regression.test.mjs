@@ -25,5 +25,11 @@ test('song intake separates analysis state and protects unsaved creator fields o
   assert.match(source, /setAnalyzing\(true\)/);
   assert.match(source, /setAnalyzing\(false\)/);
   assert.doesNotMatch(source, /\}, \[song\]\);/);
-  assert.match(source, /\[song\?\.id, song\?\.title, song\?\.artist, song\?\.lyrics, song\?\.creative_direction, song\?\.notes\]/);
+  // Reloading the same preference values must not reset unsaved text inputs.
+  // Scalar dependencies intentionally avoid using the unstable preferences object.
+  assert.match(source, /\[song\?\.id, song\?\.title, song\?\.artist, song\?\.lyrics, song\?\.creative_direction, song\?\.notes,/);
+  for (const field of ["preferred_visual_style", "imagery_mode", "narrative_mode", "unwanted_themes"]) {
+    assert.match(source, new RegExp(`song\\?\\.visual_style_preferences\\?\\.${field}`));
+  }
+  assert.doesNotMatch(source, /song\?\.visual_style_preferences\]/);
 });

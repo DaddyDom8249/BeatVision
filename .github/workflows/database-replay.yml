@@ -1,7 +1,7 @@
 name: Database migration replay
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/modal-ltx-motion-proof-20261019]
   workflow_dispatch:
 permissions:
   contents: read

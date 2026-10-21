@@ -21,9 +21,180 @@ reset role;
 -- The isolated fixture administrator stands in for server-side analysis writes.
 update public.songs set analysis_status='completed',analysis='{"duration_seconds":4}',analysis_audio_revision=audio_revision,analyzed_at=now()
 where project_id='00000000-0000-0000-0000-000000000100';
+-- Simulate the server handling real source bytes. These are disposable fixture
+-- bytes, not a remote object or a client-provided fingerprint.
+set role service_role;
+do $test$
+declare
+  fixture_song public.songs;
+  draft public.song_interpretations;
+  fixture_bytes bytea := convert_to('isolated-fixture-audio', 'UTF8');
+  fixture_hash text;
+begin
+  select * into fixture_song from public.songs
+   where project_id='00000000-0000-0000-0000-000000000100';
+  fixture_hash := encode(extensions.digest(fixture_bytes, 'sha256'), 'hex');
+  if not public.record_song_source_fingerprint(
+    fixture_song.project_id, fixture_song.id,
+    '00000000-0000-0000-0000-000000000001',
+    fixture_song.audio_revision, fixture_hash, octet_length(fixture_bytes)::bigint
+  ) then
+    raise exception 'FIXTURE_AUDIO_FINGERPRINT_NOT_RECORDED';
+  end if;
+  select * into draft from public.save_song_interpretation_draft(
+    fixture_song.project_id, fixture_song.id,
+    '00000000-0000-0000-0000-000000000001',
+    fixture_song.audio_revision, fixture_hash,
+    '{"central_message":"Artist-authored fixture interpretation"}'::jsonb,
+    '[]'::jsonb, 'manual', null, null, '{}'::jsonb
+  );
+  if draft.id is null or draft.status <> 'draft'
+    or draft.creative_source_fingerprint is distinct from
+       public.song_creative_fingerprint(fixture_song.id) then
+    raise exception 'FIXTURE_INTERPRETATION_DRAFT_INVALID';
+  end if;
+end $test$;
+reset role;
+
+-- An AI proposal captured against an obsolete creative snapshot must never
+-- supersede the artist's existing draft, even with valid audio lineage.
+set role service_role;
+do $test$
+declare fixture_song public.songs;
+begin
+ select * into fixture_song from public.songs
+  where project_id='00000000-0000-0000-0000-000000000100';
+ begin
+  perform public.save_song_interpretation_draft(
+   fixture_song.project_id, fixture_song.id,
+   '00000000-0000-0000-0000-000000000001',
+   fixture_song.audio_revision, fixture_song.audio_source_fingerprint,
+   '{"summary":"Stale inference"}'::jsonb, '[]'::jsonb,
+   'ai', 'groq', 'openai/gpt-oss-20b',
+   '{"expected_creative_source_fingerprint":"0000000000000000000000000000000000000000000000000000000000000000","source_snapshot":{}}'::jsonb
+  );
+  raise exception 'STALE_AI_DRAFT_WAS_SAVED';
+ exception when sqlstate '40901' then
+  if sqlerrm <> 'SONG_INTERPRETATION_CREATIVE_SOURCE_STALE' then raise; end if;
+ end;
+ if (select count(*) from public.song_interpretations
+      where song_id=fixture_song.id) <> 1 then
+  raise exception 'STALE_AI_DRAFT_CHANGED_HISTORY';
+ end if;
+end $test$;
+reset role;
+
+-- Even a privileged direct insert must not bypass interpretation confirmation.
+-- The BEFORE INSERT guard rejects it before checking the later World/Style FKs.
+do $test$ begin
+  begin
+    insert into public.vision_locks
+      (project_id, world_report_id, style_bible_id, song_id,
+       revision_number, snapshot)
+    select s.project_id,
+      '00000000-0000-0000-0000-000000000500',
+      '00000000-0000-0000-0000-000000000600',
+      s.id, 1, '{}'::jsonb
+    from public.songs s
+    where s.project_id='00000000-0000-0000-0000-000000000100';
+    raise exception 'UNCONFIRMED_INTERPRETATION_VISION_LOCK_ALLOWED';
+  exception when check_violation then
+    if sqlerrm <> 'VISION_LOCK_INTERPRETATION_REQUIRED' then raise; end if;
+  end;
+  if exists(select 1 from public.vision_locks) then
+    raise exception 'UNCONFIRMED_INTERPRETATION_VISION_LOCK_PERSISTED';
+  end if;
+end $test$;
+
+-- An authenticated browser cannot call the privileged confirmation RPC.
+do $test$ begin
+  if has_function_privilege('authenticated',
+    'public.confirm_song_interpretation(uuid,uuid,uuid,uuid)', 'EXECUTE') then
+    raise exception 'INTERPRETATION_CONFIRM_RPC_EXPOSED_TO_BROWSER';
+  end if;
+end $test$;
+
+-- Artist approval is recorded only through the owner-checked server RPC.
+set role service_role;
+do $test$
+declare
+  fixture_song public.songs;
+  draft_id uuid;
+  approved public.song_interpretations;
+begin
+  select * into fixture_song from public.songs
+   where project_id='00000000-0000-0000-0000-000000000100';
+  select id into draft_id from public.song_interpretations
+   where song_id=fixture_song.id and status='draft';
+  select * into approved from public.confirm_song_interpretation(
+    fixture_song.project_id, fixture_song.id, draft_id,
+    '00000000-0000-0000-0000-000000000001'
+  );
+  if approved.id is distinct from draft_id or approved.status <> 'confirmed'
+    or approved.confirmed_at is null or approved.confirmed_by is distinct from
+       '00000000-0000-0000-0000-000000000001'::uuid then
+    raise exception 'FIXTURE_INTERPRETATION_APPROVAL_INVALID';
+  end if;
+end $test$;
+reset role;
+
+-- A current, confirmed artist interpretation permits an atomic initial World.
+-- Roll the synthetic World back so the rest of this preexisting fixture remains unchanged.
+set role service_role;
+do $test$
+declare fixture_song public.songs;
+        created public.world_reports;
+        payload jsonb := '{"status":"completed","provider":"groq","mood":"fixture","emotional_arc":"fixture","visual_language":"fixture","cinematography":"fixture","environments":"fixture","color_lighting":"fixture","motifs":"fixture","atmosphere":"fixture","movement":"fixture","continuity_rules":"fixture","immutable_continuity":"fixture"}'::jsonb;
+begin
+ select * into fixture_song from public.songs
+  where project_id='00000000-0000-0000-0000-000000000100';
+ begin
+  select * into created from public.persist_current_interpretation_world(
+    fixture_song.project_id, '00000000-0000-0000-0000-000000000001',
+    fixture_song.current_interpretation_id,
+    public.song_creative_fingerprint(fixture_song.id), null, payload
+  );
+  if created.id is null or created.interpretation_id is distinct from fixture_song.current_interpretation_id
+     or created.status <> 'completed' then
+    raise exception 'ATOMIC_WORLD_NOT_LINEAGED';
+  end if;
+  raise exception 'ROLLBACK_ATOMIC_WORLD_FIXTURE';
+ exception when raise_exception then
+  if sqlerrm <> 'ROLLBACK_ATOMIC_WORLD_FIXTURE' then raise; end if;
+ end;
+ if exists(select 1 from public.world_reports where project_id=fixture_song.project_id) then
+  raise exception 'ROLLBACK_WORLD_FIXTURE_LEAKED';
+ end if;
+ begin
+  perform public.persist_current_interpretation_world(
+    fixture_song.project_id, '00000000-0000-0000-0000-000000000001',
+    fixture_song.current_interpretation_id,
+    'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+    null, payload
+  );
+  raise exception 'STALE_WORLD_WAS_SAVED';
+ exception when check_violation then
+  if sqlerrm <> 'WORLD_INTERPRETATION_SOURCE_STALE' then raise; end if;
+ end;
+ if exists(select 1 from public.world_reports where project_id=fixture_song.project_id) then
+  raise exception 'STALE_WORLD_INSERTED';
+ end if;
+end $test$;
+reset role;
+
+-- The isolated fixture administrator stands in for the server's approved
+-- World output; its lineage must refer to exactly that confirmed interpretation.
+insert into public.world_reports
+  (id, project_id, status, interpretation_id, interpretation_source_fingerprint)
+select '00000000-0000-0000-0000-000000000500',
+       s.project_id, 'completed', i.id, i.source_fingerprint
+from public.songs s
+join public.song_interpretations i on i.id=s.current_interpretation_id
+where s.project_id='00000000-0000-0000-0000-000000000100'
+  and i.status='confirmed'
+  and i.creative_source_fingerprint=public.song_creative_fingerprint(s.id);
+
 set role authenticated;
-insert into public.world_reports(id,project_id,status)
-values ('00000000-0000-0000-0000-000000000500','00000000-0000-0000-0000-000000000100','completed');
 select public.confirm_world_atomic('00000000-0000-0000-0000-000000000100');
 insert into public.style_bibles(id,project_id,world_report_id)
 values ('00000000-0000-0000-0000-000000000600','00000000-0000-0000-0000-000000000100','00000000-0000-0000-0000-000000000500');

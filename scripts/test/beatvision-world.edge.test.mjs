@@ -80,7 +80,14 @@ function makeWorldReport(overrides = {}) {
   };
 }
 
-function makeDb(worldOverrides = {}) {
+function makeDb(worldOverrides = {}, interpretationEnabled = true) {
+  const interpretation = {
+    id: "interpretation-1", song_id: "song-1", audio_revision: "11111111-1111-4111-8111-111111111111",
+    source_fingerprint: "a".repeat(64), creative_source_fingerprint: "c".repeat(64), status: "confirmed", version: 1,
+    interpretation: { schema_version: 1, summary: "A verified fixture interpretation", claims: [] },
+    evidence: [{ id: "artist.interpretation", kind: "artist", reference: "fixture", excerpt: "fixture" }],
+    confirmed_at: "2026-10-03T00:00:00.000Z",
+  };
   return {
     projects: [
       {
@@ -93,8 +100,9 @@ function makeDb(worldOverrides = {}) {
     ],
     world_reports: [makeWorldReport(worldOverrides)],
     songs: [
-      { id: "song-1", project_id: PROJECT_ID, title: "Midnight", artist: "Artist", analysis_status: "completed", analysis: {} },
+      { id: "song-1", project_id: PROJECT_ID, title: "Midnight", artist: "Artist", analysis_status: "completed", analysis: {}, ...(interpretationEnabled ? { audio_revision: interpretation.audio_revision, audio_source_fingerprint: interpretation.source_fingerprint, current_interpretation_id: interpretation.id, interpretation_confirmed_at: interpretation.confirmed_at } : {}) },
     ],
+    song_interpretations: interpretationEnabled ? [interpretation] : [],
   };
 }
 
@@ -102,8 +110,8 @@ function makeDb(worldOverrides = {}) {
  * Boots the real function module against a stub database.
  * `authUserId` controls which authenticated user the token resolves to.
  */
-async function bootFunction({ worldOverrides = {}, authUserId = USER_ID, freeKey = "", providerStatus = 200 } = {}) {
-  const db = makeDb(worldOverrides);
+async function bootFunction({ worldOverrides = {}, authUserId = USER_ID, freeKey = "", providerStatus = 200, interpretationEnabled = true, onProviderRequest = null } = {}) {
+  const db = makeDb(worldOverrides, interpretationEnabled);
   const source = await readFile(FUNCTION_PATH, "utf8");
   if (!source.includes(REMOTE_IMPORT)) {
     throw new Error(`Expected to find the network import ${REMOTE_IMPORT} in ${FUNCTION_PATH}`);
@@ -139,6 +147,7 @@ async function bootFunction({ worldOverrides = {}, authUserId = USER_ID, freeKey
           SUPABASE_SERVICE_ROLE_KEY: "stub-service-role-key",
           GROQ_API_KEY: "stub-groq-key",
           GROQ_FREE_API_KEY: freeKey,
+          GROQ_FREE_ACCOUNT_VERIFIED: freeKey ? "true" : "",
           GEMINI_API_KEY: "paid-gemini-key",
           OPENROUTER_API_KEY: "unverified-openrouter-key",
         })[key] ?? "",
@@ -149,7 +158,36 @@ async function bootFunction({ worldOverrides = {}, authUserId = USER_ID, freeKey
     },
   };
   const originalFactory = globalThis.__supabaseStubFactory;
-  globalThis.__supabaseStubFactory = createStubClientFactory(db);
+  globalThis.__supabaseStubFactory = () => ({
+    ...createStubClientFactory(db)(),
+    rpc: async (name, args) => {
+      if (name === "song_creative_fingerprint") {
+        assert.equal(args.p_song_id, "song-1");
+        return { data: db.songs[0].creative_changed ? "e".repeat(64) : "c".repeat(64), error: null };
+      }
+      if (name === "persist_current_interpretation_world") {
+        const song = db.songs[0];
+        const approved = db.song_interpretations.find((entry) => entry.id === song.current_interpretation_id);
+        if (!approved || approved.status !== "confirmed" ||
+            approved.id !== args.p_expected_interpretation_id ||
+            approved.creative_source_fingerprint !== args.p_expected_creative_source_fingerprint ||
+            song.creative_changed || !song.interpretation_confirmed_at ||
+            args.p_existing_world_report_id !== (db.world_reports[0]?.id ?? null)) {
+          return { data: null, error: { message: "WORLD_INTERPRETATION_SOURCE_STALE" } };
+        }
+        const payload = { ...args.p_payload,
+          interpretation_id: approved.id,
+          interpretation_source_fingerprint: approved.source_fingerprint,
+          confirmed_at: null };
+        const existing = db.world_reports[0];
+        if (existing) Object.assign(existing, payload);
+        else db.world_reports.push({ id: "world-1", project_id: PROJECT_ID,
+          world_id: "00000000-0000-4000-8000-000000000001", revision_number: 1, ...payload });
+        return { data: db.world_reports[0], error: null };
+      }
+      throw new Error("Unexpected World RPC: " + name);
+    },
+  });
   // The handler resolves the caller's token with fetch() on every request, so
   // this stub must stay installed for the lifetime of the tests.
   globalThis.fetch = async (input, options) => {
@@ -161,6 +199,7 @@ async function bootFunction({ worldOverrides = {}, authUserId = USER_ID, freeKey
     assert.equal(String(input), "https://api.groq.com/openai/v1/chat/completions");
     assert.equal(options.headers.Authorization, "Bearer " + freeKey);
     assert.equal(JSON.parse(options.body).model, "openai/gpt-oss-20b");
+    if (onProviderRequest) onProviderRequest(db);
     return new Response(JSON.stringify(providerStatus === 200
       ? { id: "fixture-request", choices: [{ message: { content: JSON.stringify(uiPayload().changes) } }] }
       : { error: { message: "Fixture quota exhausted" } }), { status: providerStatus });
@@ -187,6 +226,39 @@ test("World generation uses only the dedicated free key even when paid providers
   assert.equal(report.provider, "groq");
   assert.equal(report.confirmed_at, null);
   assert.equal(providerCalls.length, 1);
+});
+
+test("in-flight World generation cannot persist after the artist changes creative input", async () => {
+  const { handler, db, providerCalls } = await bootFunction({
+    freeKey: "fixture-free-key",
+    onProviderRequest: (state) => { state.songs[0].creative_changed = true; state.songs[0].lyrics = "An updated verse"; },
+  });
+  const before = structuredClone(db.world_reports);
+  const response = await request(handler, { method: "POST", body: { projectId: PROJECT_ID } });
+  assert.equal(response.status, 409);
+  assert.equal((await response.json()).error.code, "WORLD_INTERPRETATION_SOURCE_STALE");
+  assert.deepEqual(db.world_reports, before);
+  assert.equal(providerCalls.length, 1);
+});
+
+test("World Reveal rejects a newly confirmed interpretation while provider inference is in flight", async () => {
+  const { handler, db } = await bootFunction({
+    freeKey: "fixture-free-key",
+    onProviderRequest: (state) => { state.songs[0].current_interpretation_id = "newer-interp"; },
+  });
+  const before = structuredClone(db.world_reports);
+  const response = await request(handler, { method: "POST", body: { projectId: PROJECT_ID } });
+  assert.equal(response.status, 409);
+  assert.equal((await response.json()).error.code, "WORLD_INTERPRETATION_SOURCE_STALE");
+  assert.deepEqual(db.world_reports, before);
+});
+
+test("World Reveal is server-blocked until an artist-confirmed interpretation has current audio lineage", async () => {
+  const { handler, providerCalls } = await bootFunction({ freeKey: "fixture-free-key", interpretationEnabled: false });
+  const response = await request(handler, { method: "POST", body: { projectId: PROJECT_ID } });
+  assert.equal(response.status, 409);
+  assert.equal((await response.json()).error.code, "SONG_INTERPRETATION_REQUIRED");
+  assert.equal(providerCalls.length, 0);
 });
 
 test("World quota failure makes one free-key request with no paid fallback", async () => {
@@ -329,6 +401,23 @@ test("save_edits cannot silently mutate a confirmed world", async () => {
   const body = await response.json();
   assert.equal(body.error.code, "WORLD_ALREADY_CONFIRMED");
   assert.equal(db.world_reports[0].mood.tone, "original");
+});
+
+test("a pending World with stale interpretation lineage cannot be edited or confirmed", async () => {
+  const { handler, db } = await bootFunction({
+    worldOverrides: {
+      interpretation_id: "older-interpretation",
+      interpretation_source_fingerprint: "a".repeat(64),
+    },
+  });
+  const before = structuredClone(db.world_reports[0]);
+  const edit = await patch(handler, uiPayload());
+  assert.equal(edit.status, 409);
+  assert.equal((await edit.json()).error.code, "WORLD_INTERPRETATION_LINEAGE_CHANGED");
+  const confirm = await patch(handler, { projectId: PROJECT_ID, action: "confirm" });
+  assert.equal(confirm.status, 409);
+  assert.equal((await confirm.json()).error.code, "WORLD_INTERPRETATION_LINEAGE_CHANGED");
+  assert.deepEqual(db.world_reports[0], before);
 });
 
 test("save_edits requires an existing completed world report", async () => {

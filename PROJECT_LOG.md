@@ -1378,3 +1378,17 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 **CI:** Source commit `09255f2d` completed all five GitHub workflow runs successfully: Modal Motion Proof Offline `39366905066`, BeatVision Production CI `39366904976`, Legacy storage ownership security `39366905081`, Generation enqueue security `39366905040`, and Database migration replay `39366904936`. CI is source-level evidence and cannot prove live generation.
 
 **Remaining:** An owner-authenticated read-only `modal_capability` response is not yet observed. Existing stored browser session attachment failed and there is no confirmed live signed-in browser session available to this agent. No provider job ID, GPU execution, MP4, decoded duration, private output upload or user playback has been proven. Do not interpret the existing Hugging Face clip as Modal success; do not submit inference before the agreed production capability gate.
+
+## 2026-10-21 — Evidence-specific AI Director citations — review-only
+
+**Objective:** Continue BragoraForge Song Intelligence with artist-confirmed input controlling downstream AI outputs, while preserving production and recorded backups.
+
+**Root cause:** The AI Director returned all known interpretation evidence IDs for any free-text provider answer, even when the model did not actually cite those sources. This falsely implied claim-specific grounding and weakened the requirement that responses follow artist-confirmed inputs.
+
+**Changes:** Review-only `supabase/functions/beatvision-ai-director/index.ts` now asks for JSON `answer` and `evidence_refs`, validates that citations are nonempty and exist in the artist-confirmed interpretation or approved evidence, and returns only those cited IDs. Invalid, uncited or invented references fail closed with `DIRECTOR_PROVIDER_INVALID`. Updated `scripts/test/ai-director.edge.test.mjs` with positive and negative provider-stub regressions. No external model call, no GPU, no permission change, and no production data mutation.
+
+**Verification:** GitHub exact-head tests and build required after this documentation commit; do not claim success before runs finish. Prior head `0f5c398060b344fd6db4aa76ab2c9fc08a0013f9` passed three offline CI workflows. A protected Vercel preview exists but authenticated preview end-to-end tests remain unverified.
+
+**Release state:** PR #139 remains draft, not merged. Production Song Intelligence migrations absent. Avoid production merge/deploy until the configured Vercel production branch and deploy effects are confirmed, existing migration divergence is reconciled, and recovery prerequisites are met. Existing local database and 253-object Storage archives have checksum and standalone file-recovery verification; isolated PostgreSQL restoration and off-device copy remain unverified.
+
+**Next:** Verify green CI at the latest review head, verify merge isolation and authenticated artist interaction, then request release approval for actual production changes.

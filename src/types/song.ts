@@ -66,9 +66,70 @@ export interface Song {
   lyrics: string | null;
   creative_direction: string | null;
   notes: string | null;
+  visual_style_preferences?: {
+    preferred_visual_style?: string;
+    imagery_mode?: "realistic" | "stylized";
+    narrative_mode?: "narrative" | "abstract";
+    unwanted_themes?: string;
+  } | null;
   analysis_status: SongAnalysisStatus;
   analysis: SongAnalysis | null;
+  audio_source_fingerprint?: string | null;
+  audio_source_fingerprint_algorithm?: string | null;
+  audio_source_size?: number | null;
+  audio_source_fingerprinted_at?: string | null;
+  current_interpretation_id?: string | null;
+  interpretation_confirmed_at?: string | null;
   analyzed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type SongInterpretationSource = "ai" | "manual" | "artist_edited";
+export type SongInterpretationStatus = "draft" | "confirmed" | "superseded";
+
+export interface SongInterpretationEvidence {
+  id: string;
+  kind: "signal" | "lyrics" | "artist" | "manual";
+  reference: string;
+  excerpt?: string | null;
+  value?: unknown;
+}
+
+export interface SongInterpretationClaim {
+  text: string;
+  confidence: number | "artist_authored" | null;
+  evidence_refs: string[];
+}
+
+export interface SongInterpretationDocument {
+  schema_version: number;
+  summary: string;
+  themes: string[];
+  emotional_arc: string;
+  visual_motifs: string[];
+  narrative: string;
+  claims: SongInterpretationClaim[];
+}
+
+export interface SongInterpretationDraft {
+  id: string;
+  project_id: string;
+  song_id: string;
+  audio_revision: string;
+  source_fingerprint: string;
+  source_fingerprint_algorithm: string;
+  version: number;
+  status: SongInterpretationStatus;
+  source_type: SongInterpretationSource;
+  interpretation: SongInterpretationDocument;
+  evidence: SongInterpretationEvidence[];
+  provider: string | null;
+  model: string | null;
+  provenance: Record<string, unknown>;
+  created_by: string;
+  confirmed_by: string | null;
+  confirmed_at: string | null;
   created_at: string;
   updated_at: string;
 }

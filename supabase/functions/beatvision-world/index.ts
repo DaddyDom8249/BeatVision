@@ -134,6 +134,46 @@ class HttpError extends Error {
   }
 }
 
+async function loadCurrentSongInterpretation(admin: any, projectId: string) {
+  const { data: song, error: songError } = await admin
+    .from("songs")
+    .select("id,audio_revision,audio_source_fingerprint,current_interpretation_id,interpretation_confirmed_at")
+    .eq("project_id", projectId)
+    .maybeSingle();
+  if (songError) throw new Error(songError.message);
+  if (!song?.current_interpretation_id) return { song, interpretation: null };
+
+  const { data: interpretation, error: interpretationError } = await admin
+    .from("song_interpretations")
+    .select("id,song_id,audio_revision,source_fingerprint,creative_source_fingerprint,status,version,confirmed_at")
+    .eq("id", song.current_interpretation_id)
+    .eq("song_id", song.id)
+    .maybeSingle();
+  if (interpretationError) throw new Error(interpretationError.message);
+  const { data: creativeFingerprint, error: creativeError } = await admin.rpc("song_creative_fingerprint", { p_song_id: song.id });
+  if (creativeError) throw new Error("SONG_CREATIVE_FINGERPRINT_FAILED");
+  return { song, interpretation, creativeFingerprint };
+}
+
+function interpretationLineageMatchesCurrent(report: any, current: { song: any; interpretation: any; creativeFingerprint?: string }) {
+  // Legacy World records remain readable and editable. They have no new
+  // interpretation to compare, and existing submitted jobs must not be
+  // invalidated solely because the lineage columns were added later.
+  if (!report?.interpretation_id) return true;
+  const { song, interpretation } = current;
+  return Boolean(
+    song?.audio_source_fingerprint &&
+    song.interpretation_confirmed_at &&
+    interpretation?.status === "confirmed" &&
+    interpretation.id === report.interpretation_id &&
+    interpretation.audio_revision === song.audio_revision &&
+    interpretation.source_fingerprint === song.audio_source_fingerprint &&
+    interpretation.creative_source_fingerprint &&
+    interpretation.creative_source_fingerprint === current.creativeFingerprint &&
+    report.interpretation_source_fingerprint === interpretation.source_fingerprint
+  );
+}
+
 // The artist edits world content only. Keys outside the editable world fields
 // (status, confirmed_at, project_id, provider metadata) are rejected outright
 // with 400 so an edit can never silently unlock, re-point, or mislabel a world,
@@ -295,6 +335,14 @@ Deno.serve(async (req) => {
           return json(req, { error: { code: "WORLD_REVISION_REQUIRES_CONFIRMED", message: "Create a revision only after the current World has been confirmed." } }, 409);
         }
 
+        // A new World revision must be regenerated from the currently
+        // confirmed interpretation. Legacy Worlds without this lineage stay
+        // readable, but are never silently combined with newer meaning.
+        const current = await loadCurrentSongInterpretation(admin, projectId);
+        if (!existing.interpretation_id || !interpretationLineageMatchesCurrent(existing, current)) {
+          return json(req, { error: { code: "WORLD_INTERPRETATION_LINEAGE_CHANGED", message: "Confirm the current song interpretation and reveal a new World before creating this revision." } }, 409);
+        }
+
         const edits = readWorldEdits(body);
         const merged = mergeWorldForValidation(existing, edits);
         validateWorld(merged);
@@ -327,6 +375,8 @@ Deno.serve(async (req) => {
           provider_request_id: existing.provider_request_id,
           error_code: null,
           error_message: null,
+          interpretation_id: current.interpretation.id,
+          interpretation_source_fingerprint: current.interpretation.source_fingerprint,
           confirmed_at: null,
         };
 
@@ -362,6 +412,11 @@ Deno.serve(async (req) => {
       if (body.action === "save_edits") {
         if (existing.confirmed_at) {
           return json(req, { error: { code: "WORLD_ALREADY_CONFIRMED", message: "Confirmed worlds are immutable. Use create_revision to make an explicit new revision." } }, 409);
+        }
+
+        const current = await loadCurrentSongInterpretation(admin, projectId);
+        if (!interpretationLineageMatchesCurrent(existing, current)) {
+          return json(req, { error: { code: "WORLD_INTERPRETATION_LINEAGE_CHANGED", message: "This World belongs to an older song interpretation. Reveal a new World before editing it." } }, 409);
         }
 
         const edits = readWorldEdits(body);
@@ -418,6 +473,11 @@ Deno.serve(async (req) => {
 
       if (existing.confirmed_at) return json(req, { report: existing });
 
+      const current = await loadCurrentSongInterpretation(admin, projectId);
+      if (!interpretationLineageMatchesCurrent(existing, current)) {
+        return json(req, { error: { code: "WORLD_INTERPRETATION_LINEAGE_CHANGED", message: "This World belongs to an older song interpretation. Reveal and confirm a new World before locking it." } }, 409);
+      }
+
       const now = new Date().toISOString();
       const { data: confirmed, error } = await admin
         .from("world_reports")
@@ -440,7 +500,8 @@ Deno.serve(async (req) => {
       return json(req, { report: confirmed });
     }
 
-    if (existing?.confirmed_at) {
+    const regenerateForInterpretation = existing?.confirmed_at && body.action === "regenerate_for_interpretation";
+    if (existing?.confirmed_at && !regenerateForInterpretation) {
       return json(req, {
         error: {
           code: "WORLD_ALREADY_CONFIRMED",
@@ -449,17 +510,9 @@ Deno.serve(async (req) => {
       }, 409);
     }
 
-    const geminiKey = env("GEMINI_API_KEY");
-    const openRouterKey = env("OPENROUTER_API_KEY");
-    // The owner supplied a separate Free-plan account key. Never use the
-    // legacy paid GROQ_API_KEY or an unverified provider as a fallback.
-    const groqKey = env("GROQ_FREE_API_KEY");
-    const freeAccountVerified = Boolean(groqKey);
-    if (!freeAccountVerified) return json(req, {error:{code:"PROVIDER_COST_UNVERIFIED",message:"Configure the dedicated free-account key before revealing a World."}, report:{...(existing || {}),status:"unavailable",error_code:"PROVIDER_COST_UNVERIFIED",error_message:"The dedicated free-account key is not configured."}}, 503);
-
     const { data: song, error: songError } = await admin
       .from("songs")
-      .select("id,title,artist,lyrics,creative_direction,notes,analysis,analysis_status")
+      .select("id,title,artist,lyrics,creative_direction,notes,visual_style_preferences,analysis,analysis_status,audio_revision,audio_source_fingerprint,current_interpretation_id,interpretation_confirmed_at")
       .eq("project_id", projectId)
       .maybeSingle();
 
@@ -472,6 +525,46 @@ Deno.serve(async (req) => {
         },
       }, 409);
     }
+
+    const { data: currentLineage, error: currentLineageError } = await admin
+      .from("song_interpretations")
+      .select("id,song_id,audio_revision,source_fingerprint,creative_source_fingerprint,status,source_type,interpretation,evidence,version,confirmed_at")
+      .eq("id", song.current_interpretation_id)
+      .eq("song_id", song.id)
+      .maybeSingle();
+    if (currentLineageError) throw new Error(currentLineageError.message);
+    const interpretation = currentLineage;
+    if (!song.audio_source_fingerprint || !song.interpretation_confirmed_at ||
+        !interpretation || interpretation.status !== "confirmed" ||
+        interpretation.source_fingerprint !== song.audio_source_fingerprint ||
+        interpretation.audio_revision !== song.audio_revision) {
+      return json(req, {
+        error: {
+          code: "SONG_INTERPRETATION_REQUIRED",
+          message: "Confirm an evidence-grounded song interpretation before revealing the World. Manual interpretation remains available in Song Intake Notes.",
+        },
+      }, 409);
+    }
+
+    const { data: currentCreative, error: creativeError } = await admin.rpc("song_creative_fingerprint", { p_song_id: song.id });
+    if (creativeError || !interpretation.creative_source_fingerprint ||
+        interpretation.creative_source_fingerprint !== currentCreative) {
+      return json(req, { error: { code: "SONG_INTERPRETATION_SOURCE_STALE", message: "Save and reconfirm the current lyrics, Notes, and music analysis before generating a World." } }, 409);
+    }
+
+    if (regenerateForInterpretation && existing.interpretation_id === interpretation.id) {
+      return json(req, { error: { code: "WORLD_INTERPRETATION_UNCHANGED", message: "The current World already belongs to this interpretation." } }, 409);
+    }
+
+    const geminiKey = env("GEMINI_API_KEY");
+    const openRouterKey = env("OPENROUTER_API_KEY");
+    // A key alone does not prove a no-charge account. New inference is
+    // enabled only after the owner explicitly verifies the dedicated account.
+    const groqKey = env("GROQ_FREE_API_KEY");
+    const freeAccountVerified = Boolean(groqKey) && env("GROQ_FREE_ACCOUNT_VERIFIED") === "true";
+    if (!freeAccountVerified) return json(req, regenerateForInterpretation
+      ? { error: { code: "PROVIDER_COST_UNVERIFIED", message: "A verified no-charge provider is required to generate a revised World. Your previous confirmed World remains unchanged." } }
+      : {error:{code:"PROVIDER_COST_UNVERIFIED",message:"Configure and verify the dedicated no-charge provider before revealing a World."}, report:{...(existing || {}),status:"unavailable",error_code:"PROVIDER_COST_UNVERIFIED",error_message:"The provider's no-charge eligibility is unverified."}}, 503);
 
     const analysis = song.analysis && typeof song.analysis === "object"
       ? song.analysis as Record<string, unknown>
@@ -496,6 +589,7 @@ Deno.serve(async (req) => {
       artist: cleanText(song.artist, 240),
       creative_direction: cleanText(song.creative_direction, 500),
       notes: cleanText(song.notes, 300),
+      artist_visual_style: song.visual_style_preferences ?? {},
       lyrics,
       musical_analysis: {
         duration_seconds: analysis.duration_seconds ?? null,
@@ -512,6 +606,13 @@ Deno.serve(async (req) => {
         vocal_presence: analysis.vocal_presence ?? null,
         mood_tags: compactArray(analysis.mood_tags, 6, 100),
         genre_tags: compactArray(analysis.genre_tags, 6, 100),
+      },
+      interpretation: {
+        id: interpretation.id,
+        version: interpretation.version,
+        source_fingerprint: interpretation.source_fingerprint,
+        document: interpretation.interpretation,
+        evidence: interpretation.evidence,
       },
     };
 
@@ -756,6 +857,10 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
         error_code: "WORLD_MODEL_FAILED",
         error_message: providerErrors.join(" | ").slice(0, 2400),
       };
+      // Never overwrite an immutable confirmed World when regeneration fails.
+      if (regenerateForInterpretation) {
+        return json(req, { error: { code: "WORLD_MODEL_FAILED", message: "The new World could not be generated. The previously confirmed World was preserved." } }, 503);
+      }
       const result = existing
         ? await admin.from("world_reports").update(payload).eq("id", existing.id).select("*").single()
         : await admin.from("world_reports").insert({ project_id: projectId, ...payload }).select("*").single();
@@ -785,32 +890,52 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
           artist: source.artist,
           has_lyrics: Boolean(source.lyrics || source.musical_analysis.transcript),
           duration_seconds: source.musical_analysis.duration_seconds,
+          interpretation_id: interpretation.id,
+          interpretation_version: interpretation.version,
+          interpretation_source_fingerprint: interpretation.source_fingerprint,
         },
         model_output: world,
       },
       provider: generated.provider,
       provider_request_id: generated.requestId,
+      interpretation_id: interpretation.id,
+      interpretation_source_fingerprint: interpretation.source_fingerprint,
       error_code: null,
       error_message: null,
     };
 
-    const result = existing
-      ? await admin
-          .from("world_reports")
-          .update(payload)
-          .eq("id", existing.id)
-          .eq("project_id", projectId)
-          .is("confirmed_at", null)
-          .select("*")
-          .single()
-      : await admin
-          .from("world_reports")
-          .insert({ project_id: projectId, world_id: crypto.randomUUID(), revision_number: 1, ...payload })
-          .select("*")
-          .single();
+    if (regenerateForInterpretation) {
+      const revised = await admin.rpc("persist_interpretation_world_revision", {
+        p_project_id: projectId,
+        p_actor_id: userId,
+        p_parent_world_report_id: existing.id,
+        p_payload: payload,
+      });
+      if (revised.error || !revised.data) {
+        return json(req, { error: { code: "WORLD_REVISION_CONFLICT", message: "The World or interpretation changed during regeneration. Previous approved material remains unchanged." } }, 409);
+      }
+      return json(req, { report: revised.data });
+    }
 
-    if (result.error) throw new Error(result.error.message);
-
+    // Use one owner-checked PostgreSQL transaction to revalidate the exact
+    // confirmed interpretation and current creative fingerprint after inference.
+    // No direct Edge-Function insert/update may race with new artist input.
+    const result = await admin.rpc("persist_current_interpretation_world", {
+      p_project_id: projectId,
+      p_actor_id: userId,
+      p_expected_interpretation_id: interpretation.id,
+      p_expected_creative_source_fingerprint: currentCreative,
+      p_existing_world_report_id: existing?.id ?? null,
+      p_payload: payload,
+    });
+    if (result.error || !result.data) {
+      return json(req, {
+        error: {
+          code: "WORLD_INTERPRETATION_SOURCE_STALE",
+          message: "The song interpretation or World changed during generation. Reload and retry; no outdated World was saved.",
+        },
+      }, 409);
+    }
     return json(req, { report: result.data });
   } catch (error) {
     if (error instanceof HttpError) {
