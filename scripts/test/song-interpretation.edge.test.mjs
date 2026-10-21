@@ -43,7 +43,7 @@ function interpretationDocument(summary = "A return from tension into resolve.")
   };
 }
 
-async function boot({ authUserId = USER_ID, providerVerified = false, providerResponse = null } = {}) {
+async function boot({ authUserId = USER_ID, providerVerified = false, providerResponse = null, onProviderRequest = null } = {}) {
   const db = makeDb();
   const source = await readFile(FUNCTION_PATH, "utf8");
   assert.ok(source.includes(REMOTE_IMPORT));
@@ -74,7 +74,28 @@ async function boot({ authUserId = USER_ID, providerVerified = false, providerRe
           db.song_interpretation_audit_events.push({ event_type: "source_fingerprinted" });
           return { data: true, error: null };
         }
+        if (name === "song_creative_fingerprint") {
+          return { data: createHash("sha256").update(JSON.stringify({
+            title: song.title ?? null, artist: song.artist ?? null, lyrics: song.lyrics ?? null,
+            creative_direction: song.creative_direction ?? null, notes: song.notes ?? null,
+            visual_style_preferences: song.visual_style_preferences ?? null,
+            analysis_status: song.analysis_status ?? null, analysis: song.analysis ?? null,
+          })).digest("hex"), error: null };
+        }
         if (name === "save_song_interpretation_draft") {
+          if (args.p_source_type === "ai") {
+            const live = {
+              title: song.title ?? null, artist: song.artist ?? null, lyrics: song.lyrics ?? null,
+              creative_direction: song.creative_direction ?? null, notes: song.notes ?? null,
+              visual_style_preferences: song.visual_style_preferences ?? null,
+              analysis_status: song.analysis_status ?? null, analysis: song.analysis ?? null,
+            };
+            const hash = createHash("sha256").update(JSON.stringify(live)).digest("hex");
+            if (JSON.stringify(args.p_provenance.source_snapshot) !== JSON.stringify(live) ||
+                args.p_provenance.expected_creative_source_fingerprint !== hash) {
+              return { data: null, error: { message: "SONG_INTERPRETATION_CREATIVE_SOURCE_STALE" } };
+            }
+          }
           const version = db.song_interpretations.length + 1;
           db.song_interpretations.forEach((row) => { if (row.status === "draft") row.status = "superseded"; });
           const row = {
@@ -124,6 +145,7 @@ async function boot({ authUserId = USER_ID, providerVerified = false, providerRe
     calls++;
     assert.equal(url, "https://api.groq.com/openai/v1/chat/completions");
     assert.equal(options.headers.Authorization, "Bearer fixture-free-key");
+    if (onProviderRequest) onProviderRequest(db);
     return new Response(JSON.stringify(providerResponse ?? {
       id: "fixture-request",
       choices: [{ message: { content: JSON.stringify({
@@ -169,7 +191,7 @@ test("AI proposal requires explicit verification and validates evidence referenc
   const draft = (await response.json()).draft;
   assert.equal(draft.source_type, "ai");
   assert.deepEqual(draft.interpretation.claims[0].evidence_refs, ["signal.duration", "artist.direction"]);
-  assert.equal(good.calls(), 5, "AI proposal should fingerprint, reserve, call mock, save, and release once");
+  assert.equal(good.calls(), 6, "AI proposal should fingerprint, bind creative source, reserve, call mock, save, and release");
 
   const bad = await boot({ providerVerified: true, providerResponse: {
     choices: [{ message: { content: JSON.stringify({ ...interpretationDocument(), claims: [{ text: "Unsupported", confidence: 1, evidence_refs: ["not-source-evidence"] }] }) } }],
@@ -177,6 +199,17 @@ test("AI proposal requires explicit verification and validates evidence referenc
   const rejected = await request(bad.handler, { projectId: PROJECT_ID, action: "propose" });
   assert.equal(rejected.status, 502);
   assert.equal(bad.db.song_interpretations.length, 0);
+});
+
+test("late AI interpretation cannot save after artist edits during provider inference", async () => {
+  const { handler, db } = await boot({
+    providerVerified: true,
+    onProviderRequest: (state) => { state.songs[0].lyrics = "The artist rewrote the entire second verse"; },
+  });
+  const response = await request(handler, { projectId: PROJECT_ID, action: "propose" });
+  assert.equal(response.status, 409);
+  assert.equal((await response.json()).error.code, "SONG_INTERPRETATION_SOURCE_STALE");
+  assert.equal(db.song_interpretations.length, 0);
 });
 
 test("confirmation is owner-bound and explicit", async () => {
