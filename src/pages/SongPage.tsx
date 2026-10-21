@@ -15,8 +15,12 @@ interface Props {
 
 export default function SongPage({ projectId }: Props) {
   const { project, loading: projectLoading, error: projectError } = useProject(projectId);
-  const { song, loading: songLoading, error: songError, reload } = useSong(projectId);
-  const interpretation = useSongInterpretation(projectId, song?.id, song?.current_interpretation_id);
+  const { song, loading: songLoading, error: songError, schemaReady, reload } = useSong(projectId);
+  const interpretation = useSongInterpretation(
+    schemaReady ? projectId : undefined,
+    schemaReady ? song?.id : undefined,
+    schemaReady ? song?.current_interpretation_id : undefined
+  );
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [lyrics, setLyrics] = useState("");
@@ -150,12 +154,12 @@ export default function SongPage({ projectId }: Props) {
         lyrics: lyrics.trim() || null,
         creative_direction: creativeDirection.trim() || null,
         notes: notes.trim() || null,
-        visual_style_preferences: {
+        ...(schemaReady ? { visual_style_preferences: {
           preferred_visual_style: preferredVisualStyle.trim(),
           imagery_mode: imageryMode || null,
           narrative_mode: narrativeMode || null,
           unwanted_themes: unwantedThemes.trim(),
-        }
+        } } : {}),
       };
       if (audio) payload.audio_path = audioPath;
       const result = song
@@ -296,7 +300,7 @@ export default function SongPage({ projectId }: Props) {
               />
             </label>
 
-            <fieldset className="song-style-preferences">
+            {schemaReady && <fieldset className="song-style-preferences">
               <legend>Artist-directed visual style (optional)</legend>
               <label>Preferred visual style
                 <input value={preferredVisualStyle} onChange={(event) => { setPreferredVisualStyle(event.target.value); setSaved(false); }}
@@ -316,7 +320,7 @@ export default function SongPage({ projectId }: Props) {
                 <textarea rows={2} value={unwantedThemes} onChange={(event) => { setUnwantedThemes(event.target.value); setSaved(false); }}
                   placeholder="Things Bragora must not introduce without approval" />
               </label>
-            </fieldset>
+            </fieldset>}
 
             <label>
               Notes
@@ -328,7 +332,7 @@ export default function SongPage({ projectId }: Props) {
               />
             </label>
 
-            <SongInterpretationPanel
+            {schemaReady ? <SongInterpretationPanel
               song={song}
               loading={interpretation.loading}
               working={interpretation.working}
@@ -341,7 +345,7 @@ export default function SongPage({ projectId }: Props) {
               confirm={interpretation.confirm}
               onConfirmed={reload}
               songIntakeDirty={songIntakeDirty}
-            />
+            /> : <p className="form-message" role="status">Song Intelligence is not enabled on this database yet. You can save song details and audio in compatibility mode. Artist interpretations, visual-style preferences, and new World generation require the backend migrations.</p>}
 
             <button className="primary-button large" disabled={saving || analyzing}>
               {saving ? "Saving Song…" : saved ? "Song Saved ✓" : "Save Song Details →"}
@@ -354,7 +358,7 @@ export default function SongPage({ projectId }: Props) {
               {song?.analysis_status === "completed" ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                   <p>Musical signal analysis is complete. Ready to reveal the visual world for this song.</p>
-                  <button type="button" className="primary-button large" onClick={continueToWorld}>
+                  <button type="button" className="primary-button large" disabled={!schemaReady} onClick={continueToWorld}>
                     Continue to World Reveal →
                   </button>
                 </div>

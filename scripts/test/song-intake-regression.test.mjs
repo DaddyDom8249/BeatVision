@@ -33,3 +33,16 @@ test('song intake separates analysis state and protects unsaved creator fields o
   }
   assert.doesNotMatch(source, /song\?\.visual_style_preferences\]/);
 });
+
+test('Song Intake keeps old-schema edits available while gating new creative intelligence', () => {
+  const hook = readFileSync(new URL('../../src/hooks/useSong.ts', import.meta.url), 'utf8');
+  const page = readFileSync(new URL('../../src/pages/SongPage.tsx', import.meta.url), 'utf8');
+  assert.match(hook, /isMissingNewSongColumn\(error\)/);
+  assert.match(hook, /\.select\(LEGACY_SONG_COLUMNS\)/);
+  assert.match(hook, /setSchemaReady\(compatible\)/);
+  assert.match(page, /schemaReady \? projectId : undefined/);
+  assert.match(page, /schemaReady \? \{ visual_style_preferences:/);
+  assert.match(page, /\{schemaReady \? <SongInterpretationPanel/);
+  assert.match(page, /disabled=\{!schemaReady\} onClick=\{continueToWorld\}/);
+  assert.match(page, /Song Intelligence is not enabled on this database yet/);
+});
