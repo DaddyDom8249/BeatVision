@@ -917,23 +917,25 @@ Avoid unsupported claims about genre, instruments, or musical facts. If analysis
       return json(req, { report: revised.data });
     }
 
-    const result = existing
-      ? await admin
-          .from("world_reports")
-          .update(payload)
-          .eq("id", existing.id)
-          .eq("project_id", projectId)
-          .is("confirmed_at", null)
-          .select("*")
-          .single()
-      : await admin
-          .from("world_reports")
-          .insert({ project_id: projectId, world_id: crypto.randomUUID(), revision_number: 1, ...payload })
-          .select("*")
-          .single();
-
-    if (result.error) throw new Error(result.error.message);
-
+    // Use one owner-checked PostgreSQL transaction to revalidate the exact
+    // confirmed interpretation and current creative fingerprint after inference.
+    // No direct Edge-Function insert/update may race with new artist input.
+    const result = await admin.rpc("persist_current_interpretation_world", {
+      p_project_id: projectId,
+      p_actor_id: userId,
+      p_expected_interpretation_id: interpretation.id,
+      p_expected_creative_source_fingerprint: currentCreative,
+      p_existing_world_report_id: existing?.id ?? null,
+      p_payload: payload,
+    });
+    if (result.error || !result.data) {
+      return json(req, {
+        error: {
+          code: "WORLD_INTERPRETATION_SOURCE_STALE",
+          message: "The song interpretation or World changed during generation. Reload and retry; no outdated World was saved.",
+        },
+      }, 409);
+    }
     return json(req, { report: result.data });
   } catch (error) {
     if (error instanceof HttpError) {
