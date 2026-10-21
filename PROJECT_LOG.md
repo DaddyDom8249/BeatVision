@@ -1392,3 +1392,17 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 **Release state:** PR #139 remains draft, not merged. Production Song Intelligence migrations absent. Avoid production merge/deploy until the configured Vercel production branch and deploy effects are confirmed, existing migration divergence is reconciled, and recovery prerequisites are met. Existing local database and 253-object Storage archives have checksum and standalone file-recovery verification; isolated PostgreSQL restoration and off-device copy remain unverified.
 
 **Next:** Verify green CI at the latest review head, verify merge isolation and authenticated artist interaction, then request release approval for actual production changes.
+
+## 2026-10-21 — Song Intelligence review corrections and isolated integration merge
+
+**Scope:** Fix the two exact-head Codex review findings in PR #139 and integrate the verified Song Intelligence source safely without production deployment.
+
+**P1 fixed:** The Song Interpretation Edge Function captures the artist source snapshot and creative fingerprint before inference. Forward-only migration `20261021000000_song_intelligence_atomic_output_guards.sql` rechecks them under the locked song row when saving AI drafts; stale provider output cannot supersede artist-authored drafts. Added concurrent-edit Edge test and PostgreSQL negative contract.
+
+**P2 fixed:** World Reveal initial/unconfirmed save now uses owner-checked `persist_current_interpretation_world` RPC, which locks project/song and verifies the exact current confirmed interpretation and creative fingerprint before persisting. Added concurrent lyric edit/new-confirmation Edge tests and real PostgreSQL positive/negative fixture.
+
+**Evidence:** PR #139 reviewed exact source `35a268284e55ac3b1cc9d157b1d376f1353e96b7`, all three GitHub workflows successful: BeatVision Production CI, Database migration replay (real isolated PostgreSQL), Modal Motion Proof (Offline). Both Codex review threads received evidence and were resolved.
+
+**Integration:** PR #139 merged `fc59db8b2406262ad60601f5c0721c012bde84b3` into isolated `integration/bragoraforge-song-intelligence-20261021` created from feature base `7fb7649ad517db558acc445ec0fa478558ed359d`. Default `main` and the existing feature branch unchanged. Primary and secondary Vercel production deployments unchanged. Production Supabase still has 83 prior migrations; all five new Song Intelligence versions absent.
+
+**Recovery and release boundaries:** Encrypted local PostgreSQL and 253-object Storage packages passed archive/key/checksum and standalone file-recovery checks. Isolated full PostgreSQL restore and off-device archive/key protection remain unverified. Exact-commit Vercel preview was SSO protected; signed-in feature E2E and live provider output remain unverified. No production migration, Edge deploy, model inference, paid GPU use, credential change or source rollout performed. Separate owner authorization and release preflight required.
