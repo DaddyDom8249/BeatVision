@@ -341,10 +341,19 @@ async function saveDraft(admin: any, projectId: string, song: Record<string, any
   });
   if (result.error) {
     const message = String(result.error.message || "");
-    if (message.includes("STALE") || message.includes("REVISION")) throw new HttpError("SONG_INTERPRETATION_SOURCE_STALE", 409, "The audio changed while this draft was being saved. Reload and retry.");
+    if (message.includes("STALE") || message.includes("REVISION")) throw new HttpError("SONG_INTERPRETATION_SOURCE_STALE", 409, "The song, audio, or artist direction changed while this draft was being saved. Reload and retry.");
     throw new Error(message || "Interpretation draft could not be saved.");
   }
   return { draft: result.data, source };
+}
+
+function creativeSourceSnapshot(song: Record<string, any>) {
+  return {
+    title: song.title ?? null, artist: song.artist ?? null, lyrics: song.lyrics ?? null,
+    creative_direction: song.creative_direction ?? null, notes: song.notes ?? null,
+    visual_style_preferences: song.visual_style_preferences ?? null,
+    analysis_status: song.analysis_status ?? null, analysis: song.analysis ?? null,
+  };
 }
 
 async function proposeAi(admin: any, projectId: string, song: Record<string, any>, userId: string) {
@@ -356,6 +365,16 @@ async function proposeAi(admin: any, projectId: string, song: Record<string, any
   if (!verified || env("BRAGORA_INTERPRETATION_ENABLED") !== "true" || !key
       || env("BRAGORA_GROQ_MODEL") !== model) {
     return { unavailable: true, source };
+  }
+  // Bind the proposal to the exact artist fields loaded before inference.
+  // The SQL save RPC compares both this snapshot and the fingerprint while
+  // locking the current song, so late provider results cannot overwrite edits.
+  const sourceSnapshot = creativeSourceSnapshot(song);
+  const { data: expectedCreativeHash, error: creativeError } = await admin.rpc(
+    "song_creative_fingerprint", { p_song_id: song.id }
+  );
+  if (creativeError || typeof expectedCreativeHash !== "string" || !/^[0-9a-f]{64}$/.test(expectedCreativeHash)) {
+    throw new HttpError("SONG_INTERPRETATION_SOURCE_STALE", 409, "Reload the song before requesting a new interpretation.");
   }
   const evidence = sourceEvidence(song, source.fingerprint);
   const system = [
@@ -396,6 +415,8 @@ async function proposeAi(admin: any, projectId: string, song: Record<string, any
   return saveDraft(admin, projectId, song, userId, { interpretation, evidence }, "ai", {
     provider: "verified-free-provider",
     model,
+    expected_creative_source_fingerprint: expectedCreativeHash,
+    source_snapshot: sourceSnapshot,
     provider_request_id: data?.id || null,
   }, source);
   } finally {
