@@ -28,6 +28,15 @@ function legacyRenderHref(value: unknown): string | null {
   }
 }
 
+/** Candidate only: Shotstack status S3 output expires after 24 h.
+ * A separately hosted stage CDN copy may remain. Never accept arbitrary URLs.
+ */
+function hostedShotstackRenderHref(value: unknown): string | null {
+  const temporary = legacyRenderHref(value);
+  if (!temporary) return null;
+  return "https://cdn.shotstack.io/au/stage" + new URL(temporary).pathname;
+}
+
 function productionErrorMessage(error: unknown) {
   const message = typeof error === "string" ? error : getCreativeErrorMessage(error, "Production request failed.");
   if (message.includes("ASSEMBLY_MOTION_NOT_FULLY_APPROVED")) {
@@ -137,6 +146,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const busy = generating || motionGenerating || assemblyRunning || assetLoading;
   const externalLegacyRenderHref = assemblyJob?.status === "completed" && finalVideo?.downloadable !== true
     ? legacyRenderHref(finalVideo?.video_url) : null;
+  const hostedLegacyRenderHref = externalLegacyRenderHref
+    ? hostedShotstackRenderHref(externalLegacyRenderHref) : null;
+  const finalPreviewUrl = hostedLegacyRenderHref || finalVideo?.video_url || null;
   const sceneSeconds = scene ? Math.max(0, Number(scene.end_time) - Number(scene.start_time)) : 0;
   const savedProof = motionAssetJob?.output?.arena_status_response?.result?.verification;
   const savedProofSeconds = Number(savedProof?.measured_duration_seconds ?? savedProof?.video_duration_seconds);
@@ -746,19 +758,19 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
               {" "}Provider stage: {assemblyJob.output?.arena_status_response?.result?.status ?? assemblyJob.output?.arena_response?.result?.status ?? "Not reported"}.
               {" "}Last checked: {assemblyJob.output?.last_polled_at ?? "Not checked yet"}.
             </p>}
-            {finalVideo?.video_url ? <video key={finalVideo.video_url} src={finalVideo.video_url} controls playsInline
-              onCanPlay={() => setFinalPlayback({ url: finalVideo.video_url, state: "ready" })}
-              onError={() => setFinalPlayback({ url: finalVideo.video_url, state: "failed" })}
+            {finalPreviewUrl ? <video key={finalPreviewUrl} src={finalPreviewUrl} controls playsInline
+              onCanPlay={() => setFinalPlayback({ url: finalPreviewUrl, state: "ready" })}
+              onError={() => setFinalPlayback({ url: finalPreviewUrl, state: "failed" })}
               style={{ width: "100%", maxHeight: 600, borderRadius: 12 }} /> : <p>No completed final video exists yet. Assembly requires every approved scene to have an approved real motion clip.</p>}
             {!finalVideo && <p role="status">{assemblyReadiness.message}</p>}
-            {finalVideo?.video_url && finalPlayback?.url === finalVideo.video_url && finalPlayback?.state === "failed" && <p role="alert">The saved final-video URL could not be played on this device. A completed job does not establish that the file is still accessible.</p>}
+            {finalVideo?.video_url && finalPlayback?.url === finalPreviewUrl && finalPlayback?.state === "failed" && <p role="alert">The saved final-video URL could not be played on this device. A completed job does not establish that the file is still accessible.</p>}
             {finalVideo?.video_url && finalVideo.downloadable !== true && <p role="status">A final render is recorded, but its database record is marked non-downloadable. Do not assume the external render URL is a durable export.</p>}
-            {externalLegacyRenderHref && <p role="status">The original render may still be hosted externally. <a href={externalLegacyRenderHref} target="_blank" rel="noopener noreferrer">Open original render (availability unverified)</a>. If the file opens, use your browser's own save control. This does not start generation or change approvals.</p>}
+            {hostedLegacyRenderHref && <p role="status">The original Shotstack render link was temporary. This player checks the provider-hosted copy without generating new media. <a href={hostedLegacyRenderHref} target="_blank" rel="noopener noreferrer">Open hosted render (availability unverified)</a>. A hosted copy is not yet an independently archived export.</p>}
             <div className="production-actions">
               {!finalVideo && !pending(assemblyJob) && <button className="primary-button" disabled={busy || !assemblyReadiness.ready} onClick={() => void assembleFinal()}>{assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}</button>}
               {pending(assemblyJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkAssemblyStatus()}>{assemblyRunning ? "Checking…" : "Check Assembly Status"}</button>}
-              {finalVideo?.video_url && finalVideo.downloadable === true && finalPlayback?.url === finalVideo.video_url && finalPlayback?.state === "ready" && <button className="secondary-button" disabled={downloading} onClick={() => void downloadFinalVideo()}>{downloading ? "Downloading…" : "Download Video"}</button>}
-              {finalVideo?.video_url && <span className="style-lock-badge">{finalPlayback?.url === finalVideo.video_url && finalPlayback?.state === "ready" ? "FINAL PREVIEW READY" : "RENDER RECORDED · PLAYBACK UNVERIFIED"}</span>}
+              {finalVideo?.video_url && finalVideo.downloadable === true && finalPlayback?.url === finalPreviewUrl && finalPlayback?.state === "ready" && <button className="secondary-button" disabled={downloading} onClick={() => void downloadFinalVideo()}>{downloading ? "Downloading…" : "Download Video"}</button>}
+              {finalVideo?.video_url && <span className="style-lock-badge">{finalPlayback?.url === finalPreviewUrl && finalPlayback?.state === "ready" ? "FINAL PREVIEW READY" : "RENDER RECORDED · PLAYBACK UNVERIFIED"}</span>}
             </div>
           </div>
 
