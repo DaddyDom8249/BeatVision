@@ -306,6 +306,11 @@
       "sha256": "50d8cb6ff41adefdf4e511e44875db0d2f745a7a1d981c824f59fd8faa7fcd01"
     },
     {
+      "file": "modal-prompt-delivery.patch",
+      "bytes": 1482,
+      "sha256": "6ad974c47b0af052c0229641a6e466799be9ad27ca25942146c09ff189e124e4"
+    },
+    {
       "file": "modal-transport-green.txt",
       "bytes": 1327,
       "sha256": "35fa88c2545de1a6b035a30c3bffa6abde41de2c783b5a217845c9754eed2a7f"
@@ -319,6 +324,11 @@
       "file": "modal-user-financial-evidence.json",
       "bytes": 3709,
       "sha256": "ba3cb96e4a9d2c58aae9f9ddfe2d76198c8612dee8c47fec907f36e048842593"
+    },
+    {
+      "file": "motion-output-diagnosis.json",
+      "bytes": 8917,
+      "sha256": "0f9b0b8e1f1f5cf77a4533e2c0709929b30a4fca830066eb0d8b08469f3d4cb5"
     },
     {
       "file": "npm-test.txt",
@@ -466,5 +476,6 @@
     "audit": "PASS",
     "build": "PASS"
   },
-  "latest_live_verification": "automatic-draft-limit15-verification.json"
+  "latest_live_verification": "automatic-draft-limit15-verification.json",
+  "latest_motion_investigation": "motion-output-diagnosis.json"
 }

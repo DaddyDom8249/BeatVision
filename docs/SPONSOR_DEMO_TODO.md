@@ -53,7 +53,7 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Corrected phone check completed exit0: app deployed, no backlog/running inputs, billed$0.00; GPU/model runtime and approved scene unverified; modal-control-plane-verified.json
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| IN_PROGRESS| T09.3 read-only investigation of reported absent Modal motion; existing completed jobs/assets found. No GPU submission or creative approval authorized by this investigation.
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| No approved sponsor scene; T09 worker/account access and remaining financial/execution prerequisites unresolved; $0 spend-limit screenshot now verified
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| No T10 output; neither codec nor subject-motion/playback proof exists for this mission
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
@@ -1552,3 +1552,60 @@ confirmation; no active item remains. T05–T08 need their dependent approvals
 and eligible image generation; T09–T14 retain their recorded external gates.
 Next task: Artist reviews their own generated interpretation and explicitly
 confirms it. No agent creative approval, GPU request, billable fallback or merge.
+
+### T09.3 — Investigate user-reported missing Modal motion using existing output
+
+TASK ID: T09 (sole IN_PROGRESS item).
+Objective: Distinguish no job/output from a saved MP4 lacking subject movement,
+and identify an evidenced configuration/integration defect before any correction.
+Initial status: UNKNOWN for the user-reported current failure; T09 was BLOCKED.
+Evidence inspected: User reports Modal produces no motion and Hugging Face
+barely produced one. Read-only DB now shows four completed Modal jobs/four saved
+Modal assets, including two jobs in project534adf58-b9a3-4f5f-bb92-eaeb5aea0833
+at22:59/23:01. The current mission agent did not submit them. Completed/asset
+status is not motion proof; previous no-output statements apply to their earlier
+observation time and isolated mission fixture. HF has existing saved assets;
+row count does not establish subject animation or acceptable quality.
+Confirmed blocker/hypothesis: Worker uses LTX0.9.5 with49frames/20steps; only
+viewing/decoding actual existing output against its source can distinguish model
+failure, image/prompt constraints and incorrect playback/persistence. Do not
+increase frames/steps, replace models or submit retries based on speculation.
+Required files: existing worker/adapter/source and job metadata (read-only),
+private existing media if accessible, checklist/log/sanitized evidence only.
+Commit: current source95c48824d453c01672abb2109adb633171a4ed01; deployed source
+identity will be recorded if inspected. No source correction proposed yet.
+Tests performed / verification: pending bounded existing-output inspection.
+No new GPU call, polling of uncertain inference, spend-setting change, content
+approval or mutation to existing customer projects/assets. No blanket model-
+quality, subject-motion, playback or full-song success claim.
+Next task: Finish T09.3 with evidence or a precise access/input blocker; T10/T11
+acceptance remains separate and dependent on authorized approved inputs.
+
+#### T09.3a — Preserve approved movement in the bounded Modal prompt
+
+Confirmed defect: live generationv63 sends title/long visual_direction before
+movement_direction. Actual saved scenes produce508/562 prompt tokens; the pinned
+LTX T5 tokenizer and existing worker128-token budget drop both approved movement
+instructions in a CPU-only reproduction. Existing candidate ordering retains
+both. This is a confirmed prompt-delivery defect, not proof of the sole cause
+of weak rendered animation. Saved directions explicitly request minimal motion.
+Root cause: unreleased prompt-priority correction was coupled to the larger
+candidate controller, while the compatible live controller kept the old builder.
+Required files: existing modalBridgeSubmit block from committed candidate source;
+focused regression test and exact small production-source patch, task/log/evidence.
+Expected outcome: compatible function-only release puts approved movement before
+optional long atmosphere/lyrics; all other live controller code/files, approvals,
+source assets, model and spending safeguards remain byte-for-byte unchanged.
+Verification: reproduce old live behavior in the real extracted submit function;
+new test against existing corrected function/compatibility-patched production;
+pinned CPU tokenizer reproduces both actual inputs; tests/audit/build/CI and
+retrieved deployed source/hash. No GPU inference, new model or content approval.
+Visible improved subject action remains unverified until separately authorized
+inference and playback/identity checks. No customer text/media published in Git.
+
+T09.3a pre-release checks: real extracted livev63 submission fails1/3 tests for
+lost movement, while the exact compatibility patch passes3/3. Existing candidate
+plus transport18/18; full435/435,0 skipped,audit/build PASS. Patch reuses committed
+e02a3e636b8638a03a6280b021c720d00ba31a41 prompt block and changes no other live
+controller logic/dependency. Exact patch and media/tokenizer evidence recorded.
+No inference or customer data/approval mutation. Release/CI still pending.
