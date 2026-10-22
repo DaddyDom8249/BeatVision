@@ -74,7 +74,7 @@ test('Arena refuses oversized Content-Length prior to reading response', async (
   const runtime = await loadGeneration({},env);
   const original = globalThis.fetch;
   globalThis.fetch=async()=>new Response('x', {headers: {'content-length': String(20*1024*1024)}});
-  try {await assert.rejects(runtime.arena('/v2/scene-image','GET',null,'id-1'),/ARENA_GATEWAY_RESPONSE_TOO_LARGE/);}
+  try {await assert.rejects(runtime.arena('/v2/scene-image','POST',{},'id-1'),/ARENA_GATEWAY_RESPONSE_TOO_LARGE/);}
   finally {globalThis.fetch=original; await runtime.cleanup();}
 });
 
@@ -85,7 +85,7 @@ test('Arena stops streamed oversized JSON without unbounded memory use', async (
   globalThis.fetch=async()=>new Response(new ReadableStream({
     start(controller) {controller.enqueue(chunk);controller.enqueue(chunk);controller.close();}
   }));
-  try {await assert.rejects(runtime.arena('/v2/scene-image','GET',null,'id-1'),/ARENA_GATEWAY_RESPONSE_TOO_LARGE/);}
+  try {await assert.rejects(runtime.arena('/v2/scene-image','POST',{},'id-1'),/ARENA_GATEWAY_RESPONSE_TOO_LARGE/);}
   finally {globalThis.fetch=original; await runtime.cleanup();}
 });
 
