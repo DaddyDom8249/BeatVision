@@ -45,7 +45,7 @@ ID| Task| Dependency| Status| Evidence
 T01| Verify current repository, deployments, and integrations| None| PASS| CONFIRMED identities, schema/function gaps and candidate CI: evidence/sponsor-demo-20261022/baseline.json
 T02| Verify sponsor registration and login| T01| PASS| signup-result.json, login-result.json: actual confirmed fresh account; desktop/Pixel 7 sign-in HTTP 200 and settled empty dashboard
 T03| Verify project creation and song upload| T02| PASS| Initial create/upload/reload PASS; current 254.48-second audio read-only playback/hash verified on desktop/Pixel 7 after source change
-T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Latest live check503. User screenshots confirm GROQ_FREE_API_KEY name exists in shown project; six enabling settings not visible, actual absence/values UNKNOWN. Name/Value setup clarification supplied; provider-secrets-screenshot-observations.json. No artist confirmation.
+T04| Verify music analysis and interpretation confirmation| T03| IN_PROGRESS| New owner screenshot shows all six settings; visible digest prefixes match expected non-secret values. One live post-remediation verification; no approvals or GPU submission.
 T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed World GET/gate verified; no artist-confirmed interpretation or World approval
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
@@ -1141,3 +1141,115 @@ phone request, new inference, build or repeat of accepted422 tests.
 Verification: BLOCKED on current provider configuration; screenshot evidence is
 not proof settings are valid or inference works. Next task remains external
 setup; no agent approval of creative content.
+
+
+### T04.10 — Acceptance verification after evidenced operator remediation
+
+TASK ID: T04 (sole IN_PROGRESS item).
+Objective: Verify the operator's newly evidenced six-setting configuration
+through the real frontend, without bypassing any provider or approval safeguard.
+Initial status: BLOCKED; new screenshot1000088114 shows all six setting rows
+previously not visible. SHA-256 prefix comparisons match the expected non-secret
+true/model/quota values. Prefix matches are recorded as observations, not proof
+of an API key's validity or the precise target project ref (not visible).
+Evidence inspected: provider-settings-remediation-screenshot.json; current
+frontend64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52, backend interpretationv2.
+Confirmed blocker: previous configuration approach closed after3 terminal503
+results; no attempt without a changed external condition was made. The owner
+has now supplied direct evidence of remediated settings. One acceptance check
+is justified by that external change; total previous requests remain recorded,
+not reset/hidden. This is not a repeat of an uncertain job or a phone CLI retry.
+Required files: checklist, sanitized result/evidence manifest, release/log only;
+no source code, schema or deployment change planned.
+Expected outcome: real unapproved proposal with persisted provider/model/source
+lineage, or exact new terminal failure. Preserve earlier manualv1 and null
+confirmed pointer; no creative confirmation, fallback provider or GPU action.
+Verification method: real frontend login; validate isolated fixture title/Notes/
+source SHA/null pointer; one Propose click; persist status before bounded body
+read; read-only database confirmation of result/version history. Owner-confirmed
+Free account, exact model and existing bounded quota remain enforced.
+Commit: evidence pending; app source/deployments unchanged.
+Next task: T04 still requires real analysis acceptance and artist confirmation;
+no dependent creative step will be approved by the agent.
+
+
+T04.10 proposal result: actual frontend HTTP200 creates AI draftv2
+(de9d52af-5fc2-45c7-838c-36d4766d9ba5), verified-free-provider,
+openai/gpt-oss-20b, matching original audio SHA. UI shows DRAFTV2, no error,
+manual fallback hidden and Continue disabled. Read-only DB confirms v1 retained
+with status superseded (content preserved), v2 draft, both unconfirmed. Exact
+source/provenance verified; configuration blocker resolved for interpretation.
+
+### T04.11 — Verify actual transcription after configuration repair
+
+TASK ID: T04 (sole IN_PROGRESS item).
+Objective: Verify frontend audio analysis calls the configured dedicated Free
+Groq transcription provider and persists its real result.
+Initial status: UNKNOWN; local DSP already PASS, prior transcription intentionally
+aborted before network. New key/free-account configuration now evidenced and AI
+interpretation successfully completed, so one genuine transcription is justified.
+Evidence inspected: current SongPage.analyzeAudio, analyze-songv41, unchanged
+synthetic16s fixture and live DB analysis status/source; no current transcript or
+transcription_provider exists. Previously saved fallback detail is historical.
+Confirmed blocker: none established for this configured execution; result pending.
+Required files: checklist and sanitized evidence/log only; no source change.
+Expected outcome: real transcription HTTP200, provider/model metadata and original
+16s timeline persisted; retain both draft versions, null confirmed pointer and
+original audio. Instrumental fixture cannot prove sung-lyric accuracy.
+Verification method: real canonical frontend Re-Analyze once after exact fixture
+checks; record RPC/HTTP status and sanitized provider metadata; reload and read
+saved DB/browser fields; Android emulation reads only, no second inference.
+Existing free-account/cost checks retained; no paid fallback, approval or GPU.
+Commit: evidence pending; source/deployments unchanged. Never resubmit if outcome
+uncertain. Next task after T04 analysis checks remains explicit artist review;
+no dependent World/Style approval may be inferred.
+
+
+T04.11 actual result: transcription HTTP200 completed, Groq Whisper model metadata
+and original16s duration persisted; no errors after action. DB independently
+confirms provider/model. Sanitized result records transcript length only; no
+lyric-accuracy assertion. Saved transcription_status is still unavailable.
+Read-only reload harness sampled the initial MANUAL FALLBACK READY state before
+history finished; its assertion failed. DB confirms AIv2 still draft; this is
+not evidence of lost content. Do not repeat inference for that harness race.
+
+### T04.12 — Successful transcription must clear stale failure status
+
+TASK ID: T04 (sole IN_PROGRESS item).
+Objective: Persist completed transcription state after genuine provider success.
+Initial status: FAILED. Direct frontend200/DB metadata shows successful Groq
+transcription with transcription_status=unavailable; prior fallback status had
+been failed. Local-analysis RPC supplies unavailable, and the Edge success path
+spreads existing analysis without overriding status/detail.
+Evidence inspected: groq-transcription-result.json, live read-only DB metadata,
+SongPage.analyzeAudio, analyze-songv41 success analysis construction.
+Confirmed defect/root cause: inherited status can contradict real provider
+success, and previously persisted status_detail can remain after successful
+transcription. This also feeds misleading status into bounded interpretation
+context. Correct status only inside the already successful, authorized provider
+path, with the same atomic revision-aware RPC.
+Required files: supabase/functions/beatvision-analyze-song/index.ts;
+scripts/test/analyze-song.edge.test.mjs; checklist/log/evidence.
+Expected outcome: actual success returns/persists transcription_status=completed
+and clears old failure detail, preserving timing/DSP, ownership and revision
+checks. No change to provider, key choice, cost gate, retries or customer data.
+Verification method: real-handler regression red/green for prior unavailable/
+failed analysis; related/full tests, audit/build; authorized existing-function
+release; one bounded post-fix frontend transcription justified by changed success
+metadata. No repeated interpretation inference. Correct the read-only reload
+harness to wait for actual DRAFTV2 rather than initial blank UI state.
+Commit: pending. Next task remains artist review after T04 checks; no automatic
+creative approval or GPU submission.
+
+
+T04.12 pre-release checks: regression red18 PASS/1 FAIL reproduces unavailable
+status after provider success; focused23/23 PASS after two-field correction;
+full423/423 PASS,0 skipped, production audit and TypeScript/Vite build PASS.
+API inventory/get-function currently reports analyze-song version42 before this
+repair, with the unchanged prior bundle9c2a4666 and source byte-identical to the
+committed baseline; older script metadata said41 from the recorded deployment
+receipt. This version discrepancy is recorded rather than inferred away. Private
+rollback snapshot preserves actual current metadata/source. No third-party
+source changes are overwritten. Repair changes only success transcription_status
+to completed and clears status_detail; all cost/auth/revision/RPC gates retained.
+Next release must record its actual returned version, not assume42.

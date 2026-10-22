@@ -1,0 +1,38 @@
+{
+  "observed_at": "2026-10-22T21:18:14.772605+00:00",
+  "task": "T04.10",
+  "source_image": "1-1000088114.jpg",
+  "source_sha256": "b1ffbd9045fdee1190189575a6ea21c3960a77db51fec8a97fa3a4c8d64d7629",
+  "evidence_type": "Directly inspected user screenshot; six newly visible settings and non-secret value digest comparisons",
+  "settings": {
+    "GROQ_FREE_ACCOUNT_VERIFIED": {
+      "expected_non_secret_value": "true",
+      "visible_sha256_prefix_matches": true
+    },
+    "BRAGORA_GROQ_FREE_VERIFIED": {
+      "expected_non_secret_value": "true",
+      "visible_sha256_prefix_matches": true
+    },
+    "BRAGORA_INTERPRETATION_ENABLED": {
+      "expected_non_secret_value": "true",
+      "visible_sha256_prefix_matches": true
+    },
+    "BRAGORA_AI_DIRECTOR_ENABLED": {
+      "expected_non_secret_value": "true",
+      "visible_sha256_prefix_matches": true
+    },
+    "BRAGORA_GROQ_MODEL": {
+      "expected_non_secret_value": "openai/gpt-oss-20b",
+      "visible_sha256_prefix_matches": true
+    },
+    "BRAGORA_AI_DAILY_QUOTA": {
+      "expected_non_secret_value": "3",
+      "visible_sha256_prefix_matches": true
+    }
+  },
+  "exact_project_ref_visible": false,
+  "runtime_configuration_validity": "UNKNOWN until live verification",
+  "credential_values_read": false,
+  "financial_authorization": "Existing owner-confirmed Groq Free account retained",
+  "gpu_requests": 0
+}

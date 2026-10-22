@@ -1,0 +1,87 @@
+{
+  "observed_at": "2026-10-22T21:20:19.445370+00:00",
+  "task": "T04.11",
+  "frontend_commit": "64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52",
+  "analysis_function_version": 41,
+  "project_id": "ad266b2c-3e9b-45fb-b8ab-5aabacfe3ac4",
+  "financial_authorization": "Owner-confirmed Groq Free account; server dedicated-key/free-account gate unchanged",
+  "transcription_submissions": 1,
+  "proposal_submissions": 0,
+  "creative_approvals": 0,
+  "gpu_submissions": 0,
+  "accuracy_scope": "Synthetic 16s instrumental fixture; no sung-lyric accuracy claim",
+  "rpc_responses": [
+    {
+      "name": "save_local_song_analysis",
+      "http_status": 204
+    },
+    {
+      "name": "save_local_song_analysis",
+      "http_status": 204
+    }
+  ],
+  "contexts": [
+    {
+      "name": "desktop",
+      "draft_badge": "MANUAL FALLBACK READY",
+      "continue_disabled": true,
+      "interpretation_summary_characters": 0,
+      "horizontal_overflow": false,
+      "displayed_errors": []
+    }
+  ],
+  "before": {
+    "id": "1c05471d-571c-4187-9002-d990db05283f",
+    "audio_revision": "ef1c82b3-404a-4bfa-9400-bcdb59582c70",
+    "audio_source_fingerprint": "b82c95bf0fd6fb5c0f9ca8d6accffe6cf356cbd2dfd67fd5dfb5beaa8bfa1a25",
+    "current_interpretation_id": null,
+    "analysis_status": "completed",
+    "analysis": {
+      "duration_seconds": 16,
+      "analysis_method": "browser_audio_decode",
+      "transcription_provider": null,
+      "transcription_model": null,
+      "transcription_method": null,
+      "transcription_status": "failed",
+      "transcript_characters": 0,
+      "segments": 0,
+      "word_timestamps": 0,
+      "local_sections": 4
+    }
+  },
+  "http_status": 200,
+  "response_status": "completed",
+  "response_analysis": {
+    "duration_seconds": 16,
+    "analysis_method": "browser_audio_decode",
+    "transcription_provider": "groq",
+    "transcription_model": "whisper-large-v3-turbo",
+    "transcription_method": "groq_whisper",
+    "transcription_status": "unavailable",
+    "transcript_characters": 2,
+    "segments": 1,
+    "word_timestamps": 1,
+    "local_sections": 4
+  },
+  "frontend_errors_after_analysis": [],
+  "after": {
+    "id": "1c05471d-571c-4187-9002-d990db05283f",
+    "audio_revision": "ef1c82b3-404a-4bfa-9400-bcdb59582c70",
+    "audio_source_fingerprint": "b82c95bf0fd6fb5c0f9ca8d6accffe6cf356cbd2dfd67fd5dfb5beaa8bfa1a25",
+    "current_interpretation_id": null,
+    "analysis_status": "completed",
+    "analysis": {
+      "duration_seconds": 16,
+      "analysis_method": "browser_audio_decode",
+      "transcription_provider": "groq",
+      "transcription_model": "whisper-large-v3-turbo",
+      "transcription_method": "groq_whisper",
+      "transcription_status": "unavailable",
+      "transcript_characters": 2,
+      "segments": 1,
+      "word_timestamps": 1,
+      "local_sections": 4
+    }
+  },
+  "harness_error": "AssertionError: {'name': 'desktop', 'draft_badge': 'MANUAL FALLBACK READY', 'continue_disabled': True, 'interpretation_summary_characters': 0, 'horizontal_overflow': False, 'displayed_errors': []}"
+}

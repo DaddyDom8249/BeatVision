@@ -135,6 +135,8 @@ Deno.serve(async (req) => {
       transcription_provider: "groq",
       transcription_model: "whisper-large-v3-turbo",
       transcription_method: "groq_whisper",
+      transcription_status: "completed",
+      status_detail: "",
     };
 
     // Song and project duration are updated in one service-only transaction.

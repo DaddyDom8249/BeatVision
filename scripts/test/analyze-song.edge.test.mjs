@@ -157,6 +157,30 @@ test("free-key transcription preserves decoded timing and prior signal analysis"
   assert.equal(storageBucketCalls.at(-1).bucket, "songs");
 });
 
+test("successful transcription replaces unavailable or failed status and clears stale failure detail", async () => {
+  for (const status of ["unavailable", "failed"]) {
+    const analysis = { duration_seconds: 16, bpm: 117.5,
+      sections: [{ start_time: 0, end_time: 16 }],
+      transcription_status: status, status_detail: "Previous transcription could not run." };
+    const { handler, db, providerCalls } = await bootFunction({
+      freeKey: "fixture-free-key", analysis, groqData: { text: "Fixture transcript", duration: 15.8 },
+    });
+    const response = await call(handler, { projectId: PROJECT_ID });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    for (const saved of [body.analysis, db.songs[0].analysis]) {
+      assert.equal(saved.transcription_status, "completed", status);
+      assert.equal(saved.status_detail || "", "", "do not retain a resolved failure");
+      assert.equal(saved.transcript, "Fixture transcript");
+      assert.equal(saved.transcription_model, "whisper-large-v3-turbo");
+      assert.equal(saved.duration_seconds, 16);
+      assert.equal(saved.bpm, analysis.bpm);
+      assert.deepEqual(saved.sections, analysis.sections);
+    }
+    assert.equal(providerCalls.length, 1, "do not retry successful inference");
+  }
+});
+
 test("audio replaced during Groq request cannot overwrite new-track analysis or project duration", async () => {
   const original = { duration_seconds: 249.126908314, sections: [{ start_time: 0, end_time: 249.126908314 }] };
   const { handler, db, providerCalls, rpcCalls } = await bootFunction({

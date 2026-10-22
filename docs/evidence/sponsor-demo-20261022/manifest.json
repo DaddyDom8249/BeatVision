@@ -2,7 +2,7 @@
   "source_commit": "64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52",
   "production_frontend_commit": "64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52",
   "production_generation_version": 61,
-  "scope": "Partial sponsor journey; three terminal interpretation configuration503 results, latest after owner-saved settings; no successful AI/GPU inference or creative approvals",
+  "scope": "Partial sponsor journey; real AI interpretation v2 and real Groq transcription verified on isolated fixture; saved transcription status correction pending release; no creative approvals or GPU motion",
   "private_evidence": "Transcript-bearing candidate screenshots and account/session secrets excluded from Git",
   "files": [
     {
@@ -146,6 +146,21 @@
       "sha256": "940ff57ddf39bd045e847bac3657b54e66ce0c48d85cc81904db7bfc6393ca89"
     },
     {
+      "file": "groq-remediated-proposal-result.json",
+      "bytes": 1345,
+      "sha256": "ca69d34f95f4e13cec3ed4f895d7a2ed7c343c9e1607823eb1f958f9f779051c"
+    },
+    {
+      "file": "groq-remediated-proposal.png",
+      "bytes": 130327,
+      "sha256": "d6be038fc6675ed25a48c15fa9a89615ac6e7aebf8007c8c19b587e1e4d6bf37"
+    },
+    {
+      "file": "groq-transcription-result.json",
+      "bytes": 3052,
+      "sha256": "5120155eb4e27b1e217240a62b87b389d55f22f229bfd9067cf8e5a4a5e954b8"
+    },
+    {
       "file": "intake-result.json",
       "bytes": 957,
       "sha256": "56bad92ad6a5cb482b69a4ba89e1fccac6fabb0d2e47e748ae56d5b4ff27a03d"
@@ -276,9 +291,19 @@
       "sha256": "a68a06e7018a06351509f1352242efef65a7dfd2fe8fa50197abad532276e428"
     },
     {
+      "file": "provider-settings-remediation-screenshot.json",
+      "bytes": 1379,
+      "sha256": "ce5dcf513cf7a3156db9aa5338aae45988ccb5f529724b02d18456bf144390e8"
+    },
+    {
       "file": "release-runtime-preflight.json",
       "bytes": 289,
       "sha256": "9c8c3c0809d8c543f4963179d81bbe5b36a54e66222d3b6a5b71f11159996a01"
+    },
+    {
+      "file": "remediated-ai-draft-initial-loading.png",
+      "bytes": 149431,
+      "sha256": "e1be8d71184e055648d9221797555d614f62ad37dc94357f188379b96ad18499"
     },
     {
       "file": "remote-validation.json",
@@ -324,6 +349,11 @@
       "file": "traced-app-browser-green.json",
       "bytes": 1621,
       "sha256": "4c09f33fa49c3b7b1d91f5b5fec91b039568672517d2e85dde74efb9ea5d34d0"
+    },
+    {
+      "file": "transcription-status-tests.json",
+      "bytes": 1268,
+      "sha256": "8435a2c69db4cd3c95372ee3992ff74f3f48bd0f83c53ff4559a3d9f386526a5"
     }
   ],
   "log_normalization": {
