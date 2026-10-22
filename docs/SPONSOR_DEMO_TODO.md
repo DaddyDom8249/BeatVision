@@ -50,7 +50,7 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Bridge responded and phone preflight completed; read-only Modal job63c49cf7 awaits required on-phone approval; no GPU submission
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Old phone job failed127 outside Debian; corrected read-only jobb23ccbf0 queued using known working Debian wrapper; phone approval required; no GPU submission
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| No approved sponsor scene; T09 worker/account access and remaining financial/execution prerequisites unresolved; $0 spend-limit screenshot now verified
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| No T10 output; neither codec nor subject-motion/playback proof exists for this mission
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
@@ -818,3 +818,24 @@ Verification: BLOCKED by required phone approval and subsequent actual worker/
 financial/approved-input checks. Next: resume this same job when its result
 arrives; never substitute historical usage or mere bridge status for GPU proof.
 All mandatory statuses remain T01–T03 PASS/T04–T14 BLOCKED; no IN_PROGRESS item.
+
+
+### T09 read-only command retry2 — owner requested approval resend
+
+Objective: resend a working non-inference Modal account/status check.
+Initial status: BLOCKED. Confirmed evidence: bridge online with heartbeat
+2026-10-22T19:52:48.452Z; old job63c49cf7-1070-4b9a-a3ab-df9cfa991942 is
+failed/exit127, “timeout: failed to run command /root/modal-env/bin/python:
+No such file or directory”. It was approved, but the command ran a Debian path
+outside Debian. Prior successful job3b56352a uses proot-distro login debian.
+Changed hypothesis for retry2: use that existing wrapper around the same bounded
+read-only CLI app list/billing summary and SDK Function.get_current_stats.
+No new install, credential inspection, GPU invocation or provider configuration.
+New approval requestb23ccbf0-449e-4e69-9a4d-32188083f5fa is queued; tool says
+“Required on phone”. User explicitly requested resending the approval request.
+Files changed: documentation/evidence only; app source remains2baa6a3041521a8646957b79cdedc50358ff420c for the last backend correction.
+Tests performed: prior command failure retrieved; successful wrapper inspected;
+new command NOT EXECUTED at queue receipt. Verification: BLOCKED pending bridge
+approval/execution result. Next: inspect this same new job; do not duplicate it
+or infer Modal/GPU readiness from queue acceptance. Attempt count2/3 for this
+read-only status-command blocker. No GPU submission.

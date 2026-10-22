@@ -232,8 +232,8 @@
     },
     {
       "file": "termux-resumed-checks.json",
-      "bytes": 1431,
-      "sha256": "142d2a75b58a0129eae9456995df17afb7197f493f19c065b4d7508de675aa29"
+      "bytes": 2304,
+      "sha256": "a522e61440bb12125e8144e18f536fe88a523c478a59478bd5ab5b7ba28d8585"
     },
     {
       "file": "traced-app-browser-green.json",

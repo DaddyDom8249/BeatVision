@@ -81,7 +81,9 @@ the checklist; a successful isolated test reused the same project/audio.
   missing configured-spend-limit evidence. $42.38 is usage-cap headroom arithmetic,
   not a confirmed remaining credit balance. Credit expiry is not displayed.
   Current provider account/worker checks await the bridge-required phone approval
-  for read-only job63c49cf7. Bridge retry succeeded and a phone preflight completed;
+  for corrected read-only jobb23ccbf0. The previous check failed127 because its
+  Debian-only path was invoked outside Debian; retry uses the known working
+  proot-distro wrapper. Bridge retry succeeded and a phone preflight completed;
   heartbeat availability is intermittent. No direct credentials here. Exact worker/model
   availability and deployed revision remain unverified. See
   [screenshot observations](evidence/sponsor-demo-20261022/modal-user-financial-evidence.json).
@@ -160,5 +162,6 @@ audit/build PASS. Frontend and schema unchanged. Details:
 The immutable review host is separately missing from Edge origin allowlists;
 that is deferred because the reported failing origin is canonical. Use the main
 production URL for application checks. No genuine provider inference or creative
-approval occurred during this repair. Modal read-only status checks remain
-awaiting the phone bridge's required approval; no GPU submission was made.
+approval occurred during this repair. Modal read-only status checkb23ccbf0 remains
+queued for the phone bridge's required approval after the corrected Debian wrapper;
+no GPU submission was made.
