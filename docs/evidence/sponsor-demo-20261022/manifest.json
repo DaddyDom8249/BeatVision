@@ -2,7 +2,7 @@
   "source_commit": "64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52",
   "production_frontend_commit": "64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52",
   "production_generation_version": 61,
-  "scope": "Partial sponsor journey; one real interpretation proposal returned503; no successful AI/GPU inference or creative approvals",
+  "scope": "Partial sponsor journey; three terminal interpretation configuration503 results, latest after owner-saved settings; no successful AI/GPU inference or creative approvals",
   "private_evidence": "Transcript-bearing candidate screenshots and account/session secrets excluded from Git",
   "files": [
     {
@@ -119,6 +119,16 @@
       "file": "final-release-synthetic-regression.json",
       "bytes": 2410,
       "sha256": "ad488f4c35a21a1f485970f821d03167cf2dc5342f58656f8781404bdf940fc0"
+    },
+    {
+      "file": "groq-configured-proposal-result.json",
+      "bytes": 1373,
+      "sha256": "dc8e5b1f2e8430c8063732fe7c3cd739c59b1389687d0579a83796745d42fbe8"
+    },
+    {
+      "file": "groq-configured-proposal.png",
+      "bytes": 138970,
+      "sha256": "0d42a1ad31f65fb7b1feb6f11b8b305a0979b1786c16285873f976c5b2345d60"
     },
     {
       "file": "groq-confirmed-proposal-result.json",

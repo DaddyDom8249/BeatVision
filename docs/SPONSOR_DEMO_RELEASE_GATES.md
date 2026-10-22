@@ -279,3 +279,18 @@ Continue remains disabled, no content approved and no GPU request submitted.
 records exact deployment and CI39849524379:422/422 PASS,0 skipped,audit/build PASS.
 The complete sponsor journey remains BLOCKED until the prepared existing-project
 settings are applied using secure access and the artist performs creative review.
+
+
+## Owner reports settings saved — current result
+
+The owner reports the setup was saved. One actual canonical frontend retest at
+2026-10-22T20:40:20Z still returns503 PROVIDER_COST_UNVERIFIED; see
+[actual result](evidence/sponsor-demo-20261022/groq-configured-proposal-result.json).
+This fails before provider access: at least one verified flag, enable flag,
+nonempty dedicated key or exact pinned model is missing/mismatched. Individual
+values remain UNKNOWN. No new proposal/draft, provider success or GPU proof is
+claimed. Configuration submission approach is closed3/3; no automatic retry.
+The current non-secret clarification is whether GROQ_FREE_API_KEY exists in the
+same project, separately from the six pasted settings. Existing correct keys
+must be retained; no key value should be sent in chat. The owner-confirmed
+Free/no-paid-billing account attestation is not being requested again.

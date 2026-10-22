@@ -45,7 +45,7 @@ ID| Task| Dependency| Status| Evidence
 T01| Verify current repository, deployments, and integrations| None| PASS| CONFIRMED identities, schema/function gaps and candidate CI: evidence/sponsor-demo-20261022/baseline.json
 T02| Verify sponsor registration and login| T01| PASS| signup-result.json, login-result.json: actual confirmed fresh account; desktop/Pixel 7 sign-in HTTP 200 and settled empty dashboard
 T03| Verify project creation and song upload| T02| PASS| Initial create/upload/reload PASS; current 254.48-second audio read-only playback/hash verified on desktop/Pixel 7 after source change
-T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Groq Free attestation resolved. Deployed error-handling fix verified; actual frontend503 PROVIDER_COST_UNVERIFIED, manual fallback visible; missing/mismatched server settings require secure access/operator setup. No artist confirmation; interpretation-error-release.json
+T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Owner reports settings saved; actual canonical frontend still503 PROVIDER_COST_UNVERIFIED. Exact failing flag/key/model UNKNOWN; configuration verification3/3 closed. Asked only whether GROQ_FREE_API_KEY exists separately; groq-configured-proposal-result.json. No artist confirmation.
 T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed World GET/gate verified; no artist-confirmed interpretation or World approval
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
@@ -1066,3 +1066,57 @@ already has independent read-only control-plane/billing proof but needs financia
 execution prerequisites and an approved scene for remaining verification. T05–08
 and T10–14 remain blocked through the recorded creative/input dependencies. No
 active task, no new phone request, no extra tests for these documentation edits.
+
+
+### T04.9 — Verify owner-saved provider settings
+
+TASK ID: T04 (sole IN_PROGRESS item).
+Objective: Verify the saved configuration through one real authenticated frontend
+proposal, retaining financial, quota, source, ownership and creative gates.
+Initial status: BLOCKED on configuration; owner now reports “Saved”.
+Evidence inspected: exact release64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52 and
+current private fixture harness; previous two requests have terminal503 outcomes,
+not uncertain jobs. No source/deployment changes requested or planned.
+Confirmed blocker: current status after owner setup UNKNOWN pending this test.
+Root cause/testable hypothesis: owner-applied flags/key/model now satisfy the
+previously failing no-charge configuration gate. This is the third materially
+justified configuration verification after two terminal503 tests; settings have
+changed, not a blind retry. If unresolved, stop this approach after result.
+Required files: checklist, sanitized result artifact, evidence manifest and log.
+Expected outcome: a real unapproved AI draft or precise terminal error; preserve
+manualv1 and null confirmed pointer. No content confirmation or GPU operation.
+Verification method: actual canonical frontend login; assert fixture title/Notes/
+SHA and null confirmation; click Propose once; persist status before bounded
+body read; read-only DB version/provenance confirmation. No resubmission if
+completion is uncertain. Reuse accepted code tests/build; no source changes.
+Commit: pending evidence only; frontend64e6edf, backend2baa6a3 unchanged.
+Next task: T04 completion still needs analysis and explicit artist confirmation;
+T05 cannot be approved by the agent.
+
+
+### T04.9 result — settings reported saved; live provider gate still BLOCKED
+
+Evidence inspected: groq-configured-proposal-result.json, actual frontend on
+2026-10-22T20:40:20Z at frontend64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52,
+backend2baa6a3041521a8646957b79cdedc50358ff420c (interpretationv2).
+Tests performed: real authorized login and isolated fixture check PASS; one real
+Propose click returns terminal HTTP503/PROVIDER_COST_UNVERIFIED with
+manual_fallback=true. UI displays exact server message, DRAFTv1 and disabled
+Continue. No new draft or successful provider response is claimed. No creative
+confirmation, GPU job or settings edit was performed by the agent.
+Confirmed blocker: source's combined configuration guard still fails at least
+one of BRAGORA_GROQ_FREE_VERIFIED=true, BRAGORA_INTERPRETATION_ENABLED=true,
+nonempty GROQ_FREE_API_KEY or exact BRAGORA_GROQ_MODEL=openai/gpt-oss-20b.
+Individual values/presence are UNKNOWN; no keys were read or printed. This
+message occurs before quota reservation/provider fetch, not a provider401 or
+model-generation failure. Do not assume which field the owner missed.
+Files changed: checklist, release packet, log and sanitized evidence only.
+Commit: evidence update pending; source/deployments unchanged.
+Verification: FAILED for proposal acceptance; T04 BLOCKED on remaining server
+configuration. This closes configuration submission approach at3/3. No fourth
+provider attempt, CLI retry, replacement service or guard bypass queued.
+Next task: none executable until external configuration is corrected/verified;
+asked one specific non-secret question whether GROQ_FREE_API_KEY was saved
+separately from the six supplied lines, in the same project. Existing account
+Free-plan confirmation remains accepted. Do not request the key in chat.
+Accepted422-test/build/CI evidence remains valid for unchanged source; no repeat.
