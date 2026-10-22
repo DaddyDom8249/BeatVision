@@ -1,0 +1,31 @@
+name: BeatVision Completion Preflight
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  source_verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm test
+      - run: npm run production-audit
+      - run: npm run build
+      - name: Zero-cost completion readiness checks
+        run: node scripts/finish-preflight.mjs --output=beatvision-finish-readiness.json
+      - name: Publish evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beatvision-finish-readiness
+          path: beatvision-finish-readiness.json
+          if-no-files-found: warn
