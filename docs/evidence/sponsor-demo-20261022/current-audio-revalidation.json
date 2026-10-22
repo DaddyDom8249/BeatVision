@@ -1,0 +1,36 @@
+[
+  {
+    "context": "desktop",
+    "project_id": "a4841264-fac6-4ec9-ae07-04544493257c",
+    "test": "read-only current audio revalidation after source change",
+    "media": {
+      "duration": 254.48,
+      "audio_fetch_http": 200,
+      "size_bytes": 5649423,
+      "sha256": "2546e9caca999e16180b0196f61f57feb76dfb340db0e94d1d6f8efbd13e8343",
+      "currentTime": 0.265703,
+      "paused": false,
+      "error": null
+    },
+    "horizontal_overflow": false,
+    "writes": 0,
+    "transcription_or_generation_submissions": 0
+  },
+  {
+    "context": "android-emulated",
+    "project_id": "a4841264-fac6-4ec9-ae07-04544493257c",
+    "test": "read-only current audio revalidation after source change",
+    "media": {
+      "duration": 254.48,
+      "audio_fetch_http": 200,
+      "size_bytes": 5649423,
+      "sha256": "2546e9caca999e16180b0196f61f57feb76dfb340db0e94d1d6f8efbd13e8343",
+      "currentTime": 0.281938,
+      "paused": false,
+      "error": null
+    },
+    "horizontal_overflow": false,
+    "writes": 0,
+    "transcription_or_generation_submissions": 0
+  }
+]

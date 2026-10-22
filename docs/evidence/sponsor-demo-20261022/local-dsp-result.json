@@ -1,0 +1,8 @@
+{
+  "project_id": "a4841264-fac6-4ec9-ae07-04544493257c",
+  "test": "real production frontend local DSP with transcription request deliberately aborted before network; not a provider transcription test",
+  "blocked_transcription_requests": 1,
+  "page_text": "BEATVISION\n/\nSponsor QA 2026-10-22 \u2014 Intake Fixture\nANALYZED\n01\nSong\n02\nWorld\n03\nStyle\n04\nPlan\n05\nBriefs\n06\nWorkspace\n[test email]\n01 / SONG INTAKE\nSong Intake & Musical Direction\n\nThe audio track is the primary source material. Provide song details and artistic intent for BeatVision to analyze before World Reveal.\n\nSong title\nArtist\nAudio Upload (.mp3, .wav, .m4a)\nAUDIO TRACK PREVIEW\nRe-Analyze Music\nLyrics\nCreative Intent & Emotional Goal\nNotes\nSave Song Details \u2192\n\nMusical signal analysis is complete. Ready to reveal the visual world for this song.\n\nContinue to World Reveal \u2192\nMUSICAL SIGNAL ANALYSIS\nTrack Intelligence Breakdown\nDURATION\n16.0s\nBPM\n117.5\nMUSICAL KEY\nC major\nTIME SIGNATURE\nUnavailable\nGENRE & MOOD TAGS\nGenre N/A \u2022 Mood N/A\nSTRUCTURAL SEGMENTS\n4 structural regions detected \u2022 Instruments: N/A\n\nSong transcription failed: Failed to send a request to the Edge Function | Context: projectId=a4841264-fac6-4ec9-ae07-04544493257c, songId=dfdcb527-52c6-46af-9959-90a7f8555d4a, localAnalysis=completed | Local analysis was saved successfully.",
+  "local_fallback_visible": true,
+  "result": "PASS for real local DSP fallback only; full T04 BLOCKED"
+}

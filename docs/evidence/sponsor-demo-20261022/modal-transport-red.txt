@@ -1,0 +1,77 @@
+✖ Modal transport refuses redirects before forwarding proxy credentials (40.6535ms)
+✖ Modal transport rejects oversized Content-Length before reading the body (2.653444ms)
+✖ Modal transport bounds a chunked body without trusting Content-Length (21.44338ms)
+✖ Modal transport keeps the deadline active while a response body stalls (5.993573ms)
+✔ Modal transport accepts a complete maximum-size base64 clip envelope (82.295873ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 1
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 304.045874
+
+✖ failing tests:
+
+test at scripts/test/modal-motion-integration.test.mjs:155:1
+✖ Modal transport refuses redirects before forwarding proxy credentials (40.6535ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///workspace/BeatVision/scripts/test/modal-motion-integration.test.mjs:171:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /MODAL_HTTP_UNAVAILABLE/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/test/modal-motion-integration.test.mjs:179:1
+✖ Modal transport rejects oversized Content-Length before reading the body (2.653444ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///workspace/BeatVision/scripts/test/modal-motion-integration.test.mjs:185:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /MODAL_HTTP_RESPONSE_TOO_LARGE/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/test/modal-motion-integration.test.mjs:189:1
+✖ Modal transport bounds a chunked body without trusting Content-Length (21.44338ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///workspace/BeatVision/scripts/test/modal-motion-integration.test.mjs:200:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /MODAL_HTTP_RESPONSE_TOO_LARGE/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/test/modal-motion-integration.test.mjs:205:1
+✖ Modal transport keeps the deadline active while a response body stalls (5.993573ms)
+  AssertionError [ERR_ASSERTION]: headers must not clear the body-read deadline
+
+  false !== true
+
+      at TestContext.<anonymous> (file:///workspace/BeatVision/scripts/test/modal-motion-integration.test.mjs:220:12)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

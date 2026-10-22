@@ -1,0 +1,20 @@
+[
+  {
+    "context": "desktop",
+    "login_http": 200,
+    "dashboard_url": "https://beat-vision-theta.vercel.app/",
+    "dashboard_text": "BEATVISION\nSign in\nYOUR CREATIVE STUDIO\nBeatVision\nStart New Project\n\u2192\nStudio Sign In\nRECENT PROJECTS\nLoading\nYOUR CREATIVE STUDIO\nRecent Projects\n\nLoading your studio projects\u2026",
+    "page_errors": [],
+    "horizontal_overflow": false,
+    "logout_control_count": 0
+  },
+  {
+    "context": "android-emulated",
+    "login_http": 200,
+    "dashboard_url": "https://beat-vision-theta.vercel.app/",
+    "dashboard_text": "BEATVISION\nSign in\nYOUR CREATIVE STUDIO\nBeatVision\nStart New Project\n\u2192\nStudio Sign In\nRECENT PROJECTS\nLoading\nYOUR CREATIVE STUDIO\nRecent Projects\n\nLoading your studio projects\u2026",
+    "page_errors": [],
+    "horizontal_overflow": false,
+    "logout_control_count": 0
+  }
+]

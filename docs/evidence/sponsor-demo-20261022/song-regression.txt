@@ -1,0 +1,42 @@
+✔ project sign-in button renders AuthPage with next query, then returns to new project (120.297939ms)
+✔ direct /auth?next path and other existing routes retain correct component matching (259.127693ms)
+✔ project creation surfaces rejected authentication and leaves the form retryable (22.101517ms)
+✔ project creation stops on an auth error even when stale user data is present (22.93878ms)
+✔ project creation catches a rejected save and retries with the original title and owner (21.083584ms)
+✔ signed-in new project action opens creation, not the login screen (30.93957ms)
+✔ signed-in user clicking the legacy account link stays on the create form (19.07599ms)
+✔ failed audio replacement preserves persisted audio and cleans only the new upload (4.110598ms)
+✔ successful audio replacement preserves audio referenced by locked creative snapshots (0.47726ms)
+✔ metadata save does not upload or remove audio or reset the audio path (0.179573ms)
+✔ failed metadata save never removes the current song audio (0.220053ms)
+✔ existing song updates omit immutable project_id but preserve editable metadata (0.203288ms)
+✔ new song inserts include project_id for the owner-scoped RLS policy (0.187605ms)
+✔ failed mobile decode and unavailable transcription release the analyzing state for retry (12.515984ms)
+✔ older production schema can save existing song metadata without nonexistent visual-style column (0.386237ms)
+✔ local analysis emits only positive contiguous sections through exact duration (2642.555098ms)
+✔ song intake separates analysis state and protects unsaved creator fields on analysis refresh (0.590796ms)
+✔ server fingerprint is idempotent, owner-bound, and direct browser writes are denied (2019.28672ms)
+✔ draft versions append immutable content, preserve confirmed history, and audit every transition (17.806254ms)
+✔ audio replacement clears the active interpretation without deleting its audit history (10.234675ms)
+✔ new Vision Locks carry interpretation lineage while legacy locks remain readable but cannot queue new jobs (12.332472ms)
+✔ unverified AI is blocked without provider access while manual fallback computes and saves a server fingerprint (78.882257ms)
+✔ AI proposal requires explicit verification and validates evidence references (22.720357ms)
+✔ confirmation is owner-bound and explicit (16.260876ms)
+✔ legacy schema fallback is limited to missing new Song Intelligence columns (0.73301ms)
+✔ legacy mode never writes artist visual style columns or displays interpretation approvals (0.171417ms)
+✔ legacy mode discloses backend incompatibility without a fake success claim (0.19995ms)
+✔ accepted matching revision persists transcript and duration atomically (2066.814243ms)
+✔ replacement during inference rejects both stale transcript and stale project duration (6.318709ms)
+✔ matching revision with changed path cannot persist (5.022208ms)
+✔ wrong owner has no path to modify another project (7.100393ms)
+✔ invalid duration causes no partial update (4.35248ms)
+✔ browser role cannot call privileged transcription writer (2.082454ms)
+✔ songs bucket migration replays live owner policies, is idempotent and rejects cross-user writes (1989.301169ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10793.302531

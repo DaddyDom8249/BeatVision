@@ -1,0 +1,20 @@
+{
+  "fixture": "locally composed deterministic instrumental QA audio, not a supplied commercial song",
+  "duration_seconds": 16,
+  "sample_rate": 22050,
+  "channels": 1,
+  "bits_per_sample": 16,
+  "size_bytes": 705644,
+  "sha256": "b82c95bf0fd6fb5c0f9ca8d6accffe6cf356cbd2dfd67fd5dfb5beaa8bfa1a25",
+  "notes_hz": [
+    261.625565,
+    329.627557,
+    391.995436,
+    523.251131,
+    440.0,
+    391.995436,
+    329.627557,
+    293.664768
+  ],
+  "purpose": "real file upload, private playback and signal analysis only; no creative approval"
+}

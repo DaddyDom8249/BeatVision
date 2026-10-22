@@ -1,0 +1,6 @@
+
+> beatvision@0.1.0 production-audit
+> node scripts/production-audit.mjs
+
+PRODUCTION AUDIT: PASS
+Canonical production route, World CORS, generation terminal-state handling, and stub cleanup verified.

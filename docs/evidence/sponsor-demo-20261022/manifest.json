@@ -1,0 +1,160 @@
+{
+  "source_commit": "b8baeaad49508577310044d51fb4bd31134606af",
+  "production_frontend_commit": "4a2ebf8bf3e9f30f0cf35442f86662bb6296da86",
+  "production_generation_version": 59,
+  "scope": "partial sponsor-journey evidence; no AI motion proof",
+  "private_evidence": "Transcript-bearing candidate screenshots and account/session secrets excluded from Git",
+  "files": [
+    {
+      "file": "audio-fixture.json",
+      "bytes": 540,
+      "sha256": "42858b6fbb6181fd76998f767004d01d82042931a245f419f8484e1528443bc9"
+    },
+    {
+      "file": "auth-android-emulated.png",
+      "bytes": 159777,
+      "sha256": "4d6d7f14a2c34ff4ea06620b1c6ccd35210e85aeddd6bdc8a1cb33b8df17d150"
+    },
+    {
+      "file": "auth-desktop.png",
+      "bytes": 54162,
+      "sha256": "0eaf5d7d0ea76d5563d3eb8836fd8a1b25edb1502f5a96e481835f2060f90002"
+    },
+    {
+      "file": "auth-inspection.json",
+      "bytes": 1705,
+      "sha256": "3eadf6c5899ab1ffca8ee4e0b1c207af6d50b06b6bc28124d59530fe0b0912c9"
+    },
+    {
+      "file": "baseline.json",
+      "bytes": 20472,
+      "sha256": "dc9b6e3e6b644f7247bed714166fc8e92fe419f05a8ce63066da3320dbdbe7e7"
+    },
+    {
+      "file": "build.txt",
+      "bytes": 733,
+      "sha256": "b9bd52cbbdcbe8da6e5e38b5a12e8307792fd7f01385be20d52ba2bc1b4462b1"
+    },
+    {
+      "file": "candidate-gate-and-estimates.json",
+      "bytes": 1359,
+      "sha256": "5e66405189b70b937d592dfc6c0696084d6a1c40eb96e73c8a95f3913a195473"
+    },
+    {
+      "file": "candidate-schema-result.json",
+      "bytes": 3186,
+      "sha256": "8baad3b4dc4498b65a8db25bacb2e000c17430f0b673f59f4a01ec72c3f252de"
+    },
+    {
+      "file": "candidate-world-gate-android-emulated.png",
+      "bytes": 138650,
+      "sha256": "ce996f24b4e764791de14b48b4d243722d9cfbcbf2b335ad22d3782e7c874060"
+    },
+    {
+      "file": "candidate-world-gate-desktop.png",
+      "bytes": 45284,
+      "sha256": "7c3491f6ec34639df2d9cf21f164da72fcdb704f9c467bc988537c0102ab3a1d"
+    },
+    {
+      "file": "current-audio-revalidation.json",
+      "bytes": 1073,
+      "sha256": "91d802fec87d474a969928bb4d25ad1b77b09c5788fdd0ed2e466edc220e0e5c"
+    },
+    {
+      "file": "dashboard-android-emulated.png",
+      "bytes": 124887,
+      "sha256": "a207a4bc3b186da96b1a5a3308c16b84bd089e2a97353a22bfa264997b74dd22"
+    },
+    {
+      "file": "dashboard-desktop.png",
+      "bytes": 41082,
+      "sha256": "d887575d901e74e22c241ad87670d78bdc3716f24dc38578a96d89ce639a5493"
+    },
+    {
+      "file": "dashboard-settled-android-emulated.png",
+      "bytes": 197353,
+      "sha256": "61b71021ab457232b98517b2fe1573f9fe2ac86fb816e1dc7b2ee318f5faa244"
+    },
+    {
+      "file": "dashboard-settled-desktop.png",
+      "bytes": 59096,
+      "sha256": "0ba80b3904eb0c256067f0e9dce705bea0361c6f35e3ee2862e9a869d394b1ca"
+    },
+    {
+      "file": "intake-result.json",
+      "bytes": 957,
+      "sha256": "56bad92ad6a5cb482b69a4ba89e1fccac6fabb0d2e47e748ae56d5b4ff27a03d"
+    },
+    {
+      "file": "local-dsp-fallback.png",
+      "bytes": 188411,
+      "sha256": "1182707227da85047befbb226695bcae4a9d053604f43c03206cabda3b57a16c"
+    },
+    {
+      "file": "local-dsp-result.json",
+      "bytes": 1502,
+      "sha256": "52447c8a9d0ae1f1109f12b5bf84cd88338c59af582fc99da7053ffda0095e44"
+    },
+    {
+      "file": "login-initial-observation.json",
+      "bytes": 875,
+      "sha256": "7849ef18efeb50beb83f238485be2d85dd8df7943fac1592f4994162b4e16bb1"
+    },
+    {
+      "file": "login-result.json",
+      "bytes": 1173,
+      "sha256": "89092cac799d858a4aac2669aa23fe2fecdd2e385e7c4b9d4c88b7e590319474"
+    },
+    {
+      "file": "modal-capability-auth.json",
+      "bytes": 662,
+      "sha256": "cde3a941c797d8c52308fe5cb5ffe3c4b97957c393525dda743c53af0b8bc0d7"
+    },
+    {
+      "file": "modal-transport-green.txt",
+      "bytes": 1327,
+      "sha256": "35fa88c2545de1a6b035a30c3bffa6abde41de2c783b5a217845c9754eed2a7f"
+    },
+    {
+      "file": "modal-transport-red.txt",
+      "bytes": 3455,
+      "sha256": "b4f6f318fa7551c27814f084986d94ccd2dc7a490c4ac0ae9b19ec132222ef87"
+    },
+    {
+      "file": "npm-test.txt",
+      "bytes": 36349,
+      "sha256": "657d8db1739ec7d709fb471b4c11ede047ad1690e42cc299e1a6fdcdd1f1d7fe"
+    },
+    {
+      "file": "production-audit.txt",
+      "bytes": 200,
+      "sha256": "d02023ca8be7fb44222a534c8ec5a98eb1007ede71f6360657e09f8855f1bb3d"
+    },
+    {
+      "file": "signup-result.json",
+      "bytes": 328,
+      "sha256": "fb0f7092973acf40637b51d5ed549eb56a707192d2316f64da1e517927b735f2"
+    },
+    {
+      "file": "song-android-emulated.png",
+      "bytes": 319652,
+      "sha256": "88ab07ff7a54ab37a23e940042008e6431e251699b3a066173c48ebaa92a2a95"
+    },
+    {
+      "file": "song-desktop.png",
+      "bytes": 105733,
+      "sha256": "e8af8b5ebd8fa08f5873765ef2993b3b389c9953adca3b5a0956629ebfdd0f47"
+    },
+    {
+      "file": "song-regression.txt",
+      "bytes": 3361,
+      "sha256": "d48191937b6d5fb80316a9fa97dab0917f92d85267c3223f45e97e0bb9a4c470"
+    }
+  ],
+  "log_normalization": {
+    "file": "modal-transport-red.txt",
+    "change": "trailing whitespace only; all failures retained",
+    "raw_sha256": "e6f22803d2261face218c443a66920c6e81fc26ae329ff74fa7f77cfcf3708e5",
+    "raw_copy": "private outside Git"
+  }
+}
