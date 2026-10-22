@@ -50,8 +50,8 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Transport deployed v61; historical CLI billed cost $0 is not remaining credits/hard cap proof; phone bridge offline; modal-existing-access.json
-T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| No approved sponsor scene; no current GPU credit/cap proof or execution authorization
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| User screenshots verify configured $0 spend limit / $42.50 usage cap, storage exception; current worker/account access unavailable; modal-user-financial-evidence.json
+T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| No approved sponsor scene; T09 worker/account access and remaining financial/execution prerequisites unresolved; $0 spend-limit screenshot now verified
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| No T10 output; neither codec nor subject-motion/playback proof exists for this mission
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
 T13| Run complete sponsor-journey regression testing| T02–T12| BLOCKED| Intake and partial local DSP tested; T04–T12 prevent sequential journey
@@ -662,3 +662,45 @@ No item is IN_PROGRESS. MVP is not sponsor-ready. Pending owner inputs are secur
 configuration access, verified provider plan/credits/hard cap and subsequent
 explicit artist review/approvals. No unapproved compute, content approval,
 full-length experiment, new infrastructure or main/PR merge occurred.
+
+
+### T09.2 — User-provided Modal financial settings evidence
+
+Objective / acceptance: record exactly what the five supplied screenshots prove
+about the existing beatvision workspace; distinguish usage allowance, credits
+and spend protection; retain the storage exception. Initial status: BLOCKED.
+Evidence inspected: attached files1000088085/87/88/90/92.jpg, current environment
+credential readiness, existing phone-status heartbeat and existing worker source.
+Confirmed blocker before this update: no direct screenshot of configured spend
+limit. Required files: checklist, release gates, PROJECT_LOG and a sanitized
+screenshot-observation artifact with hashes. No application source change.
+Expected outcome: remove the spend-limit-evidence blocker to the extent supported,
+retain other actual dependencies, and make no inference or configuration change.
+Verification: inspect original images, hash them, compare annotations against
+visible text and worker configuration; no repeated browser/provider tests.
+
+
+T09.2 verification result: PASS for screenshot-level configured safeguard and
+usage observations; T09 remains BLOCKED overall. The supplied beatvision Starter
+workspace shows usage limit$42.50 including credits, spend limit$0, total usage
+$0.12 (L4$0.09,CPU$0.02,memory$0.01), egress1.11GiB with estimated charge$0.00.
+Modal explicitly excludes Volume storage from the workload-stop safeguard.
+Do not repeat the prior assertion that configured spend-limit evidence is absent.
+$42.38 is the arithmetic gap to the usage cap, not a verified credit balance.
+Credit expiry and capture date are not shown. Truncated app names do not verify
+an exact worker revision, inference completion or subject motion.
+
+Current environment readiness has no secret/identity bindings; phone bridge
+still reports offline (last heartbeat2026-10-22T16:33:15.842Z). No new phone
+command, provider invocation, GPU submission, configuration change or creative
+approval. Repository worker has no persistent Modal Volume configured; deployed
+source equivalence is unverified. Original billing images retained privately;
+SHA-256 references and exact visible observations in
+modal-user-financial-evidence.json. Existing tests/deployment are unchanged, so
+no redundant build/CI/journey run. Documentation integrity/hash checks only.
+Files changed: this checklist, SPONSOR_DEMO_RELEASE_GATES.md, PROJECT_LOG.md,
+modal-user-financial-evidence.json and artifact manifest. Commit: evidence-only
+commit following da01e814c7073a09a3f33ca24b1ec237c39f2e5d; unchanged released
+app SHA63604806744e6d306742c75d399cc001c00aa0e4. Next task: none dependency-ready;
+restore existing account/bridge access and remaining provider setup, then artist
+review/approvals before T10. No inference authorized or attempted by these images.

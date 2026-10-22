@@ -74,11 +74,17 @@ the checklist; a successful isolated test reused the same project/audio.
 - Artist must review and explicitly confirm their interpretation, World, Style
   Bible, characters, environments, story, storyboard and scene image. No agent
   approval or synthetic fixture is accepted as sponsor creative approval.
-- Current Modal remaining credits, expiry, rate and enforceable no-overage/hard
-  spending cap remain UNKNOWN. The existing phone bridge is offline. Historical
-  account CLI output showed $0 billed after applied credits; that does not prove
-  remaining balance or make further inference free. No direct Modal credentials
-  are available here. Current model/worker availability remains unverified.
+- User-supplied Modal screenshots now verify a configured **$0 spend limit** and
+  **$42.50 usage limit including credits**, with $0.12 total usage. Modal states
+  workloads stop after credits are exhausted and estimated charges exceed the
+  spend limit; **Volume storage charges can still accrue**. This resolves the
+  missing configured-spend-limit evidence. $42.38 is usage-cap headroom arithmetic,
+  not a confirmed remaining credit balance. Credit expiry is not displayed.
+  Current provider account/worker access remains blocked: no direct credentials
+  here and the existing phone bridge still reports offline. Exact worker/model
+  availability and deployed revision remain unverified. See
+  [screenshot observations](evidence/sponsor-demo-20261022/modal-user-financial-evidence.json).
+  No inference or spending-setting change was performed.
 - One bounded GPU job requires approved source image/instructions, financial
   proof and execution authorization. Never resubmit an uncertain job. Durable
   provider duplicate reconciliation is unverified. Then separately verify
@@ -99,7 +105,8 @@ Short output | 704×480,49 frames at24fps (~2.04s),20 inference steps
 Execution bound | 300-second timeout; automatic retries disabled
 Media bound | 8MiB image /8MiB clip; private immutable Supabase media
 Measured latency, spend, quality, memory | UNKNOWN: no authorized real proof job
-Credits, price, expiry, overage protection | UNKNOWN
+Credits, price, expiry | Remaining compute credits/expiry/rates UNKNOWN; usage cap$42.50, usage$0.12 shown
+Spend safeguard | $0 configured limit shown; workload-stop rule excludes Volume storage
 Commercial model license suitability | Requires review before commercial production
 
 240 seconds would require at least `ceil(240/(49/24))=118` accepted segments

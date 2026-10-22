@@ -1,0 +1,83 @@
+{
+  "observed_at": "2026-10-22T17:50:34.217908+00:00",
+  "task_id": "T09.2",
+  "source": "Five original screenshots supplied by the user and visually inspected; no live dashboard mutation or inference",
+  "capture_date": "UNKNOWN; screenshots show 12:46\u201312:47 and October billing cycle / November 1, 2026 egress reset, but no full capture date",
+  "evidence_class": "CONFIRMED visible screenshot content; not an independent fresh provider API reading",
+  "source_commit": "63604806744e6d306742c75d399cc001c00aa0e4",
+  "workspace": "beatvision",
+  "plan_displayed": "Starter",
+  "usage_limit": {
+    "displayed_usd": "42.50",
+    "set_by": "Modal",
+    "label": "Total usage limit, with credits included"
+  },
+  "spend_limit": {
+    "displayed_usd": "0",
+    "visible_semantics": "Once estimated monthly charges exceed the limit and credits are exhausted, workspace workloads stop. Volume storage charges still accrue.",
+    "verification": "PASS for visible configured safeguard only; not an absolute guarantee of zero future charges"
+  },
+  "usage": {
+    "total_displayed_usd": "0.12",
+    "deployed_apps_usd": "0.12",
+    "L4_usd": "0.09",
+    "CPU_usd": "0.02",
+    "memory_usd": "0.01",
+    "interpretation": "Historical GPU usage does not prove a completed AI-motion artifact or available GPU capacity"
+  },
+  "egress": {
+    "used_GiB": "1.11",
+    "included_TiB": "1.0",
+    "remaining_GiB": "1022.89",
+    "estimated_charge_usd": "0.00",
+    "overage_usd_per_GiB": "0.04",
+    "reset_displayed": "Nov 1, 2026"
+  },
+  "usage_limit_minus_usage_usd": "42.38",
+  "arithmetic_limit": "42.50 minus 0.12 is usage-cap headroom only, not a confirmed remaining credit balance",
+  "remaining_compute_credit_balance": "UNKNOWN; not displayed",
+  "compute_credit_expiry": "UNKNOWN; not displayed",
+  "listed_app_identity": "Names truncated to bragoraforge-modal-mo\u2026; cannot independently identify exact app or revision from images",
+  "worker_source": {
+    "path": "providers/modal_motion/worker.py",
+    "sha256": "1dcd5ab190c7de817a7d7da25be68db9052bbe136e6903b9f64daf3aea599e6f",
+    "observation": "Inspected repository function uses L4, max1/min0, timeout300s, retries0; no persistent Modal Volume configured. Matching deployed worker source remains unverified."
+  },
+  "current_access": {
+    "environment_secret_or_identity_bindings": 0,
+    "phone_bridge_online": false,
+    "phone_bridge_last_seen_utc": "2026-10-22T16:33:15.842000+00:00"
+  },
+  "attachments": [
+    {
+      "attachment": "1-1000088085.jpg",
+      "bytes": 66958,
+      "sha256": "c02db514ee651119d18dfe458e576bd1c5cb3c891dc589d38f30882b75598b60"
+    },
+    {
+      "attachment": "2-1000088087.jpg",
+      "bytes": 51124,
+      "sha256": "bda3e7a38f7735f051bb323a16934af2088e86af3b1c3d5d00d8c557e101c41f"
+    },
+    {
+      "attachment": "3-1000088088.jpg",
+      "bytes": 43963,
+      "sha256": "d46ee2f5624bde9686aaecc11a45e4d7ea8397214c635b12875953b560f3553b"
+    },
+    {
+      "attachment": "4-1000088090.jpg",
+      "bytes": 49527,
+      "sha256": "76d4ed1a7d69da7cf36b2f13d0f51ef99504f227b4448db77a15988b08aa746b"
+    },
+    {
+      "attachment": "5-1000088092.jpg",
+      "bytes": 48748,
+      "sha256": "fd9083a3ca6a2954e91e27f0dba19ace961317d9b4af89724edb590180c0f529"
+    }
+  ],
+  "original_images": "Retained privately outside Git; only sanitized observations and hashes committed",
+  "new_gpu_submissions": 0,
+  "provider_configuration_changes": 0,
+  "task_verification": "BLOCKED overall: account/worker access and other T09 prerequisites remain; screenshot-level spend-limit evidence now verified",
+  "next_dependency": "T10 also requires T08 artist-approved scene/image/instructions; no approvals performed"
+}

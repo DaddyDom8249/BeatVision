@@ -156,6 +156,11 @@
       "sha256": "b4f6f318fa7551c27814f084986d94ccd2dc7a490c4ac0ae9b19ec132222ef87"
     },
     {
+      "file": "modal-user-financial-evidence.json",
+      "bytes": 3709,
+      "sha256": "ba3cb96e4a9d2c58aae9f9ddfe2d76198c8612dee8c47fec907f36e048842593"
+    },
+    {
       "file": "npm-test.txt",
       "bytes": 36349,
       "sha256": "657d8db1739ec7d709fb471b4c11ede047ad1690e42cc299e1a6fdcdd1f1d7fe"
