@@ -54,6 +54,7 @@ async function boot({ authUserId = USER_ID, providerVerified = false, providerRe
   await writeFile(join(dir, "function.ts"), source.replace(JSR_IMPORT, "").replace(REMOTE_IMPORT, 'from "./supabase_stub.mjs"'));
   const baseFactory = createStubClientFactory(db);
   let calls = 0;
+  const providerRequests = [];
   globalThis.__songInterpretationFactory = () => {
     const base = baseFactory();
     return {
@@ -125,6 +126,7 @@ async function boot({ authUserId = USER_ID, providerVerified = false, providerRe
     calls++;
     assert.equal(url, "https://api.groq.com/openai/v1/chat/completions");
     assert.equal(options.headers.Authorization, "Bearer fixture-free-key");
+    providerRequests.push(JSON.parse(options.body));
     return new Response(JSON.stringify(providerResponse ?? {
       id: "fixture-request",
       choices: [{ message: { content: JSON.stringify({
@@ -134,7 +136,7 @@ async function boot({ authUserId = USER_ID, providerVerified = false, providerRe
     }), { status: 200 });
   };
   await import(pathToFileURL(join(dir, "function.ts")).href);
-  return { handler, db, calls: () => calls };
+  return { handler, db, calls: () => calls, providerRequests };
 }
 
 function request(handler, body, { token = "valid-token" } = {}) {
@@ -178,6 +180,61 @@ test("AI proposal requires explicit verification and validates evidence referenc
   const rejected = await request(bad.handler, { projectId: PROJECT_ID, action: "propose" });
   assert.equal(rejected.status, 502);
   assert.equal(bad.db.song_interpretations.length, 0);
+});
+
+test("automatic proposal reuses an active artist draft or confirmation without inference", async () => {
+  for (const confirmed of [false, true]) {
+    const f = await boot({ providerVerified: true });
+    const saved = await request(f.handler, { projectId: PROJECT_ID, action: "save_draft", interpretation: interpretationDocument(), evidence: [] });
+    const original = (await saved.json()).draft;
+    if (confirmed) await request(f.handler, { projectId: PROJECT_ID, action: "confirm", interpretation_id: original.id });
+    const before = f.calls();
+    const response = await request(f.handler, { projectId: PROJECT_ID, action: "propose", only_if_empty: true, audioRevision: REVISION });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.draft.id, original.id);
+    assert.equal(body.reused_existing, true);
+    assert.equal(f.calls(), before);
+    assert.equal(f.db.song_interpretations.length, 1);
+  }
+});
+
+test("analysis-triggered proposal refuses a changed audio revision before fingerprint or provider writes", async () => {
+  const f = await boot({ providerVerified: true });
+  const response = await request(f.handler, { projectId: PROJECT_ID, action: "propose", only_if_empty: true, audioRevision: "outdated-revision" });
+  assert.equal(response.status, 409);
+  assert.equal((await response.json()).error.code, "SONG_AUDIO_REVISION_CHANGED");
+  assert.equal(f.calls(), 0);
+});
+
+test("transcribed lyrics are citable evidence while artist lyrics remain separate and authoritative", async () => {
+  const f = await boot({ providerVerified: true, providerResponse: {
+    choices: [{ message: { content: JSON.stringify({ ...interpretationDocument(),
+      claims: [{ text: "The transcript mentions home.", confidence: 0.8, evidence_refs: ["lyrics.transcript"] }],
+    }) } }],
+  } });
+  f.db.songs[0].analysis.transcript = "I find my way home.";
+  const response = await request(f.handler, { projectId: PROJECT_ID, action: "propose" });
+  assert.equal(response.status, 200);
+  const evidence = (await response.json()).draft.evidence;
+  assert.equal(evidence.find(item => item.id === "lyrics.transcript").excerpt, "I find my way home.");
+  assert.equal(evidence.find(item => item.id === "lyrics.full").excerpt, "A line about returning home");
+  assert.match(f.providerRequests[0].messages[0].content, /artist.*lyrics.*authoritative/i);
+});
+
+test("incomplete AI sections fail honestly instead of saving an apparently complete blank editor", async () => {
+  for (const [field, value] of [["themes", []], ["emotional_arc", ""], ["visual_motifs", []], ["narrative", ""]]) {
+    const f = await boot({ providerVerified: true, providerResponse: {
+      choices: [{ message: { content: JSON.stringify({ ...interpretationDocument(), [field]: value,
+        claims: [{ text: "A return.", confidence: 0.5, evidence_refs: ["lyrics.full"] }],
+      }) } }],
+    } });
+    const response = await request(f.handler, { projectId: PROJECT_ID, action: "propose" });
+    assert.equal(response.status, 502, field);
+    assert.equal((await response.json()).error.code, "INTERPRETATION_INCOMPLETE");
+    assert.equal(f.db.song_interpretations.length, 0);
+    assert.equal(f.providerRequests.length, 1);
+  }
 });
 
 test("confirmation is owner-bound and explicit", async () => {

@@ -1,0 +1,10 @@
+{
+  "duration_seconds": 16.0,
+  "sample_rate": 22050,
+  "channels": 1,
+  "bytes": 705678,
+  "sha256": "b3d653c4981d741ff9399ae64eca69aa6cf2288eb28cd8894f4a2e1b21308c34",
+  "origin": "Locally synthesized flite speech mixed with the existing locally composed instrumental WAV; new fixture, original preserved",
+  "spoken_words": "I walk through rain toward the morning light. I leave the dark behind and find my way home.",
+  "accuracy_scope": "Synthetic speech plus instrumental; not sung-lyric or commercial full-song accuracy"
+}

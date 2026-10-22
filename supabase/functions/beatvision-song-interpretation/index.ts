@@ -200,6 +200,7 @@ function sourceEvidence(song: Record<string, any>, fingerprint: string) {
     { id: "signal.key", kind: "signal", reference: "analysis.key", value: analysis.key ?? null },
     { id: "signal.sections", kind: "signal", reference: "analysis.sections", value: Array.isArray(analysis.sections) ? analysis.sections : [] },
     { id: "lyrics.full", kind: "lyrics", reference: "songs.lyrics", excerpt: clean(song.lyrics, 5000) || null },
+    { id: "lyrics.transcript", kind: "lyrics", reference: "analysis.transcript", excerpt: clean(analysis.transcript, 5000) || null },
     { id: "artist.direction", kind: "artist", reference: "songs.creative_direction", excerpt: clean(song.creative_direction, 1200) || null },
     { id: "artist.notes", kind: "artist", reference: "songs.notes", excerpt: clean(song.notes, 1200) || null },
     { id: "artist.style", kind: "artist", reference: "songs.visual_style_preferences", excerpt: clean(JSON.stringify(song.visual_style_preferences ?? {}), 1200) },
@@ -269,13 +270,20 @@ function validateAiInterpretation(value: unknown, evidence: Array<Record<string,
     const confidence = Number(claim.confidence);
     return { text, confidence: Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : null, evidence_refs: refs };
   });
+  const themes = lines(input.themes);
+  const emotionalArc = clean(input.emotional_arc, 1200);
+  const visualMotifs = lines(input.visual_motifs);
+  const narrative = clean(input.narrative, 1200);
+  if (!themes.length || !emotionalArc || !visualMotifs.length || !narrative) {
+    throw new HttpError("INTERPRETATION_INCOMPLETE", 502, "The AI returned an incomplete interpretation. Your analysis is saved; retry Propose AI Interpretation to create a complete draft.");
+  }
   return {
     schema_version: 1,
     summary,
-    themes: lines(input.themes),
-    emotional_arc: clean(input.emotional_arc, 1200),
-    visual_motifs: lines(input.visual_motifs),
-    narrative: clean(input.narrative, 1200),
+    themes,
+    emotional_arc: emotionalArc,
+    visual_motifs: visualMotifs,
+    narrative,
     claims: safeClaims,
   };
 }
@@ -361,9 +369,12 @@ async function proposeAi(admin: any, projectId: string, song: Record<string, any
   const system = [
     "You are the BragoraForge Song Intelligence director.",
     "Return JSON only with summary, themes, emotional_arc, visual_motifs, narrative, and claims.",
+    "Fill every section with an editable first draft: summary, emotional_arc and narrative are nonempty strings; themes and visual_motifs are nonempty arrays of strings; claims is a nonempty array of text, confidence and evidence_refs.",
+    "Artist lyrics and creative direction are authoritative. The machine transcript may contain errors; prefer artist lyrics when they are provided.",
+    "Visual motifs and narrative are proposed creative suggestions, not claims about events in the song. Label those suggestions clearly.",
     "Every claim must include evidence_refs containing only IDs supplied in the source evidence.",
     "Do not invent lyrics, genre, instruments, biography, identity, or events absent from evidence.",
-    "Use null or an explicit uncertainty phrase when evidence is insufficient.",
+    "When evidence is insufficient, put an explicit uncertainty statement in that section instead of leaving it blank. Do not invent song facts to fill a section.",
   ].join(" ");
   const ticket = await reserveRequest(admin, projectId, userId, "interpretation");
   try {
@@ -438,6 +449,15 @@ Deno.serve(async (req) => {
       return json(req, { draft: result.draft, source_fingerprint: result.source.fingerprint, status: "draft" });
     }
     if (action === "propose") {
+      if (body.audioRevision !== undefined && body.audioRevision !== song.audio_revision) {
+        throw new HttpError("SONG_AUDIO_REVISION_CHANGED", 409, "The audio changed after analysis. Reload and analyze the saved track before generating its interpretation.");
+      }
+      if (body.only_if_empty === true) {
+        const versions = await listVersions();
+        const active = versions.drafts.find((draft: any) => draft.audio_revision === song.audio_revision &&
+          (draft.status === "draft" || (draft.status === "confirmed" && draft.id === song.current_interpretation_id)));
+        if (active) return json(req, { draft: active, status: active.status, reused_existing: true });
+      }
       const result = await proposeAi(admin, resolvedProjectId, song, userId);
       if (result.unavailable) {
         return json(req, {

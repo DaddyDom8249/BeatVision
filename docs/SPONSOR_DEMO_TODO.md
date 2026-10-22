@@ -45,7 +45,7 @@ ID| Task| Dependency| Status| Evidence
 T01| Verify current repository, deployments, and integrations| None| PASS| CONFIRMED identities, schema/function gaps and candidate CI: evidence/sponsor-demo-20261022/baseline.json
 T02| Verify sponsor registration and login| T01| PASS| signup-result.json, login-result.json: actual confirmed fresh account; desktop/Pixel 7 sign-in HTTP 200 and settled empty dashboard
 T03| Verify project creation and song upload| T02| PASS| Initial create/upload/reload PASS; current 254.48-second audio read-only playback/hash verified on desktop/Pixel 7 after source change
-T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Provider setup resolved: actual AIv2 proposal200 and Groq transcription200/status completed verified; desktop/Pixel7 draft reload PASS. Explicit artist confirmation pending; groq-live-verification-release.json.
+T04| Verify music analysis and interpretation confirmation| T03| IN_PROGRESS| User requests automatic editable interpretation after Analyze; T04.13 scoped implementation and regression. Existing genuine-provider proof retained; no creative confirmation.
 T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed World GET/gate verified; no artist-confirmed interpretation or World approval
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
@@ -1307,3 +1307,61 @@ Next task: artist reviews their song/interpretation and explicitly confirms it;
 T05 then becomes dependency-ready. T09's remaining independent GPU checks still
 need bounded execution/financial prerequisites and approved scene input; no
 currently executable provider/GPU work remains under existing approval scope.
+
+
+### T04.13 — Analyze fills an editable first interpretation automatically
+
+TASK ID: T04 (sole IN_PROGRESS item).
+Objective: One successful Analyze action supplies the six interpretation fields
+(summary, themes, emotional arc, visual motifs, narrative and rationale), ready
+for editing and explicit artist confirmation.
+Initial status: FAILED for requested behavior. User screenshot1000088120 shows
+empty panels after analyzed249.6s audio. Source confirms SongPage.analyzeAudio
+stops after transcription/reload; only the separate Propose button calls AI.
+The existing AI path also permits blank sections and provides no transcript
+excerpt as citable lyric evidence; evidence editor currently shows field paths.
+Confirmed cause/hypothesis: chain the existing guarded proposal after saved
+analysis, only when no active saved interpretation or unsaved editor text exists;
+read freshly persisted transcript server-side as evidence and request a complete,
+editable draft. Reuse existing provider, versions, quotas and approval gates.
+Required files: src/pages/SongPage.tsx;
+src/hooks/useSongInterpretation.ts;
+src/components/song/SongInterpretationPanel.tsx;
+supabase/functions/beatvision-song-interpretation/index.ts;
+focused song/interpretation regression tests, checklist/log/release/evidence.
+Acceptance: analysis then one automatic proposal on an empty project; all six
+fields populated/editable; reload persistence; no automatic confirmation;
+Continue remains gated. Preserve saved/confirmed drafts and unsaved local edits;
+server returns an existing active draft for automatic empty-only requests and
+rejects changed audio revision before provider access. Failures retain saved
+analysis and report the real failure without an automatic retry. Artist lyrics
+remain authoritative; transcript is machine-derived evidence, not verified fact.
+AI may suggest creative visuals but must label uncertainty instead of inventing
+song facts. Incomplete AI responses are rejected, not disguised with canned text.
+Verification: meaningful real React page/editor tests and real-handler tests
+(red/green), full tests/audit/build, exact-source CI, authorized existing backend/
+frontend release, real frontend first-analysis on a new isolated fixture and
+read-only Android reload. No edits to the user's photographed real-song project,
+no automatic creative approvals and no GPU request. One bounded verified-Free
+provider call per action; no retry if completion is uncertain.
+Commit: pending. Current frontend64e6edf, backend978240d unchanged at inspection.
+Next task: T04 remains pending artist review after automatic-draft acceptance;
+T05 is not entered without actual confirmation.
+
+
+T04.13 implementation verification: red5 PASS/7 FAIL confirms orchestration,
+loading/history, preservation, source-revision and complete/evidence requirements.
+After change, related20/20 PASS. First full run430/431 PASS: existing extracted
+mobile-analysis handler test lacked the newly referenced interpretation context;
+its fixture was corrected without removing the regression, and now also asserts
+analyzing releases true→false. Final full431/431 PASS,0 skipped; audit and
+TypeScript/Vite build PASS. The requested shared JavaScript/TypeScript skill
+reference was unavailable from its package; actual repository conventions and
+React/TypeScript checks were used. Current Supabase changelog/docs reviewed;
+announced CBC TLS deprecation starts November10 and requires no change to these
+current Chromium/server SDK calls. No schema/library/provider change.
+Prior interpretationv3 source byte-matches committed baseline; private rollback
+snapshot saved. New16s spoken-word-over-instrumental fixture was synthesized
+locally for first-analysis UI proof, original instrumental and all projects kept.
+Fixture origin/hash recorded in automatic-draft-audio-fixture.json. Release and
+real frontend acceptance pending; tests alone do not establish full T04 PASS.

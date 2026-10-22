@@ -29,6 +29,9 @@ export default function SongPage({ projectId }: Props) {
   const [audio, setAudio] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [draftingInterpretation, setDraftingInterpretation] = useState(false);
+  const [interpretationDirty, setInterpretationDirty] = useState(false);
+  const [analysisMessage, setAnalysisMessage] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,12 +49,18 @@ export default function SongPage({ projectId }: Props) {
   }, [song?.id, song?.title, song?.artist, song?.lyrics, song?.creative_direction, song?.notes, song?.visual_style_preferences]);
 
   async function analyzeAudio() {
-    if (saving || analyzing || song?.analysis_status === "analyzing") return;
+    if (saving || analyzing || interpretation.loading || interpretation.working || song?.analysis_status === "analyzing") return;
     if (!song?.audio_url) {
       setError("Save an audio track before analyzing it.");
       return;
     }
+    if (songIntakeDirty) {
+      setError("Save song details before analyzing the track.");
+      return;
+    }
+    const createFirstDraft = schemaReady && !interpretation.latestDraft && !interpretation.confirmed && !interpretationDirty;
     setError(null);
+    setAnalysisMessage(null);
     setSaved(false);
     setAnalyzing(true);
     let local: Awaited<ReturnType<typeof analyzeAudioLocally>> | null = null;
@@ -95,6 +104,23 @@ export default function SongPage({ projectId }: Props) {
       }
 
       await reload();
+      if (!invokeError && createFirstDraft) {
+        setDraftingInterpretation(true);
+        try {
+          const draft = await interpretation.propose({ audioRevision: song.audio_revision, onlyIfEmpty: true });
+          if (draft) {
+            await reload();
+            setAnalysisMessage("Music analyzed. Your interpretation draft is ready to edit and confirm.");
+          }
+          else setAnalysisMessage("Music analysis was saved. The interpretation could not be generated; review the error below or retry Propose AI Interpretation.");
+        } catch (e) {
+          setError(formatFailure("Interpretation draft", e, { projectId, songId: song.id }) + " | Music analysis was saved.");
+        } finally {
+          setDraftingInterpretation(false);
+        }
+      } else if (!invokeError && schemaReady) {
+        setAnalysisMessage("Music analyzed. Your existing interpretation and edits were kept.");
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : "Song analysis failed.";
       if (local && localPersisted) {
@@ -272,15 +298,19 @@ export default function SongPage({ projectId }: Props) {
                   type="button"
                   className="secondary-button"
                   onClick={() => void analyzeAudio()}
-                  disabled={saving || analyzing || song.analysis_status === "analyzing"}
+                  disabled={saving || analyzing || interpretation.loading || interpretation.working || songIntakeDirty || song.analysis_status === "analyzing"}
                   style={{ alignSelf: "flex-start" }}
                 >
-                  {analyzing || song.analysis_status === "analyzing"
+                  {draftingInterpretation
+                    ? "Drafting Interpretation…"
+                    : analyzing || song.analysis_status === "analyzing"
                     ? "Analyzing Music Signal…"
                     : song.analysis_status === "completed"
                     ? "Re-Analyze Music"
                     : "Analyze Music Signal"}
                 </button>
+                {songIntakeDirty && <p role="status">Save your song changes before analyzing.</p>}
+                {analysisMessage && <p role="status">{analysisMessage}</p>}
               </div>
             )}
 
@@ -339,7 +369,7 @@ export default function SongPage({ projectId }: Props) {
             {schemaReady ? <SongInterpretationPanel
               song={song}
               loading={interpretation.loading}
-              working={interpretation.working}
+              working={analyzing || interpretation.working}
               error={interpretation.error}
               manualFallback={interpretation.manualFallback}
               latestDraft={interpretation.latestDraft}
@@ -349,6 +379,7 @@ export default function SongPage({ projectId }: Props) {
               confirm={interpretation.confirm}
               onConfirmed={reload}
               songIntakeDirty={songIntakeDirty}
+              onDirtyChange={setInterpretationDirty}
             /> : <p role="status">Interpretation and World confirmation are locked until the Song Intelligence database migration is available.</p>}
 
             <button className="primary-button large" disabled={saving || analyzing}>

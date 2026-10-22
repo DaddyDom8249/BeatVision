@@ -1,0 +1,53 @@
+{
+  "observed_at": "2026-10-22T21:57:23.483214+00:00",
+  "task": "T04.13",
+  "red": {
+    "tests": 12,
+    "pass": 5,
+    "fail": 7,
+    "reason": "Analyze does not propose; missing complete-section, transcript-evidence and existing-draft/revision safeguards"
+  },
+  "initial_full_suite": {
+    "tests": 431,
+    "pass": 430,
+    "fail": 1,
+    "reason": "Legacy extracted-handler fixture omitted new interpretation dependencies; harness corrected, original regression retained and final analyzing state asserted"
+  },
+  "green": {
+    "focused": 20,
+    "pass": 20,
+    "fail": 0,
+    "full_tests": 431,
+    "full_pass": 431,
+    "full_fail": 0,
+    "skipped": 0,
+    "production_audit": "PASS",
+    "typescript_vite_build": "PASS"
+  },
+  "private_logs": {
+    "red": {
+      "path": "/workspace/shared/sponsor-release-backup-20261022/automatic-draft-red.txt",
+      "sha256": "f29b28c5d2b1738d29bc70f7f36392741b946b8a41cd3e5eb1b48713b9dcaa38"
+    },
+    "green": {
+      "path": "/workspace/shared/sponsor-release-backup-20261022/automatic-draft-green.txt",
+      "sha256": "ca878099c3066e3fd36783a06523ddaea5d6d551c8605f24e193c19e7208f66d"
+    },
+    "full-tests": {
+      "path": "/workspace/shared/sponsor-release-backup-20261022/automatic-draft-full-tests.txt",
+      "sha256": "a6ae9e19e3f24647901e01ccd84ff2e7e2a2454ea9f043f20db410d358554c32"
+    },
+    "focused-final": {
+      "path": "/workspace/shared/sponsor-release-backup-20261022/automatic-draft-focused-final.txt",
+      "sha256": "742024a989ecfe50694f0b6d2dfbdefaa8e62a7582653180a5b61abfffbc6a4b"
+    },
+    "full-tests-final": {
+      "path": "/workspace/shared/sponsor-release-backup-20261022/automatic-draft-full-tests-final.txt",
+      "sha256": "cc681524fe59339d53b9dfd4365329d4a20aecfd108f92963eb6bb4b50aa73ea"
+    },
+    "build": {
+      "path": "/workspace/shared/sponsor-release-backup-20261022/automatic-draft-build.txt",
+      "sha256": "fe6702c7deb92d9006017dc8456ed71a43eee15362585f5f7ea551213568f98e"
+    }
+  }
+}

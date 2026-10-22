@@ -74,13 +74,13 @@ export function useSongInterpretation(projectId?: string, songId?: string, curre
     return data?.draft as SongInterpretationDraft | null;
   }, [projectId, songId, working]);
 
-  const propose = useCallback(async () => {
+  const propose = useCallback(async (options: { audioRevision?: string; onlyIfEmpty?: boolean } = {}) => {
     if (!projectId || !songId || working) return null;
     setWorking(true);
     setError(null);
     setManualFallback(false);
     const { data, error: invokeError } = await supabase.functions.invoke("beatvision-song-interpretation", {
-      body: { projectId, songId, action: "propose" },
+      body: { projectId, songId, action: "propose", audioRevision: options.audioRevision, only_if_empty: options.onlyIfEmpty },
     });
     if (invokeError) {
       const details = await errorDetails(invokeError, data, "AI interpretation is unavailable.");
@@ -89,7 +89,7 @@ export function useSongInterpretation(projectId?: string, songId?: string, curre
       setWorking(false);
       return null;
     }
-    if (data?.draft) setDrafts((current) => [data.draft as SongInterpretationDraft, ...current]);
+    if (data?.draft) setDrafts((current) => [data.draft as SongInterpretationDraft, ...current.filter((draft) => draft.id !== data.draft.id)]);
     setWorking(false);
     return data?.draft as SongInterpretationDraft | null;
   }, [projectId, songId, working]);

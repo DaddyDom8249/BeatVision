@@ -91,11 +91,12 @@ test('new song inserts include project_id for the owner-scoped RLS policy', asyn
 test('failed mobile decode and unavailable transcription release the analyzing state for retry',async()=>{
  const begin=source.indexOf('  async function analyzeAudio()');const finish=source.indexOf('\n  function continueToWorld',begin);
  const action=ts.transpileModule(source.slice(begin,finish),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
- const calls=[];let reloaded=false;
+ const calls=[];let reloaded=false;const analyzingStates=[];
  const supabase={rpc:async(name,args)=>{calls.push({name,...args});return{error:null}},functions:{invoke:async()=>({error:new Error('PROVIDER_COST_UNVERIFIED')})}};
- const analyze=new Function('supabase','song','projectId','analyzeAudioLocally','formatFailure','setError','setSaved','setAnalyzing','reload','saving','analyzing',action+'\nreturn analyzeAudio;')(
- supabase,{id:'song',audio_url:'https://private.test/song.mp3',audio_revision:'revision'},'project',async()=>{throw Error('decode failed')},(_,error)=>error.message,()=>{},()=>{},()=>{},async()=>{reloaded=true},false,false);
+ const analyze=new Function('supabase','song','projectId','analyzeAudioLocally','formatFailure','setError','setSaved','setAnalyzing','reload','saving','analyzing','interpretation','songIntakeDirty','schemaReady','interpretationDirty','setAnalysisMessage',action+'\nreturn analyzeAudio;')(
+ supabase,{id:'song',audio_url:'https://private.test/song.mp3',audio_revision:'revision'},'project',async()=>{throw Error('decode failed')},(_,error)=>error.message,()=>{},()=>{},value=>analyzingStates.push(value),async()=>{reloaded=true},false,false,{loading:false,working:false},false,true,false,()=>{});
  await analyze();assert.deepEqual(calls.map(call=>call.p_status),['analyzing','failed']);assert.equal(calls.at(-1).p_audio_revision,'revision');assert.equal(reloaded,true);
+ assert.deepEqual(analyzingStates,[true,false]);
 });
 
 test('older production schema can save existing song metadata without nonexistent visual-style column', async () => {

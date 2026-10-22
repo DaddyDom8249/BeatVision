@@ -16,13 +16,21 @@ type Props = {
   confirm: (id: string) => Promise<SongInterpretationDraft | null>;
   onConfirmed?: () => Promise<unknown>;
   songIntakeDirty?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
 function listText(value: unknown) {
   return Array.isArray(value) ? value.map(String).join("\n") : "";
 }
 
-export default function SongInterpretationPanel({ song, loading, working, error, manualFallback, latestDraft, confirmed, saveDraft, propose, confirm, onConfirmed, songIntakeDirty = false }: Props) {
+function rationaleText(draft: SongInterpretationDraft) {
+  if (draft.source_type === "ai" && draft.interpretation?.claims?.length) {
+    return draft.interpretation.claims.map((claim) => claim.text).filter(Boolean).join("\n");
+  }
+  return (draft.evidence ?? []).map((item) => item.excerpt || item.reference).filter(Boolean).join("\n");
+}
+
+export default function SongInterpretationPanel({ song, loading, working, error, manualFallback, latestDraft, confirmed, saveDraft, propose, confirm, onConfirmed, songIntakeDirty = false, onDirtyChange }: Props) {
   const [summary, setSummary] = useState("");
   const [themes, setThemes] = useState("");
   const [emotionalArc, setEmotionalArc] = useState("");
@@ -40,7 +48,7 @@ export default function SongInterpretationPanel({ song, loading, working, error,
     setEmotionalArc(document?.emotional_arc ?? "");
     setVisualMotifs(listText(document?.visual_motifs));
     setNarrative(document?.narrative ?? "");
-    setEvidenceText((activeDraft.evidence ?? []).map((item) => item.excerpt || item.reference).filter(Boolean).join("\n"));
+    setEvidenceText(rationaleText(activeDraft));
   }, [activeDraft?.id]);
 
   const evidence = useMemo(() => evidenceText.split(/\r?\n/).map((excerpt, index) => excerpt.trim() ? ({
@@ -61,13 +69,16 @@ export default function SongInterpretationPanel({ song, loading, working, error,
   }
 
   const editorSnapshot = JSON.stringify([summary, themes, emotionalArc, visualMotifs, narrative, evidenceText]);
-  const persisted = latestDraft?.interpretation;
-  const persistedSnapshot = latestDraft ? JSON.stringify([
+  const persisted = activeDraft?.interpretation;
+  const persistedSnapshot = activeDraft ? JSON.stringify([
     persisted?.summary ?? "", listText(persisted?.themes), persisted?.emotional_arc ?? "",
     listText(persisted?.visual_motifs), persisted?.narrative ?? "",
-    (latestDraft.evidence ?? []).map((item) => item.excerpt || item.reference).filter(Boolean).join("\n"),
+    rationaleText(activeDraft),
   ]) : "";
-  const hasUnsavedEdits = Boolean(latestDraft) && editorSnapshot !== persistedSnapshot;
+  const hasUnsavedEdits = activeDraft
+    ? editorSnapshot !== persistedSnapshot
+    : [summary, themes, emotionalArc, visualMotifs, narrative, evidenceText].some((value) => value.trim());
+  useEffect(() => { onDirtyChange?.(hasUnsavedEdits); }, [hasUnsavedEdits, onDirtyChange]);
 
   async function confirmDraft() {
     if (!latestDraft || hasUnsavedEdits || songIntakeDirty) {
@@ -94,7 +105,7 @@ export default function SongInterpretationPanel({ song, loading, working, error,
         </span>
       </div>
       <p className="song-intelligence-copy">
-        This interpretation is separate from your Notes and never replaces them. Measured duration and tempo/key estimates are shown as evidence; creative meaning stays editable and requires explicit artist confirmation.
+        Analyze your music to fill an editable interpretation draft. Review the suggestions, make any changes, then confirm your direction. Your Notes stay separate, and tempo/key values remain estimates.
       </p>
 
       <div className="analysis-dashboard-grid song-intelligence-evidence" aria-label="Song evidence and estimates">

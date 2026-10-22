@@ -26,6 +26,16 @@
       "sha256": "3eadf6c5899ab1ffca8ee4e0b1c207af6d50b06b6bc28124d59530fe0b0912c9"
     },
     {
+      "file": "automatic-draft-audio-fixture.json",
+      "bytes": 530,
+      "sha256": "3c00f9a46bef222d746ffe1a3c59dd8d3974c8114da98dbb2b40a1fdc7f05b2f"
+    },
+    {
+      "file": "automatic-draft-tests.json",
+      "bytes": 1995,
+      "sha256": "a49c876f5b5600159c679765f7c0c2927cfaccba2cd0b05bee63eca62932d0f6"
+    },
+    {
       "file": "baseline.json",
       "bytes": 20472,
       "sha256": "dc9b6e3e6b644f7247bed714166fc8e92fe419f05a8ce63066da3320dbdbe7e7"
