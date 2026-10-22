@@ -271,6 +271,11 @@
       "sha256": "0a3af982f1084a0e6930a4cc851818126e1f8da8dfbe2f048228dd191a858d5d"
     },
     {
+      "file": "provider-secrets-screenshot-observations.json",
+      "bytes": 1398,
+      "sha256": "a68a06e7018a06351509f1352242efef65a7dfd2fe8fa50197abad532276e428"
+    },
+    {
       "file": "release-runtime-preflight.json",
       "bytes": 289,
       "sha256": "9c8c3c0809d8c543f4963179d81bbe5b36a54e66222d3b6a5b71f11159996a01"

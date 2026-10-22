@@ -45,7 +45,7 @@ ID| Task| Dependency| Status| Evidence
 T01| Verify current repository, deployments, and integrations| None| PASS| CONFIRMED identities, schema/function gaps and candidate CI: evidence/sponsor-demo-20261022/baseline.json
 T02| Verify sponsor registration and login| T01| PASS| signup-result.json, login-result.json: actual confirmed fresh account; desktop/Pixel 7 sign-in HTTP 200 and settled empty dashboard
 T03| Verify project creation and song upload| T02| PASS| Initial create/upload/reload PASS; current 254.48-second audio read-only playback/hash verified on desktop/Pixel 7 after source change
-T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Owner reports settings saved; actual canonical frontend still503 PROVIDER_COST_UNVERIFIED. Exact failing flag/key/model UNKNOWN; configuration verification3/3 closed. Asked only whether GROQ_FREE_API_KEY exists separately; groq-configured-proposal-result.json. No artist confirmation.
+T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Latest live check503. User screenshots confirm GROQ_FREE_API_KEY name exists in shown project; six enabling settings not visible, actual absence/values UNKNOWN. Name/Value setup clarification supplied; provider-secrets-screenshot-observations.json. No artist confirmation.
 T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed World GET/gate verified; no artist-confirmed interpretation or World approval
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
@@ -1120,3 +1120,24 @@ asked one specific non-secret question whether GROQ_FREE_API_KEY was saved
 separately from the six supplied lines, in the same project. Existing account
 Free-plan confirmation remains accepted. Do not request the key in chat.
 Accepted422-test/build/CI evidence remains valid for unchanged source; no repeat.
+
+
+### T04.9 screenshot clarification — key name present
+
+Evidence inspected: user attachments1000088112.jpg/1000088110.jpg; sanitized
+provider-secrets-screenshot-observations.json records hashes, not credential
+values/digests. CONFIRMED: GROQ_FREE_API_KEY exists in the shown BeatVision/main
+Secrets list. Key value/validity UNKNOWN and exact project reference not visible.
+The six prepared enabling/model/quota names are not visible in either image;
+absence from the actual project is UNKNOWN, not asserted as fact. Dashboard
+technical-issue banner is visible; no causal diagnosis is inferred from it.
+The key-presence question is resolved for the shown project; do not request the
+key value or overwrite it. Clarify separate Name/Value entries for the six
+settings on the linked target project, save together and confirm a row appears.
+Files changed: checklist, release packet, log and sanitized observation/manifest.
+Code/deployment: unchanged64e6edf frontend, interpretationv2 backend2baa6a3.
+Tests performed: direct image inspection only; no fourth provider submission,
+phone request, new inference, build or repeat of accepted422 tests.
+Verification: BLOCKED on current provider configuration; screenshot evidence is
+not proof settings are valid or inference works. Next task remains external
+setup; no agent approval of creative content.

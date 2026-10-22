@@ -294,3 +294,11 @@ The current non-secret clarification is whether GROQ_FREE_API_KEY exists in the
 same project, separately from the six pasted settings. Existing correct keys
 must be retained; no key value should be sent in chat. The owner-confirmed
 Free/no-paid-billing account attestation is not being requested again.
+
+
+User screenshots subsequently confirm GROQ_FREE_API_KEY is listed in the shown
+BeatVision/main project. The six enabling/model/quota names are not visible;
+actual absence and values remain UNKNOWN. Exact project ref is outside the
+screenshots. Preserve the existing key and enter/review the six settings as
+separate Name/Value rows in the linked target project, save together and search
+for a new setting to confirm it appears. No further provider test was submitted.
