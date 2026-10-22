@@ -1,0 +1,94 @@
+[
+  {
+    "context": "desktop",
+    "deployment": "dpl_DCEUiJhxMzsTJB3HyNRan2jQs8Lf",
+    "source_commit": "69a9578d4952ce8a8cc9ac9951b822c55941187a",
+    "style_fields_enabled": true,
+    "old_schema_warning_count": 0,
+    "interpretation_headings": [
+      "Interpret the song before revealing its World",
+      "Ask about the confirmed direction",
+      "Track Intelligence Breakdown"
+    ],
+    "interpretation_buttons": [
+      "BEATVISION",
+      "01Song",
+      "02World",
+      "03Style",
+      "04Plan",
+      "05Briefs",
+      "06Workspace",
+      "Re-Analyze Music",
+      "Propose AI Interpretation",
+      "Save Manual Draft",
+      "Confirm Interpretation",
+      "Read Aloud",
+      "Pause",
+      "Resume",
+      "Stop",
+      "Save Song Details \u2192",
+      "Continue to World Reveal \u2192"
+    ],
+    "edge_responses": [
+      {
+        "status": 200,
+        "path": "/functions/v1/beatvision-song-interpretation"
+      }
+    ],
+    "page_errors": [],
+    "horizontal_overflow": false,
+    "audio_playback": {
+      "duration": 254.48,
+      "currentTime": 0.270356,
+      "paused": false,
+      "error": null
+    },
+    "creative_approvals": 0
+  },
+  {
+    "context": "android-emulated",
+    "deployment": "dpl_DCEUiJhxMzsTJB3HyNRan2jQs8Lf",
+    "source_commit": "69a9578d4952ce8a8cc9ac9951b822c55941187a",
+    "style_fields_enabled": true,
+    "old_schema_warning_count": 0,
+    "interpretation_headings": [
+      "Interpret the song before revealing its World",
+      "Ask about the confirmed direction",
+      "Track Intelligence Breakdown"
+    ],
+    "interpretation_buttons": [
+      "BEATVISION",
+      "01Song",
+      "02World",
+      "03Style",
+      "04Plan",
+      "05Briefs",
+      "06Workspace",
+      "Re-Analyze Music",
+      "Propose AI Interpretation",
+      "Save Manual Draft",
+      "Confirm Interpretation",
+      "Read Aloud",
+      "Pause",
+      "Resume",
+      "Stop",
+      "Save Song Details \u2192",
+      "Continue to World Reveal \u2192"
+    ],
+    "edge_responses": [
+      {
+        "status": 200,
+        "path": "/functions/v1/beatvision-song-interpretation"
+      }
+    ],
+    "page_errors": [],
+    "horizontal_overflow": false,
+    "audio_playback": {
+      "duration": 254.48,
+      "currentTime": 0.264196,
+      "paused": false,
+      "error": null
+    },
+    "creative_approvals": 0
+  }
+]

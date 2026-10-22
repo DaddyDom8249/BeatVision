@@ -1,8 +1,8 @@
 {
-  "source_commit": "b8baeaad49508577310044d51fb4bd31134606af",
-  "production_frontend_commit": "4a2ebf8bf3e9f30f0cf35442f86662bb6296da86",
-  "production_generation_version": 59,
-  "scope": "partial sponsor-journey evidence; no AI motion proof",
+  "source_commit": "63604806744e6d306742c75d399cc001c00aa0e4",
+  "production_frontend_commit": "63604806744e6d306742c75d399cc001c00aa0e4",
+  "production_generation_version": 61,
+  "scope": "Released software and partial sponsor journey; no inference, no creative approvals, no AI motion proof",
   "private_evidence": "Transcript-bearing candidate screenshots and account/session secrets excluded from Git",
   "files": [
     {
@@ -81,9 +81,39 @@
       "sha256": "0ba80b3904eb0c256067f0e9dce705bea0361c6f35e3ee2862e9a869d394b1ca"
     },
     {
+      "file": "final-release-synthetic-android-emulated.png",
+      "bytes": 1083044,
+      "sha256": "769095ad35b375a7059d9b6bb111276e74af5c277907cf93d31b7ce6ba13c349"
+    },
+    {
+      "file": "final-release-synthetic-desktop.png",
+      "bytes": 319606,
+      "sha256": "0d59449fb79a07e52c77dea086d7b1c2fd1d59cfe50a515d60dbe329bd2fb5be"
+    },
+    {
+      "file": "final-release-synthetic-persistence.json",
+      "bytes": 722,
+      "sha256": "7e1731b2ddd1530db8f0e15723b0b7c06b73070e503cbcec5d56594951d4e6e7"
+    },
+    {
+      "file": "final-release-synthetic-regression.json",
+      "bytes": 2410,
+      "sha256": "ad488f4c35a21a1f485970f821d03167cf2dc5342f58656f8781404bdf940fc0"
+    },
+    {
       "file": "intake-result.json",
       "bytes": 957,
       "sha256": "56bad92ad6a5cb482b69a4ba89e1fccac6fabb0d2e47e748ae56d5b4ff27a03d"
+    },
+    {
+      "file": "lineage-rollout-green.json",
+      "bytes": 2887,
+      "sha256": "f0135e5802522eeff5381e8f0545214f7d528ba606ec1a26adbfe36be423daa7"
+    },
+    {
+      "file": "lineage-rollout-red.json",
+      "bytes": 3095,
+      "sha256": "554f19064f9f92e95b053ceef741ed9342b940d7221941c5c7dc83769ce25415"
     },
     {
       "file": "local-dsp-fallback.png",
@@ -111,6 +141,11 @@
       "sha256": "cde3a941c797d8c52308fe5cb5ffe3c4b97957c393525dda743c53af0b8bc0d7"
     },
     {
+      "file": "modal-existing-access.json",
+      "bytes": 1025,
+      "sha256": "50d8cb6ff41adefdf4e511e44875db0d2f745a7a1d981c824f59fd8faa7fcd01"
+    },
+    {
       "file": "modal-transport-green.txt",
       "bytes": 1327,
       "sha256": "35fa88c2545de1a6b035a30c3bffa6abde41de2c783b5a217845c9754eed2a7f"
@@ -129,6 +164,21 @@
       "file": "production-audit.txt",
       "bytes": 200,
       "sha256": "d02023ca8be7fb44222a534c8ec5a98eb1007ede71f6360657e09f8855f1bb3d"
+    },
+    {
+      "file": "production-release-browser.json",
+      "bytes": 2351,
+      "sha256": "3e09eb2a0e9c9a7bff2ea7c0663d99ed1679c8d95ce4e29853febc961f123be2"
+    },
+    {
+      "file": "production-release-manifest.json",
+      "bytes": 9206,
+      "sha256": "0a3af982f1084a0e6930a4cc851818126e1f8da8dfbe2f048228dd191a858d5d"
+    },
+    {
+      "file": "release-runtime-preflight.json",
+      "bytes": 289,
+      "sha256": "9c8c3c0809d8c543f4963179d81bbe5b36a54e66222d3b6a5b71f11159996a01"
     },
     {
       "file": "remote-validation.json",
@@ -161,5 +211,7 @@
     "change": "trailing whitespace only; all failures retained",
     "raw_sha256": "e6f22803d2261face218c443a66920c6e81fc26ae329ff74fa7f77cfcf3708e5",
     "raw_copy": "private outside Git"
-  }
+  },
+  "initial_source_commit": "b8baeaad49508577310044d51fb4bd31134606af",
+  "initial_production_frontend_commit": "4a2ebf8bf3e9f30f0cf35442f86662bb6296da86"
 }

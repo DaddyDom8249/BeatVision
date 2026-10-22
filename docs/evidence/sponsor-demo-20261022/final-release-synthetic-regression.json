@@ -1,0 +1,83 @@
+{
+  "observed_at": "2026-10-22T17:26:37.153875+00:00",
+  "deployment": "dpl_HBVecpyByZ6czJvLHvuHwWajis2W",
+  "source_commit": "63604806744e6d306742c75d399cc001c00aa0e4",
+  "provider_requests_blocked": [
+    "beatvision-analyze-song"
+  ],
+  "creative_approvals": 0,
+  "gpu_submissions": 0,
+  "steps": [
+    {
+      "step": "new project, actual WAV upload, style and Notes survive reload",
+      "result": "PASS",
+      "note": "created/saved in earlier attempt; read-only SQL and resumed actual frontend verify persistence"
+    },
+    {
+      "step": "actual browser DSP persists with transcription deliberately aborted before network; estimates labeled; Continue disabled",
+      "result": "PASS"
+    },
+    {
+      "step": "manual draft v1 persists after reload; no confirmation; Continue disabled",
+      "result": "PASS"
+    },
+    {
+      "step": "World route retains interpretation confirmation gate",
+      "result": "PASS"
+    }
+  ],
+  "project_id": "ad266b2c-3e9b-45fb-b8ab-5aabacfe3ac4",
+  "desktop": {
+    "page_errors": [],
+    "horizontal_overflow": false,
+    "rpc_and_function_responses": [
+      {
+        "status": 200,
+        "path": "/functions/v1/beatvision-song-interpretation"
+      },
+      {
+        "status": 204,
+        "path": "/rest/v1/rpc/save_local_song_analysis"
+      },
+      {
+        "status": 204,
+        "path": "/rest/v1/rpc/save_local_song_analysis"
+      },
+      {
+        "status": 204,
+        "path": "/rest/v1/rpc/save_local_song_analysis"
+      },
+      {
+        "status": 200,
+        "path": "/functions/v1/beatvision-song-interpretation"
+      },
+      {
+        "status": 200,
+        "path": "/functions/v1/beatvision-song-interpretation"
+      },
+      {
+        "status": 200,
+        "path": "/functions/v1/beatvision-world"
+      }
+    ],
+    "scripts": [
+      "/assets/index-29wpl7NP.js",
+      "/static/1.438.12/surveys.js",
+      "/array/phc_xTQarA73QXM2htyjuFajfqTxMmNoyF8gDp37m7BwhDqA/config.js"
+    ]
+  },
+  "android_emulated": {
+    "physical_device": false,
+    "page_errors": [],
+    "horizontal_overflow": false,
+    "draft_v1_persisted": true,
+    "continue_disabled": true,
+    "audio": {
+      "duration": 16,
+      "currentTime": 0.274034,
+      "paused": false,
+      "error": null
+    }
+  },
+  "verification": "PASS for isolated upload/DSP/manual-draft/approval gates only; genuine AI interpretation and confirmation remain BLOCKED"
+}

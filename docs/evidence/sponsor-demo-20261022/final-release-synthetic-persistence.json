@@ -1,0 +1,22 @@
+{
+  "source": "Production read-only SQL after real frontend test",
+  "rows": [
+    {
+      "id": "1c05471d-571c-4187-9002-d990db05283f",
+      "project_id": "ad266b2c-3e9b-45fb-b8ab-5aabacfe3ac4",
+      "audio_source_fingerprint": "b82c95bf0fd6fb5c0f9ca8d6accffe6cf356cbd2dfd67fd5dfb5beaa8bfa1a25",
+      "audio_source_size": 705644,
+      "current_interpretation_id": null,
+      "analysis_status": "completed",
+      "duration_seconds": "16",
+      "transcription_status": "failed",
+      "draft_id": "af8f2a18-19a2-4a02-a04e-7c38cfafa76c",
+      "version": 1,
+      "status": "draft",
+      "source_type": "manual",
+      "draft_matches_source": true,
+      "not_confirmed": true
+    }
+  ],
+  "creative_approvals": 0
+}

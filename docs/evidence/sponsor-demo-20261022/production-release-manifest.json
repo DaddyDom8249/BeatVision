@@ -1,0 +1,182 @@
+{
+  "classification": "CONFIRMED release identities, partial journey verification only",
+  "source_commit": "63604806744e6d306742c75d399cc001c00aa0e4",
+  "production_url": "https://beat-vision-theta.vercel.app/",
+  "deployment": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"result\": {\n    \"deployment\": {\n      \"id\": \"dpl_HBVecpyByZ6czJvLHvuHwWajis2W\",\n      \"name\": \"beat-vision\",\n      \"url\": \"beat-vision-666cwas4i-beat-vision.vercel.app\",\n      \"type\": \"LAMBDAS\",\n      \"state\": \"READY\",\n      \"createdAt\": 1792689762834,\n      \"creator\": {\n        \"uid\": \"lSJEq9dGVwW3WVqUAxDymQqE\",\n        \"username\": \"daddydom8249\"\n      },\n      \"project\": {\n        \"id\": \"prj_uY6UsWukCvImpUbyaaHG7EGFF2Cq\",\n        \"name\": \"beat-vision\",\n        \"framework\": \"vite\"\n      },\n      \"meta\": {\n        \"githubCommitRef\": \"63604806744e6d306742c75d399cc001c00aa0e4\",\n        \"githubCommitSha\": \"63604806744e6d306742c75d399cc001c00aa0e4\",\n        \"githubCommitMessage\": \"ci: allow explicit verification of authorized sponsor releases\",\n        \"githubRepo\": \"BeatVision\",\n        \"githubOrg\": \"DaddyDom8249\"\n      },\n      \"alias\": [\n        \"beat-vision-theta.vercel.app\",\n        \"beat-vision-beat-vision.vercel.app\",\n        \"beat-vision-git-63604806744e6d306742c75d399c-c212bc-beat-vision.vercel.app\"\n      ],\n      \"target\": \"production\",\n      \"regions\": [\n        \"iad1\"\n      ],\n      \"buildingAt\": 1792689772885,\n      \"ready\": 1792689795397,\n      \"readyState\": \"READY\",\n      \"aliasError\": null\n    }\n  }\n}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "migration": {
+    "history_version": "20261022170451",
+    "name": "sponsor_song_intelligence_release_20261022",
+    "atomic": true,
+    "sources": [
+      {
+        "path": "supabase/migrations/20261020000000_song_intelligence.sql",
+        "sha256": "9e5301f33b8e522435b68db12dbe69ae2d0edcc4a38008a2b4f072193b1741f8"
+      },
+      {
+        "path": "supabase/migrations/20261020010000_song_intelligence_integrity.sql",
+        "sha256": "497608a25943815326efcbe16efbf736f046acb219ac2b40edc294c0fac1dbd7"
+      },
+      {
+        "path": "supabase/migrations/20261020020000_bragora_ai_request_quotas.sql",
+        "sha256": "74426c3c7672c76eb7b3dab5a17e0b29f2aac092e88a318cfa6f1533bc41ab67"
+      },
+      {
+        "path": "supabase/migrations/20261022040000_song_intelligence_trigger_execute_acl.sql",
+        "sha256": "c83e1b7023cd5bab2aa303f1b4ecd6dfd216b93899696a4c76d1c47654e3b2d6"
+      },
+      {
+        "path": "supabase/migrations/20261022165544_disambiguate_song_generation_world_lineage.sql",
+        "sha256": "e82c41c50a572ff8bd6afd79da593ec68b3c3322c3b6502ecc8344d004608078"
+      }
+    ],
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"success\":true}"
+        }
+      ],
+      "structuredContent": null,
+      "isError": false
+    }
+  },
+  "functions": [
+    {
+      "name": "beatvision-analyze-song",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"id\":\"8fee1774-8566-4351-8db6-aff499cf3fab\",\"slug\":\"beatvision-analyze-song\",\"name\":\"beatvision-analyze-song\",\"status\":\"ACTIVE\",\"version\":40,\"created_at\":1790968015934,\"updated_at\":1792688870259,\"verify_jwt\":false,\"import_map\":false,\"entrypoint_path\":\"file:///tmp/user_fn_mdofsinyofqbeapzfygu_8fee1774-8566-4351-8db6-aff499cf3fab_40/source/index.ts\",\"ezbr_sha256\":\"207f6459aeb44304f89d95c912240457cd3087623645774e32277b0cab0f45c4\"}"
+          }
+        ],
+        "structuredContent": null,
+        "isError": false
+      }
+    },
+    {
+      "name": "beatvision-song-interpretation",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"id\":\"378e3091-5d41-47f3-a3f2-defafac5a5f6\",\"slug\":\"beatvision-song-interpretation\",\"name\":\"beatvision-song-interpretation\",\"status\":\"ACTIVE\",\"version\":1,\"created_at\":1792688871352,\"updated_at\":1792688871352,\"verify_jwt\":false,\"import_map\":false,\"entrypoint_path\":\"file:///tmp/user_fn_mdofsinyofqbeapzfygu_378e3091-5d41-47f3-a3f2-defafac5a5f6_1/source/index.ts\",\"ezbr_sha256\":\"3c80faaf1500e3b768ad806634badf70d7c556404f3a302dafb28f60015528ca\"}"
+          }
+        ],
+        "structuredContent": null,
+        "isError": false
+      }
+    },
+    {
+      "name": "beatvision-ai-director",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"id\":\"c3765e46-0d3c-4736-bff9-f8bdbbc6c8ff\",\"slug\":\"beatvision-ai-director\",\"name\":\"beatvision-ai-director\",\"status\":\"ACTIVE\",\"version\":1,\"created_at\":1792688872353,\"updated_at\":1792688872353,\"verify_jwt\":false,\"import_map\":false,\"entrypoint_path\":\"file:///tmp/user_fn_mdofsinyofqbeapzfygu_c3765e46-0d3c-4736-bff9-f8bdbbc6c8ff_1/source/index.ts\",\"ezbr_sha256\":\"30c5839b87c474b5fc216f13420d9ab433617824f1057ad4fa2315d9f6458f53\"}"
+          }
+        ],
+        "structuredContent": null,
+        "isError": false
+      }
+    },
+    {
+      "name": "beatvision-world",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"id\":\"20810b37-8b0b-400c-b6fe-99083d938685\",\"slug\":\"beatvision-world\",\"name\":\"beatvision-world\",\"status\":\"ACTIVE\",\"version\":60,\"created_at\":1790747863313,\"updated_at\":1792688873307,\"verify_jwt\":false,\"import_map\":false,\"entrypoint_path\":\"file:///tmp/user_fn_mdofsinyofqbeapzfygu_20810b37-8b0b-400c-b6fe-99083d938685_60/source/index.ts\",\"ezbr_sha256\":\"9ae0a5afd7a3dbc9235f41aaa9e29b0e7881e53c4ed4cc23acb9eea2e0a835b0\"}"
+          }
+        ],
+        "structuredContent": null,
+        "isError": false
+      }
+    },
+    {
+      "name": "beatvision-style-draft",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"id\":\"3797db43-2aa3-4c48-9b64-78d0624ef6c1\",\"slug\":\"beatvision-style-draft\",\"name\":\"beatvision-style-draft\",\"status\":\"ACTIVE\",\"version\":28,\"created_at\":1791506119572,\"updated_at\":1792688874403,\"verify_jwt\":true,\"import_map\":false,\"entrypoint_path\":\"file:///tmp/user_fn_mdofsinyofqbeapzfygu_3797db43-2aa3-4c48-9b64-78d0624ef6c1_28/source/index.ts\",\"ezbr_sha256\":\"dd5e42a77921edf64fc94f109619a1671b4f73bc1fda328d7d5b6d872bbbdb05\"}"
+          }
+        ],
+        "structuredContent": null,
+        "isError": false
+      }
+    }
+  ],
+  "generation_compatibility_release": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"id\":\"201e05ef-2dc5-456d-b96b-3741d5e1c38f\",\"slug\":\"beatvision-generation\",\"name\":\"beatvision-generation\",\"status\":\"ACTIVE\",\"version\":61,\"created_at\":1791104585020,\"updated_at\":1792688971593,\"verify_jwt\":false,\"import_map\":false,\"entrypoint_path\":\"file:///tmp/user_fn_mdofsinyofqbeapzfygu_201e05ef-2dc5-456d-b96b-3741d5e1c38f_61/source/index.ts\",\"ezbr_sha256\":\"ebfbcec4f265ff66ca8e6dd822886c957a753be33e6a34e6b30e8b7b63c50358\"}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "generation_compatibility": {
+    "controller_commit": "4a2ebf8bf3e9f30f0cf35442f86662bb6296da86",
+    "controller_sha256": "457d179c524ba447b541903ca52df924f0192b7bd9bc1731728fcc41633ccab1",
+    "modal_module_sha256": "9802ab772c41511caa74713a0860f3a00ca941172cdf2bc055c97089c53d79c9",
+    "full_candidate_controller_released": false,
+    "reason": "Arena allowlist configuration absent; preserve existing controller with compatible Modal transport update"
+  },
+  "existing_data_counts_before_and_after": {
+    "projects": 37,
+    "songs": 19,
+    "world_reports": 20,
+    "vision_locks": 8,
+    "scene_image_assets": 43,
+    "motion_clip_assets": 40,
+    "generation_jobs": 163
+  },
+  "gpu_submissions": 0,
+  "creative_approvals": 0,
+  "ci": {
+    "production": {
+      "run_id": 39821652295,
+      "conclusion": "success",
+      "head_sha": "63604806744e6d306742c75d399cc001c00aa0e4",
+      "checks": "npm test, production-audit, TypeScript/Vite build; all steps success",
+      "tests": {
+        "pass": 416,
+        "fail": 0,
+        "skip": 0
+      }
+    },
+    "earlier_dispatch": {
+      "run_id": 39821481478,
+      "conclusion": "failure",
+      "head_sha": "63604806744e6d306742c75d399cc001c00aa0e4",
+      "reason": "Existing workspace-layout test: Local Chromium did not start within 10 seconds",
+      "classification": "CONFIRMED runner browser startup failure; no source fix or test removal"
+    },
+    "modal_offline": {
+      "run_id": 39821652417,
+      "conclusion": "success",
+      "head_sha": "63604806744e6d306742c75d399cc001c00aa0e4"
+    },
+    "postgres_corrected_migration": {
+      "run_id": 39818827550,
+      "conclusion": "success",
+      "head_sha": "5699c35f56726ac7597be1b653ca3f8b30ce64e3"
+    },
+    "postgres_exact_head": {
+      "run_id": 39821651802,
+      "conclusion": "UNKNOWN: aggregate in_progress; replay job and all steps success at retrieval",
+      "job_id": 119974202754
+    }
+  }
+}

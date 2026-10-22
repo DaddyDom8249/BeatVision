@@ -1,176 +1,132 @@
-# Sponsor demo: blocked rollout and resource requirements
+# Sponsor demo release and remaining gates
 
-Observed 2026-10-22 UTC. This is a review packet, not release authorization.
-The authoritative task status is [SPONSOR_DEMO_TODO.md](SPONSOR_DEMO_TODO.md).
+The authorized software release is live at https://beat-vision-theta.vercel.app/.
+The full sponsor demo remains BLOCKED. The authoritative record is
+[SPONSOR_DEMO_TODO.md](SPONSOR_DEMO_TODO.md).
 
-## Verified starting state
+## Released and verified
 
-Production frontend is Vercel `dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT` at
-`4a2ebf8bf3e9f30f0cf35442f86662bb6296da86`.
-Production Supabase is `mdofsinyofqbeapzfygu`.
-A fresh confirmed sponsor account created isolated project
-`a4841264-fac6-4ec9-ae07-04544493257c`, uploaded a real 16-second WAV fixture,
-reloaded it and played it in desktop Chromium and Pixel 7 browser emulation.
-Do not substitute these results for a completed creative/motion journey.
+Frontend: `63604806744e6d306742c75d399cc001c00aa0e4`, Vercel
+`dpl_HBVecpyByZ6czJvLHvuHwWajis2W`, READY with the original production alias.
+Immutable release URL: https://beat-vision-666cwas4i-beat-vision.vercel.app/.
+Existing draft PR: https://github.com/DaddyDom8249/BeatVision/pull/141.
+The user authorized this reviewed release with “Do it”; no main merge occurred.
 
-Actual frontend DSP saved 16-second duration, tempo estimate 117.5 BPM and key
-estimate C major. Its transcription request was deliberately aborted in the
-test browser before submission to prevent unknown-cost provider use. Persisted
-`transcription_status=failed`; there is no successful transcription claim.
-The decode used a 44100 Hz Web Audio context although the WAV source is 22050 Hz.
-Stored sample_rate therefore describes decoded audio, not necessarily original
-file encoding.
+Existing Supabase `mdofsinyofqbeapzfygu` received the five Song Intelligence
+migrations as one atomic, timeout-bounded bundle, history `20261022170451`, name
+`sponsor_song_intelligence_release_20261022`. Original four migration bodies were
+preserved. A real QA PostgreSQL test reproduced ambiguous `world_id` (42702) in
+the generation trigger; forward migration `20261022165544` repairs the variable
+name and expanded contract tests exercise valid, foreign, missing-lock and stale
+lineage. All five source hashes and deployment receipts are in
+[evidence/sponsor-demo-20261022/production-release-manifest.json](evidence/sponsor-demo-20261022/production-release-manifest.json).
 
-Later, the test project's audio and analysis changed in another session; the
-actor/cause is UNKNOWN. A final read-only check verifies the current audio is
-254.48 seconds and 5,649,423 bytes with matching desktop/mobile SHA-256
-`2546e9caca999e16180b0196f61f57feb76dfb340db0e94d1d6f8efbd13e8343`.
-Playback advances with no media error in both browser contexts. The new audio
-and transcript were preserved, not attributed to the initial blocked-provider
-test. Screenshots containing this later transcript remain private outside Git.
-No speech-recognition accuracy, interpretation approval or full creative journey
-is established by the presence of those fields.
+Before/after release, existing counts were unchanged: 37 projects,19 songs,
+20 worlds,8 locks,43 scene images,40 motion assets,163 jobs. RLS and protected
+confirmation/trigger ACLs remain enforced. A later isolated QA project was added
+through the real frontend; those earlier counts describe the release transaction.
+No customer content, audio, approved worlds or assets were overwritten.
 
-## Smallest compatible backend path for T04
+Functions: analyze-song v40, song-interpretation v1, AI Director v1, World v60,
+Style v28. Generation v61 retains the existing production controller and deploys
+the compatible Modal transport repair only. The full candidate Arena controller
+is not released: candidate v60's read-only runtime preflight returned false for
+Arena, verified transcription and interpretation-proposal prerequisites.
+Do not describe the new preflight fields as still live after v61 restoration.
+No financial attestations or secrets were changed.
 
-Reuse the existing Supabase project. Do not create a database or substitute the
-locked contract-test fixture for a full app backend.
+Actual fresh-account login, upload, saved style/Notes and local DSP were tested.
+Final isolated synthetic project: `ad266b2c-3e9b-45fb-b8ab-5aabacfe3ac4`.
+The real frontend uploaded the original 16-second WAV, analyzed its signal and
+persisted manual draft v1 with matching server SHA-256. Reload and Pixel 7 browser
+emulation confirm persistence, audio playback, no page errors or overflow,
+clear tempo/key estimate labels and disabled World continuation pending artist
+confirmation. World route independently presents the confirmation gate.
+Transcription was deliberately aborted before network; it is recorded failed.
+No successful AI interpretation, creative confirmation or motion is claimed.
+Physical Android browser testing remains unverified.
 
-The four existing candidate migrations below are absent from production history.
-They are unchanged from PR #141 baseline
-`74f0367f2f3584669d7b91cde6b5111b470c71bc`.
+Production CI [39821652295](https://github.com/DaddyDom8249/BeatVision/actions/runs/39821652295)
+PASS: 416/416 tests, zero skipped, audit/build PASS on exact frontend SHA.
+Modal offline [39821652417](https://github.com/DaddyDom8249/BeatVision/actions/runs/39821652417)
+PASS. Corrected-migration PostgreSQL run39818827550 PASS. Exact-head PG run
+39821651802 reports every replay/security/lineage/quota/cleanup step successful;
+its aggregate run status was still in_progress at retrieval and is not claimed
+as completed. Earlier production dispatch39821481478 FAILED because the runner's
+Chromium did not start within10s; the later same-SHA run passed without removing
+checks. Browser harness selector failures and their corrections are recorded in
+the checklist; a successful isolated test reused the same project/audio.
 
-Order | Migration | SHA-256
----|---|---
-1 | `20261020000000_song_intelligence.sql` | `9e5301f33b8e522435b68db12dbe69ae2d0edcc4a38008a2b4f072193b1741f8`
-2 | `20261020010000_song_intelligence_integrity.sql` | `497608a25943815326efcbe16efbf736f046acb219ac2b40edc294c0fac1dbd7`
-3 | `20261020020000_bragora_ai_request_quotas.sql` | `74426c3c7672c76eb7b3dab5a17e0b29f2aac092e88a318cfa6f1533bc41ab67`
-4 | `20261022040000_song_intelligence_trigger_execute_acl.sql` | `c83e1b7023cd5bab2aa303f1b4ecd6dfd216b93899696a4c76d1c47654e3b2d6`
+## External blockers
 
-These are not merely an optional style-column addition: they add interpretation
-records and owner policies, source fingerprints, audit history, lineage checks
-for new locks/generation, protected storage deletion and request quotas. Existing
-core tables have RLS enabled; it must stay enabled. A one-column compatibility
-patch would not implement the required interpretation/approval pipeline.
+- Secure Supabase configuration access: connected tools can deploy functions and
+  SQL but cannot edit secrets; CLI has no management token. Owner can bind the
+  management token through secure environment settings or configure the dashboard.
+  Never paste credentials in chat.
+- Verify the actual Groq account plan/cost before enabling
+  `GROQ_FREE_ACCOUNT_VERIFIED` or `BRAGORA_GROQ_FREE_VERIFIED`. Interpretation also
+  requires `BRAGORA_INTERPRETATION_ENABLED`, the pinned approved model
+  `openai/gpt-oss-20b` and bounded daily quota1–20. Runtime booleans establish
+  incomplete prerequisites, not which individual secret is absent.
+- Configure/review the existing Arena endpoint/token and exact
+  `ARENA_GATEWAY_ALLOWED_HOSTS` before releasing the full candidate controller.
+  Do not invent the hostname, change provider or disable validation.
+- Artist must review and explicitly confirm their interpretation, World, Style
+  Bible, characters, environments, story, storyboard and scene image. No agent
+  approval or synthetic fixture is accepted as sponsor creative approval.
+- Current Modal remaining credits, expiry, rate and enforceable no-overage/hard
+  spending cap remain UNKNOWN. The existing phone bridge is offline. Historical
+  account CLI output showed $0 billed after applied credits; that does not prove
+  remaining balance or make further inference free. No direct Modal credentials
+  are available here. Current model/worker availability remains unverified.
+- One bounded GPU job requires approved source image/instructions, financial
+  proof and execution authorization. Never resubmit an uncertain job. Durable
+  provider duplicate reconciliation is unverified. Then separately verify
+  inference, persisted MP4, decode, duration, subject movement, source consistency
+  and actual frontend playback. No job/output exists for this mission.
 
-Retrieved exact-baseline PostgreSQL CI run
-[39720271675](https://github.com/DaddyDom8249/BeatVision/actions/runs/39720271675)
-reports success against an isolated synthetic PostgreSQL 17 contract fixture.
-It does not establish compatibility with the complete current production schema
-or existing data. No production migration was attempted in this mission.
+The transport fix rejects credential-bearing redirects, keeps the20-second
+abort deadline through body read and caps JSON at16MiB while accepting an8MiB
+clip envelope. It implements no provider spending cap.
 
-Before an approved rollout, validate these changes against the actual schema
-and existing triggers/policies in an isolated local database without customer
-records; inspect the changes to new-lock and generation behavior. Preserve
-existing worlds, locks, audio and approved assets. Use forward corrections;
-do not erase migration history or drop data to undo a partial release.
+## Full-song resources: configured workload, no cost quotation
 
-Release the matching backend and frontend together after authorization:
-
-- Add `beatvision-song-interpretation` and `beatvision-ai-director`, currently
-  absent from the live function inventory.
-- Reconcile and deploy the candidate `beatvision-analyze-song`,
-  `beatvision-world`, `beatvision-style-draft` and `beatvision-generation` with
-  their required local modules. Preserve current authentication and owner checks.
-- Configure the verified exact Arena hostname in
-  `ARENA_GATEWAY_ALLOWED_HOSTS` before the candidate generation controller; it
-  intentionally fails closed without this new requirement.
-- Verify each tested preview origin is explicitly authorized by Edge CORS.
-  An authenticated Vercel preview alone does not configure Supabase CORS or
-  provide an integrated backend.
-- Verify dedicated free-provider account evidence before enabling inference.
-  Candidate transcription requires `GROQ_FREE_ACCOUNT_VERIFIED=true`; current
-  deployed analyze-song v39 only checks presence of `GROQ_FREE_API_KEY`.
-  Interpretation/Director also need their explicit provider/model and bounded
-  quota configuration; never infer billing status from the names of variables.
-- Keep the Modal execution gate closed until T09 has current financial evidence.
-- Re-run the fresh sponsor journey, including sponsor-authored approvals, on
-  the actual deployed versions. Local build and schema-contract CI do not pass
-  the release acceptance gate.
-
-The precise external blocker is authorization for a reviewed coordinated
-production schema/function/frontend rollout, together with current provider
-cost evidence. This packet does not claim that the rollout itself is verified.
-
-## Modal: required evidence before one real submission
-
-Existing configured integration: `bragoraforge-modal-motion-proof`, private
-GPU function `single_motion_proof`, proxy-authenticated submit/poll bridge.
-Live generation function v59 contains the server adapter. This establishes code
-deployment, not current worker health, GPU availability, credits or safe spend.
-
-Required inputs from the operator/provider:
-
-- Current workspace credit balance, rate and expiry, and an enforceable
-  no-overage or explicitly approved spending cap. Historical $1 usage-limit
-  descriptions are not current credit or zero-charge evidence.
-- Explicit authorization for one bounded job within that verified cap. No GPU
-  submission has been made by this mission.
-- Fresh sponsor-approved image and exact scene instructions, with their immutable
-  project/plan/scene/image identities and digest. The agent must not approve them.
-- Confirm that no earlier job for this request is still in flight. The database
-  has a conditional claim and job idempotency key, but the worker source spawns
-  a GPU call for each valid submit; remote duplicate suppression/reconciliation
-  after an ambiguous receipt is not proven. Never retry an uncertain submit.
-- Actual worker/model availability through the authorized account, without
-  using a new inference call merely as a health check.
-
-The local transport repair at `fbbcb3d5697f39dcdfd95e32ca77ce58dc46349b` rejects
-redirects carrying proxy credentials, keeps the 20-second deadline through the
-body read, and limits JSON to 16 MiB while accepting an 8 MiB clip envelope.
-It does not implement a provider financial cap or remote duplicate suppression.
-It has not been deployed to the live Edge Function.
-
-## Specific full-song resource needs (not a quotation)
-
-Source-configured short-proof workload:
-
-Resource | Configured value / evidence limit
+Resource | Current source configuration / evidence limit
 ---|---
-GPU | Modal L4; one container maximum; zero minimum/buffer containers
-Model | `Lightricks/LTX-Video-0.9.5`, revision `e58e28c39631af4d1468ee57a853764e11c1d37e`
-Output | 704×480, 49 frames, 24 fps (~2.04 s), 20 inference steps
-Execution bound | 300-second worker timeout, automatic retries disabled
-Input/output bound | 8 MiB image / 8 MiB clip
-Persistence | Private Supabase `visual-assets`, per-job immutable MP4 and source/provenance checks
-Actual latency, GPU memory, spend per accepted clip | UNKNOWN; must be measured from authorized real job/provider usage
-Current credits, price, expiry and allowable overage | UNKNOWN
-Commercial model license suitability | Requires review before commercial-scale production
+GPU | Modal L4; max1 container; min/buffer0
+Model | Lightricks/LTX-Video-0.9.5; revision e58e28c39631af4d1468ee57a853764e11c1d37e
+Short output | 704×480,49 frames at24fps (~2.04s),20 inference steps
+Execution bound | 300-second timeout; automatic retries disabled
+Media bound | 8MiB image /8MiB clip; private immutable Supabase media
+Measured latency, spend, quality, memory | UNKNOWN: no authorized real proof job
+Credits, price, expiry, overage protection | UNKNOWN
+Commercial model license suitability | Requires review before commercial production
 
-At that frame rate and frame count, covering 240 seconds requires at least
-`ceil(240 / (49/24)) = 118` clips before transitions, overlap, rejected takes,
-continuity work or higher-resolution requirements. This arithmetic is not a
-claim of full-song support or a GPU cost estimate. The current 16-second fixture
-is for intake testing only and does not establish long-song motion capability.
+240 seconds would require at least `ceil(240/(49/24))=118` accepted segments
+before overlap, transitions, continuity and rejected variants. This arithmetic
+is not full-song support or a funding quote. Funding must cover measured GPU
+runtime/variants, creative/image inference quotas, durable media storage and
+continuity/assembly validation. Actual dollars cannot be responsibly specified
+until an authorized clip establishes runtime, output sizes and acceptance rate.
 
-Sponsorship needs a measured allocation of capped GPU credits for those accepted
-segments plus explicitly budgeted variants, provider quotas/credits for creative
-inference and images, durable private media capacity, and continuity/assembly
-validation. Actual required dollars and storage cannot be honestly quoted until
-the authorized short clip establishes latency, output sizes and acceptance rate.
-
-Full-length continuous subject motion, commercial quality, synchronized singing,
-and scalable concurrency remain planned/unverified. A surviving Shotstack final
-render or image-motion output does not prove any of those capabilities.
+Full-length continuous subject motion, commercial quality, synchronized singing
+and scalable concurrency remain planned/unverified. A truthful in-app funding
+stopping point cannot be verified until genuine short-motion proof succeeds;
+there is no claim of observed GPU exhaustion or an artificial success state.
 
 ## Test access
 
-Production intake route for the isolated account:
-https://beat-vision-theta.vercel.app/projects/a4841264-fac6-4ec9-ae07-04544493257c/song
+Open `/auth`, register an account you control, confirm its email and sign in.
+Use a fresh project and your own song. The owner's isolated test account remains
+email-confirmed; its generated password/session are private and omitted here.
+Use the normal password-reset flow if independent access to that account is
+needed. Do not share credentials or session tokens in chat or repository files.
 
-The account was created through the actual frontend and confirmed by its owner.
-Passwords and browser session state are stored privately outside the repository
-and are not included here. Independent sponsors can register with their own
-email/password, confirm the email and sign in through `/auth`.
+Review the synthetic project only within its authorized account. Its draft has
+not been confirmed. Existing project `a4841264-fac6-4ec9-ae07-04544493257c` later
+received real user audio in another session; it and its transcript were
+preserved. Screenshots containing that transcript remain private outside Git.
+The public synthetic screenshots contain only clearly labeled technical text.
 
-Candidate preview, independently identified as READY:
-https://beat-vision-f8nn-e4akic7tp-beat-vision.vercel.app/
-at `cf2ccb34a2589fe934193aa1f8c2eb145d273332`, deployment
-`dpl_6KvH3vMdh6XjsNwAwa7baX1kmx6t`. Authorized Vercel fetch returned HTTP 200
-for `/auth` and its built JavaScript; the estimate labels are present. Interactive
-hosted-preview login/journey was not verified. It may require the Vercel owner's
-authenticated access in addition to the separate application login. It is not a
-verified sponsor demo: its production backend lacks Song Intelligence prerequisites.
-Exact-head Production CI, PostgreSQL contract replay and Modal offline runs all
-report success (remote-validation.json). Later evidence-only commits do not
-change the source exercised by these checks.
+The immutable URL above is a deployed review build, not an accepted sponsor demo.
+All mandatory creative/motion steps after intake remain BLOCKED.

@@ -1,8 +1,9 @@
 # BragoraForge sponsor demo execution checklist
 
 Mission opened 2026-10-22 UTC. This is the authoritative checklist for this mission.
-Only one item may be IN_PROGRESS. No creative approval, production release,
-production schema change, or unknown-cost inference is authorized by this file.
+Only one item may be IN_PROGRESS. This file does not itself authorize creative
+approval, production changes or unknown-cost inference. The user subsequently
+authorized the reviewed production release with “Do it”; that release is below.
 
 Evidence classes: CONFIRMED = direct observation; PROBABLE = inference;
 UNKNOWN = insufficient evidence; BLOCKED = identified dependency.
@@ -24,9 +25,15 @@ a sponsor journey PASS. Previous agent/PR narrative is context, not fresh proof.
   estimate labels `b8baeaad49508577310044d51fb4bd31134606af`.
 - Review/evidence head pushed to existing draft PR #141:
   `cf2ccb34a2589fe934193aa1f8c2eb145d273332`.
-- Production: https://beat-vision-theta.vercel.app/; Vercel
-  `dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT`, READY, commit
+- Current production: https://beat-vision-theta.vercel.app/; Vercel
+  `dpl_HBVecpyByZ6czJvLHvuHwWajis2W`, READY, exact frontend commit
+  `63604806744e6d306742c75d399cc001c00aa0e4`.
+- Initial production (historical evidence): `dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT`,
   `4a2ebf8bf3e9f30f0cf35442f86662bb6296da86`.
+- Current backend: production migration bundle `20261022170451`; analyze-song v40,
+  interpretation v1, AI Director v1, World v60, Style v28, generation v61.
+  Generation v61 deliberately retains the existing controller with the repaired
+  Modal module; the full candidate Arena controller is configuration-blocked.
 - Supabase `mdofsinyofqbeapzfygu`: ACTIVE_HEALTHY, PostgreSQL 17.6.1.127.
 - Modal application name supplied: `bragoraforge-modal-motion-proof`;
   current provider availability/billing not yet independently verified.
@@ -38,19 +45,23 @@ ID| Task| Dependency| Status| Evidence
 T01| Verify current repository, deployments, and integrations| None| PASS| CONFIRMED identities, schema/function gaps and candidate CI: evidence/sponsor-demo-20261022/baseline.json
 T02| Verify sponsor registration and login| T01| PASS| signup-result.json, login-result.json: actual confirmed fresh account; desktop/Pixel 7 sign-in HTTP 200 and settled empty dashboard
 T03| Verify project creation and song upload| T02| PASS| Initial create/upload/reload PASS; current 254.48-second audio read-only playback/hash verified on desktop/Pixel 7 after source change
-T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Local DSP verified with transcription deliberately blocked; candidate schema/function rollout and sponsor interpretation confirmation unavailable
-T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; no confirmed interpretation or sponsor approval
+T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Coordinated release verified; isolated upload/DSP/manual draft persist. Verified-free provider config and explicit artist confirmation remain absent
+T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed World GET/gate verified; no artist-confirmed interpretation or World approval
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Own capability 200, existing foreign project 404, anonymous 401; worker/current credits/cap unverified; transport repaired locally
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Transport deployed v61; historical CLI billed cost $0 is not remaining credits/hard cap proof; phone bridge offline; modal-existing-access.json
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| No approved sponsor scene; no current GPU credit/cap proof or execution authorization
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| No T10 output; neither codec nor subject-motion/playback proof exists for this mission
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
 T13| Run complete sponsor-journey regression testing| T02–T12| BLOCKED| Intake and partial local DSP tested; T04–T12 prevent sequential journey
-T14| Deliver verified sponsor demo URL, evidence, and remaining funding requirements| T13| BLOCKED| Reviewable source/evidence delivery proceeds; a verified sponsor-demo URL/motion proof cannot be supplied
+T14| Deliver verified sponsor demo URL, evidence, and remaining funding requirements| T13| BLOCKED| Production/immutable URLs, PR and evidence delivered; fully verified sponsor demo and motion proof blocked by T04–T13
 
 ## Task records
+
+Initial observations below are historical. The resumed-release records at the
+end supersede the initial deployment/schema blockers; current statuses are in
+the index. No previously observed failure is erased.
 
 ### TASK ID: T01
 Objective / acceptance: Identify exact repository/PR/deployment versions and
@@ -454,3 +465,200 @@ not available; no implementation relied on its contents.
 Before each source edit, record task ID, confirmed defect/root-cause hypothesis,
 required files, expected result and verification method. This initial checklist
 is a documentation change based on read-only evidence, not a source repair.
+
+## Resumed execution — user-authorized release
+
+User instruction after the release/approval/GPU explanation: “Do it”. This
+authorizes releasing the reviewed backend/frontend changes and proceeding with
+safe verification. It does not supply a spending cap or approve unseen creative
+content. T04 is the sole active task; all other statuses retain their evidence.
+Read-only recheck: PR #141 remains draft at `d375f326…`, production remains
+`4a2ebf8…`, and the four candidate migrations/functions are still absent.
+Before production changes: inspect current object types/grants/triggers and
+candidate migration bodies, validate compatibility, retain previous deployed
+function sources for recovery, then release the existing candidate in order.
+No schema weakening, customer-content writes or new services are authorized.
+
+### T04.2 — Test valid generation lineage before release
+
+Testable hypothesis: `reject_unlineaged_new_generation()` declares `world_id`
+and also queries a world_reports relation containing a `world_id` column with
+`w.id=world_id`; PostgreSQL may reject the valid generation path as ambiguous.
+Existing PostgreSQL assertions exercise fingerprints/quotas but do not insert a
+fully valid Vision Lock and generation job. Before source changes, reproduce in
+the existing isolated QA project `llkzohajsoikdbuslxzb` using synthetic rows in a
+transaction ending ROLLBACK. No real creative content, production writes or
+provider work. If confirmed: add a forward migration disambiguating that local
+variable and extend the PostgreSQL contract's successful/invalid lineage tests.
+Expected result: valid lineage can enqueue; missing/stale/foreign lineage is
+still rejected. Required files, if confirmed: a new Supabase migration,
+scripts/test/postgres-song-intelligence-assertions.sql and its CI workflow list.
+
+CONFIRMED: rollback-only QA test failed with PostgreSQL `42702`, “column
+reference world_id is ambiguous”, in reject_unlineaged_new_generation() line 22
+on a valid synthetic image job. Production remains unchanged. Root cause is the
+local world_id variable colliding with world_reports.world_id. Required fix is
+to rename only that local variable in a forward migration, retaining the complete
+lineage/owner checks and existing service-only execution ACL. Add real-PG tests
+for valid, foreign-project, missing-lock and stale-source job inserts. One repair
+attempt planned; no provider requests involved.
+
+T04.2 result: QA forward migration applied successfully; the expanded
+rollback-only contract passes valid/foreign/missing/stale lineage, ownership,
+ACL and quota checks. Commit `5699c35f56726ac7597be1b653ca3f8b30ce64e3`.
+Existing original migration bodies remain unchanged. Production is unchanged.
+
+### T04.3 — Verify release configuration without inference
+
+Confirmed access limitation: connected Supabase supports deployment and SQL,
+but CLI `secrets list` fails because SUPABASE_ACCESS_TOKEN is unavailable. New
+required Arena allowlist and creative-provider settings therefore cannot be
+inspected through the CLI. Hypothesis: some may already be configured.
+Required files: supabase/functions/beatvision-generation/index.ts and
+scripts/test/modal-motion-integration.test.mjs. Extend the existing authenticated,
+owner-scoped read-only modal_capability response with non-secret configuration
+booleans only. Expected outcome: verify deployment prerequisites without a job,
+provider HTTP request, secret disclosure or financial-flag change. Verification:
+offline handler cases for configured/missing settings and zero outbound calls,
+then read-only live capability after deployment. If Arena configuration is
+missing, preserve the working controller rather than release a known break.
+
+T04.3 source result: new owner-only configuration fields reproduced missing
+baseline behavior, then passed configured/missing/no-provider-call tests.
+15/15 Modal/preflight tests PASS; full source suite 414/414 PASS, zero skipped.
+Commit `69a9578d4952ce8a8cc9ac9951b822c55941187a`.
+
+### T04.4 — Authorized coordinated production rollout
+
+Authorization: user's “Do it” following the explicit release explanation.
+Compatibility evidence: live prerequisite column types match the tested schema;
+pgcrypto is in extensions; authenticated has no table-level INSERT/UPDATE on
+songs, so protected new authority fields cannot be forged through broad grants;
+no active generation jobs. Existing object counts captured read-only before
+release. QA valid/invalid lineage contract PASS after the forward correction;
+real PostgreSQL CI workflow_dispatch run 39818827550 PASS at `5699c35f…`.
+Release the five existing migration bodies as one transaction with lock/statement
+timeouts to avoid exposing intermediate trigger ACL/lineage states. Preserve
+their source paths/hashes in the release evidence; the live history will record
+one named bundle. No content updates or creative approvals. Then deploy the
+matching owner-authenticated functions, verify non-inference capability and new
+schema, and release the exact frontend commit to the existing Vercel production
+project. Existing function sources are backed up privately outside Git.
+
+Production result so far: bundle `20261022170451` applied; existing table counts
+unchanged (37 projects,19 songs,20 worlds,8 locks,43 image assets,40 motion assets,
+163 jobs). New RLS/authority grants and corrected trigger verified. Functions:
+analyze-song v40, interpretation v1, AI Director v1, World v60, Style v28.
+Candidate generation v60 preflight returned arena_configured=false,
+free_transcription_configured=false, interpretation_proposals_configured=false.
+Preserved the prior controller and deployed only the compatible Modal transport
+module as generation v61; full new Arena controller remains config-blocked.
+Frontend `69a9578…` is READY at production `dpl_DCEUiJhxMzsTJB3HyNRan2jQs8Lf`.
+Actual desktop/Pixel 7 login, interpretation GET HTTP 200, enabled style fields,
+absence of old schema warning and 254.48-second song playback verified.
+
+T04.1 follow-up discovered only after the panel became live: it describes tempo
+and key under “Verified song evidence” and the next-step button ignores missing
+interpretation confirmation. Required files: SongInterpretationPanel.tsx,
+SongPage.tsx and an existing related runtime test. Root cause: new panel labels
+and next-step conditions did not share the World page's confirmation condition.
+Expected outcome: label estimates consistently and disable Continue until a
+persisted confirmed interpretation exists and song edits are saved. Verify both
+unconfirmed/confirmed cases without approving real user content, then browser
+check on the released build. Keep server and World-route approval gates intact.
+
+Follow-up source tests: reproduced two failures for unconfirmed/unsaved Continue
+states, corrected the condition and panel's estimate labeling. Full npm suite
+416/416 PASS, zero skipped; audit and TypeScript/Vite build PASS. No real
+interpretation confirmation performed. Final frontend redeploy/verification next.
+
+Release CI observation: PR-triggered runs did not appear for the new push in this
+credential context; the existing SQL workflow's manual dispatch did run and PASS
+at the exact migration-fix SHA. Required file: .github/workflows/production-ci.yml.
+Add workflow_dispatch alongside its existing triggers, preserving every check
+and permission. Expected outcome: run the unchanged Node 22 test/audit/build
+steps for the exact release branch through an explicit authorized dispatch.
+Verification is the real workflow result, not a YAML-text assertion. No new
+services, secrets or bypassed checks.
+
+Final release regression plan: after the corrected frontend is live, create one
+new synthetic QA project with the existing locally composed WAV. This isolates
+post-migration upload/style/draft writes from the earlier project that now holds
+user-provided audio. Verify actual DSP with transcription blocked before network,
+persist a clearly synthetic manual interpretation draft and reload it. Do not
+confirm it. Verify Continue remains disabled and no confirmed pointer appears.
+This tests the newly deployed schema/RPC lifecycle without approving user content
+or submitting any provider/GPU inference.
+
+
+### T04 resumed verification — final deployed behavior
+
+Verification: BLOCKED for the complete acceptance criterion; release, local DSP
+and manual-draft persistence verified. Source commits: migration correction
+`5699c35f56726ac7597be1b653ca3f8b30ce64e3`, read-only preflight
+`69a9578d4952ce8a8cc9ac9951b822c55941187a`, estimate/confirmation gate
+`235b0737c82e60b882388974fed972ab006995b2`, CI dispatch
+`63604806744e6d306742c75d399cc001c00aa0e4`.
+Production final deployment `dpl_HBVecpyByZ6czJvLHvuHwWajis2W` READY at
+https://beat-vision-666cwas4i-beat-vision.vercel.app/ with the original
+https://beat-vision-theta.vercel.app/ alias; exact frontend SHA `636048067…`.
+Production CI 39821652295: 416/416 PASS, zero skipped, audit/build PASS.
+Earlier dispatch 39821481478 FAILED because Chromium did not start within the
+existing test's 10-second limit; later same-SHA PR run passed without removing
+checks. Modal offline 39821652417 PASS. Migration-fix PG 39818827550 PASS.
+
+Actual frontend created ONE new synthetic project
+`ad266b2c-3e9b-45fb-b8ab-5aabacfe3ac4`, preserving existing project/audio.
+Saved WAV, style and Notes persisted after reload. Browser DSP completed with
+transcription deliberately aborted before network. Manual draft v1 persisted,
+server SHA-256 equals the original b82c95… fixture, confirmed pointer remains
+null. Continue is disabled and actual World route presents confirmation gate.
+Desktop/Pixel 7 no page errors or overflow; mobile playback advances at 16 s.
+Evidence: final-release-synthetic-regression.json, synthetic screenshots and
+production-release-manifest.json. This proves no AI transcription or meaning.
+Two harness observations were corrected before the successful resumed test:
+Auth exact selector omitted the arrow; Notes accessible name includes textarea
+content after persistence. Read-only DOM/SQL inspection confirmed saved Notes;
+the test switched to its placeholder, reused the same project and did not
+repeat upload or create another fixture. No creative approval performed.
+
+Specific external blockers: dedicated free-provider plan/budget evidence and
+secure configuration access. Runtime preflight verified all three new
+provider/Arena configuration booleans false. Supabase management CLI has no
+access token; connected tools do not edit secrets. Owner was asked via async
+input for secure configuration route and current provider billing facts. Do
+not paste credentials into chat or enable financial attestation flags without
+evidence. Then an artist must review and confirm their own interpretation.
+Next task: T09 (independent read-only access/safeguard verification).
+
+
+### T09 resumed verification — released transport and remaining account access
+
+Objective: establish safe current provider execution access without inference.
+Initial status: BLOCKED. Evidence inspected: production generation v61 deployment
+receipt and component hashes, prior authenticated capability/foreign/anonymous
+checks (authorization controller unchanged), exact-head Modal offline CI
+39821652417 PASS, existing authorized Termux phone-status results.
+CONFIRMED: phone bridge reports offline. Historical completed read-only CLI job
+3b56352a-ccde-43f0-93f8-29b726e23586 found Modal CLI and app ID
+ap-CopCZqKwTuk11VLpDSU0fH, zero displayed tasks, billed cost $0.00 after credits.
+That output does not state remaining credit balance, expiry or enforceable hard
+spending limit. It is not fresh worker/model availability evidence. No new
+phone command queued, app invoked or GPU job submitted. Evidence:
+modal-existing-access.json. No direct Modal account credentials are bound here.
+Files changed: checklist/evidence only in this resumed verification; transport
+source at fbbcb3d… was deployed compatibly during the coordinated T04 release.
+Commit: frontend 636048067…; generation v61 component hashes in release manifest.
+Tests performed: offline source tests PASS; current provider inference NOT RUN.
+Verification: BLOCKED by current billing/cap proof and provider account access;
+remote duplicate reconciliation after uncertain receipt still unverified.
+Next task: no dependency-ready execution tasks. T10 additionally needs T08's
+artist-approved scene; T11 has no mission output to decode/inspect/play; T12
+cannot claim demonstrated technology or actual full-song resource exhaustion;
+T13 cannot run the complete sequence; T14 delivers review evidence only.
+
+Final mandatory status: T01–T03 PASS, T04–T14 BLOCKED with the dependencies above.
+No item is IN_PROGRESS. MVP is not sponsor-ready. Pending owner inputs are secure
+configuration access, verified provider plan/credits/hard cap and subsequent
+explicit artist review/approvals. No unapproved compute, content approval,
+full-length experiment, new infrastructure or main/PR merge occurred.

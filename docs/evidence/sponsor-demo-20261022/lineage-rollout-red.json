@@ -1,0 +1,17 @@
+{
+  "project": "llkzohajsoikdbuslxzb",
+  "scope": "synthetic rollback-only QA contract; no production or provider writes",
+  "query": "begin;\ndo $test$\ndeclare\n p uuid := gen_random_uuid(); actor uuid := gen_random_uuid();\n song uuid := gen_random_uuid(); revision uuid := gen_random_uuid();\n w uuid := gen_random_uuid(); l uuid := gen_random_uuid();\n d public.song_interpretations;\nbegin\n insert into public.projects(id,owner_id,title) values(p,actor,'Synthetic rollout lineage check');\n insert into public.songs(id,project_id,title,artist,audio_path,audio_revision,analysis_status,analysis)\n values(song,p,'Synthetic','Synthetic','synthetic/rollout.wav',revision,'completed','{\"duration_seconds\":16}'::jsonb);\n perform public.record_song_source_fingerprint(p,song,actor,revision,repeat('b',64),1234);\n d := public.save_song_interpretation_draft(p,song,actor,revision,repeat('b',64),'{\"schema_version\":1,\"summary\":\"Synthetic rollout contract\"}'::jsonb,'[]'::jsonb,'manual','','','{}'::jsonb);\n d := public.confirm_song_interpretation(p,song,d.id,actor);\n insert into public.world_reports(id,project_id,world_id,revision_number,status,confirmed_at,interpretation_id,interpretation_source_fingerprint)\n values(w,p,w,1,'completed',now(),d.id,repeat('b',64));\n insert into public.vision_locks(id,project_id,world_report_id,style_bible_id,song_id,revision_number,status,snapshot)\n values(l,p,w,gen_random_uuid(),song,1,'locked','{}'::jsonb);\n insert into public.generation_jobs(project_id,vision_lock_id,job_type,status,input_snapshot)\n values(p,l,'scene_image','queued','{}'::jsonb);\nend $test$;\nrollback;",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"error\":{\"name\":\"HttpException\",\"message\":\"Failed to run sql query: ERROR:  42702: column reference \\\"world_id\\\" is ambiguous\\nDETAIL:  It could refer to either a PL/pgSQL variable or a table column.\\nQUERY:  song_row.id is null or interpretation_row.id is null\\n      or song_row.current_interpretation_id is distinct from source_id\\n      or song_row.interpretation_confirmed_at is null\\n      or interpretation_row.status <> 'confirmed'\\n      or interpretation_row.creative_source_fingerprint is null\\n      or source_hash is distinct from interpretation_row.creative_source_fingerprint\\n      or public.song_creative_fingerprint(lock_song_id) is distinct from source_hash\\n      or not exists (select 1 from public.world_reports w\\n           where w.id=world_id and w.project_id=new.project_id and w.interpretation_id=source_id\\n           and w.interpretation_source_fingerprint=interpretation_row.source_fingerprint)\\nCONTEXT:  PL/pgSQL function reject_unlineaged_new_generation() line 22 at IF\\nSQL statement \\\"insert into public.generation_jobs(project_id,vision_lock_id,job_type,status,input_snapshot)\\n values(p,l,'scene_image','queued','{}'::jsonb)\\\"\\nPL/pgSQL function inline_code_block line 18 at SQL statement\\n\"}}"
+      }
+    ],
+    "structuredContent": {
+      "error_code": "INVALID_ARGUMENT"
+    },
+    "isError": true
+  }
+}
