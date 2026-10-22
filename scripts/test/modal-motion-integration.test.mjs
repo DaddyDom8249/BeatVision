@@ -150,6 +150,49 @@ test('Generation controller fixture loads both providers without GPU calls',asyn
   const instance=await loadGeneration();try {assert.equal(typeof instance.run,'function');}finally{await instance.cleanup();}
 });
 
+test('Owner capability reports release configuration without any provider request',async()=>{
+  const originalFetch=globalThis.fetch;
+  let calls=0;
+  globalThis.fetch=async()=>{calls++;throw new Error('capability must not contact a provider');};
+  const client={
+    auth:{getUser:async()=>({data:{user:{id:'fixture-owner'}}})},
+    from(table){
+      assert.equal(table,'projects');
+      return {select(){return this;},eq(){return this;},async maybeSingle(){
+        return {data:{id:uuids[0],owner_id:'fixture-owner'}};
+      }};
+    },
+  };
+  try {
+    for(const configured of [false,true]) {
+      const instance=await loadGeneration(client,configured?{
+        ARENA_GATEWAY_URL:'https://gateway.example.com',
+        ARENA_GATEWAY_ALLOWED_HOSTS:'gateway.example.com',
+        ARENA_GATEWAY_TOKEN:'fixture-server-only-token',
+        GROQ_FREE_API_KEY:'fixture-server-only-groq-key',
+        GROQ_FREE_ACCOUNT_VERIFIED:'true',
+        BRAGORA_GROQ_FREE_VERIFIED:'true',
+        BRAGORA_INTERPRETATION_ENABLED:'true',
+        BRAGORA_GROQ_MODEL:'openai/gpt-oss-20b',
+        BRAGORA_AI_DAILY_QUOTA:'3',
+      }:{});
+      try {
+        const response=await instance.handler(new Request('https://edge.example.com',{
+          method:'POST',headers:{Authorization:'Bearer fixture-user','Content-Type':'application/json'},
+          body:JSON.stringify({action:'modal_capability',projectId:uuids[0]}),
+        }));
+        assert.equal(response.status,200);
+        const data=await response.json();
+        assert.equal(data.arena_configured,configured);
+        assert.equal(data.free_transcription_configured,configured);
+        assert.equal(data.interpretation_proposals_configured,configured);
+        assert.equal(JSON.stringify(data).includes('fixture-server-only'),false);
+      } finally {await instance.cleanup();}
+    }
+    assert.equal(calls,0);
+  } finally {globalThis.fetch=originalFetch;}
+});
+
 // These exercise the real adapter with local streams/loopback HTTP only.
 // No provider request, model inference, real credentials or motion proof.
 test('Modal transport refuses redirects before forwarding proxy credentials',async()=>{

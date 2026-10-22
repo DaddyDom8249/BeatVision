@@ -982,7 +982,21 @@ Deno.serve(async (req) => {
     if (action === "modal_capability") {
       let available = false;
       try { assertModalSubmissionEnabled(); available = true; } catch { /* no secrets sent to client */ }
-      return json(req, { modal_supported: true, modal_available: available, model: MODAL_MOTION.model });
+      // Owner-scoped release preflight: inspect configuration only. Never call
+      // a provider or reserve a job just to establish whether settings exist.
+      let arenaConfigured = false;
+      try { arenaBase(); arenaToken(); arenaConfigured = true; } catch { /* fixed-host checks fail closed */ }
+      const freeKeyConfigured = Boolean(env("GROQ_FREE_API_KEY"));
+      const dailyQuota = Number(env("BRAGORA_AI_DAILY_QUOTA"));
+      const interpretationConfigured = freeKeyConfigured &&
+        env("BRAGORA_GROQ_FREE_VERIFIED") === "true" &&
+        env("BRAGORA_INTERPRETATION_ENABLED") === "true" &&
+        env("BRAGORA_GROQ_MODEL") === "openai/gpt-oss-20b" &&
+        Number.isInteger(dailyQuota) && dailyQuota >= 1 && dailyQuota <= 20;
+      return json(req, { modal_supported: true, modal_available: available, model: MODAL_MOTION.model,
+        arena_configured: arenaConfigured,
+        free_transcription_configured: freeKeyConfigured && env("GROQ_FREE_ACCOUNT_VERIFIED") === "true",
+        interpretation_proposals_configured: interpretationConfigured });
     }
     if (action === "motion_eligibility") return json(req, {
       eligibility: await hfEligibility(env("HF_VIDEO_TOKEN")),
