@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {createServer} from 'node:http';
+import {once} from 'node:events';
+import {setImmediate as nextTurn} from 'node:timers/promises';
 import {MODAL_MOTION, assertModalSubmissionEnabled, sha256Hex, submitModalMotion,
   pollModalMotion} from '../../supabase/functions/beatvision-generation/modal-motion.ts';
 import {loadGeneration} from './generation-runtime.mjs';
@@ -145,4 +148,88 @@ test('App explicitly selects Modal and retains HF as the default',()=>{
 });
 test('Generation controller fixture loads both providers without GPU calls',async()=>{
   const instance=await loadGeneration();try {assert.equal(typeof instance.run,'function');}finally{await instance.cleanup();}
+});
+
+// These exercise the real adapter with local streams/loopback HTTP only.
+// No provider request, model inference, real credentials or motion proof.
+test('Modal transport refuses redirects before forwarding proxy credentials',async()=>{
+  let redirected=0;
+  const server=createServer((req,res)=>{
+    if(req.url==='/redirected') {
+      redirected++;
+      res.writeHead(200,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({status:'processing'}));
+    } else {
+      res.writeHead(302,{Location:'/redirected'});
+      res.end();
+    }
+  });
+  server.listen(0,'127.0.0.1');
+  await once(server,'listening');
+  const origin='http://127.0.0.1:'+server.address().port;
+  try {
+    await assert.rejects(pollModalMotion('fc-redirect01',noSpendEnv,(_url,options)=>
+      fetch(origin+'/poll',options)),/MODAL_HTTP_UNAVAILABLE/);
+    assert.equal(redirected,0,'credentialed redirect target must never be contacted');
+  } finally {
+    server.closeAllConnections();
+    await new Promise(resolve=>server.close(resolve));
+  }
+});
+test('Modal transport rejects oversized Content-Length before reading the body',async()=>{
+  let cancelled=false;
+  const response=new Response(new ReadableStream({
+    start(controller){controller.enqueue(new TextEncoder().encode('{"status":"processing"}'));controller.close();},
+    cancel(){cancelled=true;},
+  }),{headers:{'content-length':String(16*1024*1024+1)}});
+  await assert.rejects(pollModalMotion('fc-length01',noSpendEnv,async()=>response),
+    /MODAL_HTTP_RESPONSE_TOO_LARGE/);
+  assert.equal(cancelled,true,'unread oversized response must be cancelled');
+});
+test('Modal transport bounds a chunked body without trusting Content-Length',async()=>{
+  let cancelled=false,reads=0;
+  const chunk=new Uint8Array(1024*1024).fill(32);
+  const response=new Response(new ReadableStream({
+    pull(controller){
+      reads++;
+      if(reads<=17) controller.enqueue(chunk);
+      else {controller.enqueue(new TextEncoder().encode('{"status":"processing"}'));controller.close();}
+    },
+    cancel(){cancelled=true;},
+  }));
+  await assert.rejects(pollModalMotion('fc-stream01',noSpendEnv,async()=>response),
+    /MODAL_HTTP_RESPONSE_TOO_LARGE/);
+  assert.equal(cancelled,true,'oversized stream must be cancelled');
+  assert.ok(reads<=18,'stop consuming immediately after crossing the limit');
+});
+test('Modal transport keeps the deadline active while a response body stalls',async context=>{
+  context.mock.timers.enable({apis:['setTimeout']});
+  let signal,stream;
+  const pending=pollModalMotion('fc-timeout01',noSpendEnv,async(_url,options)=>{
+    signal=options.signal;
+    return new Response(new ReadableStream({start(controller){
+      stream=controller;
+      signal.addEventListener('abort',()=>controller.error(new DOMException('Timed out','AbortError')),{once:true});
+    }}));
+  });
+  // Attach immediately so deliberate cleanup on the failing baseline is handled.
+  pending.catch(()=>{});
+  try {
+    await nextTurn();
+    context.mock.timers.tick(20_001);
+    assert.equal(signal.aborted,true,'headers must not clear the body-read deadline');
+    await assert.rejects(pending,/MODAL_HTTP_TIMEOUT/);
+  } finally {
+    if(!signal.aborted) stream.error(new DOMException('Test cleanup','AbortError'));
+    await pending.catch(()=>{});
+  }
+});
+test('Modal transport accepts a complete maximum-size base64 clip envelope',async()=>{
+  const video=new Uint8Array(MODAL_MOTION.maxBytes).fill(1);
+  const result=await pollModalMotion('fc-maxclip01',noSpendEnv,async()=>new Response(JSON.stringify({
+    status:'completed',video_base64:Buffer.from(video).toString('base64'),
+    manifest:{provider:'modal',model:MODAL_MOTION.model},
+  })));
+  assert.equal(result.status,'completed');
+  assert.deepEqual(result.video,video);
 });

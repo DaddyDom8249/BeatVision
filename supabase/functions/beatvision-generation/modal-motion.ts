@@ -68,10 +68,15 @@ async function modalFetch(
 ): Promise<{response: Response; data: any}> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 20_000);
-  let response: Response;
+  // An 8 MiB clip expands to about 11 MiB in base64; allow its JSON manifest
+  // while bounding both declared and chunked responses before JSON parsing.
+  const maxResponseBytes = 16 * 1024 * 1024;
+  let response: Response | undefined;
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   try {
     response = await requester(MODAL_MOTION.apiBase + path, {
       ...init,
+      redirect: "error",
       headers: {
         "Modal-Key": env("MODAL_TOKEN_ID"),
         "Modal-Secret": env("MODAL_TOKEN_SECRET"),
@@ -79,19 +84,46 @@ async function modalFetch(
       },
       signal: controller.signal,
     });
+    const length = response.headers.get("content-length");
+    if (length && (!/^\d+$/.test(length) || Number(length) > maxResponseBytes))
+      throw new ModalMotionError("MODAL_HTTP_RESPONSE_TOO_LARGE");
+    reader = response.body?.getReader();
+    let raw = "";
+    if (reader) {
+      const decoder = new TextDecoder();
+      let total = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > maxResponseBytes)
+          throw new ModalMotionError("MODAL_HTTP_RESPONSE_TOO_LARGE");
+        raw += decoder.decode(value, { stream: true });
+      }
+      raw += decoder.decode();
+    }
+    let data: any = {};
+    try { data = raw ? JSON.parse(raw) : {}; }
+    catch { throw new ModalMotionError("MODAL_HTTP_RESPONSE_INVALID"); }
+    if (!response.ok && response.status !== 202)
+      throw new ModalMotionError("MODAL_HTTP_" + response.status + ":" + String(data?.error || "REQUEST_FAILED"));
+    return { response, data };
   } catch (error) {
+    if (error instanceof ModalMotionError) throw error;
     const name = error && typeof error === "object" ? String((error as Error).name || "") : "";
-    throw new ModalMotionError(name === "AbortError" ? "MODAL_HTTP_TIMEOUT" : "MODAL_HTTP_UNAVAILABLE");
+    throw new ModalMotionError(controller.signal.aborted || name === "AbortError"
+      ? "MODAL_HTTP_TIMEOUT" : "MODAL_HTTP_UNAVAILABLE");
   } finally {
     clearTimeout(timer);
+    // Cancel unread bytes after an oversized response or transport failure.
+    // Do not wait on an upstream cancellation acknowledgment.
+    if (reader) {
+      void reader.cancel().catch(() => {});
+      reader.releaseLock();
+    } else if (response?.body && !response.body.locked) {
+      void response.body.cancel().catch(() => {});
+    }
   }
-  const raw = await response.text();
-  let data: any = {};
-  try { data = raw ? JSON.parse(raw) : {}; }
-  catch { throw new ModalMotionError("MODAL_HTTP_RESPONSE_INVALID"); }
-  if (!response.ok && response.status !== 202)
-    throw new ModalMotionError("MODAL_HTTP_" + response.status + ":" + String(data?.error || "REQUEST_FAILED"));
-  return { response, data };
 }
 export async function submitModalMotion(
   payload: Record<string, unknown>, source: Uint8Array, env: EnvReader = readEnv,
