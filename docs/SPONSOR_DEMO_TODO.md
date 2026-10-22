@@ -45,7 +45,7 @@ ID| Task| Dependency| Status| Evidence
 T01| Verify current repository, deployments, and integrations| None| PASS| CONFIRMED identities, schema/function gaps and candidate CI: evidence/sponsor-demo-20261022/baseline.json
 T02| Verify sponsor registration and login| T01| PASS| signup-result.json, login-result.json: actual confirmed fresh account; desktop/Pixel 7 sign-in HTTP 200 and settled empty dashboard
 T03| Verify project creation and song upload| T02| PASS| Initial create/upload/reload PASS; current 254.48-second audio read-only playback/hash verified on desktop/Pixel 7 after source change
-T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Phone post-patch CORS PASS; management read not executed; final known-path CLI batche8641d25 awaits required phone approval (attempt3/3)
+T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Final approved CLI attempt: Linux Node PASS, Supabase linux-arm64 binary missing; management read not executed; approach closed3/3; one-pass provider setup in release gates
 T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed World GET/gate verified; no artist-confirmed interpretation or World approval
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
@@ -928,3 +928,29 @@ bridge requires phone approval for this changed command. No new command result
 yet. Evidence: phone-postfix-cors-and-cli-runtime.json. Previous local/phone
 CORS tests remain accepted; no repeat build or provider call. The next result
 will close this runtime approach after attempt3/3, successful or BLOCKED.
+
+
+### T04.6 final approved result — CLI approach closed
+
+Jobe8641d25 completed bridge exit0. Native Linux Nodev22.16.0 PASS. Actual CLI
+help FAILED exit1: “No matching Supabase CLI binary package found for linux-arm64”.
+The management name/metadata read was NOT EXECUTED; authentication remains
+UNKNOWN, not denied. Confirmed blocker is the local CLI binary package, not the
+app backend, RLS or Supabase account. Evidence:supabase-cli-final-result.json.
+Three materially changed attempts are exhausted; close this approach under
+user RuleE. No fourth runtime/CLI request, installation or inference queued.
+
+Prepared one-pass operator setup in SPONSOR_DEMO_RELEASE_GATES.md, verified
+against current function source and Supabase's production-secrets docs (Dashboard
+supports pasting multiple secrets; no function redeploy needed for secret edits).
+Actual secret values/presence are UNKNOWN. Six non-secret required settings are
+provided only for after verified dedicated Groq Free account/no paid billing;
+existing keys are reused/entered securely, never in chat. Director/interpretation
+quota3 is an operator recommendation within enforced1–20, not a statement of
+current value; it limits those operations, not all provider workloads. Arena
+requires its existing verified origin/token/hostname, no invented endpoint.
+Files changed: task/evidence/release/log only; app/frontend/deployments unchanged.
+Tests performed: actual phone diagnostics above; no repeated source test/build.
+Verification: BLOCKED for T04 complete acceptance. Next actionable dependencies:
+current Groq Free-plan confirmation and either owner Dashboard batch application
+or secure management access. Artist creative approvals remain later stage gates.

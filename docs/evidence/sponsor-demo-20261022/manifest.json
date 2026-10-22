@@ -241,6 +241,11 @@
       "sha256": "d48191937b6d5fb80316a9fa97dab0917f92d85267c3223f45e97e0bb9a4c470"
     },
     {
+      "file": "supabase-cli-final-result.json",
+      "bytes": 1562,
+      "sha256": "54583aad122fcdaf7c0c4c2a4f2ee41f08320e5187f1f901925326c12f203252"
+    },
+    {
       "file": "supabase-phone-access-probe.json",
       "bytes": 1273,
       "sha256": "023e1980b4d57ec88d74f85c5dba40010f302f22c5cc390098a793e668b994d5"

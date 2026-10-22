@@ -1,0 +1,24 @@
+{
+  "task_id": "T04.6",
+  "phone_job_id": "e8641d25-720c-4f9a-b6d1-4e6bcd50a7c3",
+  "status": "completed",
+  "bridge_exit": 0,
+  "runtime": {
+    "platform": "linux",
+    "version": "v22.16.0",
+    "verification": "PASS"
+  },
+  "cli_help": {
+    "exit": 1,
+    "verification": "FAILED",
+    "error": "No matching Supabase CLI binary package found for linux-arm64"
+  },
+  "supabase_management_read": "NOT EXECUTED",
+  "management_authentication": "UNKNOWN: failure occurred locally before authentication",
+  "raw_output": "FINAL_EXISTING_LINUX_CLI_READ_ONLY_NO_VALUES_OR_INFERENCE\n{\"runtime\": {\"platform\": \"linux\", \"version\": \"v22.16.0\"}}\n{\"cli_help_ok\": false, \"exit\": 1, \"diagnostic\": \"file:///data/data/com.termux/files/usr/lib/node_modules/supabase/dist/supabase.js:36\\n  throw new Error(`No matching Supabase CLI binary package found for ${process.platform}-${os.arch()}`);\\n        ^\\n\\nError: No matching Supabase CLI binary package found for linux-arm64\\n    at file:///data/data/com.termux/files/usr/lib/node_modules/supabase/dist/supabase.js:36:9\\n    at ModuleJob.run (node:internal/modules/esm/module_job:274:25)\\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26)\\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\\n\\nNode.js v22.16.0\\n\"}\n",
+  "attempt": 3,
+  "maximum_attempts": 3,
+  "approach_status": "BLOCKED and closed under user's retry limit; no further phone CLI retry queued",
+  "settings_changes": 0,
+  "provider_or_gpu_submissions": 0
+}

@@ -199,3 +199,67 @@ checked and absent. Existing successful command metadata identifies
 (attempt3/3) uses that known candidate and one batch for all nine configuration
 names; it requires a new bridge phone approval. No install/login/secret-value
 inspection, settings or inference. Do not repeat completed CORS/billing tests.
+
+
+## One operator setup pass after the final CLI result
+
+Final approved jobe8641d25 proves Linux Nodev22.16.0 works, but the installed
+Supabase JS wrapper lacks its linux-arm64 CLI binary. CLI help failed locally;
+management authentication and secret metadata never ran. Three attempts are
+exhausted, so no further phone CLI request is queued. This is not an RLS or
+backend failure. See
+[final CLI evidence](evidence/sponsor-demo-20261022/supabase-cli-final-result.json).
+
+The next setup can use the existing
+[Supabase Edge Function secrets dashboard](https://supabase.com/dashboard/project/mdofsinyofqbeapzfygu/functions/secrets)
+in one session. Supabase's current
+[secrets documentation](https://supabase.com/docs/guides/functions/secrets)
+confirms multiple secrets can be pasted at once and become available without
+redeploying the functions. Current individual values/presence remain UNKNOWN.
+
+First verify that the dedicated **Groq** account used for transcription and
+creative proposals is currently Free with no paid billing/overage. Modal's
+separate $0 spend-limit evidence does not establish the Groq account plan.
+Only after that verification, the required non-secret settings are:
+
+```dotenv
+GROQ_FREE_ACCOUNT_VERIFIED=true
+BRAGORA_GROQ_FREE_VERIFIED=true
+BRAGORA_INTERPRETATION_ENABLED=true
+BRAGORA_AI_DIRECTOR_ENABLED=true
+BRAGORA_GROQ_MODEL=openai/gpt-oss-20b
+BRAGORA_AI_DAILY_QUOTA=3
+```
+
+These values are a prepared setup batch, **not** changes already made or proof
+that the provider is free. The quota3 is a conservative recommended setting
+within source-enforced1–20 for interpretation/Director operations; it is not an
+account-wide cap on transcription/World/Style requests. Keep the existing
+`GROQ_FREE_API_KEY` if it belongs to that verified dedicated account; otherwise
+enter the correct dedicated key only through the Dashboard/secure environment.
+Do not paste a placeholder over an existing key or send credentials in chat.
+The same verified-free account flag gates transcription, World and Style text.
+Do not add unrelated provider keys or paid fallbacks.
+
+For the existing Arena connection, review these together before releasing the
+full candidate generation controller:
+
+Setting | Required existing/verified value
+---|---
+ARENA_GATEWAY_URL | Existing approved HTTPS origin only; no path/query/fragment/credentials/port
+ARENA_GATEWAY_TOKEN | Existing valid gateway token entered/reused securely
+ARENA_GATEWAY_ALLOWED_HOSTS | Exact lowercase DNS hostname from that verified origin; no wildcard
+
+No endpoint or token value is guessed or included here. Verify the existing
+image provider's no-charge eligibility before any scene-image submission; Modal
+credits do not establish another provider's price. Preserve the compatible
+production generation controller until its candidate prerequisites are verified.
+
+Alternative: bind working `SUPABASE_ACCESS_TOKEN` through secure environment
+settings so the existing workspace CLI can apply the reviewed configuration.
+Supply any missing dedicated provider key through that secure mechanism too,
+never in chat. No need to repair the phone CLI to use the Dashboard route.
+After account/setup confirmation, verify authenticated provider availability,
+then proceed to genuine analysis/interpretation and artist review. No creative
+content is auto-approved. A GPU proof still requires approved scene inputs and
+bounded execution safeguards; the complete sponsor demo remains BLOCKED.
