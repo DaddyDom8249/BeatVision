@@ -361,8 +361,12 @@ export default function SongPage({ projectId }: Props) {
               {saved && <p role="status" style={{ color: "var(--color-success)", fontWeight: 600 }}>Song details saved successfully.</p>}
               {song?.analysis_status === "completed" ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <p>Musical signal analysis is complete. Ready to reveal the visual world for this song.</p>
-                  <button type="button" className="primary-button large" onClick={continueToWorld}>
+                  <p>{songIntakeDirty
+                    ? "Save your song changes, then save and confirm the interpretation before World Reveal."
+                    : interpretation.confirmed
+                    ? "Musical analysis and artist interpretation are confirmed. Continue to World Reveal."
+                    : "Musical signal analysis is complete. Save and confirm the interpretation above before World Reveal."}</p>
+                  <button type="button" className="primary-button large" disabled={songIntakeDirty || !interpretation.confirmed} onClick={continueToWorld}>
                     Continue to World Reveal →
                   </button>
                 </div>

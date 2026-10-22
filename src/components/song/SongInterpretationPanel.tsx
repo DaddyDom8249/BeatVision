@@ -94,13 +94,13 @@ export default function SongInterpretationPanel({ song, loading, working, error,
         </span>
       </div>
       <p className="song-intelligence-copy">
-        This interpretation is separate from your Notes and never replaces them. Signal facts are shown as evidence; creative meaning stays editable and requires explicit artist confirmation.
+        This interpretation is separate from your Notes and never replaces them. Measured duration and tempo/key estimates are shown as evidence; creative meaning stays editable and requires explicit artist confirmation.
       </p>
 
-      <div className="analysis-dashboard-grid song-intelligence-evidence" aria-label="Verified song evidence">
+      <div className="analysis-dashboard-grid song-intelligence-evidence" aria-label="Song evidence and estimates">
         <div className="analysis-metric-card"><span className="metric-label">Audio source</span><span className="metric-value">{song?.audio_path ? "Saved privately" : "Required"}</span></div>
         <div className="analysis-metric-card"><span className="metric-label">Duration</span><span className="metric-value">{signal?.duration_seconds ? `${Number(signal.duration_seconds).toFixed(1)}s` : "Unavailable"}</span></div>
-        <div className="analysis-metric-card"><span className="metric-label">BPM / key</span><span className="metric-value">{signal?.bpm ?? "—"} / {signal?.key ?? "—"}</span></div>
+        <div className="analysis-metric-card"><span className="metric-label">BPM / key estimates</span><span className="metric-value">{signal?.bpm ?? "—"} / {signal?.key ?? "—"}</span></div>
         <div className="analysis-metric-card"><span className="metric-label">Source fingerprint</span><span className="metric-value fingerprint-value">{song?.audio_source_fingerprint ? `${song.audio_source_fingerprint.slice(0, 12)}…` : "Computed on save"}</span></div>
       </div>
 
