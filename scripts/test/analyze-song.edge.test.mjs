@@ -16,6 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createStubClientFactory, storageBucketCalls } from "./supabase_stub.mjs";
+import { corsHeaders as sdkCorsHeaders } from "@supabase/supabase-js/cors";
 
 const FUNCTION_PATH = fileURLToPath(
   new URL("../../supabase/functions/beatvision-analyze-song/index.ts", import.meta.url)
@@ -306,4 +307,21 @@ test("song analysis allows canonical origin without wildcard CORS", async () => 
   const denied = await handler(new Request(endpoint, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: "{}" }));
   assert.equal(denied.status, 401);
   assert.equal(denied.headers.get("Access-Control-Allow-Origin"), origin);
+});
+
+test("song analysis preflight allows SDK tracing headers while retaining authentication", async () => {
+  const { handler } = await bootFunction();
+  const origin = "https://beat-vision-theta.vercel.app";
+  const endpoint = `${SUPABASE_URL}/functions/v1/beatvision-analyze-song`;
+  const requested = sdkCorsHeaders["Access-Control-Allow-Headers"].split(",").map((name) => name.trim().toLowerCase());
+  const response = await handler(new Request(endpoint, { method: "OPTIONS", headers: {
+    Origin: origin, "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": requested.join(", "),
+  } }));
+  const allowed = response.headers.get("Access-Control-Allow-Headers").split(",").map((name) => name.trim().toLowerCase());
+  for (const name of requested) assert.ok(allowed.includes(name), `SDK header ${name} must pass preflight`);
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), origin);
+  const denied = await handler(new Request(endpoint, { method: "POST", headers: {
+    Origin: origin, traceparent: "00-11111111111111111111111111111111-2222222222222222-01", "Content-Type": "application/json",
+  }, body: "{}" }));
+  assert.equal(denied.status, 401);
 });

@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 import { createStubClientFactory } from "./supabase_stub.mjs";
+import { corsHeaders as sdkCorsHeaders } from "@supabase/supabase-js/cors";
 
 const FUNCTION_PATH = fileURLToPath(new URL("../../supabase/functions/beatvision-song-interpretation/index.ts", import.meta.url));
 const SUPABASE_URL = "https://stub.supabase.co";
@@ -192,6 +193,27 @@ test("confirmation is owner-bound and explicit", async () => {
   const denied = await request(other.handler, { projectId: PROJECT_ID, action: "save_draft", interpretation: interpretationDocument(), evidence: [] });
   assert.equal(denied.status, 404);
   assert.equal(other.db.song_interpretation_audit_events.length, 0);
+});
+
+test("interpretation preflight permits SDK tracing headers with exact origins and authentication", async () => {
+  const { handler } = await boot();
+  const origin = "https://beat-vision-theta.vercel.app";
+  const endpoint = `${SUPABASE_URL}/functions/v1/beatvision-song-interpretation`;
+  const requested = sdkCorsHeaders["Access-Control-Allow-Headers"].split(",").map((name) => name.trim().toLowerCase());
+  const preflight = await handler(new Request(endpoint, { method: "OPTIONS", headers: {
+    Origin: origin, "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": requested.join(", "),
+  } }));
+  const allowed = preflight.headers.get("Access-Control-Allow-Headers").split(",").map((name) => name.trim().toLowerCase());
+  for (const name of requested) assert.ok(allowed.includes(name), `SDK header ${name} must pass preflight`);
+  assert.equal(preflight.headers.get("Access-Control-Allow-Origin"), origin);
+  for (const untrusted of ["https://evil.example", "null", `${origin}.evil.example`]) {
+    const denied = await handler(new Request(endpoint, { method: "OPTIONS", headers: { Origin: untrusted } }));
+    assert.equal(denied.headers.get("Access-Control-Allow-Origin"), null);
+  }
+  const denied = await handler(new Request(endpoint, { method: "POST", headers: {
+    Origin: origin, traceparent: "00-11111111111111111111111111111111-2222222222222222-01", "Content-Type": "application/json",
+  }, body: "{}" }));
+  assert.equal(denied.status, 401);
 });
 
 after(async () => {
