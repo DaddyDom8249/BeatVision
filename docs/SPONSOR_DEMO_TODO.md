@@ -26,8 +26,8 @@ a sponsor journey PASS. Previous agent/PR narrative is context, not fresh proof.
 - Review/evidence head pushed to existing draft PR #141:
   `cf2ccb34a2589fe934193aa1f8c2eb145d273332`.
 - Current production: https://beat-vision-theta.vercel.app/; Vercel
-  `dpl_HBVecpyByZ6czJvLHvuHwWajis2W`, READY, exact frontend commit
-  `63604806744e6d306742c75d399cc001c00aa0e4`.
+  `dpl_4tzfmck36NYpFTn3xbhzQYhcx8Ft`, READY, exact frontend commit
+  `64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52`.
 - Initial production (historical evidence): `dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT`,
   `4a2ebf8bf3e9f30f0cf35442f86662bb6296da86`.
 - Current backend: production migration bundle `20261022170451`; analyze-song v41,
@@ -45,7 +45,7 @@ ID| Task| Dependency| Status| Evidence
 T01| Verify current repository, deployments, and integrations| None| PASS| CONFIRMED identities, schema/function gaps and candidate CI: evidence/sponsor-demo-20261022/baseline.json
 T02| Verify sponsor registration and login| T01| PASS| signup-result.json, login-result.json: actual confirmed fresh account; desktop/Pixel 7 sign-in HTTP 200 and settled empty dashboard
 T03| Verify project creation and song upload| T02| PASS| Initial create/upload/reload PASS; current 254.48-second audio read-only playback/hash verified on desktop/Pixel 7 after source change
-T04| Verify music analysis and interpretation confirmation| T03| IN_PROGRESS| User confirmed dedicated Groq Free account; one guarded real frontend proposal test on unchanged isolated fixture; configuration access route still pending
+T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Groq Free attestation resolved. Deployed error-handling fix verified; actual frontend503 PROVIDER_COST_UNVERIFIED, manual fallback visible; missing/mismatched server settings require secure access/operator setup. No artist confirmation; interpretation-error-release.json
 T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed World GET/gate verified; no artist-confirmed interpretation or World approval
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
@@ -1019,3 +1019,50 @@ sets manual fallback from code/flag and preserves approvals/version history.
 No database/backend/provider-setting changes. Deployment and browser green check
 pending; do not mark full T04 PASS. Actual proposal503 and incomplete harness
 read separately recorded in groq-confirmed-proposal-result.json, no resubmission.
+
+
+T04.8 deployment64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52 is READY as
+dpl_4tzfmck36NYpFTn3xbhzQYhcx8Ft; canonical alias attached. Exact-head production
+CI39849524379 completed success (tests/audit/build). Controlled frontend green
+check running, with no real provider submission. After that, one materially
+justified actual frontend retest may inspect the formerly hidden terminal error:
+previous request is conclusively503 in server logs, no quota or inflight rows,
+only manualv1 remains; not an uncertain-job resubmission. Read-only source check
+again confirms isolated synthetic fixture and null confirmation. User-confirmed
+Free account and unchanged server financial/quotas gates apply. This retest must
+write observed status before body reading and bound every wait; no retry after
+an uncertain result. No automatic confirmation, GPU call or settings change.
+
+
+### T04.8 final verification — deployed repair PASS; T04 BLOCKED
+
+Objective: Preserve actual server errors/manual fallback without relaxing any
+provider, ownership or approval gate.
+Evidence inspected: interpretation-error-release.json; controlled red/green
+browser artifacts; actual groq-postfix-proposal-result.json and panel screenshot;
+read-only production song_interpretations query after retest.
+Confirmed blocker: actual authenticated frontend proposal returns HTTP503 with
+PROVIDER_COST_UNVERIFIED and the configured-provider-unavailable message. Exact
+source shows at least one required verified flag/enable flag/key/pinned model
+condition fails. Individual secret values remain UNKNOWN. Owner's Groq Free
+attestation is accepted; it does not automatically update server environment.
+Files changed: src/hooks/useSongInterpretation.ts;
+scripts/test/song-interpretation-errors.test.mjs; checklist, release packet,
+PROJECT_LOG.md and sanitized evidence. No backend/schema/provider-setting changes.
+Commit: 64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52.
+Deployment: dpl_4tzfmck36NYpFTn3xbhzQYhcx8Ft READY; canonical alias confirmed;
+https://beat-vision-nlxq3v0z6-beat-vision.vercel.app/ is immutable identity only
+(the previously deferred immutable-host CORS limitation still applies).
+Tests performed: focused8/8 PASS; full local422/422 PASS,0 skipped; exact-source
+CI39849524379 completed/success422/422,0 skipped,audit/build PASS. Canonical
+controlled503 browser regression PASS in desktop and Pixel7 emulation. Actual
+postfix frontend retest displays the exact server message/manual fallback; DRAFT
+V1 and disabled Continue retained. Prior manual version remains the only DB row.
+The second real proposal has a terminal503/error envelope, not an uncertain job;
+no further submission queued. No successful inference or creative approval claim.
+Verification: PASS for numbered error-handling repair; BLOCKED for mandatory T04.
+Next task: No dependency-ready item remains executable with current access. T09
+already has independent read-only control-plane/billing proof but needs financial/
+execution prerequisites and an approved scene for remaining verification. T05–08
+and T10–14 remain blocked through the recorded creative/input dependencies. No
+active task, no new phone request, no extra tests for these documentation edits.

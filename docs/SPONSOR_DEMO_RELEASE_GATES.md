@@ -6,9 +6,9 @@ The full sponsor demo remains BLOCKED. The authoritative record is
 
 ## Released and verified
 
-Frontend: `63604806744e6d306742c75d399cc001c00aa0e4`, Vercel
-`dpl_HBVecpyByZ6czJvLHvuHwWajis2W`, READY with the original production alias.
-Immutable release URL: https://beat-vision-666cwas4i-beat-vision.vercel.app/.
+Frontend: `64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52`, Vercel
+`dpl_4tzfmck36NYpFTn3xbhzQYhcx8Ft`, READY with the original production alias.
+Immutable release URL: https://beat-vision-nlxq3v0z6-beat-vision.vercel.app/.
 Existing draft PR: https://github.com/DaddyDom8249/BeatVision/pull/141.
 The user authorized this reviewed release with “Do it”; no main merge occurred.
 
@@ -63,8 +63,10 @@ the checklist; a successful isolated test reused the same project/audio.
   SQL but cannot edit secrets; CLI has no management token. Owner can bind the
   management token through secure environment settings or configure the dashboard.
   Never paste credentials in chat.
-- Verify the actual Groq account plan/cost before enabling
-  `GROQ_FREE_ACCOUNT_VERIFIED` or `BRAGORA_GROQ_FREE_VERIFIED`. Interpretation also
+- Owner confirmed the dedicated Groq Free/no-paid-billing account. That evidence
+  is owner attestation; no independent billing retrieval is claimed. Actual
+  server503 PROVIDER_COST_UNVERIFIED still rejects required configuration.
+  Setting values remain UNKNOWN; at least one required condition fails. Interpretation also
   requires `BRAGORA_INTERPRETATION_ENABLED`, the pinned approved model
   `openai/gpt-oss-20b` and bounded daily quota1–20. Runtime booleans establish
   incomplete prerequisites, not which individual secret is absent.
@@ -217,10 +219,10 @@ in one session. Supabase's current
 confirms multiple secrets can be pasted at once and become available without
 redeploying the functions. Current individual values/presence remain UNKNOWN.
 
-First verify that the dedicated **Groq** account used for transcription and
-creative proposals is currently Free with no paid billing/overage. Modal's
-separate $0 spend-limit evidence does not establish the Groq account plan.
-Only after that verification, the required non-secret settings are:
+The owner has now confirmed that the dedicated **Groq** account is Free with
+paid billing disabled. This is owner attestation, recorded separately from
+Modal billing. Do not ask for the same confirmation again. The actual frontend
+provider gate still returns503; the prepared non-secret settings are:
 
 ```dotenv
 GROQ_FREE_ACCOUNT_VERIFIED=true
@@ -259,7 +261,21 @@ Alternative: bind working `SUPABASE_ACCESS_TOKEN` through secure environment
 settings so the existing workspace CLI can apply the reviewed configuration.
 Supply any missing dedicated provider key through that secure mechanism too,
 never in chat. No need to repair the phone CLI to use the Dashboard route.
-After account/setup confirmation, verify authenticated provider availability,
+After setup application, verify authenticated provider availability,
 then proceed to genuine analysis/interpretation and artist review. No creative
 content is auto-approved. A GPU proof still requires approved scene inputs and
 bounded execution safeguards; the complete sponsor demo remains BLOCKED.
+
+
+## Interpretation error repair verified on production
+
+Commit64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52 corrects the hook discarding
+HTTP error Response JSON. Actual canonical frontend now displays the server's
+PROVIDER_COST_UNVERIFIED message and manual-edit availability. Desktop/Pixel7
+controlled-response checks verify the UI correction; a separate real frontend
+request confirms the live configuration blocker. Prior manualv1 remains intact,
+Continue remains disabled, no content approved and no GPU request submitted.
+[Release evidence](evidence/sponsor-demo-20261022/interpretation-error-release.json)
+records exact deployment and CI39849524379:422/422 PASS,0 skipped,audit/build PASS.
+The complete sponsor journey remains BLOCKED until the prepared existing-project
+settings are applied using secure access and the artist performs creative review.
