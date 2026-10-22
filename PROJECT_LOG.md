@@ -1408,3 +1408,10 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 - New app-only legacy schema fallback queries only columns confirmed present in production when PostgREST reports one of the new Song Intelligence columns absent. Missing-schema state is visible and suppresses new interpretation confirmation and navigation.
 - Old Song Intake details remain real and editable; artist visual-style controls disabled, no fake AI or confirmation. No database writes or project migrations performed by this code change.
 - Isolated QA Supabase project was created on an explicitly zero-monthly-price quote. Its schema/auth/project contents are not yet provisioned for end-to-end tests. Do not mislabel it as usable until separately verified.
+
+
+## 2026-10-22 — Isolated QA Song Intelligence migration and ACL test
+
+- Existing no-cost QA project `llkzohajsoikdbuslxzb` provisioned with an empty, RLS-enabled, service-role-only core fixture. The three published Song Intelligence migrations replayed successfully in QA; production remains unchanged.
+- Supabase security advisor identified two trigger-only SECURITY DEFINER functions executable by anon/authenticated. Forward-only ACL migration removes PUBLIC role invocation; QA re-check cleared both security warnings. Seven remaining `rls_enabled_no_policy` informational findings reflect deliberately inaccessible contract-fixture tables; **not** ready as a real signed-in production-equivalent QA backend.
+- CI PostgreSQL replay now includes new ACL migration and direct role privilege assertions. All four migrations must pass exact-head checks before release promotion.

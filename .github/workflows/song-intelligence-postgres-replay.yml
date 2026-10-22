@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'supabase/migrations/202610200*.sql'
+      - 'supabase/migrations/20261022040000_song_intelligence_trigger_execute_acl.sql'
       - 'scripts/test/postgres-song-intelligence-*.sql'
       - '.github/workflows/song-intelligence-postgres-replay.yml'
   workflow_dispatch:
@@ -44,5 +45,6 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261020000000_song_intelligence.sql
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261020010000_song_intelligence_integrity.sql
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261020020000_bragora_ai_request_quotas.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261022040000_song_intelligence_trigger_execute_acl.sql
       - name: Assert owner security, creative lineage and request quota
         run: psql -X -v ON_ERROR_STOP=1 -f scripts/test/postgres-song-intelligence-assertions.sql

@@ -26,6 +26,14 @@ begin
      or not has_function_privilege('service_role', 'public.reserve_bragora_ai_request(uuid,uuid,text,integer)', 'EXECUTE') then
     raise exception 'ROLE_PERMISSION_BOUNDARY_UNSAFE';
   end if;
+  if has_function_privilege('anon', 'public.enforce_new_vision_lock_interpretation()', 'EXECUTE')
+     or has_function_privilege('authenticated', 'public.enforce_new_vision_lock_interpretation()', 'EXECUTE')
+     or has_function_privilege('anon', 'public.reject_unlineaged_new_generation()', 'EXECUTE')
+     or has_function_privilege('authenticated', 'public.reject_unlineaged_new_generation()', 'EXECUTE')
+     or not has_function_privilege('service_role', 'public.enforce_new_vision_lock_interpretation()', 'EXECUTE')
+     or not has_function_privilege('service_role', 'public.reject_unlineaged_new_generation()', 'EXECUTE') then
+    raise exception 'TRIGGER_DEFINER_FUNCTION_ACL_UNSAFE';
+  end if;
   if not exists (
     select 1 from pg_policies where schemaname='storage'
       and tablename='objects' and policyname='song_audio_protect_referenced_delete'
