@@ -376,6 +376,7 @@ export default function SongPage({ projectId }: Props) {
             <section style={{ marginTop: "32px", borderTop: "1px solid var(--border-subtle)", paddingTop: "24px" }}>
               <div className="eyebrow">MUSICAL SIGNAL ANALYSIS</div>
               <h2 style={{ fontSize: "20px", color: "#ffffff", marginBottom: "16px" }}>Track Intelligence Breakdown</h2>
+              <p>Tempo and key are estimates. Structural boundaries are heuristic candidates to review before directing scenes.</p>
 
               <div className="analysis-dashboard-grid">
                 <div className="analysis-metric-card">
@@ -383,11 +384,11 @@ export default function SongPage({ projectId }: Props) {
                   <span className="metric-value">{hasValidAnalysisDuration ? `${durationSeconds.toFixed(1)}s` : "Unavailable"}</span>
                 </div>
                 <div className="analysis-metric-card">
-                  <span className="metric-label">BPM</span>
+                  <span className="metric-label">BPM estimate</span>
                   <span className="metric-value">{analysis.bpm ? String(analysis.bpm) : "N/A"}</span>
                 </div>
                 <div className="analysis-metric-card">
-                  <span className="metric-label">Musical Key</span>
+                  <span className="metric-label">Musical key estimate</span>
                   <span className="metric-value">{analysis.key ?? "N/A"}</span>
                 </div>
                 <div className="analysis-metric-card">
@@ -404,9 +405,9 @@ export default function SongPage({ projectId }: Props) {
                   </span>
                 </div>
                 <div className="analysis-metric-card">
-                  <span className="metric-label">Structural Segments</span>
+                  <span className="metric-label">Structural candidates</span>
                   <span className="metric-value" style={{ fontSize: "14px", fontWeight: 500 }}>
-                    {analysis.sections?.length ?? 0} structural regions detected • Instruments: {analysis.instruments?.slice(0, 6).join(", ") || "N/A"}
+                    {analysis.sections?.length ?? 0} candidate regions • Instruments: {analysis.instruments?.slice(0, 6).join(", ") || "N/A"}
                   </span>
                 </div>
                 {analysis.description && (
