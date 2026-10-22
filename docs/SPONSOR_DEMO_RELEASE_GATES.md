@@ -163,9 +163,14 @@ Passwords and browser session state are stored privately outside the repository
 and are not included here. Independent sponsors can register with their own
 email/password, confirm the email and sign in through `/auth`.
 
-Candidate baseline preview, independently identified as READY:
-https://beat-vision-f8nn-qnbsh8jx1-beat-vision.vercel.app/
-at `74f0367f2f3584669d7b91cde6b5111b470c71bc`. It may require the Vercel owner's
-authenticated access. It is not a verified sponsor demo; its production backend
-lacks the candidate Song Intelligence prerequisites. See the checklist for any
-new preview/version evidence after source commits are pushed.
+Candidate preview, independently identified as READY:
+https://beat-vision-f8nn-e4akic7tp-beat-vision.vercel.app/
+at `cf2ccb34a2589fe934193aa1f8c2eb145d273332`, deployment
+`dpl_6KvH3vMdh6XjsNwAwa7baX1kmx6t`. Authorized Vercel fetch returned HTTP 200
+for `/auth` and its built JavaScript; the estimate labels are present. Interactive
+hosted-preview login/journey was not verified. It may require the Vercel owner's
+authenticated access in addition to the separate application login. It is not a
+verified sponsor demo: its production backend lacks Song Intelligence prerequisites.
+Exact-head Production CI, PostgreSQL contract replay and Modal offline runs all
+report success (remote-validation.json). Later evidence-only commits do not
+change the source exercised by these checks.

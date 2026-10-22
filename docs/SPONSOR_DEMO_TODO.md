@@ -22,6 +22,8 @@ a sponsor journey PASS. Previous agent/PR narrative is context, not fresh proof.
 - Mission commits: checklist `9140561a38ab00d3c297cdfc9005c2301358af86`;
   Modal transport `fbbcb3d5697f39dcdfd95e32ca77ce58dc46349b`;
   estimate labels `b8baeaad49508577310044d51fb4bd31134606af`.
+- Review/evidence head pushed to existing draft PR #141:
+  `cf2ccb34a2589fe934193aa1f8c2eb145d273332`.
 - Production: https://beat-vision-theta.vercel.app/; Vercel
   `dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT`, READY, commit
   `4a2ebf8bf3e9f30f0cf35442f86662bb6296da86`.
@@ -384,11 +386,29 @@ without satisfying sponsor-demo acceptance.
 Files changed: Authoritative checklist, task evidence, release gate/resource
 packet and PROJECT_LOG.md; focused source commits listed above.
 Commit: Source `b8baeaad49508577310044d51fb4bd31134606af`; documentation delivery
-commit and remote preview/CI evidence to be recorded after push.
+commit `cf2ccb34a2589fe934193aa1f8c2eb145d273332`; remote-validation.json.
 Tests performed: No verified final demo; preserve existing draft PR #141.
 Verification: BLOCKED for mandatory sponsor-demo delivery, despite reviewable
 partial improvements/evidence.
 Next task: None.
+
+Remote delivery verification (partial deliverables, not a sponsor-demo PASS):
+existing PR #141 remains draft/open, updated with current scope and retained
+prior verification history. Exact review head `cf2ccb34…` has completed-success
+[Production CI 39738730339](https://github.com/DaddyDom8249/BeatVision/actions/runs/39738730339),
+[PostgreSQL contract replay 39738730165](https://github.com/DaddyDom8249/BeatVision/actions/runs/39738730165),
+and [Modal offline 39738730312](https://github.com/DaddyDom8249/BeatVision/actions/runs/39738730312).
+Retrieved Production CI logs confirm 413 PASS, 0 FAIL, 0 SKIP, audit PASS,
+and build success under Node 22. Vercel/CodeRabbit statuses report success.
+
+Exact candidate preview: https://beat-vision-f8nn-e4akic7tp-beat-vision.vercel.app/
+Vercel `dpl_6KvH3vMdh6XjsNwAwa7baX1kmx6t`, READY, source `cf2ccb34…`,
+preview target (not production). Authorized Vercel fetch returned HTTP 200 for
+`/auth` and `/assets/index-DsW2PLBW.js`, whose content includes the estimate
+labels/explanation. This is not hosted interactive browser journey proof.
+Preview may require the owner's Vercel authentication; register/sign in to the
+app separately. Backend schema/function gates still block Song Intelligence.
+Later evidence-only commits do not change the app source verified here.
 
 ## Motion verification
 

@@ -131,6 +131,11 @@
       "sha256": "d02023ca8be7fb44222a534c8ec5a98eb1007ede71f6360657e09f8855f1bb3d"
     },
     {
+      "file": "remote-validation.json",
+      "bytes": 5122,
+      "sha256": "5e3835883a130c7db369344640c9d47867292ea6568980665978b4f680c49852"
+    },
+    {
       "file": "signup-result.json",
       "bytes": 328,
       "sha256": "fb0f7092973acf40637b51d5ed549eb56a707192d2316f64da1e517927b735f2"

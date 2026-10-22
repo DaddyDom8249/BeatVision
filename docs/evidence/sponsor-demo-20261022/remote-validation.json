@@ -1,0 +1,159 @@
+{
+  "observed_on": "2026-10-22",
+  "review_head": "cf2ccb34a2589fe934193aa1f8c2eb145d273332",
+  "last_app_source_commit": "b8baeaad49508577310044d51fb4bd31134606af",
+  "pr": "https://github.com/DaddyDom8249/BeatVision/pull/141",
+  "draft": true,
+  "workflows": [
+    {
+      "id": 39738730312,
+      "name": "Modal Motion Proof (Offline)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_number": 54,
+      "jobs_url": "https://api.github.com/repos/DaddyDom8249/BeatVision/actions/runs/39738730312/jobs",
+      "logs_url": "https://api.github.com/repos/DaddyDom8249/BeatVision/actions/runs/39738730312/logs",
+      "workflow_id": 389028650
+    },
+    {
+      "id": 39738730165,
+      "name": "Bragora Song Intelligence PostgreSQL Replay",
+      "status": "completed",
+      "conclusion": "success",
+      "run_number": 11,
+      "jobs_url": "https://api.github.com/repos/DaddyDom8249/BeatVision/actions/runs/39738730165/jobs",
+      "logs_url": "https://api.github.com/repos/DaddyDom8249/BeatVision/actions/runs/39738730165/logs",
+      "workflow_id": 392335795
+    },
+    {
+      "id": 39738730339,
+      "name": "BeatVision Production CI",
+      "status": "completed",
+      "conclusion": "success",
+      "run_number": 689,
+      "jobs_url": "https://api.github.com/repos/DaddyDom8249/BeatVision/actions/runs/39738730339/jobs",
+      "logs_url": "https://api.github.com/repos/DaddyDom8249/BeatVision/actions/runs/39738730339/logs",
+      "workflow_id": 370550115
+    }
+  ],
+  "production_ci_jobs": [
+    {
+      "id": 119690528599,
+      "name": "audit",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 39738730339,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Run npm install",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Run npm test",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Run npm run production-audit",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Run npm run build",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Run test -f README.md && test -d src && test -d supabase",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        }
+      ]
+    }
+  ],
+  "production_ci_log_excerpt": [
+    "2026-10-22T07:11:01.0254536Z   node-version: 22",
+    "2026-10-22T07:11:41.0318714Z # tests 413",
+    "2026-10-22T07:11:41.0319451Z # pass 413",
+    "2026-10-22T07:11:41.0319786Z # fail 0",
+    "2026-10-22T07:11:41.0320444Z # skipped 0",
+    "2026-10-22T07:11:41.2041310Z PRODUCTION AUDIT: PASS",
+    "2026-10-22T07:11:49.3660851Z ✓ built in 2.78s"
+  ],
+  "deployment": {
+    "id": "dpl_6KvH3vMdh6XjsNwAwa7baX1kmx6t",
+    "name": "beat-vision-f8nn",
+    "url": "beat-vision-f8nn-e4akic7tp-beat-vision.vercel.app",
+    "created": 1792653054668,
+    "state": "READY",
+    "target": null,
+    "creator": {
+      "uid": "lSJEq9dGVwW3WVqUAxDymQqE",
+      "username": "daddydom8249"
+    },
+    "meta": {
+      "githubCommitRef": "repair/song-intelligence-integrity-20261021",
+      "githubCommitSha": "cf2ccb34a2589fe934193aa1f8c2eb145d273332",
+      "githubCommitMessage": "docs(demo): record live intake evidence and explicit release and GPU blockers",
+      "githubRepo": "BeatVision",
+      "githubOrg": "DaddyDom8249"
+    },
+    "inspectorUrl": "https://vercel.com/beat-vision/beat-vision-f8nn/6KvH3vMdh6XjsNwAwa7baX1kmx6t",
+    "isRollbackCandidate": false
+  },
+  "preview_fetch": {
+    "via": "authorized Vercel web_fetch_vercel_url",
+    "path": "/auth",
+    "http": 200,
+    "asset": "/assets/index-DsW2PLBW.js",
+    "asset_http": 200,
+    "estimate_labels_present": true,
+    "interactive_browser_journey": "NOT VERIFIED on protected hosted preview; tested in local build and existing production stages separately"
+  },
+  "production_release": false,
+  "gpu_submissions": 0,
+  "readiness": "BLOCKED per SPONSOR_DEMO_TODO.md"
+}
