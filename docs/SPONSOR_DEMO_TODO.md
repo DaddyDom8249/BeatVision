@@ -23,20 +23,23 @@ a sponsor journey PASS. Previous agent/PR narrative is context, not fresh proof.
 - Mission commits: checklist `9140561a38ab00d3c297cdfc9005c2301358af86`;
   Modal transport `fbbcb3d5697f39dcdfd95e32ca77ce58dc46349b`;
   estimate labels `b8baeaad49508577310044d51fb4bd31134606af`.
-- Review/evidence head pushed to existing draft PR #141:
-  `cf2ccb34a2589fe934193aa1f8c2eb145d273332`.
+- Latest implementation head pushed to existing draft PR #141:
+  `be15931abdfec4583b2b26cc6a807b83ef41bd73`; automatic-fill implementation
+  `195c5337324704a91fbf894c83f65db6dce3813b`.
 - Current production: https://beat-vision-theta.vercel.app/; Vercel
-  `dpl_4tzfmck36NYpFTn3xbhzQYhcx8Ft`, READY, exact frontend commit
-  `64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52`.
+  `dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV`, READY, exact frontend commit
+  `195c5337324704a91fbf894c83f65db6dce3813b`.
 - Initial production (historical evidence): `dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT`,
   `4a2ebf8bf3e9f30f0cf35442f86662bb6296da86`.
 - Current backend: production migration bundle `20261022170451`; analyze-song v43,
-  interpretation v3, AI Director v2, World v61, Style v29, generation v62.
-  Latest API inventory recorded in groq-live-verification-release.json. Generation v62 deliberately retains the existing controller with the repaired
+  interpretation v5, AI Director v2, World v61, Style v29, generation v62.
+  Latest interpretation release/source evidence is automatic-draft-estimate-release.json.
+  Generation v62 deliberately retains the existing controller with the repaired
   Modal module; the full candidate Arena controller is configuration-blocked.
 - Supabase `mdofsinyofqbeapzfygu`: ACTIVE_HEALTHY, PostgreSQL 17.6.1.127.
-- Modal application name supplied: `bragoraforge-modal-motion-proof`;
-  current provider availability/billing not yet independently verified.
+- Modal `bragoraforge-modal-motion-proof`: deployed/idle control plane and
+  billed$0.00 verified in modal-control-plane-verified.json; loaded model/GPU
+  availability, remaining compute credits and motion output remain UNKNOWN.
 
 ## Task index
 
@@ -45,7 +48,7 @@ ID| Task| Dependency| Status| Evidence
 T01| Verify current repository, deployments, and integrations| None| PASS| CONFIRMED identities, schema/function gaps and candidate CI: evidence/sponsor-demo-20261022/baseline.json
 T02| Verify sponsor registration and login| T01| PASS| signup-result.json, login-result.json: actual confirmed fresh account; desktop/Pixel 7 sign-in HTTP 200 and settled empty dashboard
 T03| Verify project creation and song upload| T02| PASS| Initial create/upload/reload PASS; current 254.48-second audio read-only playback/hash verified on desktop/Pixel 7 after source change
-T04| Verify music analysis and interpretation confirmation| T03| IN_PROGRESS| User requests automatic editable interpretation after Analyze; T04.13 scoped implementation and regression. Existing genuine-provider proof retained; no creative confirmation.
+T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| T04.13 automatic six-field editable draft live PASS at195c533/v4; v5 estimate qualification has432 passing tests but new provider request503, daily3/3 used; explicit artist confirmation still required. automatic-draft-estimate-release.json
 T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed World GET/gate verified; no artist-confirmed interpretation or World approval
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
@@ -1418,3 +1421,68 @@ committed baseline, preserved privately. Required live verification harness:
 QA fixture only, no automatic approvals and no transcription rerun. New server
 release and one bounded remaining Free-model request pending; existing initial
 automatic-flow evidence remains tied explicitly to195c533/v4.
+
+### Final T04.13 / T04.13a evidence and stopping point
+
+TASK ID: T04.13
+Objective: Analyze populates six editable interpretation fields without a
+separate proposal click; preserve edits/versions and explicit creative approval.
+Initial status: FAILED (empty fields after analysis in supplied screenshot).
+Evidence inspected: automatic-draft-journey.json; automatic-draft-tests.json;
+CI39861322151; exact production frontend and interpretationv4 source.
+Confirmed blocker: None for the initial automatic-fill acceptance at those
+identities. This does not establish artist confirmation or full T04 acceptance.
+Files changed: src/pages/SongPage.tsx; src/hooks/useSongInterpretation.ts;
+src/components/song/SongInterpretationPanel.tsx;
+supabase/functions/beatvision-song-interpretation/index.ts;
+scripts/test/automatic-song-interpretation.test.mjs;
+scripts/test/song-interpretation.edge.test.mjs;
+scripts/test/song-audio-replacement.test.mjs; checklist/log/evidence.
+Commit: 195c5337324704a91fbf894c83f65db6dce3813b; Vercel
+dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV; interpretationv4 bundle
+0c77ef861be513f6cae0e82f83dde2ac2320a341f49db22a8bb84154b5814cde.
+Tests performed: Genuine first-analysis frontend journey PASS; all six fields
+generated, editable and saved as a new variant; desktop/Pixel7-emulated reload
+PASS; CI431/431,0 skipped,audit/build PASS. No physical Android claim.
+Verification: PASS for T04.13 at recorded versions. Later v5 changes only
+heuristic-claim qualification; its provider-output acceptance is separately blocked.
+Next task: T04.13a result below; T05 still requires artist confirmation.
+
+TASK ID: T04.13a
+Objective: Qualify generated rationale citing heuristic tempo/key/section data.
+Initial status: FAILED (direct inspection of generated AIv1 rationale).
+Evidence inspected: automatic-draft-estimate-tests.json;
+automatic-draft-estimate-release.json; automatic-draft-estimate-verification.json;
+automatic-draft-postfailure-retention.json; CI39863365590 and provider logs.
+Confirmed blocker: One real explicit proposal at22:16:13Z returned terminal503
+INTERPRETATION_PROVIDER_FAILED. Source maps a downstream non-2xx response to this
+error; the exact provider status/cause is UNKNOWN. Available logs show the503,
+not a downstream error body. Do not assert provider quota, key failure or outage
+as the cause. Local actor request_count is now3 for2026-10-22, matching the
+configured daily allowance; no more requests, quota increases or provider swaps.
+Files changed: supabase/functions/beatvision-song-interpretation/index.ts;
+scripts/test/song-interpretation.edge.test.mjs; checklist/log/release/evidence.
+Commit: be15931abdfec4583b2b26cc6a807b83ef41bd73. Existing interpretation
+functionv5 ACTIVE, bundle35409fc23e8ba2cddc8beb3f6c2c6c9143581f61857ef6720c1ddb3eccc0dab0;
+retrieved source byte-matches commit. Explicit internal authentication unchanged;
+verify_jwt=false retained. Frontend195c533/deployment above unchanged.
+Tests performed: Handler regression failed before correction; focused13/13,
+full432/432,0 skipped,audit/build PASS. Exact-source CI39863365590 completed
+success432/432,audit/build PASS. Real proposal FAILED503; no new AIv3. Read-only
+database inspection confirms AIv1 and editedv2 preserved, no confirmed pointer,
+no active request. Corrected read-only desktop/Pixel7 reload PASS for all six
+saved edits, editable fields, disabled Continue, enabled artist Confirm and no
+errors/overflow. Initial retention harness accidentally blocked read action get;
+that failed observation is retained in
+automatic-draft-postfailure-retention-initial.json.
+Allowing the existing read action corrected the harness; no inference retried.
+Verification: BLOCKED for live changed-output acceptance. Deployment/source and
+automated tests PASS; genuine new qualified rationale output remains UNKNOWN.
+Next task: No currently executable dependency-ready item. T04 still needs artist
+review/confirmation and a bounded provider check when quota/cause permit it.
+T05–T08 depend on actual creative approvals and eligible image provider access;
+T09 remains blocked on approved input and financial/runtime prerequisites;
+T10–T14 have the explicit dependencies in the index. No active task remains.
+
+No creative approval, GPU submission, new schema/service, customer-project
+mutation or main merge occurred. Full sponsor demo acceptance remains BLOCKED.

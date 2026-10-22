@@ -4,11 +4,28 @@ The authorized software release is live at https://beat-vision-theta.vercel.app/
 The full sponsor demo remains BLOCKED. The authoritative record is
 [SPONSOR_DEMO_TODO.md](SPONSOR_DEMO_TODO.md).
 
+Current user-facing change: Analyze now requests the first six-section editable
+interpretation automatically after successful transcription when no saved draft
+or unsaved interpretation edits exist. Existing drafts/edits are preserved.
+The artist still reviews, edits, saves a new version and explicitly confirms.
+One real first-analysis journey generated all six fields and saved/reloaded edits
+on desktop/Pixel7 emulation; see
+[automatic journey](evidence/sponsor-demo-20261022/automatic-draft-journey.json).
+
+The final server-only estimate qualification is deployed as interpretationv5 from
+`be15931abdfec4583b2b26cc6a807b83ef41bd73`, retrieved source byte-matched.
+Its automated tests/CI pass432/432. Its one live follow-up returned503
+INTERPRETATION_PROVIDER_FAILED, with downstream cause UNKNOWN. The test actor
+has used its three daily requests. Earlier AIv1 and editedv2 remain intact;
+read-only desktop/Pixel7 reloads pass. No further request or quota change was
+made. Live new-output acceptance for that qualification remains BLOCKED; see
+[final release evidence](evidence/sponsor-demo-20261022/automatic-draft-estimate-release.json).
+
 ## Released and verified
 
-Frontend: `64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52`, Vercel
-`dpl_4tzfmck36NYpFTn3xbhzQYhcx8Ft`, READY with the original production alias.
-Immutable release URL: https://beat-vision-nlxq3v0z6-beat-vision.vercel.app/.
+Frontend: `195c5337324704a91fbf894c83f65db6dce3813b`, Vercel
+`dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV`, READY with the original production alias.
+Immutable release URL: https://beat-vision-3baka38dm-beat-vision.vercel.app/.
 Existing draft PR: https://github.com/DaddyDom8249/BeatVision/pull/141.
 The user authorized this reviewed release with “Do it”; no main merge occurred.
 
@@ -27,7 +44,7 @@ confirmation/trigger ACLs remain enforced. A later isolated QA project was added
 through the real frontend; those earlier counts describe the release transaction.
 No customer content, audio, approved worlds or assets were overwritten.
 
-Functions (current API inventory): analyze-song v43, song-interpretation v3,
+Functions (current API inventory): analyze-song v43, song-interpretation v5,
 AI Director v2, World v61, Style v29. Generation v62 retains the existing production controller and deploys
 the compatible Modal transport repair only. The full candidate Arena controller
 is not released: candidate v60's read-only runtime preflight returned false for
@@ -52,9 +69,10 @@ Pixel7 reloads retain AIv2; prior manualv1 remains in history. Instrumental QA
 proves provider integration, not sung-lyric accuracy. No creative confirmation
 or motion is claimed. Physical Android browser testing remains unverified.
 
-Latest backend-fix CI [39856954325](https://github.com/DaddyDom8249/BeatVision/actions/runs/39856954325)
-PASS at978240d:423/423, zero skipped,audit/build PASS. Unchanged frontend CI
-39849524379 PASS at64e6edf:422/422,audit/build PASS. Earlier release CI
+Latest source CI [39863365590](https://github.com/DaddyDom8249/BeatVision/actions/runs/39863365590)
+PASS at `be15931abdfec4583b2b26cc6a807b83ef41bd73`:432/432, zero skipped,
+audit/build PASS. Automatic-fill frontend CI39861322151 PASS at195c533:431/431,
+audit/build PASS. Earlier release CI
 39821652295 passed416/416 at its historical frontend identity.
 Modal offline [39821652417](https://github.com/DaddyDom8249/BeatVision/actions/runs/39821652417)
 PASS. Corrected-migration PostgreSQL run39818827550 PASS. Exact-head PG run
@@ -67,6 +85,11 @@ the checklist; a successful isolated test reused the same project/audio.
 
 ## External blockers
 
+- Verify new estimate-qualified AI output after the provider failure is resolved
+  and the existing test actor quota permits a bounded request. A new account,
+  paid fallback or quota increase must not be used to evade the current limit.
+  The local3/3 quota is verified; it is not the established cause of the preceding
+  downstream provider failure.
 - The Groq configuration blocker is resolved: owner-applied settings now produce
   genuine AI proposal/transcription results. Owner Free/no-paid-billing attestation
   remains the financial evidence; no independent billing retrieval is claimed.
@@ -307,13 +330,13 @@ separate Name/Value rows in the linked target project, save together and search
 for a new setting to confirm it appears. No further provider test was submitted.
 
 
-## Current live provider verification supersedes earlier setup blockers
+## Earlier successful live provider verification resolved setup blockers
 
 [Current release evidence](evidence/sponsor-demo-20261022/groq-live-verification-release.json)
 records actual proposal200/draftv2, transcription200/completed metadata, preserved
 history/source, current function versions and exact423-test CI. Early503 results,
 old setup questions and two failed browser-harness observations below/above are
-historical, not current provider failures. Corrected read-only desktop/Pixel7
+historical. The separate latest503 is recorded at the top. Corrected read-only desktop/Pixel7
 reloads pass without repeated inference. The next stage needs the artist to
 review and confirm their interpretation; no synthetic QA draft is approved by
 the agent. Full sponsor acceptance remains BLOCKED through that creative gate.

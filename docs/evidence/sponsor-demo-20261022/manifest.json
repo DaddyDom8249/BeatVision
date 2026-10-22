@@ -1,8 +1,8 @@
 {
-  "source_commit": "978240d1f97fa54ec9e008b9a3f5e201eeca96b0",
+  "source_commit": "be15931abdfec4583b2b26cc6a807b83ef41bd73",
   "production_frontend_commit": "195c5337324704a91fbf894c83f65db6dce3813b",
   "production_generation_version": 62,
-  "scope": "Partial sponsor journey with real AI proposal/transcription and corrected completed metadata; artist confirmation pending; no creative approvals or GPU motion proof",
+  "scope": "Real automatic six-field editable draft and saved variants verified at195c533/v4; server estimate qualification deployed/tested atbe15931/v5 but follow-up provider503 and actor daily3/3 block fresh-output verification. Artist confirmation and full creative/motion journey pending.",
   "private_evidence": "Transcript-bearing candidate images, Android reload screenshot containing profile text, and account/session secrets excluded from Git",
   "files": [
     {
@@ -31,14 +31,34 @@
       "sha256": "3c00f9a46bef222d746ffe1a3c59dd8d3974c8114da98dbb2b40a1fdc7f05b2f"
     },
     {
+      "file": "automatic-draft-estimate-release.json",
+      "bytes": 3814,
+      "sha256": "e91fdb73b34974518f621856cf98621cd4665945a98e3e55a069e8e7125425fe"
+    },
+    {
       "file": "automatic-draft-estimate-tests.json",
       "bytes": 1417,
       "sha256": "e4e22271b04ff9a5d01f1ac6edb46666b6863ea3e16096166b7b99a7a534ea03"
     },
     {
+      "file": "automatic-draft-estimate-verification.json",
+      "bytes": 956,
+      "sha256": "03d441e71dd734030a24106c4fa57efc2992da283a5e30e2b5c7bd27b58a7c23"
+    },
+    {
       "file": "automatic-draft-journey.json",
       "bytes": 4239,
       "sha256": "de6687db989ca009c8f21a2f9ae20fd804471a60ee6fb4b16971d27c9fdd7ef7"
+    },
+    {
+      "file": "automatic-draft-postfailure-retention-initial.json",
+      "bytes": 611,
+      "sha256": "c006f1ceff37ce402ab86ddec1a3e174f0e9fbd79a15d35681c81f20921f3120"
+    },
+    {
+      "file": "automatic-draft-postfailure-retention.json",
+      "bytes": 1000,
+      "sha256": "c9860a9f554ca9f748bf4ff77985e9181674f12bca4f90cd82e70b4b172e85ee"
     },
     {
       "file": "automatic-draft-tests.json",
@@ -404,8 +424,19 @@
   },
   "initial_source_commit": "b8baeaad49508577310044d51fb4bd31134606af",
   "initial_production_frontend_commit": "4a2ebf8bf3e9f30f0cf35442f86662bb6296da86",
-  "latest_backend_source_commit": "2baa6a3041521a8646957b79cdedc50358ff420c",
+  "latest_backend_source_commit": "be15931abdfec4583b2b26cc6a807b83ef41bd73",
   "current_backend_function_versions": {
+    "beatvision-analyze-song": 43,
+    "beatvision-song-interpretation": 5,
+    "beatvision-ai-director": 2,
+    "beatvision-world": 61,
+    "beatvision-style-draft": 29,
+    "beatvision-generation": 62
+  },
+  "production_frontend_deployment": "dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV",
+  "production_analysis_version": 43,
+  "production_interpretation_version": 5,
+  "historical_backend_function_versions": {
     "beatvision-analyze-song": 41,
     "beatvision-song-interpretation": 2,
     "beatvision-ai-director": 1,
@@ -413,7 +444,16 @@
     "beatvision-style-draft": 28,
     "beatvision-generation": 61
   },
-  "production_frontend_deployment": "dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV",
-  "production_analysis_version": 43,
-  "production_interpretation_version": 4
+  "latest_ci": {
+    "id": 39863365590,
+    "commit": "be15931abdfec4583b2b26cc6a807b83ef41bd73",
+    "status": "completed",
+    "conclusion": "success",
+    "tests": 432,
+    "pass": 432,
+    "fail": 0,
+    "skipped": 0,
+    "audit": "PASS",
+    "build": "PASS"
+  }
 }
