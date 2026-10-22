@@ -1396,3 +1396,5 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 - Upstream calls reject redirects, accept v2 paths only, abort after 20 s polling / 90 s submission, and stop responses beyond 16 MiB (allows encoded scene images).
 - Added offline negative-path regressions; configuration must be explicitly set and reviewed before deploying any changed Edge Function. Missing allowlist fails closed.
 - This commit does not change production Edge Functions, database or provider configuration. Live authenticated and no-charge execution remains unverified.
+
+- First Arena security CI pass exposed five legacy test failures from absent new allowlist settings; updated synthetic fixtures and encoded-separator validation. Exact-head CI revalidation required before approval.

@@ -233,11 +233,11 @@ test('scene image dispatch uses authenticated Arena bridge, never Pixazo directl
     return Response.json({ok:false,status:'provider_unavailable',code:'PROVIDER_COST_UNVERIFIED',
       error:'Workers Free entitlement or AI binding not available'}, {status:503});
   };
-  const runtime=await loadGeneration(db,{ARENA_GATEWAY_URL:'https://arena.fixture.test',ARENA_GATEWAY_TOKEN:'fixture-secret'});
+  const runtime=await loadGeneration(db,{ARENA_GATEWAY_URL:'https://arena.fixture.workers.dev',ARENA_GATEWAY_ALLOWED_HOSTS:'arena.fixture.workers.dev',ARENA_GATEWAY_TOKEN:'fixture-secret'});
   try {
     const result=await runtime.run(db,job);
     assert.equal(calls.length,1);
-    assert.equal(calls[0].url,'https://arena.fixture.test/v2/scene-image');
+    assert.equal(calls[0].url,'https://arena.fixture.workers.dev/v2/scene-image');
     const payload=JSON.parse(calls[0].init.body).payload;
     assert.equal(payload.source.application,'beatvision');
     assert.equal(payload.source.contract,'2.0');
@@ -380,11 +380,11 @@ test('free Shotstack sandbox assembly passes controller cost guard without openi
     calls.push({ url: String(url), init });
     return Response.json({ ok: false, status: 'provider_unavailable', error: 'Sandbox stage unavailable in fixture' }, { status: 503 });
   };
-  const runtime = await loadGeneration(db, { ARENA_GATEWAY_URL: 'https://arena.fixture.test', ARENA_GATEWAY_TOKEN: 'fixture-secret' });
+  const runtime = await loadGeneration(db, { ARENA_GATEWAY_URL: 'https://arena.fixture.workers.dev', ARENA_GATEWAY_ALLOWED_HOSTS: 'arena.fixture.workers.dev', ARENA_GATEWAY_TOKEN: 'fixture-secret' });
   try {
     const result = await runtime.run(db, job);
     assert.equal(calls.length, 1, 'one gateway request only; no Pixazo, production Shotstack, or second attempt');
-    assert.equal(calls[0].url, 'https://arena.fixture.test/v2/assemble');
+    assert.equal(calls[0].url, 'https://arena.fixture.workers.dev/v2/assemble');
     assert.equal(calls[0].init.method, 'POST');
     const body = JSON.parse(calls[0].init.body);
     assert.equal(body.payload.generation.cost_class, 'free');

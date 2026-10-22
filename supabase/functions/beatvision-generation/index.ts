@@ -209,8 +209,12 @@ async function bridgePayload(db: any, job: any) {
 async function arena(path: string, method: "GET" | "POST", payload: unknown, requestId: string) {
   const origin = arenaBase();
   // Only the known v2 bridge API; reject protocol-relative and traversal paths.
+  let decodedPath: string;
+  try { decodedPath = decodeURIComponent(path); }
+  catch { throw new Error("ARENA_GATEWAY_PATH_REJECTED"); }
   if (!/^\/v2\/[a-z0-9/_%-]+$/i.test(path) || path.includes("//") ||
-      path.split("/").some((segment) => segment === "." || segment === ".."))
+      /[?#\\%]/.test(decodedPath) || decodedPath.includes("//") ||
+      decodedPath.split("/").some((segment) => segment === "." || segment === ".."))
     throw new Error("ARENA_GATEWAY_PATH_REJECTED");
   const target = new URL(path, origin);
   if (target.origin !== origin || !target.pathname.startsWith("/v2/"))

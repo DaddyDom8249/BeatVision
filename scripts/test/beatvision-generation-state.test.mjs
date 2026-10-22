@@ -351,7 +351,7 @@ test('poll persists a nested done assembly once and completes its existing job',
   }};
   const oldFetch = globalThis.fetch;
   const runtime = await loadGeneration();
-  globalThis.Deno.env.get = name => name === 'FINAL_VIDEO_ALLOWED_HOSTS' ? 'shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com' : name === 'ARENA_GATEWAY_URL' ? 'https://arena.test' : name === 'ARENA_GATEWAY_TOKEN' ? 'fixture-token' : '';
+  globalThis.Deno.env.get = name => name === 'FINAL_VIDEO_ALLOWED_HOSTS' ? 'shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com' : name === 'ARENA_GATEWAY_URL' ? 'https://arena.fixture.workers.dev' : name === 'ARENA_GATEWAY_ALLOWED_HOSTS' ? 'arena.fixture.workers.dev' : name === 'ARENA_GATEWAY_TOKEN' ? 'fixture-token' : '';
   globalThis.fetch = async url => {
     requests++;
     if (String(url) === 'https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com/final.mp4') return new Response(mediaFixture);
