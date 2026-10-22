@@ -1400,3 +1400,11 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 - First Arena security CI pass exposed five legacy test failures from absent new allowlist settings; updated synthetic fixtures and encoded-separator validation. Exact-head CI revalidation required before approval.
 
 - Corrected verified offline regression: legacy Arena polling uses pinned `/v1/video/animate/jobs/<id>` GET and `/v1/video/assemble/status/<id>` POST, while submissions use fixed `/v2` routes. Added successful polling and negative route/method/encoded-ID tests. No GPU/provider requests run.
+
+
+## 2026-10-22 — Authenticated preview legacy-schema compatibility
+
+- On actual Vercel preview commit 163f6a7, real user login succeeded and 12 existing projects loaded; Ghast Song failed because current production songs table lacks visual_style_preferences.
+- New app-only legacy schema fallback queries only columns confirmed present in production when PostgREST reports one of the new Song Intelligence columns absent. Missing-schema state is visible and suppresses new interpretation confirmation and navigation.
+- Old Song Intake details remain real and editable; artist visual-style controls disabled, no fake AI or confirmation. No database writes or project migrations performed by this code change.
+- Isolated QA Supabase project was created on an explicitly zero-monthly-price quote. Its schema/auth/project contents are not yet provisioned for end-to-end tests. Do not mislabel it as usable until separately verified.

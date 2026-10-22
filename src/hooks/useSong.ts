@@ -6,13 +6,26 @@ export function useSong(projectId?: string) {
   const [song, setSong] = useState<Song | null>(null);
   const [loading, setLoading] = useState(Boolean(projectId));
   const [error, setError] = useState<string | null>(null);
+  const [schemaReady, setSchemaReady] = useState(true);
 
   const load = useCallback(async () => {
     if (!projectId) return;
     setError(null);
-    const { data, error } = await supabase.from("songs")
+    // New Song Intelligence columns are absent on production until migrations
+    // are explicitly approved. Preview only: keep real legacy Song Intake
+    // readable without silently claiming that interpretation is available.
+    const full = await supabase.from("songs")
       .select("id,project_id,title,artist,audio_path,audio_revision,lyrics,creative_direction,notes,visual_style_preferences,analysis_status,analysis,audio_source_fingerprint,audio_source_fingerprint_algorithm,audio_source_size,audio_source_fingerprinted_at,current_interpretation_id,interpretation_confirmed_at,analyzed_at,created_at,updated_at")
       .eq("project_id", projectId).maybeSingle();
+    const missingNewColumns = full.error?.code === "42703" &&
+      /(?:visual_style_preferences|audio_source_fingerprint|audio_source_fingerprint_algorithm|audio_source_size|audio_source_fingerprinted_at|current_interpretation_id|interpretation_confirmed_at)/.test(full.error.message || "");
+    const result = missingNewColumns
+      ? await supabase.from("songs")
+        .select("id,project_id,title,artist,audio_path,audio_revision,lyrics,creative_direction,notes,analysis_status,analysis,analyzed_at,created_at,updated_at")
+        .eq("project_id", projectId).maybeSingle()
+      : full;
+    setSchemaReady(!missingNewColumns);
+    const { data, error } = result;
     if (error) {
       // Preserve the last known DB state during a transient reload failure.
       // Clearing song here can make a successful analysis/save look like it
@@ -39,5 +52,5 @@ export function useSong(projectId?: string) {
     void load();
   }, [load]);
 
-  return { song, loading, error, reload: load };
+  return { song, loading, error, schemaReady, reload: load };
 }

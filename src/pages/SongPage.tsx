@@ -15,7 +15,7 @@ interface Props {
 
 export default function SongPage({ projectId }: Props) {
   const { project, loading: projectLoading, error: projectError } = useProject(projectId);
-  const { song, loading: songLoading, error: songError, reload } = useSong(projectId);
+  const { song, loading: songLoading, error: songError, schemaReady = true, reload } = useSong(projectId);
   const interpretation = useSongInterpretation(projectId, song?.id, song?.current_interpretation_id);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
@@ -148,12 +148,14 @@ export default function SongPage({ projectId }: Props) {
         lyrics: lyrics.trim() || null,
         creative_direction: creativeDirection.trim() || null,
         notes: notes.trim() || null,
-        visual_style_preferences: {
-          preferred_visual_style: preferredVisualStyle.trim(),
-          imagery_mode: imageryMode || null,
-          narrative_mode: narrativeMode || null,
-          unwanted_themes: unwantedThemes.trim(),
-        }
+      };
+      // Do not send nonexistent columns to an older database. Visual-style
+      // controls remain disabled in this state; backend interpretation stays off.
+      if (schemaReady) payload.visual_style_preferences = {
+        preferred_visual_style: preferredVisualStyle.trim(),
+        imagery_mode: imageryMode || null,
+        narrative_mode: narrativeMode || null,
+        unwanted_themes: unwantedThemes.trim(),
       };
       if (audio) payload.audio_path = audioPath;
       const result = song
@@ -178,10 +180,12 @@ export default function SongPage({ projectId }: Props) {
   const songIntakeDirty = Boolean(audio || (song && (
     title !== song.title || artist !== song.artist || lyrics !== (song.lyrics ?? "") ||
     creativeDirection !== (song.creative_direction ?? "") || notes !== (song.notes ?? "") ||
-    preferredVisualStyle !== (song.visual_style_preferences?.preferred_visual_style ?? "") ||
-    imageryMode !== (song.visual_style_preferences?.imagery_mode ?? "") ||
-    narrativeMode !== (song.visual_style_preferences?.narrative_mode ?? "") ||
-    unwantedThemes !== (song.visual_style_preferences?.unwanted_themes ?? "")
+    (schemaReady && (
+      preferredVisualStyle !== (song.visual_style_preferences?.preferred_visual_style ?? "") ||
+      imageryMode !== (song.visual_style_preferences?.imagery_mode ?? "") ||
+      narrativeMode !== (song.visual_style_preferences?.narrative_mode ?? "") ||
+      unwantedThemes !== (song.visual_style_preferences?.unwanted_themes ?? "")
+    ))
   )));
 
   if (projectLoading || songLoading) {
@@ -222,6 +226,12 @@ export default function SongPage({ projectId }: Props) {
           <p>
             The audio track is the primary source material. Provide song details and artistic intent for BeatVision to analyze before World Reveal.
           </p>
+
+          {!schemaReady && <p className="form-message" role="status">
+            This preview can read and edit your existing song details. New Song Intelligence
+            features require a database upgrade and are unavailable until that migration is approved.
+            Your existing project and audio have not been changed.
+          </p>}
 
           <form onSubmit={submit}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
@@ -294,7 +304,7 @@ export default function SongPage({ projectId }: Props) {
               />
             </label>
 
-            <fieldset className="song-style-preferences">
+            <fieldset className="song-style-preferences" disabled={!schemaReady}>
               <legend>Artist-directed visual style (optional)</legend>
               <label>Preferred visual style
                 <input value={preferredVisualStyle} onChange={(event) => { setPreferredVisualStyle(event.target.value); setSaved(false); }}
@@ -326,7 +336,7 @@ export default function SongPage({ projectId }: Props) {
               />
             </label>
 
-            <SongInterpretationPanel
+            {schemaReady ? <SongInterpretationPanel
               song={song}
               loading={interpretation.loading}
               working={interpretation.working}
@@ -339,14 +349,14 @@ export default function SongPage({ projectId }: Props) {
               confirm={interpretation.confirm}
               onConfirmed={reload}
               songIntakeDirty={songIntakeDirty}
-            />
+            /> : <p role="status">Interpretation and World confirmation are locked until the Song Intelligence database migration is available.</p>}
 
             <button className="primary-button large" disabled={saving || analyzing}>
               {saving ? "Saving Song…" : saved ? "Song Saved ✓" : "Save Song Details →"}
             </button>
           </form>
 
-          {(saved || song?.analysis_status === "completed") && (
+          {schemaReady && (saved || song?.analysis_status === "completed") && (
             <section aria-label="Next step" className="create-card" style={{ marginTop: "24px", background: "var(--bg-surface-0)" }}>
               {saved && <p role="status" style={{ color: "var(--color-success)", fontWeight: 600 }}>Song details saved successfully.</p>}
               {song?.analysis_status === "completed" ? (
