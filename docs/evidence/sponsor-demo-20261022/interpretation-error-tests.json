@@ -1,0 +1,31 @@
+{
+  "observed_at": "2026-10-22T20:30:51.472434+00:00",
+  "task": "T04.8",
+  "red": {
+    "tests": 4,
+    "pass": 2,
+    "fail": 2,
+    "reason": "Generic SDK non-2xx message replaces server message"
+  },
+  "green": {
+    "focused_tests": 8,
+    "passed": 8,
+    "failed": 0,
+    "full_tests": 422,
+    "full_passed": 422,
+    "full_failed": 0,
+    "skipped": 0,
+    "production_audit": "PASS",
+    "typescript_vite_build": "PASS"
+  },
+  "logs": {
+    "full-tests": {
+      "sha256": "440c7ded31fdbba0e0067ec56bc9fa2423f4dc657f6d2d9fbf6e53f64f945ee3",
+      "private_workspace_path": "/workspace/shared/sponsor-release-backup-20261022/interpretation-errors-full-tests.txt"
+    },
+    "build": {
+      "sha256": "2581fb500ffde0e779d8514d513ab3b9c67c9da1cfd155ac563104c47b6f289e",
+      "private_workspace_path": "/workspace/shared/sponsor-release-backup-20261022/interpretation-errors-build.txt"
+    }
+  }
+}

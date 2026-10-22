@@ -2,7 +2,7 @@
   "source_commit": "2baa6a3041521a8646957b79cdedc50358ff420c",
   "production_frontend_commit": "63604806744e6d306742c75d399cc001c00aa0e4",
   "production_generation_version": 61,
-  "scope": "Released software and partial sponsor journey; no inference, no creative approvals, no AI motion proof",
+  "scope": "Partial sponsor journey; one real interpretation proposal returned503; no successful AI/GPU inference or creative approvals",
   "private_evidence": "Transcript-bearing candidate screenshots and account/session secrets excluded from Git",
   "files": [
     {
@@ -121,9 +121,29 @@
       "sha256": "ad488f4c35a21a1f485970f821d03167cf2dc5342f58656f8781404bdf940fc0"
     },
     {
+      "file": "groq-confirmed-proposal-result.json",
+      "bytes": 1216,
+      "sha256": "930467730b99863bf2605aeb55ab2ee559a79597722d260291b97836584047ce"
+    },
+    {
       "file": "intake-result.json",
       "bytes": 957,
       "sha256": "56bad92ad6a5cb482b69a4ba89e1fccac6fabb0d2e47e748ae56d5b4ff27a03d"
+    },
+    {
+      "file": "interpretation-error-browser-red.json",
+      "bytes": 616,
+      "sha256": "977b7c157dfbc17bd1908813d25dc7b969bec0b6b4ba820d12aee489024f2746"
+    },
+    {
+      "file": "interpretation-error-red-desktop.png",
+      "bytes": 130513,
+      "sha256": "2c954aed949e3afd20eaad7106af8746b101c794c4935ecc17fccd2ae14eb32e"
+    },
+    {
+      "file": "interpretation-error-tests.json",
+      "bytes": 906,
+      "sha256": "5461be450f22472b9dc475a2ac0891bb1004c98ab339a5639c35b8d6618e010f"
     },
     {
       "file": "lineage-rollout-green.json",

@@ -7,10 +7,24 @@ type DraftInput = {
   evidence: SongInterpretationEvidence[];
 };
 
-function errorMessage(error: unknown, data: any, fallback: string) {
-  if (data?.error?.message) return String(data.error.message);
-  if (error && typeof error === "object" && "message" in error) return String((error as { message: string }).message);
-  return fallback;
+async function errorDetails(error: unknown, data: any, fallback: string) {
+  let payload = data;
+  if (error && typeof error === "object" && "context" in error && error.context instanceof Response) {
+    try {
+      payload = await error.context.clone().json();
+    } catch {
+      // Network/proxy failures may return HTML or an unreadable body.
+    }
+  }
+  const message = payload?.error?.message
+    ? String(payload.error.message)
+    : error && typeof error === "object" && "message" in error
+      ? String(error.message)
+      : fallback;
+  return {
+    message,
+    manualFallback: Boolean(payload?.manual_fallback) || payload?.error?.code === "PROVIDER_COST_UNVERIFIED",
+  };
 }
 
 export function useSongInterpretation(projectId?: string, songId?: string, currentInterpretationId?: string | null) {
@@ -32,7 +46,7 @@ export function useSongInterpretation(projectId?: string, songId?: string, curre
       body: { projectId, songId, action: "get" },
     });
     if (invokeError) {
-      setError(errorMessage(invokeError, data, "Song interpretation could not be loaded."));
+      setError((await errorDetails(invokeError, data, "Song interpretation could not be loaded.")).message);
     } else {
       setDrafts(Array.isArray(data?.drafts) ? data.drafts as SongInterpretationDraft[] : []);
     }
@@ -50,7 +64,7 @@ export function useSongInterpretation(projectId?: string, songId?: string, curre
       body: { projectId, songId, action: "save_draft", source_type: sourceType, ...input },
     });
     if (invokeError) {
-      const message = errorMessage(invokeError, data, "Interpretation draft could not be saved.");
+      const { message } = await errorDetails(invokeError, data, "Interpretation draft could not be saved.");
       setError(message);
       setWorking(false);
       return null;
@@ -69,9 +83,9 @@ export function useSongInterpretation(projectId?: string, songId?: string, curre
       body: { projectId, songId, action: "propose" },
     });
     if (invokeError) {
-      const message = errorMessage(invokeError, data, "AI interpretation is unavailable.");
-      setError(message);
-      setManualFallback(Boolean(data?.manual_fallback) || message.includes("PROVIDER_COST_UNVERIFIED"));
+      const details = await errorDetails(invokeError, data, "AI interpretation is unavailable.");
+      setError(details.message);
+      setManualFallback(details.manualFallback);
       setWorking(false);
       return null;
     }
@@ -88,7 +102,7 @@ export function useSongInterpretation(projectId?: string, songId?: string, curre
       body: { projectId, songId, action: "confirm", interpretation_id: interpretationId },
     });
     if (invokeError) {
-      setError(errorMessage(invokeError, data, "Interpretation confirmation failed."));
+      setError((await errorDetails(invokeError, data, "Interpretation confirmation failed.")).message);
       setWorking(false);
       return null;
     }

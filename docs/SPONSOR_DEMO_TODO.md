@@ -45,7 +45,7 @@ ID| Task| Dependency| Status| Evidence
 T01| Verify current repository, deployments, and integrations| None| PASS| CONFIRMED identities, schema/function gaps and candidate CI: evidence/sponsor-demo-20261022/baseline.json
 T02| Verify sponsor registration and login| T01| PASS| signup-result.json, login-result.json: actual confirmed fresh account; desktop/Pixel 7 sign-in HTTP 200 and settled empty dashboard
 T03| Verify project creation and song upload| T02| PASS| Initial create/upload/reload PASS; current 254.48-second audio read-only playback/hash verified on desktop/Pixel 7 after source change
-T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Final approved CLI attempt: Linux Node PASS, Supabase linux-arm64 binary missing; management read not executed; approach closed3/3; one-pass provider setup in release gates
+T04| Verify music analysis and interpretation confirmation| T03| IN_PROGRESS| User confirmed dedicated Groq Free account; one guarded real frontend proposal test on unchanged isolated fixture; configuration access route still pending
 T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed World GET/gate verified; no artist-confirmed interpretation or World approval
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
@@ -954,3 +954,68 @@ Tests performed: actual phone diagnostics above; no repeated source test/build.
 Verification: BLOCKED for T04 complete acceptance. Next actionable dependencies:
 current Groq Free-plan confirmation and either owner Dashboard batch application
 or secure management access. Artist creative approvals remain later stage gates.
+
+
+### T04.7 — User-confirmed Groq Free account; guarded frontend proposal
+
+User statement: “Yes, verified Groq Free account”, answering the question about
+the dedicated transcription/creative account being Free with paid billing
+disabled. Evidence is owner attestation, not an independently retrieved billing
+API/dashboard. The plan-confirmation dependency is resolved within that scope.
+Current server flag/key presence remains UNKNOWN; environment readiness has no
+secret bindings and connected tools cannot edit secrets. CLI retry approach
+stays closed3/3; no new phone request.
+
+Next safe action: one real frontend Propose AI Interpretation on the isolated
+ad266b2c fixture after read-only checks that its synthetic title/Notes/audio hash
+and null confirmed pointer remain unchanged. Existing server verified-free flags,
+pinned model and quota remain enforced. A missing configuration returns an honest
+error; if already configured, the owner-confirmed Free account can produce an
+unapproved new version. No paid fallback, GPU request or creative confirmation.
+No app source change planned. Record exact HTTP/envelope/UI result and any
+version/provenance; preserve previous drafts. Do not retry provider submission
+if its completion status is uncertain. This is independent of the unanswered
+configuration-route question; no settings are being edited.
+
+
+### T04.8 — Preserve interpretation HTTP error details
+
+TASK ID: T04 (sole IN_PROGRESS item)
+Objective: Show the server's actionable interpretation failure and manual-edit
+availability instead of losing them behind the SDK generic non-2xx message.
+Initial status: FAILED for error handling; T04 overall remains unverified.
+Evidence inspected: useSongInterpretation.ts invokes functions.invoke but reads
+only data.error; non-2xx responses have data=null and JSON in error.context.
+The one authorized frontend proposal reached production: function_edge_logs
+2026-10-22T20:22:52.606000 records POST503, preceded by get200. Harness then
+hung reading Playwright Response.json and was interrupted; its UI/envelope
+observation is UNKNOWN. No proposal retry. Database still contains only manual
+v1; request completion/provider invocation is not inferred from that alone.
+Confirmed blocker: hook discards the SDK HTTP error Response; runtime regression
+will reproduce this with a genuine Response and FunctionsHttpError-shaped error.
+Root cause/testable hypothesis: parse a cloned error.context Response JSON to
+recover message/code/manual_fallback, retain generic handling for network or
+malformed responses. Do not change provider flags, approvals or server gates.
+Required files: src/hooks/useSongInterpretation.ts,
+scripts/test/song-interpretation-errors.test.mjs, checklist/evidence/project log.
+Expected outcome: all four interpretation actions expose server messages;
+proposal preserves manual fallback and releases working state after errors.
+Verification method: failing-then-passing hook execution tests; full tests,
+production audit and build; authorized frontend deployment and browser check
+using a clearly marked controlled HTTP503 response (no provider retry).
+Commit: pending; backend remains2baa6a3 and frontend6360480 until deployment.
+Next task: T04 remains blocked on actual provider configuration and artist review
+if this correction verifies; no downstream creative approval by the agent.
+
+
+T04.8 evidence update: actual canonical frontend with a controlled (intercepted,
+not provider-generated) HTTP503 reproduces generic non-2xx and absent manual
+fallback on old frontend6360480; interpretation-error-browser-red.json and panel
+screenshot record the result. Hook regression initially2 PASS/2 FAIL, corrected
+hook4/4 PASS and related intake4/4 PASS. Full npm test422/422 PASS,0 skipped;
+production audit PASS; TypeScript/Vite build PASS. New code preserves cloned
+HTTP envelopes for load/save/propose/confirm, retains network/malformed fallback,
+sets manual fallback from code/flag and preserves approvals/version history.
+No database/backend/provider-setting changes. Deployment and browser green check
+pending; do not mark full T04 PASS. Actual proposal503 and incomplete harness
+read separately recorded in groq-confirmed-proposal-result.json, no resubmission.
