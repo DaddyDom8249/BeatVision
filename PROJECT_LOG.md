@@ -1467,3 +1467,10 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 
 - User requested resending approval. Actual old job63c49cf7 was approved and failed127: /root/modal-env/bin/python does not exist in the outer Termux environment. Prior successful command used proot-distro login debian; agent's earlier direct-path command omitted it.
 - Retry2/3 queues the same bounded read-only app/billing/function-stats checks through the verified existing Debian wrapper. New jobb23ccbf0-449e-4e69-9a4d-32188083f5fa queued; bridge requires approval on phone. No install, new credentials, provider change or GPU inference. Result remains UNKNOWN until actual completion. App source/deployments/tests unchanged; no redundant CI run for evidence-only update.
+
+
+## 2026-10-22 — Modal control-plane verified; related phone diagnostics batched
+
+- Approved corrected Modal read-only jobb23ccbf0 completed exit0. SDK1.6.2 lists exact existing appap-CopCZqKwTuk11VLpDSU0fH deployed with0 tasks. Function stats backlog/runners/running inputs0; billed$0.00 after credits/egress allowance, metered$0.16. Account/control-plane access verified, no GPU invocation or loaded-model claim. modal-control-plane-verified.json retains actual output.
+- Supabase access probebadbf87f completed bridge exit0 but CLI help failed exit1 Unsupported platform android; management authentication/secret-name query never ran. No claim of denied or absent access. Testable retry uses existing native Linux Node in the known Debian guest instead of inherited Android Node; no installs or credential-file reads.
+- User requests bulk approvals to reduce app switching. Persisted preference: group related dependency-ready read-only commands in one script, execute sequentially with one active checklist task, collect reviewable questions together. New request900e072e batches Linux runtime selection, relevant secret-name metadata and phone post-patch canonical CORS. Awaiting required on-phone approval. No settings, source/deployment, financial flag, creative approval or inference changes; no repeated CI. T04/T09 remain partially verified and BLOCKED on stated dependencies.

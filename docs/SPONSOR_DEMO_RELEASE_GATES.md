@@ -80,12 +80,15 @@ the checklist; a successful isolated test reused the same project/audio.
   spend limit; **Volume storage charges can still accrue**. This resolves the
   missing configured-spend-limit evidence. $42.38 is usage-cap headroom arithmetic,
   not a confirmed remaining credit balance. Credit expiry is not displayed.
-  Current provider account/worker checks await the bridge-required phone approval
-  for corrected read-only jobb23ccbf0. The previous check failed127 because its
-  Debian-only path was invoked outside Debian; retry uses the known working
-  proot-distro wrapper. Bridge retry succeeded and a phone preflight completed;
-  heartbeat availability is intermittent. No direct credentials here. Exact worker/model
-  availability and deployed revision remain unverified. See
+  Approved corrected phone checkb23ccbf0 completed exit0: the exact existing
+  Modal app is deployed with0 tasks; function backlog/running inputs/runners are0.
+  Current billing summary shows metered$0.16, applied credits-$0.12 and billed$0.00
+  after the egress allowance. This verifies authenticated control-plane access
+  and idle function registration. It does not verify loaded model/GPU capacity,
+  remaining credits, expiry or a generated artifact. The old127 path failure was
+  corrected using the existing Debian wrapper; do not report its approval as pending.
+  See [current control-plane evidence](evidence/sponsor-demo-20261022/modal-control-plane-verified.json).
+  Direct account credentials remain absent from the workspace. See
   [screenshot observations](evidence/sponsor-demo-20261022/modal-user-financial-evidence.json).
   No inference or spending-setting change was performed.
 - One bounded GPU job requires approved source image/instructions, financial
@@ -165,3 +168,21 @@ production URL for application checks. No genuine provider inference or creative
 approval occurred during this repair. Modal read-only status checkb23ccbf0 remains
 queued for the phone bridge's required approval after the corrected Debian wrapper;
 no GPU submission was made.
+
+
+## Approved Modal check and next provider-setup dependency
+
+The read-only Modal command completed successfully through Termux. No GPU job
+was submitted. T09 has fresh app/account/statistics/ledger evidence; actual model
+runtime, approved scene/image/instructions and full inference acceptance remain
+unverified. The next independent T04 check is existing Supabase CLI access in
+that same Debian environment. Grouped job900e072e-70d0-4005-acfe-b061779596c1 (prior badbf87f completed, but CLI help failed on Android Node)
+runs help and a read-only secret-name presence query; no secret values/digests,
+login prompt, install, settings update or inference. It requires the bridge's
+per-command phone approval. Application source/deployments/tests unchanged.
+
+
+User prefers consolidated phone approvals. The current single read-only batch
+covers existing Linux-runtime selection, CLI secret-name metadata and canonical
+post-patch CORS checks; no install/login/settings/inference. Pending approval for
+900e072e replaces the completed probe, not another execution of that same job.

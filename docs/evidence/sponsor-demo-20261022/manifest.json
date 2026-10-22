@@ -161,6 +161,11 @@
       "sha256": "cde3a941c797d8c52308fe5cb5ffe3c4b97957c393525dda743c53af0b8bc0d7"
     },
     {
+      "file": "modal-control-plane-verified.json",
+      "bytes": 2623,
+      "sha256": "68f5431dabb3448732fa2290007068e325cf18ddd4f31cb7656bb55f54049a77"
+    },
+    {
       "file": "modal-existing-access.json",
       "bytes": 1025,
       "sha256": "50d8cb6ff41adefdf4e511e44875db0d2f745a7a1d981c824f59fd8faa7fcd01"
@@ -229,6 +234,11 @@
       "file": "song-regression.txt",
       "bytes": 3361,
       "sha256": "d48191937b6d5fb80316a9fa97dab0917f92d85267c3223f45e97e0bb9a4c470"
+    },
+    {
+      "file": "supabase-phone-access-probe.json",
+      "bytes": 1273,
+      "sha256": "023e1980b4d57ec88d74f85c5dba40010f302f22c5cc390098a793e668b994d5"
     },
     {
       "file": "termux-resumed-checks.json",

@@ -45,12 +45,12 @@ ID| Task| Dependency| Status| Evidence
 T01| Verify current repository, deployments, and integrations| None| PASS| CONFIRMED identities, schema/function gaps and candidate CI: evidence/sponsor-demo-20261022/baseline.json
 T02| Verify sponsor registration and login| T01| PASS| signup-result.json, login-result.json: actual confirmed fresh account; desktop/Pixel 7 sign-in HTTP 200 and settled empty dashboard
 T03| Verify project creation and song upload| T02| PASS| Initial create/upload/reload PASS; current 254.48-second audio read-only playback/hash verified on desktop/Pixel 7 after source change
-T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| SDK-header CORS defect fixed/deployed: interpretationv2/analyze-songv41; traced actual frontend reads PASS; user retry and verified-free provider/artist confirmation pending
+T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Grouped read-only request900e072e awaits one phone approval: Linux CLI runtime, config-name metadata and post-patch phone CORS; prior Android CLI failure recorded
 T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed World GET/gate verified; no artist-confirmed interpretation or World approval
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Old phone job failed127 outside Debian; corrected read-only jobb23ccbf0 queued using known working Debian wrapper; phone approval required; no GPU submission
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Corrected phone check completed exit0: app deployed, no backlog/running inputs, billed$0.00; GPU/model runtime and approved scene unverified; modal-control-plane-verified.json
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| No approved sponsor scene; T09 worker/account access and remaining financial/execution prerequisites unresolved; $0 spend-limit screenshot now verified
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| No T10 output; neither codec nor subject-motion/playback proof exists for this mission
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
@@ -839,3 +839,71 @@ new command NOT EXECUTED at queue receipt. Verification: BLOCKED pending bridge
 approval/execution result. Next: inspect this same new job; do not duplicate it
 or infer Modal/GPU readiness from queue acceptance. Attempt count2/3 for this
 read-only status-command blocker. No GPU submission.
+
+
+### T09 completed read-only result after user “Go”
+
+Approved jobb23ccbf0 completed exit0. Modal SDK1.6.2 lists existing
+ap-CopCZqKwTuk11VLpDSU0fH / bragoraforge-modal-motion-proof as deployed,0 tasks.
+Function.get_current_stats resolves the existing function and returns backlog0,
+num_total_runners0,num_running_inputs0,input_headroom0. Billing displays metered
+$0.16,deployed apps$0.12,egress$0.04 with-$0.04 allowance, credits applied-$0.12,
+billed$0.00. No new GPU/container/inference was invoked. This proves authenticated
+control-plane access and idle registered function, not loaded model/GPU capacity,
+remaining credit balance or a valid MP4. Evidence: modal-control-plane-verified.json.
+Verification: PASS for account/app/stats/ledger reads; overallT09 remains BLOCKED
+on remaining live execution/approved-input prerequisites. No command retry needed.
+Next dependency-ready task:T04 secure existing CLI/config access inspection.
+
+### T04.6 — Check existing phone Supabase management access
+
+Objective: determine whether the existing phone has an authenticated Supabase
+CLI that can inspect relevant secret-name presence, without reading secret values.
+Initial status: BLOCKED. Connected tools still lack secret-edit capability;
+workspace has no bound credentials. The newly working authorized phone may have
+existing CLI login; this is a testable access hypothesis, not a credential claim.
+Required files: checklist/evidence only. No app source or settings change planned.
+Use known working proot-distro Debian wrapper, existing CLI or cached no-install
+npx command only. Discover secrets-list help before using --project-ref. Print
+only requested secret-name presence and auth-read success, never secret values
+or digests. No inference, installation, login prompt or financial flag changes.
+Verification: actual read-only CLI result. If unavailable, record exact missing
+access; do not search credential files or repeat this probe without new evidence.
+
+
+T04.6 approval resend: original job5c2f0d64 was declined on phone before
+execution. User explained accidental input and explicitly requested resending.
+Identical read-only command requeued once asbadbf87f-6bc2-434c-8fbe-583ff93f0920;
+bridge requires on-phone approval. No command execution result yet, settings
+change or provider/GPU call. CurrentT04 BLOCKED on that approval; no active task.
+
+
+### Approval batching preference and T04.6 execution retry2
+
+User requests bulk approval requests to avoid repeated app switching. Persisted
+preference: combine related dependency-ready read-only diagnostics into one
+Termux script, with conditional branches and sequential execution after one
+phone approval. Keep one checklist task active. Collect outstanding decisions
+in one message when reviewable; no blanket approval of unseen creative work,
+financial attestation or unknown-cost execution.
+
+Result of approved badbf87f: bridge process completed exit0 but CLI help failed
+exit1 with Unsupported platform: android; stack path is Termux's global Supabase
+JS wrapper and Node24.18.0. Management secret-name read was NOT EXECUTED. This is
+not successful Supabase access. Testable correction: select an existing native
+Linux Node in Debian and invoke the existing CLI entrypoint using it and a clean
+Linux PATH. No install, login, credential-file inspection or settings mutation.
+Batch also checks canonical function preflight/SDK-header coverage from the phone
+after the deployed correction (previous phone check had old headers). Required
+files: checklist/evidence only; no app source. Expected outcome: one approval
+resolves runtime/access/header observations, or records exact remaining access.
+Retry2/3 for actual CLI execution blocker; accidental rejected prompt is not a
+CLI execution attempt. No repeated Modal bill/stats queries or GPU invocation.
+
+
+Batch queued as900e072e-70d0-4005-acfe-b061779596c1; bridge returns Required on
+phone. One approval covers the related diagnostic branches above, in sequence.
+T04 BLOCKED on that approval; no active task or repeated Modal checks. Current
+source/deployments unchanged. Supabase access is UNKNOWN, not denied/absent,
+because earlier CLI failed locally before management authentication. Evidence:
+supabase-phone-access-probe.json. No source tests repeated for documentation.

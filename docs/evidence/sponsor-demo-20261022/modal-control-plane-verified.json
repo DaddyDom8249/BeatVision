@@ -1,0 +1,33 @@
+{
+  "task_id": "T09",
+  "source": "Approved existing Termux/Modal CLI and SDK control-plane calls",
+  "phone_job_id": "b23ccbf0-449e-4e69-9a4d-32188083f5fa",
+  "bridge_exit": 0,
+  "result": "CONFIRMED read-only checks completed; no inference",
+  "sdk_version": "1.6.2",
+  "app": {
+    "id": "ap-CopCZqKwTuk11VLpDSU0fH",
+    "name": "bragoraforge-modal-motion-proof",
+    "state": "deployed",
+    "tasks": 0,
+    "created_at_displayed": "2026-10-20 03:10 UTC"
+  },
+  "billing_displayed": {
+    "metered_cost": "0.16",
+    "deployed_apps": "0.12",
+    "network_egress": "0.04",
+    "network_egress_allowance": "-0.04",
+    "credits_applied": "-0.12",
+    "billed_cost": "$0.00"
+  },
+  "function_stats": {
+    "backlog": 0,
+    "num_total_runners": 0,
+    "num_running_inputs": 0,
+    "input_headroom": 0
+  },
+  "remaining_credit_balance": "UNKNOWN: ledger shows applied credits, not remaining balance",
+  "model_weights_or_gpu_capacity": "UNKNOWN: not loaded or inferred by this check",
+  "inference_submissions": 0,
+  "raw_output": "READ_ONLY_MODAL_CONTROL_PLANE_NO_INFERENCE\nMODAL_SDK_VERSION 1.6.2\nAPPS\n                                                         Apps                                                         \n                                                                                                                      \n  App ID                      Description                       State      Tasks   Created at             Stopped at  \n ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────── \n  ap-CopCZqKwTuk11VLpDSU0fH   bragoraforge-modal-motion-proof   deployed   0       2026-10-20 03:10 UTC               \n                                                                                                                      \n\n\nEXIT 0\nBILLING_SUMMARY\n                                     \n  Metered Cost:                0.16  \n    Deployed Apps:             0.12  \n    Network Egress:            0.04  \n    Ephemeral Apps:            0.00  \n  Network Egress Allowance:   -0.04  \n  Credits:                    -0.12  \n  Billed Cost:                $0.00  \n                                     \n\n\nEXIT 0\nFUNCTION_STATS\nFunctionCurrentStats(backlog=0, num_total_runners=0, num_running_inputs=0, input_headroom=0)\n\n\nEXIT 0\nNO_REMOTE_SPAWN_RUN_DEPLOY_OR_GPU_SUBMISSION\n"
+}
