@@ -88,9 +88,26 @@ class HttpError extends Error {
 }
 
 function arenaBase() {
-  const value = env("ARENA_GATEWAY_URL").replace(/\/$/, "");
-  if (!value) throw new Error("Arena gateway is not configured.");
-  return value;
+  // Explicitly approved exact DNS hostnames; never trust a suffix or a
+  // user-supplied upstream URL. Missing allowlist means no Arena submission.
+  const raw = env("ARENA_GATEWAY_URL");
+  const configured = env("ARENA_GATEWAY_ALLOWED_HOSTS").split(",").map((host) => host.trim());
+  if (!raw || configured.length === 0 || configured.some((host) => !host))
+    throw new Error("ARENA_GATEWAY_CONFIG_UNVERIFIED");
+  const validHost = (host: string) =>
+    host.length <= 253 && /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(host) &&
+    host.includes(".") && !host.includes("..") && !/^\d+(?:\.\d+){3}$/.test(host) &&
+    !/(?:^|\.)(?:localhost|local|internal|test|invalid)$/.test(host);
+  if (configured.length > 10 || configured.some((host) => !validHost(host)))
+    throw new Error("ARENA_GATEWAY_ALLOWLIST_INVALID");
+  let target: URL;
+  try { target = new URL(raw); }
+  catch { throw new Error("ARENA_GATEWAY_URL_INVALID"); }
+  if (target.protocol !== "https:" || target.username || target.password ||
+      target.port || target.pathname !== "/" || target.search || target.hash ||
+      !validHost(target.hostname) || !configured.includes(target.hostname))
+    throw new Error("ARENA_GATEWAY_ORIGIN_NOT_ALLOWED");
+  return target.origin;
 }
 
 function arenaToken() {
@@ -190,8 +207,19 @@ async function bridgePayload(db: any, job: any) {
 }
 
 async function arena(path: string, method: "GET" | "POST", payload: unknown, requestId: string) {
-  const response = await fetch(arenaBase() + path, {
+  const origin = arenaBase();
+  // Only the known v2 bridge API; reject protocol-relative and traversal paths.
+  if (!/^\/v2\/[a-z0-9/_%-]+$/i.test(path) || path.includes("//") ||
+      path.split("/").some((segment) => segment === "." || segment === ".."))
+    throw new Error("ARENA_GATEWAY_PATH_REJECTED");
+  const target = new URL(path, origin);
+  if (target.origin !== origin || !target.pathname.startsWith("/v2/"))
+    throw new Error("ARENA_GATEWAY_PATH_REJECTED");
+
+  const response = await fetch(target.href, {
     method,
+    redirect: "error", // Never forward the bearer token to an unapproved redirect.
+    signal: AbortSignal.timeout(method === "POST" ? 90_000 : 20_000),
     headers: {
       Authorization: "Bearer " + arenaToken(),
       "Content-Type": "application/json",
@@ -200,9 +228,32 @@ async function arena(path: string, method: "GET" | "POST", payload: unknown, req
     },
     body: method === "POST" ? JSON.stringify({ payload }) : undefined,
   });
-  const raw = await response.text();
+  const MAX_RESPONSE_BYTES = 16 * 1024 * 1024; // Scene images may be base64.
+  const length = response.headers.get("content-length");
+  if (length && (!/^\d+$/.test(length) || Number(length) > MAX_RESPONSE_BYTES))
+    throw new Error("ARENA_GATEWAY_RESPONSE_TOO_LARGE");
+  const reader = response.body?.getReader();
+  let raw = "";
+  if (reader) {
+    const decoder = new TextDecoder();
+    let total = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > MAX_RESPONSE_BYTES)
+          throw new Error("ARENA_GATEWAY_RESPONSE_TOO_LARGE");
+        raw += decoder.decode(value, { stream: true });
+      }
+      raw += decoder.decode();
+    } finally {
+      reader.releaseLock();
+    }
+  }
   let data: any;
-  try { data = raw ? JSON.parse(raw) : {}; } catch { data = { raw: raw.slice(0, 4000) }; }
+  try { data = raw ? JSON.parse(raw) : {}; }
+  catch { data = { raw: raw.slice(0, 4000) }; }
   return { response, data };
 }
 

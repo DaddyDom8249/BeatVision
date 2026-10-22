@@ -1388,3 +1388,11 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 - Modal Python tests: 20/20 pass; TypeScript/Vite build, production audit and git diff integrity pass.
 - No live Supabase migration replay, production deployment, real provider inference, paid GPU, or end-to-end playable MP4 validation performed. Migration authorization and Arena provider URL security remain release gates.
 - Local commit only; no push, main merge, production changes or provider cost claims.
+
+
+## 2026-10-21 — Arena gateway security candidate (testing branch only)
+
+- Arena gateway requires exact `ARENA_GATEWAY_ALLOWED_HOSTS` comma-separated DNS allowlist; `ARENA_GATEWAY_URL` must be HTTPS origin (no embedded credentials, path, query, fragment, IP, internal host or nondefault port).
+- Upstream calls reject redirects, accept v2 paths only, abort after 20 s polling / 90 s submission, and stop responses beyond 16 MiB (allows encoded scene images).
+- Added offline negative-path regressions; configuration must be explicitly set and reviewed before deploying any changed Edge Function. Missing allowlist fails closed.
+- This commit does not change production Edge Functions, database or provider configuration. Live authenticated and no-charge execution remains unverified.
