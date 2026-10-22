@@ -32,10 +32,11 @@ a sponsor journey PASS. Previous agent/PR narrative is context, not fresh proof.
 - Initial production (historical evidence): `dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT`,
   `4a2ebf8bf3e9f30f0cf35442f86662bb6296da86`.
 - Current backend: production migration bundle `20261022170451`; analyze-song v44,
-  interpretation v6, AI Director v3, World v62, Style v30, generation v63.
+  interpretation v6, AI Director v3, World v62, Style v30, generation v64.
   Latest interpretation source/live evidence is automatic-draft-limit15-verification.json.
-  Generation v63 retains the same bundle/controller as verified v62 with the repaired
-  Modal module; the full candidate Arena controller is configuration-blocked.
+  Generation v64 retains the compatible controller/Modal transport and ports only
+  the existing movement-first prompt correction; modal-prompt-release.json records
+  exact patch/source/hash. Full candidate Arena controller remains configuration-blocked.
 - Supabase `mdofsinyofqbeapzfygu`: ACTIVE_HEALTHY, PostgreSQL 17.6.1.127.
 - Modal `bragoraforge-modal-motion-proof`: deployed/idle control plane and
   billed$0.00 verified in modal-control-plane-verified.json; loaded model/GPU
@@ -53,9 +54,9 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| IN_PROGRESS| T09.3 read-only investigation of reported absent Modal motion; existing completed jobs/assets found. No GPU submission or creative approval authorized by this investigation.
-T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| No approved sponsor scene; T09 worker/account access and remaining financial/execution prerequisites unresolved; $0 spend-limit screenshot now verified
-T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| No T10 output; neither codec nor subject-motion/playback proof exists for this mission
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| T09.3a prompt cutoff repaired/livev64; CI435 and source match PASS. Existing output decoded read-only; remaining credits/deployed worker equivalence and post-fix execution safeguards unverified. modal-prompt-release.json
+T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Existing owner-approved source rows and external Modal outputs observed; isolated sequential journey and authorized post-fix budgeted inference remain unverified; no agent GPU submission
+T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| Two existing external Modal MP4s decode49frames/2.041667s under T09.3; post-fix directed subject motion, source consistency and BragoraForge playback remain unverified
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
 T13| Run complete sponsor-journey regression testing| T02–T12| BLOCKED| Intake and partial local DSP tested; T04–T12 prevent sequential journey
 T14| Deliver verified sponsor demo URL, evidence, and remaining funding requirements| T13| BLOCKED| Production/immutable URLs, PR and evidence delivered; fully verified sponsor demo and motion proof blocked by T04–T13
@@ -1609,3 +1610,46 @@ plus transport18/18; full435/435,0 skipped,audit/build PASS. Patch reuses commit
 e02a3e636b8638a03a6280b021c720d00ba31a41 prompt block and changes no other live
 controller logic/dependency. Exact patch and media/tokenizer evidence recorded.
 No inference or customer data/approval mutation. Release/CI still pending.
+
+### T09.3 / T09.3a final verification and remaining gate
+
+TASK ID: T09.3a
+Objective: Deliver the already-approved movement ahead of optional long prose
+through the existing bounded LTX prompt path, preserving input/financial guards.
+Initial status: FAILED for deployed prompt delivery (real extractedv63 regression
+and pinned CPU-tokenizer reproduction); UNKNOWN for rendered-quality causality.
+Evidence inspected: motion-output-diagnosis.json; modal-prompt-delivery.patch;
+modal-prompt-release.json; actual retrievedv63/v64 sources; existing saved files;
+CI39871128656; canonical Vercel deployment rechecked unchanged.
+Confirmed blocker: Post-fix motion quality remains UNKNOWN without an authorized
+GPU run. Budget/remaining-credit and deployed-worker-source proof are still
+missing; the user has not authorized a new charged inference in this turn.
+Existing saved directions request minimal movement; do not silently strengthen
+that approved direction. T09 overall cannot PASS solely from this code release.
+Files changed: scripts/test/modal-prompt-delivery.test.mjs;
+docs/evidence/sponsor-demo-20261022/modal-prompt-delivery.patch;
+docs/evidence/sponsor-demo-20261022/motion-output-diagnosis.json;
+docs/evidence/sponsor-demo-20261022/modal-prompt-release.json;
+docs/SPONSOR_DEMO_TODO.md; docs/SPONSOR_DEMO_RELEASE_GATES.md; PROJECT_LOG.md;
+evidence manifest. App repository prompt code was already corrected in e02a3e;
+production received only that exact existing block, without the unreleased
+candidate controller. No unrelated source/service/model or schema change.
+Commit: c1e55a2535e745d182b1f09da0cdf23fa45d7b27 includes exact deployment patch
+and regression; reused blocke02a3e636b8638a03a6280b021c720d00ba31a41.
+Deployment: generationv64 ACTIVE, bundle
+c1b6f762475d7b98ed2b853b8b982fae74bbaefd2b0d05d3481bb06e78da6092.
+All five retrieved files exactly match tested release; only index prompt block
+changed fromv63. No frontend redeploy; canonical dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV
+remains READY at195c5337324704a91fbf894c83f65db6dce3813b.
+Tests performed: old live extracted function2/3 PASS1FAIL; corrected compatible
+function3/3 PASS; candidate plus Modal transport18/18 PASS. Full435/435,0 skipped,
+production audit/TypeScript/Vite build PASS. Exact-commit CI39871128656 completed
+success435/435,audit/build PASS. Actual two existing MP4 decode/token-budget
+results are separately recorded; no new provider job or fake motion result.
+Verification: PASS for T09.3 read-only diagnosis and T09.3a software delivery/
+release acceptance. BLOCKED for mandatory T09 and post-fix real directed motion,
+source-identity and application-playback acceptance. No item remains IN_PROGRESS.
+Next task: Budget/execution-authorized short proof with the existing approved
+source/action, or explicit artist revision if stronger movement is wanted.
+Other mandatory tasks retain their recorded artist/input dependencies. No GPU
+job, paid provider, creative approval, stored asset replacement or merge performed.

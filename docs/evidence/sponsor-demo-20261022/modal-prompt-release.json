@@ -1,0 +1,84 @@
+{
+  "task": "T09.3a",
+  "source_commit": "c1e55a2535e745d182b1f09da0cdf23fa45d7b27",
+  "reused_controller_block_commit": "e02a3e636b8638a03a6280b021c720d00ba31a41",
+  "base_production_version": 63,
+  "base_production_bundle_sha256": "ebfbcec4f265ff66ca8e6dd822886c957a753be33e6a34e6b30e8b7b63c50358",
+  "deployment": {
+    "id": "201e05ef-2dc5-456d-b96b-3741d5e1c38f",
+    "slug": "beatvision-generation",
+    "name": "beatvision-generation",
+    "status": "ACTIVE",
+    "version": 64,
+    "created_at": 1791104585020,
+    "updated_at": 1792711264630,
+    "verify_jwt": false,
+    "import_map": false,
+    "entrypoint_path": "/tmp/user_fn_mdofsinyofqbeapzfygu_201e05ef-2dc5-456d-b96b-3741d5e1c38f_64/source/index.ts",
+    "ezbr_sha256": "c1b6f762475d7b98ed2b853b8b982fae74bbaefd2b0d05d3481bb06e78da6092"
+  },
+  "all_five_retrieved_files_byte_match_tested_release": true,
+  "change": "Only the modalBridgeSubmit prompt construction is replaced by the existing committed movement-first block. Four other files and all other controller logic unchanged.",
+  "patch": "modal-prompt-delivery.patch",
+  "ci": {
+    "id": 39871128656,
+    "url": "https://github.com/DaddyDom8249/BeatVision/actions/runs/39871128656",
+    "commit": "c1e55a2535e745d182b1f09da0cdf23fa45d7b27",
+    "status": "completed",
+    "conclusion": "success",
+    "tests": 435,
+    "pass": 435,
+    "fail": 0,
+    "skipped": 0,
+    "production_audit": "PASS",
+    "typescript_vite_build": "PASS",
+    "scope": "Repository candidate tests; exact compatibility-patched production function additionally tested3/3 locally. Not a new GPU/render acceptance.",
+    "retrieved_log_sha256": "01e4ba0fd7744ed8e14097f28ca574f7a916b3b1d72cdc2a85f3496445a887c9"
+  },
+  "frontend": {
+    "commit": "195c5337324704a91fbf894c83f65db6dce3813b",
+    "deployment": "dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV",
+    "state": "READY",
+    "canonical": "https://beat-vision-theta.vercel.app/",
+    "rechecked": true,
+    "changed": false
+  },
+  "new_gpu_submissions": 0,
+  "new_model_weights_downloads": 0,
+  "existing_assets_approvals_mutated": 0,
+  "post_fix_motion_quality": "UNKNOWN; requires approved scene/action and separately authorized budgeted inference",
+  "verification": "PASS for compatible prompt-delivery repair/deployment/source identity; T09 financial/runtime acceptance and post-fix directed motion/frontend playback remain BLOCKED",
+  "recorded_at": "2026-10-22T23:24:54.628234+00:00",
+  "file_hashes": [
+    {
+      "name": "index.ts",
+      "before_sha256": "457d179c524ba447b541903ca52df924f0192b7bd9bc1731728fcc41633ccab1",
+      "after_sha256": "a573748e36c65d1ed2f41d7607b73853d9a17b603eebefcf56ff66499842065c",
+      "changed": true
+    },
+    {
+      "name": "image-media.ts",
+      "before_sha256": "d9f451ac3669dfcb0082c014e7ca5a43646601024768e408cc42aebd48f1fed2",
+      "after_sha256": "d9f451ac3669dfcb0082c014e7ca5a43646601024768e408cc42aebd48f1fed2",
+      "changed": false
+    },
+    {
+      "name": "final-media.ts",
+      "before_sha256": "884f373980942826951c08afd27cd669fca77d16113453c417e1992b0832ac3f",
+      "after_sha256": "884f373980942826951c08afd27cd669fca77d16113453c417e1992b0832ac3f",
+      "changed": false
+    },
+    {
+      "name": "hf-motion.ts",
+      "before_sha256": "ffa76cae86330f10b935cf9b85629705693a5e3c5020a913159da9c54abba7fb",
+      "after_sha256": "ffa76cae86330f10b935cf9b85629705693a5e3c5020a913159da9c54abba7fb",
+      "changed": false
+    },
+    {
+      "name": "modal-motion.ts",
+      "before_sha256": "9802ab772c41511caa74713a0860f3a00ca941172cdf2bc055c97089c53d79c9",
+      "after_sha256": "9802ab772c41511caa74713a0860f3a00ca941172cdf2bc055c97089c53d79c9",
+      "changed": false
+    }
+  ]
+}

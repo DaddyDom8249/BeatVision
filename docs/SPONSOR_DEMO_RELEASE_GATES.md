@@ -49,9 +49,10 @@ through the real frontend; those earlier counts describe the release transaction
 No customer content, audio, approved worlds or assets were overwritten.
 
 Functions (current API inventory): analyze-song v44, song-interpretation v6,
-AI Director v3, World v62, Style v30. Each bundle hash matches the preceding
-version. Generation v63 retains the existing production controller with
-the compatible Modal transport repair only. The full candidate Arena controller
+AI Director v3, World v62, Style v30. Generation v64 retains the compatible
+production controller/Modal transport and ports only the committed movement-first
+prompt correction. Other controller text/dependencies byte-match priorv63.
+The full candidate Arena controller
 is not released: candidate v60's read-only runtime preflight returned false for
 Arena, verified transcription and interpretation-proposal prerequisites.
 Do not describe the candidate preflight fields as live after controller restoration.
@@ -74,9 +75,10 @@ Pixel7 reloads retain AIv2; prior manualv1 remains in history. Instrumental QA
 proves provider integration, not sung-lyric accuracy. No creative confirmation
 or motion is claimed. Physical Android browser testing remains unverified.
 
-Latest source CI [39863365590](https://github.com/DaddyDom8249/BeatVision/actions/runs/39863365590)
-PASS at `be15931abdfec4583b2b26cc6a807b83ef41bd73`:432/432, zero skipped,
-audit/build PASS. Automatic-fill frontend CI39861322151 PASS at195c533:431/431,
+Latest source CI [39871128656](https://github.com/DaddyDom8249/BeatVision/actions/runs/39871128656)
+PASS at `c1e55a2535e745d182b1f09da0cdf23fa45d7b27`:435/435, zero skipped,
+audit/build PASS. Exact compatibility-patched production submit function3/3
+offline PASS. This is not a GPU/render test. Automatic-fill frontend CI39861322151 PASS at195c533:431/431,
 audit/build PASS. Earlier release CI
 39821652295 passed416/416 at its historical frontend identity.
 Modal offline [39821652417](https://github.com/DaddyDom8249/BeatVision/actions/runs/39821652417)
@@ -345,3 +347,33 @@ Corrected read-only desktop/Pixel7
 reloads pass without repeated inference. The next stage needs the artist to
 review and confirm their interpretation; no synthetic QA draft is approved by
 the agent. Full sponsor acceptance remains BLOCKED through that creative gate.
+
+## Current motion investigation and compatible prompt correction
+
+User-reported weak Modal output was investigated using two existing private MP4s
+from their recent project, without new inference. Both decode49frames/2.041667s
+at704x480/H264. Pixel changes/sample pose changes do not establish convincing
+subject action, source consistency or sponsor acceptance. The raw files/frames,
+private URLs and creative text stay outside Git. Existing approvals unchanged.
+
+Livev63 placed long world/lyric text before approved movement. With the pinned
+T5 tokenizer/committed worker128-token budget, both saved inputs lose their
+movement instructions. The already-committed movement-first ordering preserves
+both in CPU-only reproduction. Saved instructions themselves request minimal
+motion; this correction does not replace that artist-approved direction.
+
+Generationv64 now contains only that small prompt patch; all five retrieved
+files match the tested release. Bundle
+c1b6f762475d7b98ed2b853b8b982fae74bbaefd2b0d05d3481bb06e78da6092.
+Source/patch/CI and limitations:
+[release evidence](evidence/sponsor-demo-20261022/modal-prompt-release.json),
+[diagnosis](evidence/sponsor-demo-20261022/motion-output-diagnosis.json).
+No new GPU invocation, model, provider, financial setting or customer data change.
+
+Improved post-fix animation remains UNKNOWN. A new proof still requires approved
+specific action/source, verified financial safeguards/available credits and
+explicit execution authorization under the user's no-unapproved-compute rule.
+Current HF history also contains quota-exhaustion failures and one processing
+job; no uncertain job was polled/resubmitted. Row counts are not usable-clip proof.
+Earlier no-output statements describe their historical observation/isolated QA
+fixture; the later owner-created outputs are now recorded separately.

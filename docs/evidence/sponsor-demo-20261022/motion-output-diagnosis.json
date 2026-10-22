@@ -97,7 +97,7 @@
   "gpu_submissions": 0,
   "generation_resubmissions": 0,
   "new_services_models": 0,
-  "verification": "Prompt correction and non-inference verification in progress; no new render-quality PASS",
+  "verification": "PASS for existing-output diagnosis, bounded-prompt software correction, tests and live deployment/source identity. Post-fix real subject motion/identity/app playback remain BLOCKED.",
   "downloads": [
     {
       "job_id": "8fc3f4f5-96fb-40f3-9dd2-3d4788c6818c",
@@ -238,5 +238,6 @@
   "private_frame_sheet_hashes": {
     "8fc3f4f5-96fb-40f3-9dd2-3d4788c6818c-frames.png": "32b47910a059a5c0dfb4055c9a6f939888784ab400764d592e52b1280b6a2746",
     "9eccb1bd-addd-456b-81ef-bd3bab2974f2-frames.png": "c09d56f765ba15876a740684d17c34df3bfaeb2841867db43055adc47a45ad14"
-  }
+  },
+  "release_evidence": "modal-prompt-release.json"
 }
