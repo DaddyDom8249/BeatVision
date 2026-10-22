@@ -1,0 +1,59 @@
+{
+  "observed_at": "2026-10-22T18:06:59.652123+00:00",
+  "source_commit": "2baa6a3041521a8646957b79cdedc50358ff420c",
+  "frontend_commit": "63604806744e6d306742c75d399cc001c00aa0e4",
+  "contexts": [
+    {
+      "name": "desktop",
+      "actual_frontend_draft_loaded_with_sdk_trace_headers": true,
+      "interpretation_error": null,
+      "analysis_validation_response": {
+        "status": 400,
+        "body": {
+          "error": "projectId is required."
+        }
+      },
+      "responses": [
+        {
+          "path": "/functions/v1/beatvision-song-interpretation",
+          "status": 200
+        },
+        {
+          "path": "/functions/v1/beatvision-analyze-song",
+          "status": 400
+        }
+      ],
+      "console_errors": [
+        "Failed to load resource: the server responded with a status of 400 ()"
+      ],
+      "continue_disabled": true
+    },
+    {
+      "name": "android-emulated",
+      "actual_frontend_draft_loaded_with_sdk_trace_headers": true,
+      "interpretation_error": null,
+      "analysis_validation_response": {
+        "status": 400,
+        "body": {
+          "error": "projectId is required."
+        }
+      },
+      "responses": [
+        {
+          "path": "/functions/v1/beatvision-song-interpretation",
+          "status": 200
+        },
+        {
+          "path": "/functions/v1/beatvision-analyze-song",
+          "status": 400
+        }
+      ],
+      "console_errors": [
+        "Failed to load resource: the server responded with a status of 400 ()"
+      ],
+      "continue_disabled": true
+    }
+  ],
+  "provider_submissions": 0,
+  "creative_approvals": 0
+}

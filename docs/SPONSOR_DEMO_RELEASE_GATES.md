@@ -27,7 +27,7 @@ confirmation/trigger ACLs remain enforced. A later isolated QA project was added
 through the real frontend; those earlier counts describe the release transaction.
 No customer content, audio, approved worlds or assets were overwritten.
 
-Functions: analyze-song v40, song-interpretation v1, AI Director v1, World v60,
+Functions: analyze-song v41, song-interpretation v2, AI Director v1, World v60,
 Style v28. Generation v61 retains the existing production controller and deploys
 the compatible Modal transport repair only. The full candidate Arena controller
 is not released: candidate v60's read-only runtime preflight returned false for
@@ -80,8 +80,9 @@ the checklist; a successful isolated test reused the same project/audio.
   spend limit; **Volume storage charges can still accrue**. This resolves the
   missing configured-spend-limit evidence. $42.38 is usage-cap headroom arithmetic,
   not a confirmed remaining credit balance. Credit expiry is not displayed.
-  Current provider account/worker access remains blocked: no direct credentials
-  here and the existing phone bridge still reports offline. Exact worker/model
+  Current provider account/worker checks await the bridge-required phone approval
+  for read-only job63c49cf7. Bridge retry succeeded and a phone preflight completed;
+  heartbeat availability is intermittent. No direct credentials here. Exact worker/model
   availability and deployed revision remain unverified. See
   [screenshot observations](evidence/sponsor-demo-20261022/modal-user-financial-evidence.json).
   No inference or spending-setting change was performed.
@@ -137,3 +138,27 @@ The public synthetic screenshots contain only clearly labeled technical text.
 
 The immutable URL above is a deployed review build, not an accepted sponsor demo.
 All mandatory creative/motion steps after intake remain BLOCKED.
+
+
+## Follow-up: reported Edge request failure
+
+User screenshot1000088094 reports failed transcription/interpretation transport
+on the canonical theta origin. Read-only canonical frontend loads succeeded on
+desktop and Pixel7 emulation, while an actual browser request with traceparent
+reproduced CORS rejection on both handlers. Their old four-header allowlist did
+not include current SDK tracing/retry headers. Exact screenshot header names
+remain UNKNOWN; user-device retry confirmation is pending.
+
+Commit2baa6a3041521a8646957b79cdedc50358ff420c updates only those two header
+lists and regression tests; deployed interpretationv2/analyze-songv41 retain
+all origin/auth/owner/provider-cost gates. Live traced canonical reads now pass,
+unauthenticated requests still401, and deliberate empty analysis requests return
+structured400 before inference. Production CI39828722358:418/418,0 skipped,
+audit/build PASS. Frontend and schema unchanged. Details:
+[cors-header-release.json](evidence/sponsor-demo-20261022/cors-header-release.json).
+
+The immutable review host is separately missing from Edge origin allowlists;
+that is deferred because the reported failing origin is canonical. Use the main
+production URL for application checks. No genuine provider inference or creative
+approval occurred during this repair. Modal read-only status checks remain
+awaiting the phone bridge's required approval; no GPU submission was made.

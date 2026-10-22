@@ -30,8 +30,8 @@ a sponsor journey PASS. Previous agent/PR narrative is context, not fresh proof.
   `63604806744e6d306742c75d399cc001c00aa0e4`.
 - Initial production (historical evidence): `dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT`,
   `4a2ebf8bf3e9f30f0cf35442f86662bb6296da86`.
-- Current backend: production migration bundle `20261022170451`; analyze-song v40,
-  interpretation v1, AI Director v1, World v60, Style v28, generation v61.
+- Current backend: production migration bundle `20261022170451`; analyze-song v41,
+  interpretation v2, AI Director v1, World v60, Style v28, generation v61.
   Generation v61 deliberately retains the existing controller with the repaired
   Modal module; the full candidate Arena controller is configuration-blocked.
 - Supabase `mdofsinyofqbeapzfygu`: ACTIVE_HEALTHY, PostgreSQL 17.6.1.127.
@@ -45,12 +45,12 @@ ID| Task| Dependency| Status| Evidence
 T01| Verify current repository, deployments, and integrations| None| PASS| CONFIRMED identities, schema/function gaps and candidate CI: evidence/sponsor-demo-20261022/baseline.json
 T02| Verify sponsor registration and login| T01| PASS| signup-result.json, login-result.json: actual confirmed fresh account; desktop/Pixel 7 sign-in HTTP 200 and settled empty dashboard
 T03| Verify project creation and song upload| T02| PASS| Initial create/upload/reload PASS; current 254.48-second audio read-only playback/hash verified on desktop/Pixel 7 after source change
-T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Coordinated release verified; isolated upload/DSP/manual draft persist. Verified-free provider config and explicit artist confirmation remain absent
+T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| SDK-header CORS defect fixed/deployed: interpretationv2/analyze-songv41; traced actual frontend reads PASS; user retry and verified-free provider/artist confirmation pending
 T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed World GET/gate verified; no artist-confirmed interpretation or World approval
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| User screenshots verify configured $0 spend limit / $42.50 usage cap, storage exception; current worker/account access unavailable; modal-user-financial-evidence.json
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Bridge responded and phone preflight completed; read-only Modal job63c49cf7 awaits required on-phone approval; no GPU submission
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| No approved sponsor scene; T09 worker/account access and remaining financial/execution prerequisites unresolved; $0 spend-limit screenshot now verified
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| No T10 output; neither codec nor subject-motion/playback proof exists for this mission
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
@@ -704,3 +704,117 @@ commit following da01e814c7073a09a3f33ca24b1ec237c39f2e5d; unchanged released
 app SHA63604806744e6d306742c75d399cc001c00aa0e4. Next task: none dependency-ready;
 restore existing account/bridge access and remaining provider setup, then artist
 review/approvals before T10. No inference authorized or attempted by these images.
+
+
+### T04.5 — Investigate screenshot-reported Edge Function request failures
+
+Objective: interpretation/transcription requests from the actual supported app
+origin must reach the authenticated endpoint and return honest structured results.
+Initial status: FAILED in supplied screenshot; exact origin/root cause UNKNOWN.
+Evidence: user attachment1000088094.jpg shows “Failed to send a request to the
+Edge Function” in interpretation and transcription; local DSP249.6s persisted.
+No claim that this is a provider cost response. User's page URL is not visible.
+Testable hypothesis: immutable release URL was supplied but is absent from the
+exact Edge CORS allowlists. Compare allowed production/immutable origins on real
+OPTIONS and read-only authenticated frontend calls; inspect deployment/logs.
+No transcription/proposal POST, inference or writes to the depicted user project.
+Potential required files if confirmed: affected function origin allowlists and
+related CORS tests; smallest exact-origin correction only, no wildcard or auth
+relaxation. Record confirmed cause/files before any source change.
+
+
+T04.5 confirmed defect before source edit: real OPTIONS to both deployed
+interpretationv1/analyze-songv40 returns HTTP200 but no Allow-Origin for the
+published immutable release origin, while canonical theta origin is allowed.
+Source/live bundle hashes match the known release. Production frontend still
+636048067…/dpl_HBVecpyByZ6czJvLHvuHwWajis2W; remote branch unchanged. Logs do
+not expose an Origin value, so the supplied screenshot's exact cause remains
+PROBABLE until the user identifies their URL. Supabase current CORS docs confirm
+missing Allow-Origin causes browser invocation failure. Changelog reviewed;
+no SDK upgrade or schema change needed for this exact-origin defect.
+Required source files: beatvision-song-interpretation/index.ts and
+beatvision-analyze-song/index.ts; existing interpretation/analysis handler tests.
+Expected outcome: exact owned immutable release origin allowed on preflight and
+structured auth/error responses; untrusted/lookalike origins remain rejected.
+Verification: failing real-handler tests before the two-line allowlist fix, green
+after; direct live preflights and actual read-only authenticated browser calls.
+No wildcard, auth relaxation, provider call or user-project write. Other stage
+origin gaps are recorded for dependency-ready verification, not silently fixed.
+Termux retry requested by user now returns online, fresh heartbeat17:56:47Z.
+This restores bridge transport access; it is not GPU/worker/inference proof.
+
+
+T04.5 steering: user confirms failing page is canonical theta origin. Therefore
+missing immutable-release CORS is a separate confirmed defect, not an established
+cause of this screenshot. Defer its source change while tracing actual production
+requests. No source file has changed. Next evidence: real read-only browser
+interpretation GET on canonical site, request header names, failure messages,
+function version/status and comparison with Android browser context.
+
+T04.5 confirmed canonical-origin defect before source changes: actual Chromium
+fetch without trace header reaches both endpoints and returns401; identical
+request plus standard traceparent fails preflight with “Request header field
+traceparent is not allowed”. The current SDK's exported CORS header list includes
+x-retry-count/traceparent/tracestate/baggage; both handlers hardcode only the old
+four headers. Screenshot user's actual requested header names remain UNKNOWN;
+this is a reproduced compatible failure path, not proof of their exact header.
+Required files: the two function index.ts files and their two existing handler
+tests. Expected change: synchronize only allowed request-header names with the
+SDK, preserve exact origin restrictions, methods, getUser/owner checks and cost
+gates. Tests will compare real handler responses with SDK-exported header names,
+retain denied-origin cases, and prove unauthenticated errors stay401. Run red
+first, then green and the live browser reproduction. Defer the independent
+immutable-origin defect. No provider/GPU submission or actual user content write.
+
+
+T04.5 verification: PASS for reproduced SDK-header CORS path after deployment;
+complete T04 remains BLOCKED. Handler regression before patch:20 PASS/2 FAIL
+(missing SDK headers); after patch22/22 PASS,0 skipped; production audit PASS.
+Commit2baa6a3041521a8646957b79cdedc50358ff420c changes only two header strings
+and related tests. Released interpretationv2 (bundle5a6704dd…) and analyze-songv41
+(bundle9c2a4666…); candidate contents byte-compared to committed source first.
+Actual Chromium on canonical theta now reads401 both with/without traceparent;
+before, traced requests failed CORS. This is unauthenticated rejection, not a
+successful creative request. Actual authenticated frontend reads with all SDK
+trace headers load draftv1 HTTP200 in desktop/Pixel7; a deliberate empty analysis
+request returns structured400 projectId required before any provider call. The
+400 console messages are expected validation errors, not CORS failures.
+Evidence: canonical-edge-diagnosis.json, canonical-trace-cors-red/green.json,
+traced-app-browser-green.json, cors-header-release.json. Screenshot's exact
+client header remains UNKNOWN; user asked to reload/retry, no approval required.
+No production frontend/schema change or real user project write. Next: T09
+read-only existing bridge account checks; T04's provider/config/artist gates stay.
+
+
+T04.5 final remote validation: Production CI39828722358 PASS on exact
+2baa6a3041521a8646957b79cdedc50358ff420c:418/418 tests,0 skipped,audit/build PASS.
+The screenshot is retained privately with its original SHA256 in
+cors-header-release.json. User confirmed canonical theta URL. User-device retry
+result is still UNKNOWN; do not report screenshot fully resolved from emulation.
+DEFERRED under T04.5: immutable-host origin allowlist gap was reproduced but is
+not the origin the user reports. No unrelated origin/source changes made.
+Current deploy identities: frontend636048067… unchanged; interpretationv2 and
+analyze-songv41 as recorded in release artifact. No provider call or approvals.
+
+### T09 bridge retry / read-only checks
+
+Objective: use restored existing bridge access for non-inference account/worker
+verification. Initial status: BLOCKED. User explicitly requested bridge retry.
+Evidence: heartbeat became online at17:56:47Z; existing bridge job
+2daf31ff-5148-4db5-b5e3-d841f9c50d9d completed exit0 and confirmed phone can
+reach both canonical-origin preflight endpoints with200. That command was queued
+before deployment; its output shows the old four headers and no completion
+clock, so it is not post-patch physical-device proof. New read-only Modal job
+63c49cf7-1070-4b9a-a3ab-df9cfa991942 is awaiting_approval (bridge tool explicitly
+requires approval on the phone). Latest observed heartbeat18:09:06Z, offline
+at retrieval. Command uses existing Modal CLI/SDK to list apps, billing summary
+and Function.get_current_stats; no remote/spawn/run/deploy/GPU invocation.
+Files changed: task/evidence/release docs only for T09; no provider/worker code.
+Commit: evidence update following2baa6a3041521a8646957b79cdedc50358ff420c.
+Tests performed: phone preflight PASS (read-only network access); Modal check
+NOT EXECUTED pending bridge approval. Approval is imposed by the bridge tool,
+not an invented additional inference permission. No duplicate command queued.
+Verification: BLOCKED by required phone approval and subsequent actual worker/
+financial/approved-input checks. Next: resume this same job when its result
+arrives; never substitute historical usage or mere bridge status for GPU proof.
+All mandatory statuses remain T01–T03 PASS/T04–T14 BLOCKED; no IN_PROGRESS item.

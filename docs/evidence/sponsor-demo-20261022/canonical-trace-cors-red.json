@@ -1,0 +1,35 @@
+{
+  "classification": "CONFIRMED canonical-origin trace-header failure reproduction; screenshot client header remains UNKNOWN",
+  "rows": [
+    {
+      "name": "beatvision-song-interpretation",
+      "traced": false,
+      "status": 401
+    },
+    {
+      "name": "beatvision-song-interpretation",
+      "traced": true,
+      "error": "TypeError: Failed to fetch"
+    },
+    {
+      "name": "beatvision-analyze-song",
+      "traced": false,
+      "status": 401
+    },
+    {
+      "name": "beatvision-analyze-song",
+      "traced": true,
+      "error": "TypeError: Failed to fetch"
+    }
+  ],
+  "console_errors": [
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Access to fetch at 'https://mdofsinyofqbeapzfygu.supabase.co/functions/v1/beatvision-song-interpretation' from origin 'https://beat-vision-theta.vercel.app' has been blocked by CORS policy: Request header field traceparent is not allowed by Access-Control-Allow-Headers in preflight response.",
+    "Failed to load resource: net::ERR_FAILED",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Access to fetch at 'https://mdofsinyofqbeapzfygu.supabase.co/functions/v1/beatvision-analyze-song' from origin 'https://beat-vision-theta.vercel.app' has been blocked by CORS policy: Request header field traceparent is not allowed by Access-Control-Allow-Headers in preflight response.",
+    "Failed to load resource: net::ERR_FAILED"
+  ],
+  "authenticated": false,
+  "provider_submissions": 0
+}

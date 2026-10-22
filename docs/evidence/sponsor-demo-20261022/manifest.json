@@ -1,5 +1,5 @@
 {
-  "source_commit": "63604806744e6d306742c75d399cc001c00aa0e4",
+  "source_commit": "2baa6a3041521a8646957b79cdedc50358ff420c",
   "production_frontend_commit": "63604806744e6d306742c75d399cc001c00aa0e4",
   "production_generation_version": 61,
   "scope": "Released software and partial sponsor journey; no inference, no creative approvals, no AI motion proof",
@@ -54,6 +54,26 @@
       "file": "candidate-world-gate-desktop.png",
       "bytes": 45284,
       "sha256": "7c3491f6ec34639df2d9cf21f164da72fcdb704f9c467bc988537c0102ab3a1d"
+    },
+    {
+      "file": "canonical-edge-diagnosis.json",
+      "bytes": 2474,
+      "sha256": "0e8c9b0f77b076ce02f8e4d6b49414c449e2c0bcd345af6b020484e7711c1a8f"
+    },
+    {
+      "file": "canonical-trace-cors-green.json",
+      "bytes": 932,
+      "sha256": "6a0d79d1e0e05e670c04e4c7a1b7aec3e2bafd7fe93d2bf54102d294165bb258"
+    },
+    {
+      "file": "canonical-trace-cors-red.json",
+      "bytes": 1517,
+      "sha256": "2adc4e775c7976e613edcaaf57ffa0e7db4f9209ddc64d05c38a620cd33a3a92"
+    },
+    {
+      "file": "cors-header-release.json",
+      "bytes": 2603,
+      "sha256": "ad89f1844e5a84ea0c05c0ebdcd2125d15d35fe64004842482962142d158cbdb"
     },
     {
       "file": "current-audio-revalidation.json",
@@ -209,6 +229,16 @@
       "file": "song-regression.txt",
       "bytes": 3361,
       "sha256": "d48191937b6d5fb80316a9fa97dab0917f92d85267c3223f45e97e0bb9a4c470"
+    },
+    {
+      "file": "termux-resumed-checks.json",
+      "bytes": 1431,
+      "sha256": "142d2a75b58a0129eae9456995df17afb7197f493f19c065b4d7508de675aa29"
+    },
+    {
+      "file": "traced-app-browser-green.json",
+      "bytes": 1621,
+      "sha256": "4c09f33fa49c3b7b1d91f5b5fec91b039568672517d2e85dde74efb9ea5d34d0"
     }
   ],
   "log_normalization": {
@@ -218,5 +248,14 @@
     "raw_copy": "private outside Git"
   },
   "initial_source_commit": "b8baeaad49508577310044d51fb4bd31134606af",
-  "initial_production_frontend_commit": "4a2ebf8bf3e9f30f0cf35442f86662bb6296da86"
+  "initial_production_frontend_commit": "4a2ebf8bf3e9f30f0cf35442f86662bb6296da86",
+  "latest_backend_source_commit": "2baa6a3041521a8646957b79cdedc50358ff420c",
+  "current_backend_function_versions": {
+    "beatvision-analyze-song": 41,
+    "beatvision-song-interpretation": 2,
+    "beatvision-ai-director": 1,
+    "beatvision-world": 60,
+    "beatvision-style-draft": 28,
+    "beatvision-generation": 61
+  }
 }

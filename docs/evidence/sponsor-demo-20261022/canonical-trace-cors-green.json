@@ -1,0 +1,33 @@
+{
+  "classification": "Post-deployment canonical-origin trace-header verification; screenshot client header remains UNKNOWN",
+  "rows": [
+    {
+      "name": "beatvision-song-interpretation",
+      "traced": false,
+      "status": 401
+    },
+    {
+      "name": "beatvision-song-interpretation",
+      "traced": true,
+      "status": 401
+    },
+    {
+      "name": "beatvision-analyze-song",
+      "traced": false,
+      "status": 401
+    },
+    {
+      "name": "beatvision-analyze-song",
+      "traced": true,
+      "status": 401
+    }
+  ],
+  "console_errors": [
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()"
+  ],
+  "authenticated": false,
+  "provider_submissions": 0
+}
