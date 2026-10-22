@@ -1,8 +1,8 @@
 {
   "source_commit": "be15931abdfec4583b2b26cc6a807b83ef41bd73",
   "production_frontend_commit": "195c5337324704a91fbf894c83f65db6dce3813b",
-  "production_generation_version": 62,
-  "scope": "Real automatic six-field editable draft and saved variants verified at195c533/v4; server estimate qualification deployed/tested atbe15931/v5 but follow-up provider503 and actor daily3/3 block fresh-output verification. Artist confirmation and full creative/motion journey pending.",
+  "production_generation_version": 63,
+  "scope": "Real automatic six-field editable draft, saved variants and estimate-qualified AIv3 verified. After owner-reported allowance15, fourth daily request200, all three heuristic claims qualified and desktop/Android-emulated persistence PASS. Prior503 retained; explicit artist confirmation and full creative/motion journey pending.",
   "private_evidence": "Transcript-bearing candidate images, Android reload screenshot containing profile text, and account/session secrets excluded from Git",
   "files": [
     {
@@ -36,6 +36,11 @@
       "sha256": "e91fdb73b34974518f621856cf98621cd4665945a98e3e55a069e8e7125425fe"
     },
     {
+      "file": "automatic-draft-estimate-retest-limit15.json",
+      "bytes": 2068,
+      "sha256": "76810f34786664b474a404d3546f4c596059c47bd2550bed8719c531bae8099d"
+    },
+    {
       "file": "automatic-draft-estimate-tests.json",
       "bytes": 1417,
       "sha256": "e4e22271b04ff9a5d01f1ac6edb46666b6863ea3e16096166b7b99a7a534ea03"
@@ -49,6 +54,11 @@
       "file": "automatic-draft-journey.json",
       "bytes": 4239,
       "sha256": "de6687db989ca009c8f21a2f9ae20fd804471a60ee6fb4b16971d27c9fdd7ef7"
+    },
+    {
+      "file": "automatic-draft-limit15-verification.json",
+      "bytes": 4537,
+      "sha256": "6062736e5aa49a3496fc235055927f36f3e1cfc873887495c438049d879aadfe"
     },
     {
       "file": "automatic-draft-postfailure-retention-initial.json",
@@ -426,16 +436,16 @@
   "initial_production_frontend_commit": "4a2ebf8bf3e9f30f0cf35442f86662bb6296da86",
   "latest_backend_source_commit": "be15931abdfec4583b2b26cc6a807b83ef41bd73",
   "current_backend_function_versions": {
-    "beatvision-analyze-song": 43,
-    "beatvision-song-interpretation": 5,
-    "beatvision-ai-director": 2,
-    "beatvision-world": 61,
-    "beatvision-style-draft": 29,
-    "beatvision-generation": 62
+    "beatvision-world": 62,
+    "beatvision-analyze-song": 44,
+    "beatvision-generation": 63,
+    "beatvision-style-draft": 30,
+    "beatvision-song-interpretation": 6,
+    "beatvision-ai-director": 3
   },
   "production_frontend_deployment": "dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV",
-  "production_analysis_version": 43,
-  "production_interpretation_version": 5,
+  "production_analysis_version": 44,
+  "production_interpretation_version": 6,
   "historical_backend_function_versions": {
     "beatvision-analyze-song": 41,
     "beatvision-song-interpretation": 2,
@@ -455,5 +465,6 @@
     "skipped": 0,
     "audit": "PASS",
     "build": "PASS"
-  }
+  },
+  "latest_live_verification": "automatic-draft-limit15-verification.json"
 }

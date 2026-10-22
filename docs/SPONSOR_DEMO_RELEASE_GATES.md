@@ -12,14 +12,18 @@ One real first-analysis journey generated all six fields and saved/reloaded edit
 on desktop/Pixel7 emulation; see
 [automatic journey](evidence/sponsor-demo-20261022/automatic-draft-journey.json).
 
-The final server-only estimate qualification is deployed as interpretationv5 from
-`be15931abdfec4583b2b26cc6a807b83ef41bd73`, retrieved source byte-matched.
-Its automated tests/CI pass432/432. Its one live follow-up returned503
-INTERPRETATION_PROVIDER_FAILED, with downstream cause UNKNOWN. The test actor
-has used its three daily requests. Earlier AIv1 and editedv2 remain intact;
-read-only desktop/Pixel7 reloads pass. No further request or quota change was
-made. Live new-output acceptance for that qualification remains BLOCKED; see
-[final release evidence](evidence/sponsor-demo-20261022/automatic-draft-estimate-release.json).
+The estimate qualification is now live-verified on interpretationv6, whose
+source byte-matches `be15931abdfec4583b2b26cc6a807b83ef41bd73` and the unchanged
+v5 bundle. Tests/CI pass432/432. After the owner reported raising the daily
+allowance to15, one bounded real proposal returned200 and saved AIv3. All three
+heuristic claims are qualified as estimates; all six fields reload identically
+and remain editable on desktop/Pixel7 emulation. Previous AIv1/editedv2 remain
+preserved, none confirmed. The fourth daily reservation confirms the old limit3
+is lifted; exact15 is owner-reported. No agent deployment, setting change,
+creative approval, repeated analysis or GPU call occurred during the retest.
+See [current verification](evidence/sponsor-demo-20261022/automatic-draft-limit15-verification.json).
+The preceding503 and its unknown downstream cause remain recorded in
+[historical failure evidence](evidence/sponsor-demo-20261022/automatic-draft-estimate-release.json).
 
 ## Released and verified
 
@@ -44,8 +48,9 @@ confirmation/trigger ACLs remain enforced. A later isolated QA project was added
 through the real frontend; those earlier counts describe the release transaction.
 No customer content, audio, approved worlds or assets were overwritten.
 
-Functions (current API inventory): analyze-song v43, song-interpretation v5,
-AI Director v2, World v61, Style v29. Generation v62 retains the existing production controller and deploys
+Functions (current API inventory): analyze-song v44, song-interpretation v6,
+AI Director v3, World v62, Style v30. Each bundle hash matches the preceding
+version. Generation v63 retains the existing production controller with
 the compatible Modal transport repair only. The full candidate Arena controller
 is not released: candidate v60's read-only runtime preflight returned false for
 Arena, verified transcription and interpretation-proposal prerequisites.
@@ -85,11 +90,10 @@ the checklist; a successful isolated test reused the same project/audio.
 
 ## External blockers
 
-- Verify new estimate-qualified AI output after the provider failure is resolved
-  and the existing test actor quota permits a bounded request. A new account,
-  paid fallback or quota increase must not be used to evade the current limit.
-  The local3/3 quota is verified; it is not the established cause of the preceding
-  downstream provider failure.
+- Estimate-qualified AI output and access past the old quota boundary now pass
+  after the owner-reported15-request setting change. No current provider/quota
+  blocker is established by the latest200. The exact earlier503 cause remains
+  unknown; successful retest does not prove that raising the quota caused recovery.
 - The Groq configuration blocker is resolved: owner-applied settings now produce
   genuine AI proposal/transcription results. Owner Free/no-paid-billing attestation
   remains the financial evidence; no independent billing retrieval is claimed.
@@ -336,7 +340,8 @@ for a new setting to confirm it appears. No further provider test was submitted.
 records actual proposal200/draftv2, transcription200/completed metadata, preserved
 history/source, current function versions and exact423-test CI. Early503 results,
 old setup questions and two failed browser-harness observations below/above are
-historical. The separate latest503 is recorded at the top. Corrected read-only desktop/Pixel7
+historical. The later503 and subsequent successful retest are recorded at the top.
+Corrected read-only desktop/Pixel7
 reloads pass without repeated inference. The next stage needs the artist to
 review and confirm their interpretation; no synthetic QA draft is approved by
 the agent. Full sponsor acceptance remains BLOCKED through that creative gate.

@@ -31,10 +31,10 @@ a sponsor journey PASS. Previous agent/PR narrative is context, not fresh proof.
   `195c5337324704a91fbf894c83f65db6dce3813b`.
 - Initial production (historical evidence): `dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT`,
   `4a2ebf8bf3e9f30f0cf35442f86662bb6296da86`.
-- Current backend: production migration bundle `20261022170451`; analyze-song v43,
-  interpretation v5, AI Director v2, World v61, Style v29, generation v62.
-  Latest interpretation release/source evidence is automatic-draft-estimate-release.json.
-  Generation v62 deliberately retains the existing controller with the repaired
+- Current backend: production migration bundle `20261022170451`; analyze-song v44,
+  interpretation v6, AI Director v3, World v62, Style v30, generation v63.
+  Latest interpretation source/live evidence is automatic-draft-limit15-verification.json.
+  Generation v63 retains the same bundle/controller as verified v62 with the repaired
   Modal module; the full candidate Arena controller is configuration-blocked.
 - Supabase `mdofsinyofqbeapzfygu`: ACTIVE_HEALTHY, PostgreSQL 17.6.1.127.
 - Modal `bragoraforge-modal-motion-proof`: deployed/idle control plane and
@@ -48,7 +48,7 @@ ID| Task| Dependency| Status| Evidence
 T01| Verify current repository, deployments, and integrations| None| PASS| CONFIRMED identities, schema/function gaps and candidate CI: evidence/sponsor-demo-20261022/baseline.json
 T02| Verify sponsor registration and login| T01| PASS| signup-result.json, login-result.json: actual confirmed fresh account; desktop/Pixel 7 sign-in HTTP 200 and settled empty dashboard
 T03| Verify project creation and song upload| T02| PASS| Initial create/upload/reload PASS; current 254.48-second audio read-only playback/hash verified on desktop/Pixel 7 after source change
-T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| T04.13 automatic six-field editable draft live PASS at195c533/v4; v5 estimate qualification has432 passing tests but new provider request503, daily3/3 used; explicit artist confirmation still required. automatic-draft-estimate-release.json
+T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Automatic six-field draft and estimate-qualified AIv3 verified; fourth request200 after operator-raised allowance, prior variants preserved; desktop/Pixel7 reload PASS. Explicit artist confirmation required. automatic-draft-limit15-verification.json
 T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed World GET/gate verified; no artist-confirmed interpretation or World approval
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
@@ -1486,3 +1486,69 @@ T10–T14 have the explicit dependencies in the index. No active task remains.
 
 No creative approval, GPU submission, new schema/service, customer-project
 mutation or main merge occurred. Full sponsor demo acceptance remains BLOCKED.
+
+### T04.13a resumed after operator-reported quota change
+
+TASK ID: T04 (sole IN_PROGRESS item).
+Objective: Complete blocked live estimate-qualified proposal acceptance.
+Initial status: BLOCKED.
+Evidence inspected: User reports “I raised it to15”; read-only DB still shows
+request_count3 today, only preserved unconfirmed AIv1/editedv2, no inflight row.
+Current interpretationv6 ACTIVE has the same35409fc2… bundle and source exactly
+matching be15931abdfec4583b2b26cc6a807b83ef41bd73. No agent redeploy this turn;
+reason for version increment is UNKNOWN. Current frontend195c533 unchanged.
+Confirmed blocker/hypothesis: Earlier proposal failed with terminal provider503;
+its exact cause was not established. Operator-reported raised allowance permits
+one materially justified follow-up without changing model or financial guards.
+A request passing the previous3-request boundary proves that boundary changed,
+not independently that the exact server limit equals15. No secret value read.
+Files changed: checklist/log/release/evidence only; no application source.
+Commit: unchanged source be15931; evidence commit pending.
+Tests performed / verification: pending one actual Propose action on the same
+isolated projectbb457d64-29ea-4649-a566-c446eef61ad6, followed by real desktop/
+Pixel7 reload only if a new draft succeeds. Preserve the previous failure artifact.
+No audio re-analysis, creative approval, GPU call, quota increase by agent,
+paid/provider fallback or automatic retry. This is attempt2 for the latest
+provider-output blocker; inspect a terminal result before any further action.
+Next task: T04 resolution or explicit blocker; T05 not eligible without artist
+confirmation. Other mandatory tasks remain blocked as in the index.
+
+### T04.13a final bounded retest — PASS
+
+TASK ID: T04.13a
+Objective: Verify genuine estimate-qualified AI output/storage/frontend after
+operator-reported quota change, with prior variants and approvals preserved.
+Initial status: BLOCKED.
+Evidence inspected: automatic-draft-estimate-retest-limit15.json;
+automatic-draft-limit15-verification.json; read-only database and live source/
+function inventory. Operator-reported daily allowance15 is authorized; actual
+fourth daily reservation succeeded, independently proving the old3 boundary is
+lifted. The exact15 value was not independently read. Financial/Free-provider
+flags, pinned model, ownership and existing quota guards remain active.
+Confirmed blocker: None for this numbered retest. Previous503 cause remains
+UNKNOWN; successful recovery is not proof that the quota caused that provider
+failure. Artist confirmation remains the mandatory T04 acceptance dependency.
+Files changed: docs/SPONSOR_DEMO_TODO.md; docs/SPONSOR_DEMO_RELEASE_GATES.md;
+PROJECT_LOG.md; sanitized retest/release evidence and manifest. No app source,
+secrets, database schema or agent-deployed function changed this turn.
+Commit: Same backend be15931abdfec4583b2b26cc6a807b83ef41bd73; same frontend
+195c5337324704a91fbf894c83f65db6dce3813b/dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV.
+Current interpretationv6 bundle35409fc2… exactly matches priorv5 and source.
+Latest inventory reports analyze44/interpretation6/Director3/World62/Style30/
+generation63, each bundle unchanged from preceding version. Cause/actor of
+version increments is UNKNOWN; do not attribute a deployment to this agent.
+Tests performed: One actual frontend Propose click returned200; saved AIv3
+(a4daad16-803f-45e5-9cae-6dc5f9a27a59), verified-free-provider/gpt-oss20b with
+provider request provenance and unchanged source fingerprint/revision. Three
+heuristic claims each begin Estimate; all six fields nonempty/editable and
+exactly persisted on desktop/Pixel7-emulated reload. No displayed errors;
+Continue disabled and artist Confirm available. Database confirms earlier AIv1
+and editedv2 preserved (superseded), newv3 draft, all confirmed_at null, current
+pointer null, request_count4 and no inflight row. No physical Android claim.
+Existing exact-source CI39863365590 PASS432/432,0 skipped,audit/build reused
+because source is unchanged. No repeated transcription or additional AI call.
+Verification: PASS for T04.13a. Overall T04 BLOCKED on explicit artist review/
+confirmation; no active item remains. T05–T08 need their dependent approvals
+and eligible image generation; T09–T14 retain their recorded external gates.
+Next task: Artist reviews their own generated interpretation and explicitly
+confirms it. No agent creative approval, GPU request, billable fallback or merge.
