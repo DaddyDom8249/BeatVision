@@ -8,6 +8,9 @@ declare
   song uuid := '10000000-0000-4000-8000-000000000004';
   revision uuid := '10000000-0000-4000-8000-000000000005';
   confirmed_id uuid;
+  world_report uuid := gen_random_uuid();
+  vision_lock uuid := gen_random_uuid();
+  valid_job uuid := gen_random_uuid();
   ticket uuid;
   released boolean;
   hash text;
@@ -64,12 +67,54 @@ begin
   ) returning id into confirmed_id;
   update public.songs set current_interpretation_id=confirmed_id,
     interpretation_confirmed_at=now() where id=song;
+
+  -- Exercise the complete valid path, including the World table's world_id
+  -- column. Fingerprint/quota-only checks did not execute this trigger branch.
+  insert into public.world_reports (
+    id,project_id,world_id,revision_number,status,confirmed_at,
+    interpretation_id,interpretation_source_fingerprint
+  ) values (
+    world_report,p,world_report,1,'completed',now(),confirmed_id,repeat('b',64)
+  );
+  insert into public.vision_locks (
+    id,project_id,world_report_id,style_bible_id,song_id,revision_number,status,snapshot
+  ) values (
+    vision_lock,p,world_report,gen_random_uuid(),song,1,'locked','{}'::jsonb
+  );
+  if (select snapshot->'interpretation_lineage'->>'interpretation_id'
+      from public.vision_locks where id=vision_lock) is distinct from confirmed_id::text then
+    raise exception 'VALID_LOCK_LOST_CONFIRMED_INTERPRETATION';
+  end if;
+  insert into public.generation_jobs (
+    id,project_id,vision_lock_id,job_type,status,input_snapshot
+  ) values (valid_job,p,vision_lock,'scene_image','queued','{}'::jsonb);
+  if not exists(select 1 from public.generation_jobs where id=valid_job and status='queued') then
+    raise exception 'VALID_LINEAGE_GENERATION_NOT_QUEUED';
+  end if;
+  begin
+    insert into public.generation_jobs(project_id,vision_lock_id,job_type,status,input_snapshot)
+      values(gen_random_uuid(),vision_lock,'scene_image','queued','{}'::jsonb);
+    raise exception 'FOREIGN_PROJECT_LINEAGE_WAS_ACCEPTED';
+  exception when sqlstate '23514' then null;
+  end;
+  begin
+    insert into public.generation_jobs(project_id,vision_lock_id,job_type,status,input_snapshot)
+      values(p,gen_random_uuid(),'scene_image','queued','{}'::jsonb);
+    raise exception 'MISSING_LOCK_LINEAGE_WAS_ACCEPTED';
+  exception when sqlstate '23514' then null;
+  end;
   update public.songs set lyrics='Changed synthetic lyrics' where id=song;
   if exists(select 1 from public.songs
       where id=song and (current_interpretation_id is not null
                          or interpretation_confirmed_at is not null)) then
     raise exception 'CREATIVE_SOURCE_EDIT_DID_NOT_INVALIDATE_CONFIRMATION';
   end if;
+  begin
+    insert into public.generation_jobs(project_id,vision_lock_id,job_type,status,input_snapshot)
+      values(p,vision_lock,'scene_image','queued','{}'::jsonb);
+    raise exception 'STALE_INTERPRETATION_GENERATION_WAS_ACCEPTED';
+  exception when sqlstate '23514' then null;
+  end;
 
   begin
     perform public.reserve_bragora_ai_request(p,other_actor,'director',2);
