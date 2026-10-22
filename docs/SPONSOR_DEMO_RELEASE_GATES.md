@@ -186,3 +186,16 @@ User prefers consolidated phone approvals. The current single read-only batch
 covers existing Linux-runtime selection, CLI secret-name metadata and canonical
 post-patch CORS checks; no install/login/settings/inference. Pending approval for
 900e072e replaces the completed probe, not another execution of that same job.
+
+
+## Approved grouped diagnostics result
+
+Batch900e072e completed: both physical-phone network preflights return200 for
+the canonical origin with no missing SDK headers after the patch. This is not
+a real browser interpretation proposal, artist approval or video playback test.
+CLI management read did not run: only two standard Linux Node locations were
+checked and absent. Existing successful command metadata identifies
+/root/.local/node-v22.16.0-linux-arm64/bin/node. Final targeted retrye8641d25
+(attempt3/3) uses that known candidate and one batch for all nine configuration
+names; it requires a new bridge phone approval. No install/login/secret-value
+inspection, settings or inference. Do not repeat completed CORS/billing tests.

@@ -45,7 +45,7 @@ ID| Task| Dependency| Status| Evidence
 T01| Verify current repository, deployments, and integrations| None| PASS| CONFIRMED identities, schema/function gaps and candidate CI: evidence/sponsor-demo-20261022/baseline.json
 T02| Verify sponsor registration and login| T01| PASS| signup-result.json, login-result.json: actual confirmed fresh account; desktop/Pixel 7 sign-in HTTP 200 and settled empty dashboard
 T03| Verify project creation and song upload| T02| PASS| Initial create/upload/reload PASS; current 254.48-second audio read-only playback/hash verified on desktop/Pixel 7 after source change
-T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Grouped read-only request900e072e awaits one phone approval: Linux CLI runtime, config-name metadata and post-patch phone CORS; prior Android CLI failure recorded
+T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Phone post-patch CORS PASS; management read not executed; final known-path CLI batche8641d25 awaits required phone approval (attempt3/3)
 T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed World GET/gate verified; no artist-confirmed interpretation or World approval
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
@@ -907,3 +907,24 @@ T04 BLOCKED on that approval; no active task or repeated Modal checks. Current
 source/deployments unchanged. Supabase access is UNKNOWN, not denied/absent,
 because earlier CLI failed locally before management authentication. Evidence:
 supabase-phone-access-probe.json. No source tests repeated for documentation.
+
+
+T04.6 approved batch900e072e result: completed exit0; both phone OPTIONS200,
+exact canonical Origin allowed, missing_sdk_headers=[] for interpretation and
+analysis. PASS for post-patch phone network/header coverage, not browser playback
+or AI interpretation. Management read NOT EXECUTED: no Linux Node at the two
+standard paths checked. This does not prove no runtime exists elsewhere.
+Read-only previous successful command metadata identifies a previously used
+/root/.local/node-v22.16.0-linux-arm64 path (job1e27c7f7 and others). Retry3/3
+uses that concrete existing-runtime candidate and native PATH. No install or
+credential-file inspection. Final batch handles all required secret-name checks
+in one approval, and omits the now-verified phone CORS checks. If this cannot
+establish existing CLI management access, mark BLOCKED and require external
+secure access/setup rather than repeating the runtime approach.
+
+
+Final consolidated CLI requeste8641d25-720c-4f9a-b6d1-4e6bcd50a7c3 queued;
+bridge requires phone approval for this changed command. No new command result
+yet. Evidence: phone-postfix-cors-and-cli-runtime.json. Previous local/phone
+CORS tests remain accepted; no repeat build or provider call. The next result
+will close this runtime approach after attempt3/3, successful or BLOCKED.

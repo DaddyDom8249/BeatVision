@@ -191,6 +191,11 @@
       "sha256": "657d8db1739ec7d709fb471b4c11ede047ad1690e42cc299e1a6fdcdd1f1d7fe"
     },
     {
+      "file": "phone-postfix-cors-and-cli-runtime.json",
+      "bytes": 1488,
+      "sha256": "a4dd3de5bde8d3aa984e69d82ae77d9b7733aa4d6e50e4d23814d94d89bc4ab4"
+    },
+    {
       "file": "production-audit.txt",
       "bytes": 200,
       "sha256": "d02023ca8be7fb44222a534c8ec5a98eb1007ede71f6360657e09f8855f1bb3d"
