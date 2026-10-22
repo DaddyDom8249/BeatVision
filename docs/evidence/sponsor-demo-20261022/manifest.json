@@ -1,9 +1,9 @@
 {
-  "source_commit": "64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52",
+  "source_commit": "978240d1f97fa54ec9e008b9a3f5e201eeca96b0",
   "production_frontend_commit": "64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52",
-  "production_generation_version": 61,
-  "scope": "Partial sponsor journey; real AI interpretation v2 and real Groq transcription verified on isolated fixture; saved transcription status correction pending release; no creative approvals or GPU motion",
-  "private_evidence": "Transcript-bearing candidate screenshots and account/session secrets excluded from Git",
+  "production_generation_version": 62,
+  "scope": "Partial sponsor journey with real AI proposal/transcription and corrected completed metadata; artist confirmation pending; no creative approvals or GPU motion proof",
+  "private_evidence": "Transcript-bearing candidate images, Android reload screenshot containing profile text, and account/session secrets excluded from Git",
   "files": [
     {
       "file": "audio-fixture.json",
@@ -136,6 +136,11 @@
       "sha256": "930467730b99863bf2605aeb55ab2ee559a79597722d260291b97836584047ce"
     },
     {
+      "file": "groq-live-verification-release.json",
+      "bytes": 4890,
+      "sha256": "30d3e62413863b09881a343f7358f0262dd9c34d6a3d56744f65ad8467e58adb"
+    },
+    {
       "file": "groq-postfix-proposal-result.json",
       "bytes": 1302,
       "sha256": "62fa92d651d1d57ef50d8be095afba711fa27ea7de5a80c3564fcc3f602739c7"
@@ -154,6 +159,11 @@
       "file": "groq-remediated-proposal.png",
       "bytes": 130327,
       "sha256": "d6be038fc6675ed25a48c15fa9a89615ac6e7aebf8007c8c19b587e1e4d6bf37"
+    },
+    {
+      "file": "groq-transcription-postfix-result.json",
+      "bytes": 2866,
+      "sha256": "a4c6435cddfa1bd1346cdced557535e98a8212fee52ddf58cab5c7c24b597f5c"
     },
     {
       "file": "groq-transcription-result.json",
@@ -301,9 +311,19 @@
       "sha256": "9c8c3c0809d8c543f4963179d81bbe5b36a54e66222d3b6a5b71f11159996a01"
     },
     {
+      "file": "remediated-ai-draft-desktop.png",
+      "bytes": 125605,
+      "sha256": "d4f2595422368dfbdab235002827cee2e19735bb86b70cf3888e617a7baf427b"
+    },
+    {
       "file": "remediated-ai-draft-initial-loading.png",
       "bytes": 149431,
       "sha256": "e1be8d71184e055648d9221797555d614f62ad37dc94357f188379b96ad18499"
+    },
+    {
+      "file": "remediated-draft-readonly.json",
+      "bytes": 1321,
+      "sha256": "d605022caceb6ab86d72ce9ea206300157ddf363d1f8cad57a9a5257e9a810f5"
     },
     {
       "file": "remote-validation.json",
@@ -373,5 +393,7 @@
     "beatvision-style-draft": 28,
     "beatvision-generation": 61
   },
-  "production_frontend_deployment": "dpl_4tzfmck36NYpFTn3xbhzQYhcx8Ft"
+  "production_frontend_deployment": "dpl_4tzfmck36NYpFTn3xbhzQYhcx8Ft",
+  "production_analysis_version": 43,
+  "production_interpretation_version": 3
 }

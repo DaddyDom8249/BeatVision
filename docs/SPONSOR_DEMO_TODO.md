@@ -30,9 +30,9 @@ a sponsor journey PASS. Previous agent/PR narrative is context, not fresh proof.
   `64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52`.
 - Initial production (historical evidence): `dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT`,
   `4a2ebf8bf3e9f30f0cf35442f86662bb6296da86`.
-- Current backend: production migration bundle `20261022170451`; analyze-song v41,
-  interpretation v2, AI Director v1, World v60, Style v28, generation v61.
-  Generation v61 deliberately retains the existing controller with the repaired
+- Current backend: production migration bundle `20261022170451`; analyze-song v43,
+  interpretation v3, AI Director v2, World v61, Style v29, generation v62.
+  Latest API inventory recorded in groq-live-verification-release.json. Generation v62 deliberately retains the existing controller with the repaired
   Modal module; the full candidate Arena controller is configuration-blocked.
 - Supabase `mdofsinyofqbeapzfygu`: ACTIVE_HEALTHY, PostgreSQL 17.6.1.127.
 - Modal application name supplied: `bragoraforge-modal-motion-proof`;
@@ -45,7 +45,7 @@ ID| Task| Dependency| Status| Evidence
 T01| Verify current repository, deployments, and integrations| None| PASS| CONFIRMED identities, schema/function gaps and candidate CI: evidence/sponsor-demo-20261022/baseline.json
 T02| Verify sponsor registration and login| T01| PASS| signup-result.json, login-result.json: actual confirmed fresh account; desktop/Pixel 7 sign-in HTTP 200 and settled empty dashboard
 T03| Verify project creation and song upload| T02| PASS| Initial create/upload/reload PASS; current 254.48-second audio read-only playback/hash verified on desktop/Pixel 7 after source change
-T04| Verify music analysis and interpretation confirmation| T03| IN_PROGRESS| New owner screenshot shows all six settings; visible digest prefixes match expected non-secret values. One live post-remediation verification; no approvals or GPU submission.
+T04| Verify music analysis and interpretation confirmation| T03| BLOCKED| Provider setup resolved: actual AIv2 proposal200 and Groq transcription200/status completed verified; desktop/Pixel7 draft reload PASS. Explicit artist confirmation pending; groq-live-verification-release.json.
 T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed World GET/gate verified; no artist-confirmed interpretation or World approval
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
@@ -1253,3 +1253,57 @@ rollback snapshot preserves actual current metadata/source. No third-party
 source changes are overwritten. Repair changes only success transcription_status
 to completed and clears status_detail; all cost/auth/revision/RPC gates retained.
 Next release must record its actual returned version, not assume42.
+
+
+T04.12 release: source978240d1f97fa54ec9e008b9a3f5e201eeca96b0 deployed as
+analyze-songv43 ACTIVE, verify_jwt=false retained with unchanged in-function
+identity/owner checks. Bundle9c9d325451ba62a3d1e2c53df85733515a3a31e9251cb5e2724404d955011db1;
+get-function source byte-matches committed source. Actual previous inventoryv42
+and old bundle recorded. No frontend release or schema/settings change needed.
+One post-fix real transcription on unchanged isolated source is now permitted
+to verify corrected saved metadata; earlier call has terminal200 and no uncertain
+job. Read-only draft reload waits explicitly for DRAFTV2. No new proposal call.
+CI39856954325 running at exact source commit; result not claimed yet.
+
+
+### T04.10–T04.12 final verification — provider blocker resolved
+
+TASK ID: T04; no IN_PROGRESS item remains.
+Objective: Real configured AI proposal/transcription with correct persisted
+success state; complete T04 still requires explicit artist confirmation.
+Initial status: provider configuration BLOCKED; successful-transcription status
+FAILED after the first real call exposed inherited unavailable metadata.
+Evidence inspected: groq-live-verification-release.json and linked actual
+frontend/DB artifacts; source978240d1f97fa54ec9e008b9a3f5e201eeca96b0;
+unchanged frontend64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52 on canonical URL.
+Confirmed blocker: provider configuration resolved by operator's evidenced change
+and real200 results. Remaining mandatory blocker is artist confirmation, not a
+missing key/flag. Sung-lyric accuracy/full-song coverage not claimed from16s
+instrumental fixture. Dependent World/Style/storyboard/image/motion gates remain.
+Files changed: analyze-song/index.ts, analyze-song.edge.test.mjs, checklist,
+release/log and sanitized evidence. No schema, frontend release or agent secret
+edit; no approved/customer content altered.
+Commit: 978240d1f97fa54ec9e008b9a3f5e201eeca96b0. Actual analyze-songv43
+ACTIVE bundle9c9d325451ba62a3d1e2c53df85733515a3a31e9251cb5e2724404d955011db1,
+retrieved source byte-matches commit. Current other API versions are
+interpretation3/Director2/World61/Style29/generation62; generation and
+interpretation bundle hashes match accepted code. Prior receipt/harness version
+numbers are retained as historical observations, not presented as current.
+Tests performed: red18 PASS/1 FAIL; focused23/23 PASS; full423/423 PASS,
+0 skipped, audit/build PASS locally and completed exact-head CI39856954325.
+Post-fix actual frontend transcription200 persists status completed, clears
+failure detail and retains source/revision/16s timeline; read-only DB confirms.
+One AI proposal200 creates draftv2 with real provider request provenance and8
+validated claims; manualv1 retained with superseded status. No confirmation.
+First two reload harness assertions failed on loading timing then populated-label
+selector. Neither caused another provider request. Third corrected read-only
+check PASS on desktop/Pixel7: DRAFTV2 persists, summary128 chars, no errors or
+horizontal overflow, artist Confirm available, Continue disabled. These are
+emulated Android checks, not physical browser or video playback proof.
+Verification: PASS for numbered configuration/proposal/transcription/status
+repairs; BLOCKED for full T04 pending explicit artist confirmation. No GPU call,
+creative approval or main merge. No repeated accepted tests for final docs.
+Next task: artist reviews their song/interpretation and explicitly confirms it;
+T05 then becomes dependency-ready. T09's remaining independent GPU checks still
+need bounded execution/financial prerequisites and approved scene input; no
+currently executable provider/GPU work remains under existing approval scope.

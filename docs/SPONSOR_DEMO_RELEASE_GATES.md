@@ -27,13 +27,14 @@ confirmation/trigger ACLs remain enforced. A later isolated QA project was added
 through the real frontend; those earlier counts describe the release transaction.
 No customer content, audio, approved worlds or assets were overwritten.
 
-Functions: analyze-song v41, song-interpretation v2, AI Director v1, World v60,
-Style v28. Generation v61 retains the existing production controller and deploys
+Functions (current API inventory): analyze-song v43, song-interpretation v3,
+AI Director v2, World v61, Style v29. Generation v62 retains the existing production controller and deploys
 the compatible Modal transport repair only. The full candidate Arena controller
 is not released: candidate v60's read-only runtime preflight returned false for
 Arena, verified transcription and interpretation-proposal prerequisites.
-Do not describe the new preflight fields as still live after v61 restoration.
-No financial attestations or secrets were changed.
+Do not describe the candidate preflight fields as live after controller restoration.
+The owner subsequently applied the prepared verified-free settings; no secret
+value was read or edited by the agent.
 
 Actual fresh-account login, upload, saved style/Notes and local DSP were tested.
 Final isolated synthetic project: `ad266b2c-3e9b-45fb-b8ab-5aabacfe3ac4`.
@@ -42,12 +43,19 @@ persisted manual draft v1 with matching server SHA-256. Reload and Pixel 7 brows
 emulation confirm persistence, audio playback, no page errors or overflow,
 clear tempo/key estimate labels and disabled World continuation pending artist
 confirmation. World route independently presents the confirmation gate.
-Transcription was deliberately aborted before network; it is recorded failed.
-No successful AI interpretation, creative confirmation or motion is claimed.
-Physical Android browser testing remains unverified.
+The initial transcription was deliberately aborted before network. After the
+operator applied the six settings, actual AI interpretation200 persisted draftv2
+and actual Groq Whisper transcription200 persisted completed status/model, with
+the original16s timeline. The two-field backend success-status repair is deployed
+as analyze-songv43 from978240d1f97fa54ec9e008b9a3f5e201eeca96b0. Desktop and
+Pixel7 reloads retain AIv2; prior manualv1 remains in history. Instrumental QA
+proves provider integration, not sung-lyric accuracy. No creative confirmation
+or motion is claimed. Physical Android browser testing remains unverified.
 
-Production CI [39821652295](https://github.com/DaddyDom8249/BeatVision/actions/runs/39821652295)
-PASS: 416/416 tests, zero skipped, audit/build PASS on exact frontend SHA.
+Latest backend-fix CI [39856954325](https://github.com/DaddyDom8249/BeatVision/actions/runs/39856954325)
+PASS at978240d:423/423, zero skipped,audit/build PASS. Unchanged frontend CI
+39849524379 PASS at64e6edf:422/422,audit/build PASS. Earlier release CI
+39821652295 passed416/416 at its historical frontend identity.
 Modal offline [39821652417](https://github.com/DaddyDom8249/BeatVision/actions/runs/39821652417)
 PASS. Corrected-migration PostgreSQL run39818827550 PASS. Exact-head PG run
 39821651802 reports every replay/security/lineage/quota/cleanup step successful;
@@ -59,17 +67,12 @@ the checklist; a successful isolated test reused the same project/audio.
 
 ## External blockers
 
-- Secure Supabase configuration access: connected tools can deploy functions and
-  SQL but cannot edit secrets; CLI has no management token. Owner can bind the
-  management token through secure environment settings or configure the dashboard.
-  Never paste credentials in chat.
-- Owner confirmed the dedicated Groq Free/no-paid-billing account. That evidence
-  is owner attestation; no independent billing retrieval is claimed. Actual
-  server503 PROVIDER_COST_UNVERIFIED still rejects required configuration.
-  Setting values remain UNKNOWN; at least one required condition fails. Interpretation also
-  requires `BRAGORA_INTERPRETATION_ENABLED`, the pinned approved model
-  `openai/gpt-oss-20b` and bounded daily quota1–20. Runtime booleans establish
-  incomplete prerequisites, not which individual secret is absent.
+- The Groq configuration blocker is resolved: owner-applied settings now produce
+  genuine AI proposal/transcription results. Owner Free/no-paid-billing attestation
+  remains the financial evidence; no independent billing retrieval is claimed.
+  New configuration changes still need secure operator access because connected
+  tools cannot edit secrets and phone CLI approach is closed. Do not send keys
+  in chat. The current stage blocker is explicit artist confirmation.
 - Configure/review the existing Arena endpoint/token and exact
   `ARENA_GATEWAY_ALLOWED_HOSTS` before releasing the full candidate controller.
   Do not invent the hostname, change provider or disable validation.
@@ -302,3 +305,15 @@ actual absence and values remain UNKNOWN. Exact project ref is outside the
 screenshots. Preserve the existing key and enter/review the six settings as
 separate Name/Value rows in the linked target project, save together and search
 for a new setting to confirm it appears. No further provider test was submitted.
+
+
+## Current live provider verification supersedes earlier setup blockers
+
+[Current release evidence](evidence/sponsor-demo-20261022/groq-live-verification-release.json)
+records actual proposal200/draftv2, transcription200/completed metadata, preserved
+history/source, current function versions and exact423-test CI. Early503 results,
+old setup questions and two failed browser-harness observations below/above are
+historical, not current provider failures. Corrected read-only desktop/Pixel7
+reloads pass without repeated inference. The next stage needs the artist to
+review and confirm their interpretation; no synthetic QA draft is approved by
+the agent. Full sponsor acceptance remains BLOCKED through that creative gate.
