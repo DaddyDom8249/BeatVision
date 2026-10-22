@@ -1365,3 +1365,56 @@ snapshot saved. New16s spoken-word-over-instrumental fixture was synthesized
 locally for first-analysis UI proof, original instrumental and all projects kept.
 Fixture origin/hash recorded in automatic-draft-audio-fixture.json. Release and
 real frontend acceptance pending; tests alone do not establish full T04 PASS.
+
+
+T04.13 release started from195c5337324704a91fbf894c83f65db6dce3813b:
+interpretationv4 ACTIVE bundle0c77ef861be513f6cae0e82f83dde2ac2320a341f49db22a8bb84154b5814cde,
+verify_jwt=false retained with explicit user/project authorization. Existing
+Vercel production build dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV is initializing;
+CI39861322151 running. No deployment success claim before READY/browser checks.
+Verification code required: /workspace/shared/verify-automatic-draft-journey.py;
+new isolated app project (not a new Supabase/cloud project), upload the new QA
+WAV once, one real Analyze action → transcription → automatic proposal. No
+separate Propose click. Check six editable fields, save deliberate QA edits as
+new variant, desktop/Android-emulated reload, all approval gates unchanged.
+Persist fixture identity and submission intent before every provider call; do
+not recreate/resubmit an uncertain attempt. Existing actor quota is enforced;
+owner-confirmed Free account remains the financial basis. Screenshots containing
+profile text stay private; sanitized results/hashes are published. No GPU calls.
+
+
+T04.13 real acceptance: one Analyze click (no separate Propose click) on new
+isolated projectbb457d64-29ea-4649-a566-c446eef61ad6 produced transcription200,
+automatic proposal200, all six nonempty/editable fields, and persisted AIv1.
+QA edits to all six saved as artist_editedv2; desktop/Pixel7 reload PASS, no
+errors/overflow, Continue disabled, Confirm available, both versions preserved.
+No creative approval or GPU call. Exact CI39861322151 PASS431/431,audit/build.
+
+#### T04.13a — Qualify heuristic claims in generated rationale
+
+Confirmed integrity defect from direct generated-text inspection: rationale says
+“The tempo is117.5” and “The key isE minor” without qualifying those DSP estimates.
+UI metric cards are labeled estimates, but exposed rationale must also preserve
+uncertainty. Required files: beatvision-song-interpretation/index.ts and its
+real-handler regression test, task/log/evidence. Root cause: validated claim text
+is accepted unchanged even when its evidence_refs identify heuristic BPM/key/
+section sources. Expected correction: qualify those claims as estimates in the
+saved proposal and prompt; preserve exact duration and lyric claims, references,
+original versions and approval gates. No procedural creative content is added.
+Verification: red/green handler test, full tests/audit/build and function-only
+release; frontend/orchestration code remains195c533 unchanged. One additional
+real Propose click on the isolated QA project can validate changed provider
+output/storage/UI, preserving its AIv1 and editedv2 as earlier variants. This
+uses the remaining third allowed interpretation request today; no quota increase,
+no transcription rerun or second app project. No retry if completion is uncertain.
+
+
+T04.13a checks: real-handler regression8 PASS/1 FAIL reproduces unqualified
+heuristic claims; corrected13/13 focused and432/432 full PASS,0 skipped,
+audit/build PASS. Frontend/orchestration unchanged from195c533; no Vercel rebuild
+needed for this server-only correction. Prior live interpretationv4 byte-matches
+committed baseline, preserved privately. Required live verification harness:
+/workspace/shared/verify-automatic-draft-estimates.py; new variant on the existing
+QA fixture only, no automatic approvals and no transcription rerun. New server
+release and one bounded remaining Free-model request pending; existing initial
+automatic-flow evidence remains tied explicitly to195c533/v4.

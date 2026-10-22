@@ -268,7 +268,10 @@ function validateAiInterpretation(value: unknown, evidence: Array<Record<string,
       throw new HttpError("INTERPRETATION_EVIDENCE_REQUIRED", 502, "Every interpretation claim must cite known song evidence.");
     }
     const confidence = Number(claim.confidence);
-    return { text, confidence: Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : null, evidence_refs: refs };
+    const qualifiedText = refs.some((ref: string) => ["signal.bpm", "signal.key", "signal.sections"].includes(ref))
+      ? clean("Estimate: " + text, 600)
+      : text;
+    return { text: qualifiedText, confidence: Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : null, evidence_refs: refs };
   });
   const themes = lines(input.themes);
   const emotionalArc = clean(input.emotional_arc, 1200);
@@ -373,6 +376,7 @@ async function proposeAi(admin: any, projectId: string, song: Record<string, any
     "Artist lyrics and creative direction are authoritative. The machine transcript may contain errors; prefer artist lyrics when they are provided.",
     "Visual motifs and narrative are proposed creative suggestions, not claims about events in the song. Label those suggestions clearly.",
     "Every claim must include evidence_refs containing only IDs supplied in the source evidence.",
+    "Tempo, musical key and structural regions are heuristic estimates; describe them as estimates rather than verified musical facts. Duration is measured.",
     "Do not invent lyrics, genre, instruments, biography, identity, or events absent from evidence.",
     "When evidence is insufficient, put an explicit uncertainty statement in that section instead of leaving it blank. Do not invent song facts to fill a section.",
   ].join(" ");

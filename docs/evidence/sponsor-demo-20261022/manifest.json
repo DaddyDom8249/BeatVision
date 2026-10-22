@@ -1,6 +1,6 @@
 {
   "source_commit": "978240d1f97fa54ec9e008b9a3f5e201eeca96b0",
-  "production_frontend_commit": "64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52",
+  "production_frontend_commit": "195c5337324704a91fbf894c83f65db6dce3813b",
   "production_generation_version": 62,
   "scope": "Partial sponsor journey with real AI proposal/transcription and corrected completed metadata; artist confirmation pending; no creative approvals or GPU motion proof",
   "private_evidence": "Transcript-bearing candidate images, Android reload screenshot containing profile text, and account/session secrets excluded from Git",
@@ -29,6 +29,16 @@
       "file": "automatic-draft-audio-fixture.json",
       "bytes": 530,
       "sha256": "3c00f9a46bef222d746ffe1a3c59dd8d3974c8114da98dbb2b40a1fdc7f05b2f"
+    },
+    {
+      "file": "automatic-draft-estimate-tests.json",
+      "bytes": 1417,
+      "sha256": "e4e22271b04ff9a5d01f1ac6edb46666b6863ea3e16096166b7b99a7a534ea03"
+    },
+    {
+      "file": "automatic-draft-journey.json",
+      "bytes": 4239,
+      "sha256": "de6687db989ca009c8f21a2f9ae20fd804471a60ee6fb4b16971d27c9fdd7ef7"
     },
     {
       "file": "automatic-draft-tests.json",
@@ -403,7 +413,7 @@
     "beatvision-style-draft": 28,
     "beatvision-generation": 61
   },
-  "production_frontend_deployment": "dpl_4tzfmck36NYpFTn3xbhzQYhcx8Ft",
+  "production_frontend_deployment": "dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV",
   "production_analysis_version": 43,
-  "production_interpretation_version": 3
+  "production_interpretation_version": 4
 }

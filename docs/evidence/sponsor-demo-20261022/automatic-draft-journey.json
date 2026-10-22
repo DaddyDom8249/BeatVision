@@ -1,0 +1,156 @@
+{
+  "observed_at": "2026-10-22T22:00:29.425845+00:00",
+  "task": "T04.13",
+  "source_commit": "195c5337324704a91fbf894c83f65db6dce3813b",
+  "frontend_deployment": "dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV",
+  "interpretation_function_version": 4,
+  "analysis_function_version": 43,
+  "financial_authorization": "Owner-confirmed dedicated Groq Free account, existing server flags/quota retained",
+  "analysis_clicks": 1,
+  "separate_propose_clicks": 0,
+  "creative_approvals": 0,
+  "gpu_calls": 0,
+  "function_requests": [
+    {
+      "function": "beatvision-song-interpretation",
+      "action": "get"
+    },
+    {
+      "function": "beatvision-analyze-song",
+      "audioRevision": "3a13917a-fd92-4dd6-89b5-1c2d5c1665b4"
+    },
+    {
+      "function": "beatvision-song-interpretation",
+      "action": "propose",
+      "audioRevision": "3a13917a-fd92-4dd6-89b5-1c2d5c1665b4",
+      "only_if_empty": true
+    },
+    {
+      "function": "beatvision-song-interpretation",
+      "action": "save_draft"
+    },
+    {
+      "function": "beatvision-song-interpretation",
+      "action": "get"
+    }
+  ],
+  "function_responses": [
+    {
+      "function": "beatvision-song-interpretation",
+      "http_status": 200
+    },
+    {
+      "function": "beatvision-analyze-song",
+      "http_status": 200
+    },
+    {
+      "function": "beatvision-song-interpretation",
+      "http_status": 200
+    },
+    {
+      "function": "beatvision-song-interpretation",
+      "http_status": 200
+    },
+    {
+      "function": "beatvision-song-interpretation",
+      "http_status": 200
+    }
+  ],
+  "contexts": [
+    {
+      "name": "desktop",
+      "edited_fields_persisted": true,
+      "field_lengths": [
+        209,
+        38,
+        48,
+        59,
+        153,
+        349
+      ],
+      "all_editable": true,
+      "continue_disabled": true,
+      "confirm_available_for_artist": true,
+      "horizontal_overflow": false,
+      "displayed_errors": [],
+      "scripts": [
+        "/assets/index-D4NIoGKz.js"
+      ]
+    },
+    {
+      "name": "android-emulated",
+      "edited_fields_persisted": true,
+      "field_lengths": [
+        209,
+        38,
+        48,
+        59,
+        153,
+        349
+      ],
+      "all_editable": true,
+      "continue_disabled": true,
+      "confirm_available_for_artist": true,
+      "horizontal_overflow": false,
+      "displayed_errors": [],
+      "scripts": [
+        "/assets/index-D4NIoGKz.js"
+      ]
+    }
+  ],
+  "private_screenshots": [
+    {
+      "name": "automatic-draft-desktop.png",
+      "sha256": "afb20bd12d23a97a36eb2b70f2adcbef7b3d7949210eb69ffb6d4472e7c8a123"
+    },
+    {
+      "name": "automatic-draft-android-emulated.png",
+      "sha256": "9c7926af4a382fba9c924f8ff58b0461a55884178f87f160dac4529be3cb2c52"
+    }
+  ],
+  "project_id": "bb457d64-29ea-4649-a566-c446eef61ad6",
+  "before": {
+    "id": "0fb1c668-f00e-433f-91b7-d6a07a931887",
+    "audio_revision": "3a13917a-fd92-4dd6-89b5-1c2d5c1665b4",
+    "current_interpretation_id": null,
+    "analysis_status": "not_started"
+  },
+  "transcription_http_status": 200,
+  "proposal_http_status": 200,
+  "ai_draft": {
+    "id": "7908c96f-6f98-472b-ba7a-f7250d091d85",
+    "version": 1,
+    "status": "draft",
+    "source_type": "ai",
+    "provider": "verified-free-provider",
+    "model": "openai/gpt-oss-20b",
+    "source_fingerprint": "b3d653c4981d741ff9399ae64eca69aa6cf2288eb28cd8894f4a2e1b21308c34"
+  },
+  "generated_field_lengths": [
+    198,
+    27,
+    37,
+    48,
+    142,
+    338
+  ],
+  "save_edits_http_status": 200,
+  "edited_draft": {
+    "id": "e30734e7-9cf1-4e56-ab88-15e83eb73a96",
+    "version": 2,
+    "status": "draft",
+    "source_type": "artist_edited"
+  },
+  "saved_analysis": {
+    "status": "completed",
+    "duration_seconds": 16,
+    "transcription_status": "completed",
+    "transcription_provider": "groq",
+    "transcription_model": "whisper-large-v3-turbo",
+    "transcript_characters": 92,
+    "has_expected_home_word": true,
+    "source_fingerprint": "b3d653c4981d741ff9399ae64eca69aa6cf2288eb28cd8894f4a2e1b21308c34",
+    "current_interpretation_id": null
+  },
+  "verification": "PASS for real automatic six-section editable draft, saved variant and desktop/Android-emulated persistence; artist confirmation remains pending"
+}

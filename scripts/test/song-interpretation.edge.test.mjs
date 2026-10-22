@@ -237,6 +237,29 @@ test("incomplete AI sections fail honestly instead of saving an apparently compl
   }
 });
 
+test("saved AI rationale qualifies heuristic tempo, key and section claims while retaining measured facts", async () => {
+  const claims = [
+    { text: "The tempo is 96 BPM.", confidence: 0.9, evidence_refs: ["signal.bpm"] },
+    { text: "The key is A minor.", confidence: 0.9, evidence_refs: ["signal.key"] },
+    { text: "The song has one section.", confidence: 0.9, evidence_refs: ["signal.sections"] },
+    { text: "The audio lasts 12 seconds.", confidence: 1, evidence_refs: ["signal.duration"] },
+    { text: "The lyrics mention returning home.", confidence: 1, evidence_refs: ["lyrics.full"] },
+  ];
+  const f = await boot({ providerVerified: true, providerResponse: {
+    choices: [{ message: { content: JSON.stringify({ ...interpretationDocument(), claims }) } }],
+  } });
+  const response = await request(f.handler, { projectId: PROJECT_ID, action: "propose" });
+  assert.equal(response.status, 200);
+  const saved = (await response.json()).draft.interpretation.claims;
+  for (let i = 0; i < 3; i++) {
+    assert.match(saved[i].text, /^Estimate: /);
+    assert.deepEqual(saved[i].evidence_refs, claims[i].evidence_refs);
+  }
+  assert.equal(saved[3].text, claims[3].text);
+  assert.equal(saved[4].text, claims[4].text);
+  assert.deepEqual(f.db.song_interpretations[0].interpretation.claims, saved);
+});
+
 test("confirmation is owner-bound and explicit", async () => {
   const { handler, db } = await boot();
   const saved = await request(handler, { projectId: PROJECT_ID, action: "save_draft", interpretation: interpretationDocument(), evidence: [] });
