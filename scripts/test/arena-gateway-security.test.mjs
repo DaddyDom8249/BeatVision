@@ -98,3 +98,38 @@ test('Arena refuses redirected bearer requests', async () => {
   try {await assert.rejects(runtime.arena('/v2/scene-image','POST',{},'id-1'),/redirect disallowed/);}
   finally {globalThis.fetch=original; await runtime.cleanup();}
 });
+
+for (const [path, method] of [
+  ['/v1/video/animate/jobs/render-123', 'GET'],
+  ['/v1/video/assemble/status/render-123', 'POST'],
+]) test('Arena permits pinned legacy polling route ' + path, async () => {
+  const runtime=await loadGeneration({},env), oldFetch=globalThis.fetch;
+  let called=0;
+  globalThis.fetch=async(url,options)=>{
+    called++;
+    assert.equal(String(url),'https://'+HOST+path);
+    assert.equal(options.method,method);
+    assert.equal(options.redirect,'error');
+    return Response.json({status:'processing'});
+  };
+  try {
+    const response=await runtime.arena(path,method,null,'fixture-poll');
+    assert.equal(called,1);
+    assert.equal(response.data.status,'processing');
+  } finally {globalThis.fetch=oldFetch;await runtime.cleanup();}
+});
+
+for (const [path,method] of [
+  ['/v1/video/animate/jobs/render-123','POST'],
+  ['/v1/video/assemble/status/render-123','GET'],
+  ['/v1/video/animate/jobs/../secrets','GET'],
+  ['/v1/video/animate/jobs/encoded%2fslash','GET'],
+  ['/v1/video/animate/jobs/%252e%252e','GET'],
+]) test('Arena rejects wrong polling method or untrusted ID '+path+' '+method,async()=>{
+  const runtime=await loadGeneration({},env), oldFetch=globalThis.fetch;
+  let called=0;globalThis.fetch=async()=>{called++;throw Error('forbidden-network')};
+  try {
+    await assert.rejects(runtime.arena(path,method,null,'fixture'),/ARENA_GATEWAY_PATH_REJECTED/);
+    assert.equal(called,0);
+  } finally {globalThis.fetch=oldFetch;await runtime.cleanup();}
+});

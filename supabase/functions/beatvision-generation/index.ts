@@ -208,16 +208,22 @@ async function bridgePayload(db: any, job: any) {
 
 async function arena(path: string, method: "GET" | "POST", payload: unknown, requestId: string) {
   const origin = arenaBase();
-  // Only the known v2 bridge API; reject protocol-relative and traversal paths.
+  // Permit only fixed submit operations and the two historical poll routes.
+  // Decoding before validation prevents encoded separators and dot traversal.
   let decodedPath: string;
   try { decodedPath = decodeURIComponent(path); }
   catch { throw new Error("ARENA_GATEWAY_PATH_REJECTED"); }
-  if (!/^\/v2\/[a-z0-9/_%-]+$/i.test(path) || path.includes("//") ||
-      /[?#\\%]/.test(decodedPath) || decodedPath.includes("//") ||
+  if (path.includes("//") || /[?#\\%]/.test(decodedPath) ||
+      decodedPath.includes("//") ||
       decodedPath.split("/").some((segment) => segment === "." || segment === ".."))
     throw new Error("ARENA_GATEWAY_PATH_REJECTED");
+  const submit = method === "POST" &&
+    ["/v2/scene-image", "/v2/animate", "/v2/assemble"].includes(path);
+  const polling = (method === "GET" && /^\/v1\/video\/animate\/jobs\/[a-z0-9._:-]{1,256}$/i.test(decodedPath)) ||
+    (method === "POST" && /^\/v1\/video\/assemble\/status\/[a-z0-9._:-]{1,256}$/i.test(decodedPath));
+  if (!submit && !polling) throw new Error("ARENA_GATEWAY_PATH_REJECTED");
   const target = new URL(path, origin);
-  if (target.origin !== origin || !target.pathname.startsWith("/v2/"))
+  if (target.origin !== origin)
     throw new Error("ARENA_GATEWAY_PATH_REJECTED");
 
   const response = await fetch(target.href, {

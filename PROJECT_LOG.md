@@ -1398,3 +1398,5 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 - This commit does not change production Edge Functions, database or provider configuration. Live authenticated and no-charge execution remains unverified.
 
 - First Arena security CI pass exposed five legacy test failures from absent new allowlist settings; updated synthetic fixtures and encoded-separator validation. Exact-head CI revalidation required before approval.
+
+- Corrected verified offline regression: legacy Arena polling uses pinned `/v1/video/animate/jobs/<id>` GET and `/v1/video/assemble/status/<id>` POST, while submissions use fixed `/v2` routes. Added successful polling and negative route/method/encoded-ID tests. No GPU/provider requests run.
