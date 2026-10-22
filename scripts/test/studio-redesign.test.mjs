@@ -75,6 +75,12 @@ for (const [name, meter, expected] of [
         id: "song-1", title: "Fixture track", artist: "Fixture artist", analysis_status: "completed",
         analysis: { duration_seconds: 60, time_signature: meter, sections: [] },
       } }) },
+      "../hooks/useSongInterpretation": { useSongInterpretation: () => ({
+        loading: false, working: false, error: null, manualFallback: false,
+        latestDraft: null, confirmed: null, saveDraft: async () => null,
+        propose: async () => null, confirm: async () => null,
+      }) },
+      "../components/song/SongInterpretationPanel": { default: () => null },
       "../lib/musicAnalysis": { analyzeAudioLocally: () => { throw new Error("No analysis call expected"); } },
       "../lib/errorDetails": { formatFailure: () => "Fixture error" },
     });

@@ -22,8 +22,8 @@ function fixture({ failSave = false, replacement = true, newSong = false } = {})
     storage: { from(bucket) { assert.equal(bucket, 'songs'); return { async upload() { events.push('upload'); return {}; }, async remove(paths) { removed.push(...paths); events.push('remove'); return {}; } }; } },
     from(table) { assert.equal(table, 'songs'); return { update(value) { payload = value; return query; }, insert(value) { payload = value; return query; } }; },
   };
-  const submit = new Function('supabase', 'song', 'audio', 'project', 'projectId', 'crypto', 'saving', 'analyzing', 'setSaving', 'setSaved', 'setError', 'setAudio', 'reload', 'title', 'artist', 'lyrics', 'creativeDirection', 'notes', handler + '\nreturn submit;')(
-    client, song, selectedAudio, { owner_id: 'user-1' }, 'project-1', { randomUUID: () => 'new' }, false, false, () => {}, () => {}, value => { error = value; }, value => { selectedAudio = value; }, async () => { events.push('reload'); }, 'Song', 'Artist', '', '', ''
+  const submit = new Function('supabase', 'song', 'audio', 'project', 'projectId', 'crypto', 'saving', 'analyzing', 'setSaving', 'setSaved', 'setError', 'setAudio', 'reload', 'title', 'artist', 'lyrics', 'creativeDirection', 'notes', 'preferredVisualStyle', 'imageryMode', 'narrativeMode', 'unwantedThemes', handler + '\nreturn submit;')(
+    client, song, selectedAudio, { owner_id: 'user-1' }, 'project-1', { randomUUID: () => 'new' }, false, false, () => {}, () => {}, value => { error = value; }, value => { selectedAudio = value; }, async () => { events.push('reload'); }, 'Song', 'Artist', '', '', '', '', '', '', ''
   );
   return { submit: () => submit({ preventDefault() {} }), state: () => ({ removed, events, payload, error, selectedAudio }) };
 }

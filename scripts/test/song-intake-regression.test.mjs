@@ -25,5 +25,5 @@ test('song intake separates analysis state and protects unsaved creator fields o
   assert.match(source, /setAnalyzing\(true\)/);
   assert.match(source, /setAnalyzing\(false\)/);
   assert.doesNotMatch(source, /\}, \[song\]\);/);
-  assert.match(source, /\[song\?\.id, song\?\.title, song\?\.artist, song\?\.lyrics, song\?\.creative_direction, song\?\.notes\]/);
+  assert.match(source, /\[song\?\.id, song\?\.title, song\?\.artist, song\?\.lyrics, song\?\.creative_direction, song\?\.notes, song\?\.visual_style_preferences\]/);
 });

@@ -1378,3 +1378,13 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 **CI:** Source commit `09255f2d` completed all five GitHub workflow runs successfully: Modal Motion Proof Offline `39366905066`, BeatVision Production CI `39366904976`, Legacy storage ownership security `39366905081`, Generation enqueue security `39366905040`, and Database migration replay `39366904936`. CI is source-level evidence and cannot prove live generation.
 
 **Remaining:** An owner-authenticated read-only `modal_capability` response is not yet observed. Existing stored browser session attachment failed and there is no confirmed live signed-in browser session available to this agent. No provider job ID, GPU execution, MP4, decoded duration, private output upload or user playback has been proven. Do not interpret the existing Hugging Face clip as Modal success; do not submit inference before the agreed production capability gate.
+
+
+## 2026-10-21 — Song Intelligence candidate verification (local only)
+
+- Base: 7fb7649ad517db558acc445ec0fa478558ed359d; branch: repair/song-intelligence-integrity-20261021.
+- Applied verified Song Intelligence patch; updated legacy Song Intake regression and audio-save test fixtures for visual style fields.
+- Linux ARM64 Node v22.16.0 with experimental type stripping: 53 test files in two batches, 364 tests, 363 pass, 0 fail, 1 skip; targeted audio-save tests 7/7 pass.
+- Modal Python tests: 20/20 pass; TypeScript/Vite build, production audit and git diff integrity pass.
+- No live Supabase migration replay, production deployment, real provider inference, paid GPU, or end-to-end playable MP4 validation performed. Migration authorization and Arena provider URL security remain release gates.
+- Local commit only; no push, main merge, production changes or provider cost claims.
