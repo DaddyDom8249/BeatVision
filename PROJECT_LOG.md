@@ -1788,3 +1788,25 @@ mutation, deploy or new inference. Accepted6433eb05-0a13-454d-98c4-3f60e3ef6def
 requires phone approval. T09 BLOCKED on this readback, downstream gates unchanged.
 Source0b9eb69/v66 and prior455 CI/20 candidate checks unchanged. Next: inspect
 that exact readback and existing call/output; never reset either execution lock.
+
+2026-10-23T16:33 UTC T09.5c2: readback6433eb05 completed/exit0. Actual receipt
+confirms missing PIL/install0/import PASS, one spawn, scratchap-dGTGk6rM36fE8uHX24TQtu,
+callfc-01M5MRZZJ4W6ETYYX6HZWCJKRT, statecompleted_unapproved. Existing provider
+call returns48733B MP4/manifest, hash a1b5ca79284f490c285de4531254ad631076c4c1d7891183d9738a512ee67f0f.
+Saved on phone and Downloads; candidate/source/prompt/seed match. Exact initiating
+bridge record remains unknown, but receipt/call result independently proves
+isolated completion. No new inference from readback; creator/motion/coverage flags
+false. No quality, visible motion, duration or full frontend journey claim.
+
+Bridge capped output60000characters and kept tail.57712 of64980 base64characters
+retained, missing7268. Prepared bounded first16000-character read, overlap/hash
+verification, billing read and exact completed-scratch lifecycle/cleanup. Two
+earlier stop exit1 outcomes ambiguous; SDK CLI confirms already-stopped exit1 or
+missing noninteractive --yes can cause it. Inspect state first; skip stopped app,
+else use --yes for only completed scratch, then re-read lifecycle. No fourth retry.
+Source AST PASS/no inference/deploy call sites; accepted583a56b1-ec95-4b94-a9be-
+6273dbf9f5f9 awaits device approval, phone offline. Main T09 BLOCKED; T10/T11
+updated with scoped isolated proof but mandatory artist/frontend lineage and
+new decode/motion/playback still blocked. Application0b9eb69/v66 unchanged;
+455 CI/20 candidate tests reused. Post-test cost UNKNOWN; no production release,
+customer-row mutation or creative approval. Next: retrieve same existing bytes.

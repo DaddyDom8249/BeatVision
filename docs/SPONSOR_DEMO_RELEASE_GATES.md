@@ -480,3 +480,21 @@ readback6433eb05-0a13-454d-98c4-3f60e3ef6def is now the actionable Termux
 approval. It retrieves only the saved receipt/existing call and any output,
 with zero new inference submissions. Do not reapprove execution/recovery entries
 as a way to bypass the guard. Read the existing receipt first.
+
+Verified existing result (2026-10-23T16:27 UTC): readback6433eb05 completed.
+Receipt confirms PIL repair/import PASS and exactly1spawn; existing Modal call
+fc-01M5MRZZJ4W6ETYYX6HZWCJKRT returned output. The unapproved48733-byte MP4
+matches manifest SHA256a1b5ca79284f490c285de4531254ad631076c4c1d7891183d9738a512ee67f0f
+and is saved in phone Downloads asBragoraForge-Modal-Quality-Trial-03e1639b.mp4.
+Same pinned model/source/candidate/prompt/seed. This establishes isolated provider
+completion, not visible subject movement, quality acceptance, decoded duration,
+full sponsor frontend/RLS lineage or production-worker upgrade. No defaults or
+production worker changed. All creative/motion/full-coverage manifest flags false.
+
+The bridge truncated inline transfer at60000characters; prefix/billing/scratch
+state+conditional cleanup request583a56b1-ec95-4b94-a9be-6273dbf9f5f9 awaits
+phone approval, latest phone offline. New inference is not part of this request.
+Full-file decode, subject/source review and new-clip playback remain UNKNOWN.
+Earlier original-clip playback does not substitute for testing these new bytes.
+Post-test billing is not retrieved; timeout/rate arithmetic is not actual cost.
+See [isolated trial result](evidence/sponsor-demo-20261022/modal-quality-trial-result.json).

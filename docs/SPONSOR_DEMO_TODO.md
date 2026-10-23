@@ -55,9 +55,9 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Guarded resend507adefc ran/exit1 at the prior app/call/spawn assertion; changed receipt means GPU submission/result UNKNOWN. Existing-call readback6433eb05-0a13-454d-98c4-3f60e3ef6def queued for device approval, zero inference-submission call sites. Do not requeue GPU execution. modal-quality-trial-authorization.json
-T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Existing owner-approved source rows and external Modal outputs observed; isolated sequential journey and authorized post-fix budgeted inference remain unverified; no agent GPU submission
-T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| T09.5 attached Modal/HF MP4s fully decode and play actual bytes in controlled deployed desktop/Pixel7 UI. Modal quality rejected; strict action/identity, owner-storage journey and T10 remain unverified. attached-motion-quality-diagnosis.json
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Existing-call readback6433eb05 proves1spawn/completed call and48733B saved MP4/hash. Prefix/billing/scratch cleanup batch583a56b1-ec95-4b94-a9be-6273dbf9f5f9 awaits device approval; latest phone offline. Post-test cost/cleanup and quality verification pending. modal-quality-trial-result.json
+T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Authorized isolated same-model trial callfc-01M5MRZZJ4W6ETYYX6HZWCJKRT completed with source/hash/model provenance. This uses supplied Scene5 bytes and synthetic IDs, not fresh sponsor frontend lineage; T08/T09 and sequential journey still block mandatory gate. modal-quality-trial-result.json
+T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| Original attached clips decode/play in controlled deployed UI; new trial48733B MP4/hash persisted on phone. Its transfer is truncated; new decode/subject motion/identity/playback UNKNOWN. No quality approval or actual owner-storage journey. modal-quality-trial-result.json
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
 T13| Run complete sponsor-journey regression testing| T02–T12| BLOCKED| T13.1a scoped assembly access/coverage repair deployed; CI455 PASS, controlled deployed desktop/Android viewports PASS. Full sequential journey requires T04–T12; actual footage is1.9–2.04s per7.8–67.6s scene. No new render/GPU job. assembly-repair-release.json
 T14| Deliver verified sponsor demo URL, evidence, and remaining funding requirements| T13| BLOCKED| Production/immutable URLs, PR and evidence delivered; fully verified sponsor demo and motion proof blocked by T04–T13
@@ -2289,3 +2289,48 @@ Verification: BLOCKED on device approval of existing-state readback; current
 GPU submission/inference/MP4/motion/playback UNKNOWN. No application source,
 deployment, creative approval or customer data changed. Next: T09; inspect
 only6433eb05 and its existing call/result. Never retry the failed assertion.
+
+T09.5c2 actual readback completed/exit0 (16:27 UTC): exact receipt reports
+PIL missing, pinned local Pillow11.3.0 install0/import PASS; spawn_attempts=1,
+transient appap-dGTGk6rM36fE8uHX24TQtu and callfc-01M5MRZZJ4W6ETYYX6HZWCJKRT.
+Call.get returned completed output; receipt state completed_unapproved, updated
+16:23:58. Source/candidate/prompt/seed remain frozen.48733B MP4 manifest/hash
+verified, SHA256a1b5ca79284f490c285de4531254ad631076c4c1d7891183d9738a512ee67f0f.
+Saved locally and to phone Downloads/BragoraForge-Modal-Quality-Trial-03e1639b.mp4.
+All creator/motion/full-coverage verification flags remain false. No inference
+submission by readback itself. Exact actor/bridge record for earlier execution
+still unknown; receipt and successful existing call establish result directly.
+Bridge output was capped at60000 characters, dropping the start of inline media;
+TRIAL_READBACK observation survived. A57712-character base64 suffix was retained;
+64980 total expected,7268 prefix missing. Do not regenerate. Retrieve first16000
+characters of the existing file, overlap/hash-verify locally, then decode/view/
+play. Candidate quality and app-end-to-end storage remain UNKNOWN. Scratch stop
+CLI returned1; inspect state/errors before any further cleanup attempt.
+
+T09.5c2 transfer/cleanup correction before execution: exact installed SDK1.6.2
+CLI source confirms app stop exits1 both when already stopped and when its
+noninteractive confirmation lacks --yes. Current cause is not assumed. The
+batched prefix read inspects exact scratch lifecycle first; skips a stopped app,
+otherwise uses --yes only for known completed_unapproved scratchap-dGTGk6rM36fE8uHX24TQtu
+and reads lifecycle again. Productionap-CopCZqKwTuk11VLpDSU0fH is never stopped.
+This materially changes the third/final cleanup attempt after two unexplained
+exit1 outcomes; no further stop retries. It also reads billing totals (lag may
+prevent exact attribution). No generation/deploy call is included.
+
+T09.5c2 current external blocker (16:33 UTC): prefix/billing/conditional scratch
+cleanup batch583a56b1-ec95-4b94-a9be-6273dbf9f5f9 accepted, now awaiting_approval,
+exit=null, latest phone online=false.3004-byte command SHA256
+e6f2cf16ab80326a87da518a5d7da9a9bb1336493a3ba615687bbac7a100bfeb.
+AST parse PASS; zero inference-submission call sites. Missing16000-character
+prefix read is bounded below the observed60000-character bridge output cap.
+Existing full-base64 length64980, retained suffix57712, missing7268; verify
+overlap and full SHA before creating local workspace MP4. No new cloud resource,
+provider/model/settings change, creative approval or application-row mutation.
+Files changed: checklist, release gates, PROJECT_LOG, sanitized trial result/
+authorization/manifest; private readback/prefix helpers and partial media only.
+Commit: source0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c/v66 unchanged;
+documentation based one76f3bb. Prior455 CI and20 offline checks still apply.
+Verification: BLOCKED for complete trial acceptance; provider completion and
+phone persistence/hash PASS, new decode/motion/identity/playback UNKNOWN. No
+further independent main task is eligible before this result and artist gates.
+Next: T09; read only583a56b1, reconstruct existing bytes, inspect/play. No GPU retry.

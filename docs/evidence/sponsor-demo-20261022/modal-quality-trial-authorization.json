@@ -62,17 +62,17 @@
     "creative_approvals": 0
   },
   "motion_verification": {
-    "request_authorized": "PASS for this isolated test only",
-    "gpu_job_submitted": "UNKNOWN; current receipt changed, existing-state readback required",
-    "inference_completed": "UNKNOWN",
-    "mp4_persisted": "UNKNOWN",
+    "request_authorized": "PASS for isolated diagnostic",
+    "gpu_job_submitted": "PASS, one saved call/receipt",
+    "inference_completed": "PASS, existing provider call returned output",
+    "mp4_persisted": "PASS on phone, manifest/hash; app persistence UNKNOWN",
     "video_decoded": "UNKNOWN",
     "visible_subject_movement": "UNKNOWN",
     "browser_playback": "UNKNOWN"
   },
   "quality_fix_verified": false,
   "sponsor_journey_ready": false,
-  "verification": "BLOCKED on existing-state readback device approval; no inference retry authorized. Actual prior call/submission/output unknown.",
+  "verification": "BLOCKED on existing-media prefix transfer, post-test billing/cleanup and quality/decode/playback; isolated provider completion and phone hash/persistence PASS.",
   "approval_resend": {
     "observed_at": "2026-10-23T14:44:00Z",
     "owner_request": "Resend approval request",
@@ -143,12 +143,13 @@
   "existing_state_readback": {
     "task": "T09.5c2",
     "termux_job_id": "6433eb05-0a13-454d-98c4-3f60e3ef6def",
-    "status": "queued; Required on phone",
+    "status": "completed,exit0",
     "scope": "Read receipt and retrieve only existing call/result; preserve/hash-check artifact. No inference submission/retry/deployment. Completed scratch-only cleanup and optional phone Downloads copy remain unapproved.",
     "command_bytes": 4576,
     "command_sha256": "e826aa897ab597dd0226e0c95cb7313ad768e8760eafa21039d4e72512269456",
     "ast_parse": "PASS",
     "inference_submission_call_sites": 0,
-    "actual_result": "UNKNOWN"
-  }
+    "actual_result": "Existing call completed;48733B MP4/hash persisted on phone; transfer prefix pending. See modal-quality-trial-result.json."
+  },
+  "latest_confirmed_trial_result": "modal-quality-trial-result.json"
 }
