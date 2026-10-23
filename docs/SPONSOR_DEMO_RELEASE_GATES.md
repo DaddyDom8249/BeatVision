@@ -419,3 +419,24 @@ Short demos remain the scope before sponsorship. Full-song production still
 needs additional genuine approved motion coverage, continuity/assembly work
 and measured GPU/credit capacity; the precise cost is UNKNOWN. No loops/freezes
 or fabricated four-minute output count as full-song subject motion.
+
+## Actual attached motion quality — 2026-10-23
+
+The creator supplied Modal Scene5 and HF Scene7 MP4s with corresponding source
+images. All49/57 frames decode. Both actual files play in the deployed
+frontend on desktop/Pixel7 emulation using controlled isolated REST/signing
+fixtures; this is not a creator-storage/RLS or physical-Android acceptance.
+Modal has subtle posture/limb movement with soft detail and creator-rejected
+quality. HF shows a clearer head turn/approach, but different source scenes
+prevent a controlled model-quality ranking. Shadowed faces prevent strict
+identity acceptance. No model/settings/source change or new inference was made.
+
+Possible Modal source stretching/deployed-preprocessing drift remains a
+hypothesis. Approved Termux read shows an idle app,$0 billed so far and exact
+local worker-file parity; it does not prove deployed code parity or remaining
+credits. Pending read-only batchfe43298d-5caf-4307-be36-69e15df29de1 requires
+phone approval to retrieve deployed definition/resources and billing rates.
+This approval does not authorize GPU generation. See
+[attached-file diagnosis](evidence/sponsor-demo-20261022/attached-motion-quality-diagnosis.json),
+[actual-media playback](evidence/sponsor-demo-20261022/attached-motion-browser-playback.json)
+and [control-plane evidence](evidence/sponsor-demo-20261022/modal-quality-control-plane.json).

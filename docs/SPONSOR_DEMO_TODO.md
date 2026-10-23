@@ -55,9 +55,9 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Modal primary/HF fallback retained; creator reports poor motion quality. T09.5 independent newest-clip review blocked by expired links. Financial/runtime/proof gates remain. modal-quality-followup.json
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| T09.5 supplied clips decoded/played; Modal quality rejected. First Termux read PASS: idle app,$0 billed; local source matches repo. Deployed-definition read awaits phone approval; financial/quality gates remain. modal-quality-control-plane.json
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Existing owner-approved source rows and external Modal outputs observed; isolated sequential journey and authorized post-fix budgeted inference remain unverified; no agent GPU submission
-T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| Two existing external Modal MP4s decode49frames/2.041667s under T09.3; post-fix directed subject motion, source consistency and BragoraForge playback remain unverified
+T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| T09.5 attached Modal/HF MP4s fully decode and play actual bytes in controlled deployed desktop/Pixel7 UI. Modal quality rejected; strict action/identity, owner-storage journey and T10 remain unverified. attached-motion-quality-diagnosis.json
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
 T13| Run complete sponsor-journey regression testing| T02–T12| BLOCKED| T13.1a scoped assembly access/coverage repair deployed; CI455 PASS, controlled deployed desktop/Android viewports PASS. Full sequential journey requires T04–T12; actual footage is1.9–2.04s per7.8–67.6s scene. No new render/GPU job. assembly-repair-release.json
 T14| Deliver verified sponsor demo URL, evidence, and remaining funding requirements| T13| BLOCKED| Production/immutable URLs, PR and evidence delivered; fully verified sponsor demo and motion proof blocked by T04–T13
@@ -1905,3 +1905,152 @@ change, creative approval or customer-asset mutation. Modal remains primary,
 Hugging Face explicit fallback. All prior mandatory sponsor gates remain.
 Next task: Obtain actual problematic MP4 and source through creator-authorized
 media access or direct attachment, then inspect without GPU regeneration.
+
+### T09.5 resumed — attached source images and actual clips available
+
+TASK ID: T09 (sole IN_PROGRESS item).
+Objective: Resume the previously blocked quality diagnosis from actual uploaded
+MP4s and their own approved input images, without new GPU work.
+Initial status: BLOCKED on expired download URLs; direct attachments now remove
+that media-access blocker for Modal jobd74245c1-fa8b-4be0-b632-31daace032f2
+and HF job5dba3345-60bf-4893-8215-6ec9372b27ea. These are existing outputs.
+Read-only filename/provenance lookup matches image0b16da03 to approved Scene5
+asset40f92141-799d-4774-b693-96774f0ae04e, and59e16cae to approved Scene7
+asset80823229-5498-4a12-b464-5adc9f904ed7. Four uploaded JPEGs contain exactly
+two unique1280x1280 images (byte-identical duplicate pairs1/4 and2/3).
+Evidence inspected: local attachment type/dimensions/hash; owner-scoped source
+asset metadata. Clip decode/frame comparison pending.
+Required files: private diagnostic scripts/results/contact sheets; existing
+worker/adapter only if a new cause is confirmed; checklist/log/sanitized evidence.
+No new source/settings/model change proposed before evidence.
+Commit: basee8566b4 (full SHA to record); implementation remains0b9eb69/v66.
+Verification: inspect full decoded clip sequence against matching own source,
+record duration/identity/motion findings and distinguish observations from
+model-quality hypotheses. No paid inference, regeneration, creative approval,
+provider switch or customer-data mutation. Existing previous results reused.
+Next task: Complete T09.5 visual diagnosis, then scope a confirmed minimal
+correction or precise external quality/runtime blocker.
+
+T09.5 attached-media evidence so far: Modal decodes49frames/2.041667s at
+704x480; HF decodes57frames/1.9s at704x512. All decoded frames differ. Direct
+source/sample-frame review finds subtle Modal limb/posture changes and very
+soft detail; HF shows a clearer head turn and approach toward camera. Different
+Scene5/Scene7 sources prevent a controlled claim that one model is universally
+better. Pixel deltas are diagnostic only, not a quality score or acceptance.
+The attached Modal source is1280x1280; its first frame aligns much more closely
+with a stretched resize (RGB MAE2.11) than center crop13.05 or committed contain
+preprocessing15.69. This is PROBABLE live preprocessing/source drift, not proof
+of the deployed worker's exact resize operation. Source attachment re-encoding
+and VAE reconstruction remain confounders; no speculative deployment.
+Diffusersv0.35.2 docs recommend higher guidance for non-distilled LTX and show
+50step examples. Committed Modal worker uses20steps/guidance3; inadequate
+sampling is a hypothesis, not a proven root cause or an authorized cost increase.
+Browser verification attempts1/2 failed in private harness before media
+playback: diagnostic inspect.py shadowed standard Python inspect (renamed),
+then Playwright Locator.first was incorrectly called (property usage fixed).
+Third/final browser attempt is justified by those distinct concrete fixes.
+No application source changes or provider work; no browser PASS yet.
+
+### T09.5 attached-media final record — decode/playback PASS; quality FAILED
+
+TASK ID: T09.5 (no main item IN_PROGRESS).
+Objective: Diagnose actual supplied Modal/HF clips against their own source
+images and isolate media/player failures from synthesis-quality defects.
+Initial status: BLOCKED on expired links; direct attachments remove that blocker
+for Modal Scene5/HF Scene7. Earlier blocked record remains historical.
+Evidence inspected: actual MP4/JPEG hashes, ffprobe, complete ffmpeg decode,
+source/sample-frame and first/last-frame viewing, source-geometry comparison,
+actual deployed UI playing real attached bytes with isolated REST/signing
+fixtures, pinned Diffusers0.35.2 docs and Termux heartbeat.
+Confirmed blocker: Modal output quality is rejected by creator. Root cause is
+not established by the different-source comparison. Exact deployed worker
+preprocessing/source parity is UNKNOWN and Termux reports offline. No current
+credit/budget/execution proof authorizes a new GPU test.
+Files changed: checklist/PROJECT_LOG; attached-motion-quality-diagnosis.json;
+attached-motion-browser-playback.json; evidence manifest. Uploaded customer
+media/contact sheets/screenshots/private scripts remain outside Git.
+Commit: source unchanged0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c; docs based on
+e8566b4c9d0968e2775270aa555857c431e33a59. Generationv66 unchanged.
+Tests performed: Modal H264704x480,49frames/2.041667s; HF H264704x512,57frames/
+1.9s; all frames decode. Visual samples show subtle Modal posture/limb changes
+with soft detail, while HF shows clearer head turning and forward movement.
+Different scenes prevent a controlled provider-quality conclusion. Face
+occlusion prevents strict identity acceptance. Modal first-frame geometry
+strongly favors stretched source over committed containment; live preprocessing
+drift is PROBABLE, not confirmed. Sampler20steps/guidance3 versus higher pinned
+doc examples is a testable hypothesis, not a proven cause or authorized change.
+Private browser harness attempt1 failed on Python module shadowing, attempt2
+on Locator.first API usage. Both were corrected with explicit reasons; third
+and final attempt PASS for4 contexts: desktop/Pixel7 emulation x2 real clips.
+Actual deployed component video currentTime>1.1s;27–34 decoded frames, zero
+dropped frames/media errors in observations. REST/signing are controlled; no
+actual creator-storage/RLS journey, physical Android or full sponsor PASS.
+No application change, so prior455/455 exact-source CI/audit/build reused.
+No new GPU/job/inference retry, worker/function deployment, financial setting,
+provider switch, creative approval, source overwrite or customer mutation.
+Verification: PASS for decode and precisely scoped deployed-UI playback;
+FAILED for creator Modal quality acceptance; BLOCKED for live-worker cause
+verification/repair and full mandatory T09/T10/T11.
+Next task: Bring existing Termux bridge online for one batched read-only worker
+source/config/budget inspection; prepare the smallest evidenced correction.
+Any subsequent bounded real GPU comparison requires verified budget/execution
+authorization. No new model/service or automatic creative revision.
+
+Motion verification | Result
+---|---
+Request authorized | UNKNOWN — original request not independently retrieved
+GPU job submitted | PASS — existing saved provider-response ID; no new submission
+Inference completed | PASS — existing completed state and supplied actual MP4
+MP4 persisted | UNKNOWN — stored asset/path exists; renewed owner-cloud retrieval not exercised here
+Video decoded | PASS — all49 Modal/57 HF frames decoded
+Visible subject movement | UNKNOWN for strict accepted direction/identity; sampled posture changes visible, Modal quality rejected
+Browser playback | PASS — actual attached bytes in controlled deployed desktop/Pixel7 UI; creator-storage journey unverified
+
+T09.5 resumed: Creator reports existing Termux bridge is up. T09 is again the
+sole IN_PROGRESS item for one batched read-only live worker/source/config/budget
+inspection. Earlier offline observations remain historical; do not repeat
+completed MP4/browser checks. No inference authorization is implied by bridge
+availability. No new GPU/deploy/approval or customer mutation permitted.
+
+T09.5 bridge check: live heartbeat now online. One batched read-only command is
+queued through the owner's existing approval bridge: current app/billing stats,
+local worker AST/hash and SDK read-metadata schema. No import of worker code,
+credential-file reading, package install, Supabase CLI retry, deployment or
+GPU submission. Local source is explicitly not deployed-source proof. Owner
+bridge approval is a tool requirement, not a request for creative/inference
+authorization. Await exact batch result before any adaptive worker read.
+
+### T09.5 control-plane follow-up — first batch PASS, device approval BLOCKED
+
+TASK ID: T09.5; main T09 BLOCKED, no item IN_PROGRESS.
+Objective: Inspect exact live worker references/resources and budget evidence
+without inference or speculative redeployment.
+Initial status: BLOCKED on bridge connectivity; owner brought it online.
+Evidence inspected: approved phone batcheab6e619-1a3d-4418-b152-df9f594686bb
+completed/exit0. Modal1.6.2 shows deployed appap-CopCZqKwTuk11VLpDSU0fH,
+zero tasks/backlog/runners; functionfu-7utVyRnLk1LGQJWS5xyThX. Billing meter0.33,
+apps0.24,egress0.09,credits-0.24,allowance-0.09,billed$0.00. This is applied
+credits, not remaining-credit proof. Current usage/spend caps remain UNKNOWN.
+Phone checkoute02a3e636b8638a03a6280b021c720d00ba31a41 has worker/contracts/
+media hashes identical to current repository; local image containment and
+20step/guidance3 settings confirmed. Deployed file equality still UNKNOWN.
+The SDK read schema discovered FunctionGetById returning ranked function data.
+Exact installed1.6.2 wheel source was inspected locally (no package install,
+model weights, cloud resource or GPU). Nonexistent GitHub version-tag source
+URLs returned404; use exact wheel instead, no repeated URL retries.
+Confirmed blocker: follow-up phone batchfe43298d-5caf-4307-be36-69e15df29de1
+awaits device approval. It reads only FunctionGetById and WorkspaceBillingRates;
+no request to spawn/run/build/deploy or read credential files. This is Termux
+Link's per-command phone approval requirement. No duplicate queued command or
+new GPU job. Latest heartbeat had returned offline after the first completed
+batch; do not equate chat Continue with device approval.
+Files changed: checklist/log, attached diagnosis/playback and control-plane
+evidence/manifest only. Source remains0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c;
+previous455 CI applies unchanged. Private media/SDK/scripts stay outside Git.
+Tests performed: approved first read PASS; three local source hashes MATCH;
+follow-up NOT EXECUTED. Existing attached decode/4-context playback evidence
+reused. No source change or repeated application test/build.
+Verification: BLOCKED on exact device approval, then live-code/config inference
+and separately authorized budgeted proof. No quality fix or MVP-ready claim.
+Next task: Retrieve exact pending batch result once approved, then scope the
+smallest confirmed correction. Never submit a GPU test from this approval.

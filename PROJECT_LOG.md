@@ -1650,3 +1650,48 @@ provider switch, creative approval or customer mutation. Source/build/CI remain
 unchanged at0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c; earlier455/455 applies.
 Evidence: modal-quality-followup.json. T09.5 diagnosis and sponsor gates BLOCKED;
 creator quality acceptance FAILED. Next dependency is the actual MP4/source.
+
+
+## 2026-10-23 — T09.5 supplied media removes download blocker
+
+Creator supplied two unique1280x1280 sources (four JPEG attachments with duplicate
+pairs), one Modal Scene5 MP4d74245c1 and one HF Scene7 MP45dba3345. Read-only
+asset lookup matches their image filenames/source IDs. Actual Modal49frame/
+2.041667s H264704x480 and HF57frame/1.9s H264704x512 decode fully. Direct
+frame/source review shows subtle Modal posture/arm movement with soft detail;
+HF shows a clearer head turn/forward approach. Creator rejects Modal quality.
+Different sources and shadowed faces prevent model-ranking/identity acceptance.
+
+Modal first frame resembles a stretched square source (RGB MAE2.11) much more
+than committed containment15.69; possible stale live preprocessing is PROBABLE.
+No live-worker-source equivalence is proven. Committed20steps/guidance3 are
+below pinned documentation examples, but a quality fix cannot be inferred from
+a setting change. Termux heartbeat reports offline, blocking artifact inspection.
+
+Actual deployed frontend plays actual attached MP4 bytes on desktop/Pixel7
+emulation with controlled REST/signing. All4 contexts advance>1.1s,27–34 decoded
+frames, zero observed dropped frames/media errors. This isolates a player/
+container failure from quality, while not exercising owner storage/RLS or
+physical Android. Private harness attempts1/2 failed on module shadowing and
+Locator.first API usage; two concrete corrections, final attempt3 PASS. No
+repeat after success. No application source change, new inference/job/provider
+switch, deployment, financial setting, creative approval or customer mutation.
+Private footage/derived images remain outside Git. Public receipts: attached-
+motion-quality-diagnosis.json, attached-motion-browser-playback.json. Source
+0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c/v66 unchanged;455 CI reused.
+T09.5 cause/quality repair and full sponsor acceptance remain BLOCKED. Next:
+existing bridge online, batched read-only worker/budget inspection, then a
+separately authorized bounded comparison after an evidenced correction.
+
+
+T09.5 bridge resumed: approved batcheab6e619 completed/exit0. App deployed/idle;
+functionfu-7utVyRnLk1LGQJWS5xyThX. Metered0.33; apps0.24/egress0.09 offset
+by credits/allowance; billed$0.00. Remaining credits/current caps still UNKNOWN.
+All3 local worker files byte-match repository; no deployed artifact equivalence
+claim. Exact SDK1.6.2 schema/source inspection supports a narrow follow-up
+FunctionGetById/WorkspaceBillingRates read. Batchfe43298d is awaiting phone
+approval; latest heartbeat flagged offline. Device approval is external and
+chat Continue is not a substitute. No duplicate queue/inference/deploy, package
+install, credential read, source change or customer mutation. Source455 CI
+reused. Public modal-quality-control-plane.json records exact first result and
+pending blocker. Main T09 BLOCKED until that result; no false quality success.
