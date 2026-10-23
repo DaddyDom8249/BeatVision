@@ -55,7 +55,7 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Owner Ok/Yes authorizes one credits-only trial and attests usable credits/$0hard paid-spend cap. Termux batch1a2818b1-5ebf-4b26-aa5d-563a71aa0d89 awaiting device approval; latest phone offline. No GPU call confirmed.50step/guidance5 candidate20 offline tests PASS; existing quality rejected. modal-quality-trial-authorization.json
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Owner Ok/Yes authorizes one credits-only trial and attests usable credits/$0hard paid-spend cap. At owner's resend request, refreshed Termux batchd80f5ea5-90f7-4870-9425-6ea4ace66fc5 queued for device approval; phone online. Prior batch's input link expired. Same exclusive receipt, no GPU call confirmed. modal-quality-trial-authorization.json
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Existing owner-approved source rows and external Modal outputs observed; isolated sequential journey and authorized post-fix budgeted inference remain unverified; no agent GPU submission
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| T09.5 attached Modal/HF MP4s fully decode and play actual bytes in controlled deployed desktop/Pixel7 UI. Modal quality rejected; strict action/identity, owner-storage journey and T10 remain unverified. attached-motion-quality-diagnosis.json
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
@@ -2193,3 +2193,20 @@ T10–T14 need those dependencies and real motion/journey acceptance.
 Verification: BLOCKED; request authorized PASS for the isolated diagnostic;
 GPU submission, inference, persisted MP4, decode, subject motion and playback
 all UNKNOWN. Application0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c/v66 unchanged.
+
+T09.5c approval resend (2026-10-23T14:44 UTC): Owner explicitly requested
+resending approval. Phone now online; old1a2818b1 still awaiting_approval,
+exit=null. Its input GET now400 InvalidJWT, exp claim timestamp check failed;
+signed expiry1792746701 is before observation1792766598. First read's assertion
+looked only for literal "expired" and failed before saving; exact provider error
+and signed expiry were then inspected and recorded. No cloud invocation.
+Re-signed the same existing private QA bundle for7200s using normal QA login;
+download SHA256 remains94aeb150b09ac924014e623c9e257ad855c430933a7ffbc6cced158894f708ed.
+No new upload or application/customer-row mutation. Added a pre-fetch receipt
+guard: if the same trial receipt exists, return it and never relaunch. Existing
+exclusive receipt still gates the only spawn. Source/model/seed/sampler unchanged.
+Short1672-byte command accepted asd80f5ea5-90f7-4870-9425-6ea4ace66fc5;
+approval Required on phone. This supersedes the expired-input entry, not another
+inference authorization. Tests: Python AST parse PASS; exact bundle hash PASS.
+Verification: BLOCKED pending device approval/result; GPU submission UNKNOWN.
+Next task: T09; inspect only the refreshed entry and its same-trial call receipt.

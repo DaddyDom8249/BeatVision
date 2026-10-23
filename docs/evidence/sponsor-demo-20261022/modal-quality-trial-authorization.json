@@ -48,7 +48,8 @@
     "approval": "Required on phone by Termux bridge",
     "signed_url_or_input_media_published": false,
     "latest_phone_online": false,
-    "latest_exit": null
+    "latest_exit": null,
+    "superseded_by_refreshed_batch": "d80f5ea5-90f7-4870-9425-6ea4ace66fc5"
   },
   "idempotency": "Exclusive fsynced private attempt receipt before cloud work. One spawn call site; save call ID immediately; no requeue/resubmission after uncertainty. Poll the same call only.",
   "validation": {
@@ -71,5 +72,25 @@
   },
   "quality_fix_verified": false,
   "sponsor_journey_ready": false,
-  "verification": "BLOCKED on Termux device approval/phone availability; chat authorization provided. No GPU submission receipt."
+  "verification": "BLOCKED on refreshed Termux device approval; phone online, GPU submission receipt absent.",
+  "approval_resend": {
+    "observed_at": "2026-10-23T14:44:00Z",
+    "owner_request": "Resend approval request",
+    "old_termux_job_id": "1a2818b1-5ebf-4b26-aa5d-563a71aa0d89",
+    "old_status": "awaiting_approval",
+    "old_input_http_status": 400,
+    "old_input_provider_error": "InvalidJWT: exp claim timestamp check failed",
+    "old_signed_expiry_epoch": 1792746701,
+    "observation_epoch": 1792766598,
+    "new_termux_job_id": "d80f5ea5-90f7-4870-9425-6ea4ace66fc5",
+    "status": "queued; Required on phone",
+    "phone_online": true,
+    "new_uploads": 0,
+    "application_row_mutations": 0,
+    "new_link_seconds": 7200,
+    "same_bundle_hash_verified": true,
+    "command_bytes": 1672,
+    "command_sha256": "50ff833b208035a56036b9e74bdee3bb152cd4592ba4c8210fa9fe272613f335",
+    "idempotency": "Same trial exclusive receipt. New pre-fetch guard returns existing receipt without relaunch. No additional inference authorization."
+  }
 }

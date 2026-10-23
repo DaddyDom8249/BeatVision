@@ -1747,3 +1747,13 @@ Application0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c/v66 unchanged, PR remains
 draft/unmerged. Quality repair and sponsor readiness are not verified. Public
 receipt: modal-quality-trial-authorization.json. Next: read exact accepted batch,
 then inspect only its existing call/artifact; no automatic GPU retry.
+
+2026-10-23T14:44 UTC T09.5c: owner requested approval resend. Phone online;
+old batch still awaiting approval, with input GET400 InvalidJWT/exp claim failed
+and past signed expiry. First literal-error assertion failed; inspected exact
+error/timestamp rather than assuming execution. Re-signed same private QA bundle,
+verified unchanged SHA, zero uploads/row mutations. Refreshed1672-byte command
+includes pre-fetch existing-receipt guard plus original exclusive receipt and
+single spawn. Same trial/source/model/seed/settings; no extra inference approval.
+Accepted batchd80f5ea5-90f7-4870-9425-6ea4ace66fc5 requires device approval.
+No GPU submission confirmed; T09 remains BLOCKED. No application/deployment change.
