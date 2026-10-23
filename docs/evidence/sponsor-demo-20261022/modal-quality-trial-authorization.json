@@ -63,7 +63,7 @@
   },
   "motion_verification": {
     "request_authorized": "PASS for this isolated test only",
-    "gpu_job_submitted": "FAIL for completed preflight attempt: confirmed zero submissions; guarded first-invocation recovery pending",
+    "gpu_job_submitted": "UNKNOWN; current receipt changed, existing-state readback required",
     "inference_completed": "UNKNOWN",
     "mp4_persisted": "UNKNOWN",
     "video_decoded": "UNKNOWN",
@@ -72,7 +72,7 @@
   },
   "quality_fix_verified": false,
   "sponsor_journey_ready": false,
-  "verification": "BLOCKED on local-import recovery device approval. Original preflight FAILED before any GPU call; quality remains unverified.",
+  "verification": "BLOCKED on existing-state readback device approval; no inference retry authorized. Actual prior call/submission/output unknown.",
   "approval_resend": {
     "observed_at": "2026-10-23T14:44:00Z",
     "owner_request": "Resend approval request",
@@ -128,5 +128,27 @@
     "production_deploy_calls": 0,
     "actual_repair": "UNKNOWN",
     "inference": "UNKNOWN"
+  },
+  "latest_execution_guard_stop": {
+    "observed_at": "2026-10-23T16:27:00Z",
+    "owner_requested_exact_approval_resend": true,
+    "termux_job_id": "507adefc-681d-4958-aa87-4d6922f64aa8",
+    "status": "failed",
+    "exit": 1,
+    "traceback_line": 10,
+    "failed_condition": "spawn_attempts==0 and no function_call_id and no transient_app_id",
+    "interpretation": "At least one prior-execution field is set. Exact values and actor UNKNOWN. Earlier zero-submission preflight is historical and cannot establish current state.",
+    "new_inference_submitted_by_this_failed_resend": 0
+  },
+  "existing_state_readback": {
+    "task": "T09.5c2",
+    "termux_job_id": "6433eb05-0a13-454d-98c4-3f60e3ef6def",
+    "status": "queued; Required on phone",
+    "scope": "Read receipt and retrieve only existing call/result; preserve/hash-check artifact. No inference submission/retry/deployment. Completed scratch-only cleanup and optional phone Downloads copy remain unapproved.",
+    "command_bytes": 4576,
+    "command_sha256": "e826aa897ab597dd0226e0c95cb7313ad768e8760eafa21039d4e72512269456",
+    "ast_parse": "PASS",
+    "inference_submission_call_sites": 0,
+    "actual_result": "UNKNOWN"
   }
 }

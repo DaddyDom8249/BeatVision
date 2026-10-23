@@ -55,7 +55,7 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Refreshed batchd80f5ea5 ran/exit2; hash/profile/idle/billing checks PASS, then ModuleNotFoundError before app initialization. Receipt confirms zero GPU submissions. Guarded local-import recovery1f0c166a-c611-474d-9025-54647b9f08d2 queued for device approval; same single-test authorization. modal-quality-trial-authorization.json
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Guarded resend507adefc ran/exit1 at the prior app/call/spawn assertion; changed receipt means GPU submission/result UNKNOWN. Existing-call readback6433eb05-0a13-454d-98c4-3f60e3ef6def queued for device approval, zero inference-submission call sites. Do not requeue GPU execution. modal-quality-trial-authorization.json
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Existing owner-approved source rows and external Modal outputs observed; isolated sequential journey and authorized post-fix budgeted inference remain unverified; no agent GPU submission
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| T09.5 attached Modal/HF MP4s fully decode and play actual bytes in controlled deployed desktop/Pixel7 UI. Modal quality rejected; strict action/identity, owner-storage journey and T10 remain unverified. attached-motion-quality-diagnosis.json
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
@@ -2248,3 +2248,44 @@ from preparation. Exact missing module/Pillow installation remain UNKNOWN until
 device-approved diagnostic execution. Main T09 BLOCKED on this approval.
 Verification: confirmed prior preflight FAILED with0GPU submissions; recovery
 execution, output and quality UNKNOWN. Next: read only recovery batch1f0c166a.
+
+### T09.5c2 — Inspect changed execution receipt; never resubmit
+
+TASK ID: T09 (sole IN_PROGRESS item).
+Objective: Determine existing execution state and retrieve any already-generated
+output without another inference submission or reset of the one-run lock.
+Initial status: UNKNOWN following safety-guard stop.
+Evidence inspected: owner explicitly requested approval resend; status showed
+1f0c166a awaiting approval and phone online. Exact4703-byte guarded command was
+resent as507adefc-681d-4958-aa87-4d6922f64aa8. It ran/exit1; traceback line10
+is the assertion requiring spawn_attempts=0,no function_call_id,no transient_app_id.
+Thus at least one prior-execution field is now set. Exact current value and the
+actor/attempt that changed it are UNKNOWN. The old bridge entry still reports
+awaiting approval; bridge status cannot override the actual private receipt.
+Confirmed blocker: current receipt not yet retrieved. Do not assert0GPU calls
+or create a new job from the stale earlier receipt.
+Required files: private existing-receipt/call readback script; existing scratch
+attempt/source/request/manifest/MP4; new local readback record if possible.
+Expected: report exact receipt, poll only its existing call ID, validate/hash and
+preserve existing returned bytes without overwrite. If no retrievable call or
+pending/error, record it and stop. Never spawn, deploy, remove a receipt or retry
+inference. Stop only a verified completed scratch app, never production.
+Verification: inspect provider response, manifest/source/video hashes; subsequent
+full decode/visual/playback only if genuine bytes are retrieved. No creative
+approval, customer-row mutation, model change or new compute authorization.
+Next task: queue one batched existing-state/result readback; Termux device
+approval is required by the bridge, independently of chat authorization.
+
+T09.5c2 preparation:4576-byte existing-call readback accepted as
+6433eb05-0a13-454d-98c4-3f60e3ef6def, status queued, approval Required on phone.
+SHA256e826aa897ab597dd0226e0c95cb7313ad768e8760eafa21039d4e72512269456.
+Tests performed: Python AST parse PASS; zero spawn/remote/deploy call sites.
+It reads whitelisted receipt fields, gets only an existing function-call ID,
+verifies returned manifest/hash, preserves previous bytes and optionally saves
+the same unapproved clip to phone Downloads for review. Pending/error/no-call
+states are recorded without resubmission. Completed scratch-app cleanup is
+guarded against the production ID. No inference authorization was added.
+Verification: BLOCKED on device approval of existing-state readback; current
+GPU submission/inference/MP4/motion/playback UNKNOWN. No application source,
+deployment, creative approval or customer data changed. Next: T09; inspect
+only6433eb05 and its existing call/result. Never retry the failed assertion.

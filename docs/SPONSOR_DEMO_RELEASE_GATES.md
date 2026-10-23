@@ -470,3 +470,13 @@ installs pinned binary Pillow11.3.0 only if PIL is missing, then permits only th
 original first invocation after zero-submission and source-integrity guards.
 Other missing modules stop without GPU. No additional inference authorization,
 automatic GPU retry, production release or creative approval. Quality UNKNOWN.
+
+Latest receipt checkpoint (2026-10-23T16:27 UTC): owner requested another
+approval resend; the exact guarded command507adefc ran/exit1 at the assertion
+requiring no prior app/call/spawn. Thus prior-execution state is now present;
+its exact fields and GPU submission/result remain UNKNOWN. This supersedes
+earlier zero-submission statements for the current trial state. Existing-state
+readback6433eb05-0a13-454d-98c4-3f60e3ef6def is now the actionable Termux
+approval. It retrieves only the saved receipt/existing call and any output,
+with zero new inference submissions. Do not reapprove execution/recovery entries
+as a way to bypass the guard. Read the existing receipt first.

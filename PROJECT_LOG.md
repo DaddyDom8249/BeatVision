@@ -1773,3 +1773,18 @@ causes stop without GPU. No source/model/seed/creative changes or receipt deleti
 gate; actual module repair/inference/output/quality UNKNOWN. Source0b9eb69/v66
 unchanged,455 application CI and20 candidate checks remain applicable. No GPU
 retry or additional inference authorization. Next: inspect exact recovery batch.
+
+2026-10-23T16:27 UTC T09.5c2: owner requested resending approval again; bridge
+showed1f0c166a awaiting approval/phone online. Exact4703-byte guarded command
+resent as507adefc; then ran/exit1, assertion line10 requires zero prior spawn,
+no call ID and no transient app ID. At least one receipt field is now set; exact
+current values/actor UNKNOWN. This guard prevented an unsafe repeat; do not claim
+current0GPU submissions based on the earlier14:44 preflight receipt. No retry.
+Prepared existing-state/result retrieval only:4576B, AST PASS, zero spawn/remote/
+deploy call sites. It reads safe receipt fields, polls only saved call ID and
+validates/preserves returned bytes, with completed scratch-only cleanup and
+optional unapproved phone Downloads copy. No source/model/approval/customer
+mutation, deploy or new inference. Accepted6433eb05-0a13-454d-98c4-3f60e3ef6def
+requires phone approval. T09 BLOCKED on this readback, downstream gates unchanged.
+Source0b9eb69/v66 and prior455 CI/20 candidate checks unchanged. Next: inspect
+that exact readback and existing call/output; never reset either execution lock.
