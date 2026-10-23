@@ -1712,3 +1712,38 @@ and$0hard-spend-cap confirmation plus explicit one-test authorization are
 external gates; read-only approvals do not authorize inference. Source0b9eb69/
 v66 unchanged. No GPU job, new persistent service, customer mutation or
 quality-fix claim. See modal-quality-trial-proposal.json and unapplied patch.
+
+## 2026-10-23 — T09.5c authorized one-shot test queued; device gate remains
+
+Owner Ok/Yes explicitly authorizes one existing-credits-only quality diagnostic
+and attests usable credits plus hard$0paid-spend cap. This resolves the chat
+authorization blocker, not independent API balance/cap verification. Prepared
+private launcher freezes the supplied Scene5 JPEG/hash, prompt and original seed,
+checks exact original/candidate source hashes, SDK/profile/production idle state,
+and writes an exclusive durable receipt before cloud work. It creates only an
+isolated transient run with1L4/300s/retries0/min0/max1, stores call ID immediately
+after the single spawn, preserves unapproved output, and stops only its completed
+scratch app. Unknown call status never triggers resubmission or production stop.
+
+Large embedded-input queue requests failed; the retained second response is
+INVALID_ARGUMENT and history showed no matching entry. The first response id
+was not retained because client code assumed success; status, not that client
+exception, establishes no observed queue entry. Changed transport to one58,911B
+bundle in existing private visual-assets under the isolated QA user's owner prefix,
+using normal QA auth and existing RLS. Upload200/sign200/download SHA verified;
+no upsert/settings/schema/customer-row/approval change. Private transfer preparation
+first failed before any network action on missing requests; standard-library HTTP
+resolved that local dependency. No package install. Private bundle contains no
+credentials; input footage/signed links are excluded from Git.
+
+Short1,407B hash-checking command accepted as1a2818b1-5ebf-4b26-aa5d-563a71aa0d89.
+Latest status: awaiting_approval,exit=null,phone offline. GPU submission UNKNOWN,
+no function-call receipt/output yet. Device approval is explicitly required by
+Termux; do not requeue. Bundle link expires after2h and fails before inference
+if expired. T09 BLOCKED on this external gate; other remaining main tasks depend
+on artist approvals and real motion/journey evidence. Launcher AST PASS; one
+spawn/zero deploy sites; unchanged20 candidate tests and455 application CI reused.
+Application0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c/v66 unchanged, PR remains
+draft/unmerged. Quality repair and sponsor readiness are not verified. Public
+receipt: modal-quality-trial-authorization.json. Next: read exact accepted batch,
+then inspect only its existing call/artifact; no automatic GPU retry.

@@ -1,0 +1,75 @@
+{
+  "task": "T09.5c",
+  "observed_at": "2026-10-23T07:12:00Z",
+  "classification": "CONFIRMED for chat authorization and queued transport; GPU execution UNKNOWN",
+  "trial_id": "03e1639b-2aa5-4eda-b4e6-f0d02a621751",
+  "authorization": {
+    "owner_answers": [
+      "Ok",
+      "Yes"
+    ],
+    "scope": "Exactly one isolated two-second Modal quality diagnostic using existing credits; no retry, production deploy, model switch, approval or customer-row mutation.",
+    "usable_credits": "Owner-attested; not independently API-retrieved",
+    "hard_zero_paid_spend_cap": "Owner-attested; not independently API-retrieved",
+    "gpu_execution_limit": "One L4, 300-second execution timeout, retries=0, min=0/max=1.",
+    "cost_boundary": "L4 execution segment up to 300s is $0.066667 at $0.80/hour. Startup/CPU/RAM/build/transfer use additional credits; timeout is not a total monetary cap."
+  },
+  "implementation": {
+    "application_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
+    "documentation_base_commit": "4dbcd591a1f3d3b3396f331d0386c723e4a2667d",
+    "candidate_worker_sha256": "c5c7835df0c75fa885feca4c00bf151957c91c13b3b3f6d3bfb521ee3d205882",
+    "candidate_contracts_sha256": "f299170d86d38d93983e6a6b9fafd1dbce6784550f8d18b8e88e83262bb3f92d",
+    "media_sha256": "d61631975e0654d8d38d70e65fa96745c588f025accd4a121fd60aa523749db1",
+    "model": "Lightricks/LTX-Video-0.9.5",
+    "revision": "e58e28c39631af4d1468ee57a853764e11c1d37e",
+    "steps": 50,
+    "guidance_scale": 5,
+    "frames": 49,
+    "fps": 24,
+    "source_sha256": "173bc698e88631749e76a9ad9f2146f457212d1ba1bac948f2499f0b8d0ad349",
+    "source_bytes": 56117,
+    "seed": 225715292,
+    "source_boundary": "Supplied Scene5 JPEG; not original saved source-byte identity. Synthetic diagnostic IDs; no real project approval claim.",
+    "prompt_boundary": "Reconstructed frozen movement-first direction; no invented stronger action."
+  },
+  "transport": {
+    "initial_large_command_response": "First response id was not retained because client assumed success; subsequent status had no matching job. No inference claim.",
+    "second_large_command_response": "INVALID_ARGUMENT",
+    "corrective_change": "One new isolated QA-owned bundle in existing private visual-assets bucket; normal QA authentication and existing RLS, no overwrite. Hash-verified short command replaces large embedded input.",
+    "bundle_bytes": 58911,
+    "bundle_sha256": "94aeb150b09ac924014e623c9e257ad855c430933a7ffbc6cced158894f708ed",
+    "upload_http_status": 200,
+    "sign_http_status": 200,
+    "download_hash_verified": true,
+    "short_command_bytes": 1407,
+    "short_command_sha256": "5cdbb933916849e54052663adf0596538f463a769bd21a65228e6065d06f5b6a",
+    "termux_job_id": "1a2818b1-5ebf-4b26-aa5d-563a71aa0d89",
+    "status": "awaiting_approval",
+    "approval": "Required on phone by Termux bridge",
+    "signed_url_or_input_media_published": false,
+    "latest_phone_online": false,
+    "latest_exit": null
+  },
+  "idempotency": "Exclusive fsynced private attempt receipt before cloud work. One spawn call site; save call ID immediately; no requeue/resubmission after uncertainty. Poll the same call only.",
+  "validation": {
+    "launcher_ast_parse": "PASS, no execution",
+    "candidate_contract_media_tests": "20 PASS, reused unchanged",
+    "candidate_python_compile": "PASS, reused unchanged",
+    "private_fixture_transfers": 1,
+    "application_row_mutations": 0,
+    "production_deployments": 0,
+    "creative_approvals": 0
+  },
+  "motion_verification": {
+    "request_authorized": "PASS for this isolated test only",
+    "gpu_job_submitted": "UNKNOWN",
+    "inference_completed": "UNKNOWN",
+    "mp4_persisted": "UNKNOWN",
+    "video_decoded": "UNKNOWN",
+    "visible_subject_movement": "UNKNOWN",
+    "browser_playback": "UNKNOWN"
+  },
+  "quality_fix_verified": false,
+  "sponsor_journey_ready": false,
+  "verification": "BLOCKED on Termux device approval/phone availability; chat authorization provided. No GPU submission receipt."
+}

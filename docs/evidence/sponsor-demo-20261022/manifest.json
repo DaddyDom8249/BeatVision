@@ -2,7 +2,7 @@
   "source_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
   "production_frontend_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
   "production_generation_version": 66,
-  "scope": "Application0b9eb69/v66 unchanged. Actual attached decode/playback PASS; Modal quality rejected. Both read-only Termux checks completed. Unapplied same-model sampler trial prepared;20 offline tests PASS. Credits/$0spend-cap confirmation and one-test execution authorization required; zero GPU jobs or quality-fix claim.",
+  "scope": "Application0b9eb69/v66 unchanged; attached-media decode/controlled playback PASS, Modal quality rejected. One credits-only50step/guidance5 trial authorized; owner-attested credits/$0hard paid-spend cap. Exact Termux batch awaiting device approval; phone offline. No GPU call/output confirmed and no quality-fix claim.",
   "private_evidence": "Transcript-bearing candidate images, Android reload screenshot containing profile text, and account/session secrets excluded from Git",
   "files": [
     {
@@ -381,9 +381,14 @@
       "sha256": "4857decf7988dbbd970671367b5a0fc82ea4dd66e8b47c0f483ce6e7ba1d90d4"
     },
     {
+      "file": "modal-quality-trial-authorization.json",
+      "bytes": 4020,
+      "sha256": "26375f271882fa1269c091d4e45296a80c983dc28eff7c6bebaf1f7c64c7b534"
+    },
+    {
       "file": "modal-quality-trial-proposal.json",
-      "bytes": 3691,
-      "sha256": "9d7919cc009b810284f0f710aa9cbd3bf7e2b24be82ffd08370afeb1d4db2003"
+      "bytes": 3846,
+      "sha256": "cd3e0b6f5b5257701e4ec581697a27e31a20939da937819b872f99de788ee08c"
     },
     {
       "file": "modal-quality-trial-unapplied.patch",

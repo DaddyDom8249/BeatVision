@@ -55,7 +55,7 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Both Termux reads completed; idle1L4/300s,$0 billed so far. Unapplied quality trial prepared;20 offline tests PASS. Usable credits/$0spend-cap confirmation and one-test execution authorization remain required. Quality still FAILED. modal-quality-trial-proposal.json
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Owner Ok/Yes authorizes one credits-only trial and attests usable credits/$0hard paid-spend cap. Termux batch1a2818b1-5ebf-4b26-aa5d-563a71aa0d89 awaiting device approval; latest phone offline. No GPU call confirmed.50step/guidance5 candidate20 offline tests PASS; existing quality rejected. modal-quality-trial-authorization.json
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Existing owner-approved source rows and external Modal outputs observed; isolated sequential journey and authorized post-fix budgeted inference remain unverified; no agent GPU submission
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| T09.5 attached Modal/HF MP4s fully decode and play actual bytes in controlled deployed desktop/Pixel7 UI. Modal quality rejected; strict action/identity, owner-storage journey and T10 remain unverified. attached-motion-quality-diagnosis.json
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
@@ -2123,3 +2123,73 @@ Next task: Owner confirms usable credits/$0hard paid-spend cap and explicitly
 authorizes one credits-only test; only then materialize the reviewed candidate
 and single-attempt receipt. No further GPU action is authorized by chat Ok
 for the preceding read-only request. Full sponsor gates remain BLOCKED.
+
+### T09.5c — Authorized single credits-only quality invocation
+
+TASK ID: T09 (sole IN_PROGRESS item).
+Objective: Execute exactly the reviewed isolated2s same-model sampler trial,
+then inspect actual output; preserve production and all approved assets.
+Initial status: BLOCKED on execution/current financial safeguards.
+Authorization: Owner answered Ok then Yes to the explicit one-test request
+confirming usable Modal credits and a hard$0paid-spend cap. This is fresh owner
+attestation, not independently retrieved provider balance/cap evidence. It
+authorizes one credits-only test, no retries,300s execution, startup/CPU/RAM
+credit use acknowledged. Do not ask for this authorization again. Termux
+requires device approval of the exact execution command separately.
+Confirmed defect: supplied Modal quality rejected; precise cause UNKNOWN.
+Testable hypothesis: reviewed50step/guidance5 candidate with existing image
+containment and frozen direction may improve output.20 offline checks PASS.
+Required files: private one-shot launcher, copied candidate worker/contracts/
+media and input JPEG in a new isolated task directory; durable exclusive
+receipt, unapproved MP4/manifest; checklist/log/sanitized evidence only.
+Original application files and deployed primary worker are not changed.
+One transient execution app on existing Modal infrastructure, no persistent
+service or production alias/deploy; retain1L4,min0/max1,retries0,49frames/24fps.
+Use synthetic test IDs and supplied image bytes, record relation to Scene5
+without falsely asserting original-byte equality or changing creative approval.
+Pin original seed and reconstruct the original movement-first prompt.
+Expected: at most one invocation, separate output or explicit failure, no
+resubmission after uncertain status. Exclusive receipt precedes app/cloud work;
+store call ID immediately after spawn. Check current production backlog first.
+Verification: manifest/hash, complete MP4 decode/duration, source/subject review,
+actual playback with scope explicitly recorded. Creator quality approval stays
+manual; no short-test result proves full-song rendering or sponsor readiness.
+Commit: base4dbcd591a1f3d3b3396f331d0386c723e4a2667d; app0b9eb69/v66
+unchanged. Next: queue one reviewed batch, retrieve only that call/result.
+
+T09.5c transport evidence (2026-10-23T07:12 UTC): The image-bearing command
+could not be queued. Its second transport request returned INVALID_ARGUMENT;
+phone history contained no matching execution entry. No inference was submitted
+by these rejected requests. The response-capture script initially failed after
+the first response because it assumed an id existed; that client error is not
+proof of submission. The final transport differs materially: a58,911-byte test
+bundle was uploaded once, without upsert, to the existing private visual-assets
+bucket under the isolated QA user's own prefix, using that user's normal login
+and existing owner RLS. Upload200/sign200 and downloaded SHA256
+94aeb150b09ac924014e623c9e257ad855c430933a7ffbc6cced158894f708ed verified.
+This is one new private QA fixture, not a customer asset or application-row
+mutation. No RLS, schema, bucket settings or existing object changed. The
+short1,407-byte command validates that bundle hash before execution; it was
+accepted as1a2818b1-5ebf-4b26-aa5d-563a71aa0d89, queued with device approval
+required. Signed link/input bytes and launcher remain private, not committed.
+The exclusive receipt and single spawn are unchanged across transport versions.
+GPU job submitted / inference / MP4 / decode / motion / playback: UNKNOWN
+pending actual device-approved execution. Do not requeue or resubmit while the
+accepted batch or its call status is uncertain. Only read that exact job.
+Tests performed: launcher Python AST parse PASS; one spawn call site, zero
+deploy call sites. Existing20 candidate contract/media tests reused. Transfer
+preparation initially stopped at a missing requests import before authentication
+or upload; replaced with standard-library HTTP and one successful upload.
+Next task: T09, inspect accepted batch after its required device approval.
+
+T09.5c checkpoint: latest direct phone status returns online=false and exact
+batch status=awaiting_approval, exit=null; no execution output/call ID. Mark T09
+BLOCKED on device approval/bridge availability, not on chat cost authorization.
+The accepted bundle link expires two hours after signing; an expired fetch must
+fail before any receipt/cloud work. Never send another launcher while this queue
+entry or its eventual call is uncertain. Continue by inspecting this exact entry.
+No further independent main task is eligible: T04–T08 need artist approvals,
+T10–T14 need those dependencies and real motion/journey acceptance.
+Verification: BLOCKED; request authorized PASS for the isolated diagnostic;
+GPU submission, inference, persisted MP4, decode, subject motion and playback
+all UNKNOWN. Application0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c/v66 unchanged.

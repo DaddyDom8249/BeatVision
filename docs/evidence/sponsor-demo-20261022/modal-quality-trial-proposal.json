@@ -35,8 +35,8 @@
     "gpu_execution_only_300s_usd": "0.06666666666666666666666666667",
     "cpu_usd_per_core_hour": "0.04730",
     "boundary": "GPU execution arithmetic only; excludes GPU startup/teardown, CPU, RAM, build and transfer. 300s execution timeout is not a total monetary cap. Current billing shows$0 so far, not future zero-cost proof.",
-    "current_usable_credit_balance": "UNKNOWN",
-    "current_paid_spend_cap": "UNKNOWN to API; requires owner confirmation of $0 hard cap before test."
+    "current_usable_credit_balance": "Owner confirms usable credits; numeric remaining balance UNKNOWN to API.",
+    "current_paid_spend_cap": "Owner confirms hard $0paid-spend cap; independently retrieved cap UNKNOWN."
   },
   "offline_validation": {
     "worker_contract_media_tests": {
@@ -55,7 +55,7 @@
     "Check output MP4, full decode/duration, visible subject action/source identity and actual playback separately.",
     "Creator judges quality; output remains unapproved. No MVP-ready claim from this isolated trial."
   ],
-  "execution_authorization": "BLOCKED: explicit approval for one credits-only trial and current financial safeguards not yet provided.",
+  "execution_authorization": "Owner Ok/Yes now authorizes one credits-only diagnostic and attests usable credits/hard$0paid-spend cap. Exact queued batch awaits device approval; see modal-quality-trial-authorization.json.",
   "gpu_jobs_submitted": 0,
   "worker_deployments": 0,
   "application_source_changes": 0,

@@ -448,5 +448,14 @@ trial is prepared (50steps/guidance5, same model/source/49frames);20/20 offline
 contract/media tests and compilation pass. Production is unchanged and output
 quality remains unverified. See
 [reviewable trial](evidence/sponsor-demo-20261022/modal-quality-trial-proposal.json).
-One credits-only test needs explicit execution authorization and owner
-confirmation of usable credits and a hard$0paid-spend cap.
+The owner subsequently answered Ok/Yes to the explicit one-test request,
+confirming usable credits and a hard$0paid-spend cap. These are owner attestations,
+not API-retrieved balance/cap evidence. Exactly one diagnostic is authorized.
+Termux accepted batch1a2818b1-5ebf-4b26-aa5d-563a71aa0d89; its latest state is
+awaiting_approval and the phone is offline. No GPU call is confirmed. The bridge
+requires device approval separately; no additional chat authorization is needed.
+The short command verifies a private isolated QA bundle hash before execution;
+an exclusive durable receipt prevents another launch. No production/default
+change, new persistent service, customer mutation or automatic creative approval.
+See [authorization and queue evidence](evidence/sponsor-demo-20261022/modal-quality-trial-authorization.json).
+The actual trial result and all mandatory sponsor acceptance gates remain blocked.
