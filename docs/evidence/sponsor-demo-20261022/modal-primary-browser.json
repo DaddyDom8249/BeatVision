@@ -1,0 +1,92 @@
+{
+  "observed_at": "2026-10-23T01:05:10.364252+00:00",
+  "task": "T09.4",
+  "scope": "Real deployed frontend with controlled isolated REST/provider responses; no real generation or creative approval",
+  "real_provider_requests": 0,
+  "database_mutations": 0,
+  "contexts": [
+    {
+      "name": "desktop",
+      "default_provider": "modal",
+      "options": [
+        "Modal LTX 0.9.5 (account-gated) \u2014 Primary",
+        "Hugging Face \u2014 Fallback"
+      ],
+      "pending_checks": [
+        {
+          "provider": "modal",
+          "switch_disabled": true,
+          "new_generation_hidden": true,
+          "polled_existing_id": "existing-modal",
+          "new_enqueues": 0
+        },
+        {
+          "provider": "huggingface-zerogpu",
+          "switch_disabled": true,
+          "new_generation_hidden": true,
+          "polled_existing_id": "existing-huggingface-zerogpu",
+          "new_enqueues": 0
+        }
+      ],
+      "unavailable_modal_calls": [
+        {
+          "action": "modal_capability",
+          "provider": null,
+          "job_id": null
+        }
+      ],
+      "explicit_fallback_enqueues": [
+        {
+          "action": "enqueue_ai_motion",
+          "provider": "huggingface",
+          "job_id": null
+        }
+      ],
+      "horizontal_overflow": false
+    },
+    {
+      "name": "android-emulated",
+      "default_provider": "modal",
+      "options": [
+        "Modal LTX 0.9.5 (account-gated) \u2014 Primary",
+        "Hugging Face \u2014 Fallback"
+      ],
+      "pending_checks": [
+        {
+          "provider": "modal",
+          "switch_disabled": true,
+          "new_generation_hidden": true,
+          "polled_existing_id": "existing-modal",
+          "new_enqueues": 0
+        },
+        {
+          "provider": "huggingface-zerogpu",
+          "switch_disabled": true,
+          "new_generation_hidden": true,
+          "polled_existing_id": "existing-huggingface-zerogpu",
+          "new_enqueues": 0
+        }
+      ],
+      "unavailable_modal_calls": [
+        {
+          "action": "modal_capability",
+          "provider": null,
+          "job_id": null
+        }
+      ],
+      "explicit_fallback_enqueues": [
+        {
+          "action": "enqueue_ai_motion",
+          "provider": "huggingface",
+          "job_id": null
+        }
+      ],
+      "horizontal_overflow": false
+    }
+  ],
+  "verification": "PASS for controlled deployed default/explicit fallback/pending-job UX on desktop/Pixel7 emulation; no provider inference/motion proof",
+  "frontend_commit": "e58261a313b0ffc3e365c0feb06a1c6af88ab3ae",
+  "frontend_deployment": "dpl_EMshjqMjXf8fxwf3GBgfzY9wKN3Y",
+  "deployed_backend_version": 65,
+  "backend_note": "Controlled browser generation requests were intercepted; no live inference endpoint invoked."
+}

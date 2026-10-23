@@ -27,9 +27,9 @@ The preceding503 and its unknown downstream cause remain recorded in
 
 ## Released and verified
 
-Frontend: `195c5337324704a91fbf894c83f65db6dce3813b`, Vercel
-`dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV`, READY with the original production alias.
-Immutable release URL: https://beat-vision-3baka38dm-beat-vision.vercel.app/.
+Frontend: `e58261a313b0ffc3e365c0feb06a1c6af88ab3ae`, Vercel
+`dpl_EMshjqMjXf8fxwf3GBgfzY9wKN3Y`, READY with the original production alias.
+Immutable release URL: https://beat-vision-py6yftmnm-beat-vision.vercel.app/.
 Existing draft PR: https://github.com/DaddyDom8249/BeatVision/pull/141.
 The user authorized this reviewed release with “Do it”; no main merge occurred.
 
@@ -49,9 +49,10 @@ through the real frontend; those earlier counts describe the release transaction
 No customer content, audio, approved worlds or assets were overwritten.
 
 Functions (current API inventory): analyze-song v44, song-interpretation v6,
-AI Director v3, World v62, Style v30. Generation v64 retains the compatible
-production controller/Modal transport and ports only the committed movement-first
-prompt correction. Other controller text/dependencies byte-match priorv63.
+AI Director v3, World v62, Style v30. Generation v65 retains the compatible
+production controller/Modal transport and movement-first prompt correction, with
+Modal as the default provider. Only two default literals changed fromv64;
+other controller text/dependencies byte-match priorv64.
 The full candidate Arena controller
 is not released: candidate v60's read-only runtime preflight returned false for
 Arena, verified transcription and interpretation-proposal prerequisites.
@@ -75,10 +76,10 @@ Pixel7 reloads retain AIv2; prior manualv1 remains in history. Instrumental QA
 proves provider integration, not sung-lyric accuracy. No creative confirmation
 or motion is claimed. Physical Android browser testing remains unverified.
 
-Latest source CI [39871128656](https://github.com/DaddyDom8249/BeatVision/actions/runs/39871128656)
-PASS at `c1e55a2535e745d182b1f09da0cdf23fa45d7b27`:435/435, zero skipped,
-audit/build PASS. Exact compatibility-patched production submit function3/3
-offline PASS. This is not a GPU/render test. Automatic-fill frontend CI39861322151 PASS at195c533:431/431,
+Latest source CI [39881788868](https://github.com/DaddyDom8249/BeatVision/actions/runs/39881788868)
+PASS at `e58261a313b0ffc3e365c0feb06a1c6af88ab3ae`:440/440, zero skipped,
+audit/build PASS. Exact compatibility controller38/38 offline PASS. Controlled
+deployed desktop/Pixel7 policy checks PASS; no GPU/render test. Earlier automatic-fill frontend CI39861322151 PASS at195c533:431/431,
 audit/build PASS. Earlier release CI
 39821652295 passed416/416 at its historical frontend identity.
 Modal offline [39821652417](https://github.com/DaddyDom8249/BeatVision/actions/runs/39821652417)
@@ -377,3 +378,23 @@ Current HF history also contains quota-exhaustion failures and one processing
 job; no uncertain job was polled/resubmitted. Row counts are not usable-clip proof.
 Earlier no-output statements describe their historical observation/isolated QA
 fixture; the later owner-created outputs are now recorded separately.
+
+## Current provider policy — Modal primary, Hugging Face explicit fallback
+
+New workspace sessions select Modal first; API requests omitting provider now
+also default to Modal. Select Hugging Face — Fallback explicitly when needed,
+then use Generate Motion. Existing model terms, source approvals, verified-free
+HF eligibility/quota and Modal budget/authentication gates remain enforced.
+Fallback never starts automatically after a failure or uncertain request.
+Pending jobs lock provider selection/new generation and Check Motion Status
+continues polling their saved IDs/provider snapshots. Previous clips remain saved.
+
+Sourcee58261a/current generationv65 and frontend release identities above are
+verified in [provider-policy receipt](evidence/sponsor-demo-20261022/modal-primary-release.json).
+The actual deployed page was checked on desktop/Pixel7 emulation with isolated
+controlled provider/REST responses: Modal default, no implicit enqueue when
+Modal unavailable, one intercepted HF enqueue only after explicit selection,
+pending-job controls and no horizontal overflow. This does not prove live
+fallback inference or improved animation; no real provider call or DB mutation.
+No new motion GPU job, resource, schema, financial setting or creative approval.
+The mandatory artist/financial/runtime/motion acceptance gates remain BLOCKED.

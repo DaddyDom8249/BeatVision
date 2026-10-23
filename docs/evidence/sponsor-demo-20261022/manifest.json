@@ -1,8 +1,8 @@
 {
-  "source_commit": "c1e55a2535e745d182b1f09da0cdf23fa45d7b27",
-  "production_frontend_commit": "195c5337324704a91fbf894c83f65db6dce3813b",
-  "production_generation_version": 64,
-  "scope": "Automatic editable interpretation verified; compatible generationv64 now prioritizes approved movement after actual saved-input cutoff reproduction. Two pre-fix existing Modal outputs decoded. No new GPU job; post-fix subject motion/identity/app playback and independent full sponsor journey remain unverified.",
+  "source_commit": "e58261a313b0ffc3e365c0feb06a1c6af88ab3ae",
+  "production_frontend_commit": "e58261a313b0ffc3e365c0feb06a1c6af88ab3ae",
+  "production_generation_version": 65,
+  "scope": "Automatic interpretation verified. Modal now primary/default with explicit HF fallback; controlled deployed desktop/Pixel7 policy checks and CI440 PASS. No new GPU inference or post-fix directed-motion/identity/full-sponsor-journey acceptance.",
   "private_evidence": "Transcript-bearing candidate images, Android reload screenshot containing profile text, and account/session secrets excluded from Git",
   "files": [
     {
@@ -306,9 +306,19 @@
       "sha256": "50d8cb6ff41adefdf4e511e44875db0d2f745a7a1d981c824f59fd8faa7fcd01"
     },
     {
+      "file": "modal-primary-browser.json",
+      "bytes": 2786,
+      "sha256": "eff02d67fd0843d0791bb7962f47db2b41a251081016f1eb59369563dccf06b0"
+    },
+    {
       "file": "modal-primary-policy.patch",
       "bytes": 1529,
       "sha256": "070c6c903a9ec11ef6fc9606f005c2c96290ae97ad056b25dc8b1735c2509613"
+    },
+    {
+      "file": "modal-primary-release.json",
+      "bytes": 3878,
+      "sha256": "23a2fbe86d5d84aaff78cbd7e95a31e0d486eff9f145103e59d7d49824fc9d91"
     },
     {
       "file": "modal-primary-tests.json",
@@ -459,16 +469,16 @@
   },
   "initial_source_commit": "b8baeaad49508577310044d51fb4bd31134606af",
   "initial_production_frontend_commit": "4a2ebf8bf3e9f30f0cf35442f86662bb6296da86",
-  "latest_backend_source_commit": "c1e55a2535e745d182b1f09da0cdf23fa45d7b27",
+  "latest_backend_source_commit": "e58261a313b0ffc3e365c0feb06a1c6af88ab3ae",
   "current_backend_function_versions": {
     "beatvision-world": 62,
     "beatvision-analyze-song": 44,
-    "beatvision-generation": 64,
+    "beatvision-generation": 65,
     "beatvision-style-draft": 30,
     "beatvision-song-interpretation": 6,
     "beatvision-ai-director": 3
   },
-  "production_frontend_deployment": "dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV",
+  "production_frontend_deployment": "dpl_EMshjqMjXf8fxwf3GBgfzY9wKN3Y",
   "production_analysis_version": 44,
   "production_interpretation_version": 6,
   "historical_backend_function_versions": {
@@ -480,20 +490,20 @@
     "beatvision-generation": 61
   },
   "latest_ci": {
-    "id": 39871128656,
-    "url": "https://github.com/DaddyDom8249/BeatVision/actions/runs/39871128656",
-    "commit": "c1e55a2535e745d182b1f09da0cdf23fa45d7b27",
+    "id": 39881788868,
+    "url": "https://github.com/DaddyDom8249/BeatVision/actions/runs/39881788868",
+    "head_sha": "e58261a313b0ffc3e365c0feb06a1c6af88ab3ae",
     "status": "completed",
     "conclusion": "success",
-    "tests": 435,
-    "pass": 435,
+    "tests": 440,
+    "pass": 440,
     "fail": 0,
     "skipped": 0,
-    "production_audit": "PASS",
-    "typescript_vite_build": "PASS",
-    "scope": "Repository candidate tests; exact compatibility-patched production function additionally tested3/3 locally. Not a new GPU/render acceptance.",
-    "retrieved_log_sha256": "01e4ba0fd7744ed8e14097f28ca574f7a916b3b1d72cdc2a85f3496445a887c9"
+    "audit": "PASS",
+    "build": "PASS",
+    "retrieved_log_sha256": "99a67e956f69e8d0a93870db70769e6919ad60b6f89e26f0abc32d6b8f8fa454"
   },
   "latest_live_verification": "automatic-draft-limit15-verification.json",
-  "latest_motion_investigation": "motion-output-diagnosis.json"
+  "latest_motion_investigation": "motion-output-diagnosis.json",
+  "latest_provider_policy_verification": "modal-primary-release.json"
 }

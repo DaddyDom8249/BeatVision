@@ -24,18 +24,18 @@ a sponsor journey PASS. Previous agent/PR narrative is context, not fresh proof.
   Modal transport `fbbcb3d5697f39dcdfd95e32ca77ce58dc46349b`;
   estimate labels `b8baeaad49508577310044d51fb4bd31134606af`.
 - Latest implementation head pushed to existing draft PR #141:
-  `be15931abdfec4583b2b26cc6a807b83ef41bd73`; automatic-fill implementation
+  `e58261a313b0ffc3e365c0feb06a1c6af88ab3ae`; automatic-fill implementation
   `195c5337324704a91fbf894c83f65db6dce3813b`.
 - Current production: https://beat-vision-theta.vercel.app/; Vercel
-  `dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV`, READY, exact frontend commit
-  `195c5337324704a91fbf894c83f65db6dce3813b`.
+  `dpl_EMshjqMjXf8fxwf3GBgfzY9wKN3Y`, READY, exact frontend commit
+  `e58261a313b0ffc3e365c0feb06a1c6af88ab3ae`.
 - Initial production (historical evidence): `dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT`,
   `4a2ebf8bf3e9f30f0cf35442f86662bb6296da86`.
 - Current backend: production migration bundle `20261022170451`; analyze-song v44,
-  interpretation v6, AI Director v3, World v62, Style v30, generation v64.
+  interpretation v6, AI Director v3, World v62, Style v30, generation v65.
   Latest interpretation source/live evidence is automatic-draft-limit15-verification.json.
-  Generation v64 retains the compatible controller/Modal transport and ports only
-  the existing movement-first prompt correction; modal-prompt-release.json records
+  Generation v65 retains the compatible controller/Modal transport, movement-first
+  correction and two Modal-default literals; modal-primary-release.json records
   exact patch/source/hash. Full candidate Arena controller remains configuration-blocked.
 - Supabase `mdofsinyofqbeapzfygu`: ACTIVE_HEALTHY, PostgreSQL 17.6.1.127.
 - Modal `bragoraforge-modal-motion-proof`: deployed/idle control plane and
@@ -54,7 +54,7 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| IN_PROGRESS| T09.4 requested provider policy: Modal primary/default, Hugging Face explicit fallback; retain pending-job controls, provider eligibility, spending/approval gates and existing frozen jobs. No inference.
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| T09.4 Modal primary/default and explicit HF fallback deployed; controlled desktop/Pixel7 policy checks and CI440 PASS. Mandatory financial/runtime and post-fix motion proofs remain unverified. modal-primary-release.json
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Existing owner-approved source rows and external Modal outputs observed; isolated sequential journey and authorized post-fix budgeted inference remain unverified; no agent GPU submission
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| Two existing external Modal MP4s decode49frames/2.041667s under T09.3; post-fix directed subject motion, source consistency and BragoraForge playback remain unverified
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
@@ -1696,3 +1696,41 @@ loader optionally executes the exact compatibility controller; all original
 candidate tests remain enabled. No provider call, schema or data mutation.
 Evidence: modal-primary-tests.json and modal-primary-policy.patch. Production
 frontend/function release and controlled real-browser verification pending.
+
+### T09.4 final verification — provider policy PASS
+
+TASK ID: T09.4
+Objective: Modal primary/default; HF explicit fallback without automatic retries,
+provider changes to existing jobs, approval changes or financial-gate bypass.
+Initial status: FAILED for prior HF defaults.
+Evidence inspected: modal-primary-tests.json; modal-primary-policy.patch;
+modal-primary-release.json; modal-primary-browser.json; actual retrieved function
+files and Vercel READY/alias identities; CI39881788868 logs.
+Confirmed blocker: None for the requested software policy. Real fallback GPU
+inference and improved motion are not tested; full T09 retains its recorded
+financial/runtime/execution blockers. No synthetic UI fixture is creative approval.
+Files changed: src/pages/ProductionWorkspacePage.tsx;
+supabase/functions/beatvision-generation/index.ts (two provider defaults);
+scripts/test/production-workspace.test.mjs; scripts/test/hf-motion.test.mjs;
+scripts/test/modal-motion-integration.test.mjs; scripts/test/generation-runtime.mjs;
+checklist/log/release, exact compatibility patch and sanitized evidence/manifest.
+Commit: e58261a313b0ffc3e365c0feb06a1c6af88ab3ae.
+Deployment: Vercel dpl_EMshjqMjXf8fxwf3GBgfzY9wKN3Y READY/canonical alias;
+immutable https://beat-vision-py6yftmnm-beat-vision.vercel.app/.
+Generationv65 ACTIVE, bundle
+c1798b6cf628ec6c4d15d5ce1c133d99315e53c7c3518bc9700bd36a2c810767.
+All five retrieved files byte-match tested compatibility patch; only two default
+literals changed fromv64. Full candidate Arena controller not released.
+Tests performed: focused94/94; compatibility controller38/38; full440/440,
+0 skipped,audit/TypeScript/Vite build PASS. Exact-commit CI39881788868 completed
+success440/440,audit/build PASS. Actual deployed frontend on desktop/Pixel7
+emulation with isolated controlled REST/provider responses: default Modal first,
+HF labelled Fallback, unavailable Modal sends no enqueue/automatic fallback,
+explicit HF choice sends one intercepted HF enqueue, pending Modal/HF disable
+switching and poll the original saved ID, no new enqueue, no horizontal overflow.
+No real provider or DB mutation, no approval/GPU/render; controlled responses are
+not real provider availability or subject-motion proof. No physical Android claim.
+Verification: PASS for numbered provider-policy implementation/release/browser
+acceptance. Mandatory T09 remains BLOCKED; no item IN_PROGRESS.
+Next task: Recorded artist/financial/runtime gates and separately authorized
+short-motion proof. This request did not authorize a billable GPU test.

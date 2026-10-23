@@ -1,0 +1,93 @@
+{
+  "task": "T09.4",
+  "source_commit": "e58261a313b0ffc3e365c0feb06a1c6af88ab3ae",
+  "policy": {
+    "primary": "modal",
+    "fallback": "huggingface",
+    "fallback_trigger": "Explicit user selection and Generate Motion click; never automatic",
+    "pending_job_behavior": "Provider switching disabled; Check Motion Status polls saved job ID; no new enqueue",
+    "omitted_api_provider": "modal",
+    "existing_jobs": "Existing frozen provider snapshots remain authoritative",
+    "financial_approval_gates": "Unchanged"
+  },
+  "backend": {
+    "id": "201e05ef-2dc5-456d-b96b-3741d5e1c38f",
+    "slug": "beatvision-generation",
+    "name": "beatvision-generation",
+    "status": "ACTIVE",
+    "version": 65,
+    "created_at": 1791104585020,
+    "updated_at": 1792717438399,
+    "verify_jwt": false,
+    "import_map": false,
+    "entrypoint_path": "/tmp/user_fn_mdofsinyofqbeapzfygu_201e05ef-2dc5-456d-b96b-3741d5e1c38f_65/source/index.ts",
+    "ezbr_sha256": "c1798b6cf628ec6c4d15d5ce1c133d99315e53c7c3518bc9700bd36a2c810767"
+  },
+  "backend_all_five_files_byte_match_tested_compatibility_patch": true,
+  "backend_patch": "modal-primary-policy.patch",
+  "frontend": {
+    "id": "dpl_EMshjqMjXf8fxwf3GBgfzY9wKN3Y",
+    "url": "https://beat-vision-py6yftmnm-beat-vision.vercel.app",
+    "canonical": "https://beat-vision-theta.vercel.app/",
+    "state": "READY",
+    "source_commit": "e58261a313b0ffc3e365c0feb06a1c6af88ab3ae",
+    "aliases": [
+      "beat-vision-theta.vercel.app",
+      "beat-vision-beat-vision.vercel.app",
+      "beat-vision-git-e58261a313b0ffc3e365c0feb06a-914bef-beat-vision.vercel.app"
+    ]
+  },
+  "ci": {
+    "id": 39881788868,
+    "url": "https://github.com/DaddyDom8249/BeatVision/actions/runs/39881788868",
+    "head_sha": "e58261a313b0ffc3e365c0feb06a1c6af88ab3ae",
+    "status": "completed",
+    "conclusion": "success",
+    "tests": 440,
+    "pass": 440,
+    "fail": 0,
+    "skipped": 0,
+    "audit": "PASS",
+    "build": "PASS",
+    "retrieved_log_sha256": "99a67e956f69e8d0a93870db70769e6919ad60b6f89e26f0abc32d6b8f8fa454"
+  },
+  "controlled_browser_evidence": "modal-primary-browser.json",
+  "gpu_jobs_submitted": 0,
+  "creative_approvals": 0,
+  "schema_or_secret_changes": 0,
+  "verification": "PASS for provider default/explicit fallback policy, compatibility release/source and controlled desktop/Android-emulated frontend behavior. No real fallback inference/render or new motion proof.",
+  "remaining": "Full mandatory T09 and sponsor journey remain blocked by recorded financial/runtime/creative/motion acceptance gates.",
+  "recorded_at": "2026-10-23T01:07:50.669930+00:00",
+  "file_hashes": [
+    {
+      "name": "index.ts",
+      "before_sha256": "a573748e36c65d1ed2f41d7607b73853d9a17b603eebefcf56ff66499842065c",
+      "after_sha256": "c50939e9aa2905b1ed04fe0b6985842adc0d15efc0d6947cf9059ab7b813abf7",
+      "changed": true
+    },
+    {
+      "name": "image-media.ts",
+      "before_sha256": "d9f451ac3669dfcb0082c014e7ca5a43646601024768e408cc42aebd48f1fed2",
+      "after_sha256": "d9f451ac3669dfcb0082c014e7ca5a43646601024768e408cc42aebd48f1fed2",
+      "changed": false
+    },
+    {
+      "name": "final-media.ts",
+      "before_sha256": "884f373980942826951c08afd27cd669fca77d16113453c417e1992b0832ac3f",
+      "after_sha256": "884f373980942826951c08afd27cd669fca77d16113453c417e1992b0832ac3f",
+      "changed": false
+    },
+    {
+      "name": "hf-motion.ts",
+      "before_sha256": "ffa76cae86330f10b935cf9b85629705693a5e3c5020a913159da9c54abba7fb",
+      "after_sha256": "ffa76cae86330f10b935cf9b85629705693a5e3c5020a913159da9c54abba7fb",
+      "changed": false
+    },
+    {
+      "name": "modal-motion.ts",
+      "before_sha256": "9802ab772c41511caa74713a0860f3a00ca941172cdf2bc055c97089c53d79c9",
+      "after_sha256": "9802ab772c41511caa74713a0860f3a00ca941172cdf2bc055c97089c53d79c9",
+      "changed": false
+    }
+  ]
+}
