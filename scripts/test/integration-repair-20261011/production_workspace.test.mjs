@@ -48,20 +48,21 @@ async function mountWorkspace({ motionJob = null, runError = null, stored = fals
   }));
   const approvedMotionAssets = () => approvedMotionSceneIds.map((id, index) => ({
     id: `motion-${index + 1}`, scene_id: id, status: 'approved',
-    approved: true, video_url: `https://media.test/${id}.mp4`,
+    approved: true, video_url: `https://media.test/${id}.mp4`, generation_job_id: `motion-job-${index+1}`,
   }));
 
   globalThis.__uiDb = {
     from(table) {
       const filters = {};
       const query = {
-        select() { return this; }, eq(k,v) { filters[k] = v; return this; }, order() { return this; }, limit() { return this; },
+        select() { return this; }, eq(k,v) { filters[k] = v; return this; }, in(k,v) { filters[k] = v; return this; }, order() { return this; }, limit() { return this; },
         single() { return this; }, maybeSingle() { return this; },
         then(resolve) {
           const data = table === 'visual_plans' ? { id: 'plan-1', status: 'approved', title: 'Locked plan' }
             : table === 'visual_plan_scenes' ? (filters.status ? scenes.filter(s => s.status === filters.status) : scenes)
             : table === 'scene_image_assets' ? image
             : table === 'motion_clip_assets' ? (filters.scene_id ? approvedMotionAssets().find(m => m.scene_id === filters.scene_id) ?? null : approvedMotionAssets())
+            : table === 'generation_jobs' && Array.isArray(filters.id) ? approvedMotionSceneIds.map((scene_id,i)=>({id:`motion-job-${i+1}`,visual_plan_scene_id:scene_id,status:'completed',output:{arena_status_response:{result:{verification:{container_verified:true,video_duration_seconds:10}}}}}))
             : table === 'generation_jobs' && filters.job_type === 'scene_motion' ? motionJob : null;
           return Promise.resolve({ data, error: null }).then(resolve);
         },

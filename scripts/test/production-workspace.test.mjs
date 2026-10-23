@@ -26,7 +26,7 @@ await writeFile(join(dir, 'header.mjs'), 'export default function StudioHeader()
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, imageUrlError = null, stored = false, rpcError = null, runJob = null, approvedMotionSceneIds = ['scene-1'], sceneRecord = null, modalAvailable = true } = {}) {
+async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, imageUrlError = null, stored = false, rpcError = null, runJob = null, approvedMotionSceneIds = ['scene-1'], sceneRecord = null, modalAvailable = true, approvedSeconds = 10, coverageJobs = null } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
@@ -39,13 +39,14 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
     from(table) {
       const filters = {};
       const query = {
-        select() { return this; }, eq(k,v) { filters[k] = v; return this; }, order() { return this; }, limit() { return this; },
+        select() { return this; }, eq(k,v) { filters[k] = v; return this; }, in(k,v) { filters[k] = v; return this; }, order() { return this; }, limit() { return this; },
         single() { return this; }, maybeSingle() { return this; },
         then(resolve) {
           const data = table === 'visual_plans' ? { id: 'plan-1', status: 'approved', title: 'Locked plan' }
             : table === 'visual_plan_scenes' ? [sceneRecord ?? { id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved' }]
             : table === 'scene_image_assets' ? imageAssets ?? image
-            : table === 'motion_clip_assets' ? (filters.approved === true ? approvedMotionSceneIds.map((scene_id,i)=>({id:'approved-'+i,scene_id,status:'approved',approved:true,video_url:'https://fixture.test/'+i+'.mp4'})) : motionAssets ?? motionAsset)
+            : table === 'motion_clip_assets' ? (filters.approved === true ? approvedMotionSceneIds.map((scene_id,i)=>({id:'approved-'+i,scene_id,generation_job_id:'approved-job-'+i,status:'approved',approved:true,video_url:'https://fixture.test/'+i+'.mp4'})) : motionAssets ?? motionAsset)
+            : table === 'generation_jobs' && Array.isArray(filters.id) ? coverageJobs ?? approvedMotionSceneIds.map((scene_id,i)=>({id:'approved-job-'+i,visual_plan_scene_id:scene_id,status:'completed',output:{arena_status_response:{result:{verification:{container_verified:true,video_duration_seconds:approvedSeconds}}}}}))
             : table === 'generation_jobs' && filters.id ? (historicalQueries.push({ ...filters }), historicalJob?.id === filters.id ? historicalJob : null)
             : table === 'generation_jobs' ? (filters.job_type === 'scene_motion' ? motionJob : filters.job_type === 'scene_image' ? imageJob : assemblyJob) : null;
           return Promise.resolve({ data, error: null }).then(resolve);
@@ -577,4 +578,31 @@ test('legacy recovery never links untrusted, signed, or malformed external URLs'
       assert.equal(view.button('Download Video'), undefined);
     } finally { await view.cleanup(); }
   }
+});
+
+test('approved two-second clips explain the real scene coverage shortage without enqueueing', async () => {
+  const view=await mount({approvedSeconds:2,assemblyJob:{id:'old-failure',status:'failed',error:{message:'Shotstack 400'}}});
+  try {
+    assert.equal(view.button('Assemble Final Video').disabled,true);
+    assert.match(document.body.textContent,/Scene 1 has 2\.00s of 10\.00s/);
+    assert.match(document.body.textContent,/Full-song motion needs additional approved footage and GPU resources/);
+    assert.match(document.body.textContent,/Shotstack 400/,'historical failure remains visible');
+    assert.equal(view.rpcCalls.length,0);
+    assert.equal(view.calls.filter(x=>x.action==='run'||x.action==='enqueue_ai_motion').length,0);
+  } finally {await view.cleanup();}
+});
+
+test('missing container proof cannot turn approved-clip count into full coverage', async () => {
+  const view=await mount({coverageJobs:[]});
+  try {
+    assert.equal(view.button('Assemble Final Video').disabled,true);
+    assert.match(document.body.textContent,/measured duration is unverified/i);
+    assert.equal(view.rpcCalls.length,0);
+  } finally {await view.cleanup();}
+});
+
+test('newer unrelated motion job cannot supply coverage for the approved asset', async () => {
+  const view=await mount({coverageJobs:[{id:'wrong-job',visual_plan_scene_id:'scene-1',status:'completed',output:{arena_status_response:{result:{verification:{container_verified:true,video_duration_seconds:10}}}}}]});
+  try {assert.equal(view.button('Assemble Final Video').disabled,true);assert.equal(view.rpcCalls.length,0);}
+  finally {await view.cleanup();}
 });

@@ -1586,3 +1586,32 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 - Sourcee58261a313b0ffc3e365c0feb06a1c6af88ab3ae pushed to existing draft PR141. Generationv64 baseline rechecked unchanged, then only two default literals deployed asv65 ACTIVE bundlec1798b6cf628ec6c4d15d5ce1c133d99315e53c7c3518bc9700bd36a2c810767. All five retrieved files byte-match tested compatibility patch. Prior prompt correction/controller/auth/financial guards preserved; full candidate Arena controller remains unreleased.
 - Frontend dpl_EMshjqMjXf8fxwf3GBgfzY9wKN3Y READY, canonical theta alias and immutable beat-vision-py6yftmnm-beat-vision.vercel.app. Exact source CI39881788868 completed success440/440,0 skipped,audit/build PASS. Desktop/Pixel7-emulated real deployed frontend with controlled isolated REST/provider responses verifies Modal primary default, explicit HF fallback, no automatic enqueue on unavailable Modal, exactly one intercepted enqueue after explicit HF choice and saved-ID polling/locked selector for pending Modal/HF jobs. No horizontal overflow. Fixtures are not creative approvals or real GPU/inference proof.
 - No cloud/GPU generation, customer data/media mutation, schema/secret/financial-setting change, automatic provider switch or merge. Existing frozen provider jobs/variants retained. T09.4 policy PASS; mandatory T09/full sponsor journey remain BLOCKED on recorded financial/runtime/artist and motion acceptance. No active checklist item remains. Updated checklist/release/evidence/manifest and existing PR; app is not declared sponsor-ready.
+
+
+## 2026-10-23 — T13.1a: stale assembly sources and measured coverage
+
+User screenshot reports Final assembly: Shotstack400. Read-only latest saved
+job2ee3e58d-3f4d-49b3-a836-0e2fc2fe99de and active generationv65 confirm
+frozen motion URLs are forwarded without renewal. Scene1/2/4 URLs expired
+before assembly; actual Scene1 storage GET returns400 InvalidJWT/expired.
+Arena deployed versionf3e727e0-661e-47a5-92bb-cbe0eee7deb4 probes sources
+before constructing the edit. Exact Shotstack validation body was not saved,
+so attribution of its400 to expiry is PROBABLE, not independently proven.
+Saved container measurements confirm clips1.9/2.041667s allocated to scenes
+7.8–67.6s; approved-clip count alone is insufficient timeline coverage.
+
+Small scoped repair resolves only frozen approved asset IDs, verifies matching
+project/plan/scene/completed-job lineage and exact private storage path, checks
+container-measured duration before signing/upstream, and renews private access
+at dispatch. No saved URL/asset/job/snapshot is rewritten. Frontend readiness
+uses generating-job proof, explains the genuine footage/GPU shortfall and keeps
+old provider errors visible. No loop/freeze/retime or artificial full-song output.
+
+New handler tests red0/12 then green12/12; compatible live-controller patch12/12;
+React red41/44 then44/44; focused99/99; full455/455,0 skipped; audit/build PASS.
+Existing actual local Chromium390/980px layout regression PASS; no CSS fix
+justified. Files: generation index, workspace, focused tests/fixtures/runtime
+loader, checklist and sanitized evidence. DB/schema changes:none. GPU/render
+requests:none. No automatic creative approval. Release/CI/deployed browser
+pending. Sponsor journey remains blocked by earlier explicit approvals and
+financial/runtime/post-fix motion verification; no MVP-ready claim.

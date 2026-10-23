@@ -19,8 +19,8 @@ export async function loadGeneration(client = {}, envVars = {}, sourceOverride) 
     await writeFile(join(dir, 'function.ts'), source
       .replace('import "jsr:@supabase/functions-js/edge-runtime.d.ts";', '')
       .replace('from "https://esm.sh/@supabase/supabase-js@2"', 'from "./stub.mjs"')
-      + (sourceOverride ? '\nexport { enqueueHfMotion };\n'
-        : '\nexport { validateImage, inspectApprovedImage, terminalState, persistMotionClip, persistSceneImage, assertVerifiedFreeSceneImageResponse, persistFinalVideo, poll, run, setFailed, enqueueHfMotion, hfBridgeSubmit, hfBridgePoll, motionUrl, authenticate, arenaBase, arena };\n'));
+      + (sourceOverride ? '\nexport { enqueueHfMotion, bridgePayload, run };\n'
+        : '\nexport { validateImage, inspectApprovedImage, terminalState, persistMotionClip, persistSceneImage, assertVerifiedFreeSceneImageResponse, persistFinalVideo, poll, run, setFailed, enqueueHfMotion, hfBridgeSubmit, hfBridgePoll, motionUrl, authenticate, arenaBase, arena, bridgePayload };\n'));
     const module = await import(pathToFileURL(join(dir, 'function.ts')).href);
     return { ...module, handler, cleanup: async () => { globalThis.Deno = original; delete globalThis.__generationTestClient; await rm(dir, { recursive: true, force: true }); } };
   } catch (error) { globalThis.Deno = original; await rm(dir, { recursive: true, force: true }); throw error; }

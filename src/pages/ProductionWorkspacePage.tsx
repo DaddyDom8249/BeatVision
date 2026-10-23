@@ -42,6 +42,12 @@ function productionErrorMessage(error: unknown) {
   if (message.includes("ASSEMBLY_MOTION_NOT_FULLY_APPROVED")) {
     return "Approve a real motion clip for every scene before assembling the final video.";
   }
+  if (message.includes("ASSEMBLY_CLIP_TOO_SHORT")) {
+    return message + ". The saved short clip does not cover its scene. Full-song motion needs additional approved footage and GPU resources. Existing clips remain available to review.";
+  }
+  if (message.includes("ASSEMBLY_DURATION_UNVERIFIED")) {
+    return message + ". The saved clip's measured duration is unverified. No assembly was submitted to Shotstack.";
+  }
   if (/\bHF_QUOTA_EXHAUSTED\b/.test(message)) {
     return "Hugging Face free GPU quota is exhausted. Try after the free allowance resets. No paid provider or automatic retry was used.";
   }
@@ -295,8 +301,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     let status = { ready: false, message: "Unable to verify approved motion. Assembly remains unavailable." };
     try {
       const [sceneResult, motionResult] = await Promise.all([
-        supabase.from("visual_plan_scenes").select("id,status").eq("project_id", projectId).eq("visual_plan_id", planId),
-        supabase.from("motion_clip_assets").select("id,scene_id,status,approved,video_url").eq("project_id", projectId).eq("visual_plan_id", planId).eq("status", "approved").eq("approved", true),
+        supabase.from("visual_plan_scenes").select("id,status,scene_number,start_time,end_time").eq("project_id", projectId).eq("visual_plan_id", planId),
+        supabase.from("motion_clip_assets").select("id,scene_id,generation_job_id,status,approved,video_url").eq("project_id", projectId).eq("visual_plan_id", planId).eq("status", "approved").eq("approved", true),
       ]);
       if (sceneResult.error) throw sceneResult.error;
       if (motionResult.error) throw motionResult.error;
@@ -318,6 +324,31 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
           : { ready: approved.length === allScenes.length, message: "All scene motion is approved. Final assembly is available." };
         if (!remaining && approved.length !== allScenes.length)
           status = { ready: false, message: "Motion approval records are inconsistent. Final assembly is unavailable." };
+        if (status.ready) {
+          const jobIds = approved.map(clip => clip.generation_job_id).filter(Boolean);
+          const sources = jobIds.length ? await supabase.from("generation_jobs")
+            .select("id,visual_plan_scene_id,status,output").eq("project_id", projectId)
+            .eq("visual_plan_id", planId).eq("job_type", "scene_motion")
+            .eq("status", "completed").in("id", jobIds) : { data: [], error: null };
+          if (sources.error) throw sources.error;
+          for (const item of allScenes) {
+            const clip = approved.find(asset => asset.scene_id === item.id);
+            const source = sources.data?.find(candidate => candidate.id === clip?.generation_job_id &&
+              candidate.visual_plan_scene_id === item.id && candidate.status === "completed");
+            const proof = source?.output?.arena_status_response?.result?.verification;
+            const actual = Number(proof?.video_duration_seconds);
+            const required = Number(item.end_time) - Number(item.start_time);
+            if (proof?.container_verified !== true || !Number.isFinite(actual) || actual <= 0 ||
+                !Number.isFinite(required) || required <= 0) {
+              status = { ready: false, message: "An approved clip's measured duration is unverified. Final assembly is unavailable until its saved media is verified." };
+              break;
+            }
+            if (actual + 0.05 < required) {
+              status = { ready: false, message: "Scene " + item.scene_number + " has " + actual.toFixed(2) + "s of " + required.toFixed(2) + "s. Full-song motion needs additional approved footage and GPU resources. Your short clips remain available to review." };
+              break;
+            }
+          }
+        }
       }
     } catch (reason) {
       status = { ready: false, message: "Could not check approved motion: " + productionErrorMessage(reason) };

@@ -2,9 +2,24 @@
   "source_commit": "e58261a313b0ffc3e365c0feb06a1c6af88ab3ae",
   "production_frontend_commit": "e58261a313b0ffc3e365c0feb06a1c6af88ab3ae",
   "production_generation_version": 65,
-  "scope": "Automatic interpretation verified. Modal now primary/default with explicit HF fallback; controlled deployed desktop/Pixel7 policy checks and CI440 PASS. No new GPU inference or post-fix directed-motion/identity/full-sponsor-journey acceptance.",
+  "scope": "Automatic interpretation and Modal primary policy retained. T13.1a assembly access/coverage correction: offline455/455, audit/build PASS; deployment pending. No new provider generation or full journey claim.",
   "private_evidence": "Transcript-bearing candidate images, Android reload screenshot containing profile text, and account/session secrets excluded from Git",
   "files": [
+    {
+      "file": "assembly-dispatch.patch",
+      "bytes": 6001,
+      "sha256": "855a3bbaeecd39a2a64bfcfac225df3ae93dd08664c5921bd78984985d96ea5a"
+    },
+    {
+      "file": "assembly-input-investigation.json",
+      "bytes": 4197,
+      "sha256": "11550c5b93ffaaa59043dff70343df2b5fcf1d693438f355b77a605a150c3f86"
+    },
+    {
+      "file": "assembly-repair-tests.json",
+      "bytes": 2285,
+      "sha256": "ecd753fa4d4546570f175bfe85d20ddc8d5bdd2b2712d82f20f49562f4192e11"
+    },
     {
       "file": "audio-fixture.json",
       "bytes": 540,

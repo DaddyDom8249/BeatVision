@@ -58,7 +58,7 @@ T09| Verify Modal configuration, authentication, and GPU spending safeguards| T0
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Existing owner-approved source rows and external Modal outputs observed; isolated sequential journey and authorized post-fix budgeted inference remain unverified; no agent GPU submission
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| Two existing external Modal MP4s decode49frames/2.041667s under T09.3; post-fix directed subject motion, source consistency and BragoraForge playback remain unverified
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
-T13| Run complete sponsor-journey regression testing| T02–T12| BLOCKED| Intake and partial local DSP tested; T04–T12 prevent sequential journey
+T13| Run complete sponsor-journey regression testing| T02–T12| IN_PROGRESS| T13.1 scoped read-only diagnosis/fix of user-reported existing final assembly Shotstack400; inspect mobile layout. No new assembly/GPU submission or full-length experiment; full sequential acceptance still blocked.
 T14| Deliver verified sponsor demo URL, evidence, and remaining funding requirements| T13| BLOCKED| Production/immutable URLs, PR and evidence delivered; fully verified sponsor demo and motion proof blocked by T04–T13
 
 ## Task records
@@ -1734,3 +1734,70 @@ Verification: PASS for numbered provider-policy implementation/release/browser
 acceptance. Mandatory T09 remains BLOCKED; no item IN_PROGRESS.
 Next task: Recorded artist/financial/runtime gates and separately authorized
 short-motion proof. This request did not authorize a billable GPU test.
+
+### T13.1 — Reported final assembly Shotstack400 / mobile workspace
+
+TASK ID: T13 (sole IN_PROGRESS item).
+Objective: Diagnose the actual saved assembly error shown in screenshot1000088138,
+correct a confirmed input/integration defect if safely available, and verify the
+reported workspace viewport without guessing a CSS cause. This is a user-reported
+existing-journey regression investigation; blocked earlier stages do not authorize
+new full-length rendering or synthetic creative approvals.
+Initial status: FAILED for three real saved assembly jobs (02:00–02:02UTC) in
+project534adf58-b9a3-4f5f-bb92-eaeb5aea0833. Latest2ee3e58d-3f4d-49b3-a836-
+0e2fc2fe99de preserves opaque Shotstack400/provider_error, eight scenes/eight clips.
+Evidence inspected: Screenshot; readonly latest job/error/frozen input;
+BeatVision bridgePayload and existing assembly guards. Provider validation details
+are absent from persisted error. No new submission, retry or customer mutation.
+Confirmed blocker/hypothesis: Need the exact request/adapter contract and saved
+media durations before attributing the400 to JSON schema, source authorization or
+insufficient scene coverage. Existing motion proof does not establish full-song
+coverage. Mobile screenshot looks wide; desktop-mode/viewport/CSS cause UNKNOWN.
+Required files: existing generation/assembly adapter, relevant UI/CSS and tests
+only if evidence confirms a defect; task/log/sanitized evidence. Read existing
+BeatVision-arena source if it owns Shotstack request construction. No new service,
+model, architecture, schema or inference. Record exact files before implementation.
+Commit: base372f4a123e7ac68d338351054114facb0b1351cc; deployment identity to verify.
+Verification: pending bounded source/request/metadata and frontend inspection;
+use non-billable offline contract/browser checks. Do not repeat the three failed
+assembly submissions or submit any four-minute render for this investigation.
+Next task: Complete numbered defect verification or precise external blocker;
+full T13/T14 acceptance retains all earlier mandatory dependencies.
+
+### T13.1a — Renew frozen clip access and reject uncovered timeline
+
+Before source changes: CONFIRMED expired-input defect. Frozen Scene1/2/4
+Supabase URLs expired at00:03UTC, before latest assembly02:02UTC. Read-only
+GET of Scene1 returns400 InvalidJWT, exp timestamp check failed. Existing
+bridgePayload renews song audio only and forwards old motion URLs unchanged.
+Shotstack source probing is the first provider call; its full error body was
+not preserved, so exact provider validation reason remains UNKNOWN.
+CONFIRMED second defect: approved-clip count is treated as full coverage.
+Saved container verification shows Modal2.041667s, HF1.9s for scenes7.8–67.6s;
+UI/dispatch must require sufficient measured coverage rather than forward an
+impossible full-song assembly. No freeze/loop/retime substitute is authorized.
+Required files: supabase/functions/beatvision-generation/index.ts (renew
+exact frozen asset via owner/plan/scene/job lineage and safe storage path,
+check saved container measurements before provider dispatch);
+src/pages/ProductionWorkspacePage.tsx (same measured readiness and clear
+short-demo/full-length resource explanation); focused regression fixtures/tests;
+checklist/log/evidence. Live compatible controller receives only this scoped
+assembly change, preserving its unrelated functions and helpers byte for byte.
+Expected: expired private links renewed at dispatch for the same frozen asset;
+missing/untrusted provenance or short/unknown coverage fails before upstream;
+no asset edits, new approvals, regeneration or new model/provider.
+Verification: real handler/React tests with controlled expired URLs, incorrect
+lineage/path, signing failure and insufficient duration; full regression/audit/
+build/CI; read-only deployment parity and desktop/mobile controlled browser.
+No new assembly/GPU submission and no four-minute experiment. Base372f4a123e7ac68d338351054114facb0b1351cc, live generationv65.
+
+T13.1a implementation evidence:12/12 new actual-handler regressions fail before
+repair and pass after; exact compatiblev65 plus assembly-only patch12/12 PASS.
+New actual React regressions reproduce3 readiness failures, then44/44 PASS.
+Focused99/99; full455/455,0 skipped; production audit/TypeScript/Vite build PASS.
+Actual local Chromium CSS test390/980px PASS, no CSS edit justified. Historical
+Shotstack400 remains visible; readiness now explains the actual shortfall and
+GPU/approved-footage requirement. Approved variants, frozen inputs, prior jobs
+and all provider defaults remain intact. No schema or production data writes.
+Evidence: assembly-input-investigation.json, assembly-repair-tests.json,
+assembly-dispatch.patch. Exact scoped deployment, CI and deployed browser pending.

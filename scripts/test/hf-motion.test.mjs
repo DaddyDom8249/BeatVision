@@ -372,7 +372,7 @@ test('free Shotstack sandbox assembly passes controller cost guard without openi
       song: { id: 'song-1', title: 'Test', artist: 'Test', analysis: { duration_seconds: 8, analysis_method: 'browser_audio_decode' } },
       world: { id: 'world-1' }, style_bible: { id: 'style-1' }, revision_number: 1,
     },
-    scenes: [{ scene_number: 1, start_time: 0, end_time: 8 }],
+    scenes: [{ id: 'scene-1', scene_number: 1, start_time: 0, end_time: 8 }],
     motion_clips: [{ scene: 1, asset_id: 'approved-clip-1', video_url: 'https://existing.example.test/clip.mp4' }],
     audio_path: 'song-1/audio.wav',
   };
@@ -381,19 +381,27 @@ test('free Shotstack sandbox assembly passes controller cost guard without openi
     attempts: 0, input_snapshot: snapshot, output: {} };
   const db = {
     storage: { from(bucket) {
-      assert.equal(bucket, 'songs');
-      return { createSignedUrl: async () => ({ data: { signedUrl: 'https://private.example.test/song.wav' }, error: null }) };
+      assert.ok(['songs','visual-assets'].includes(bucket));
+      return { createSignedUrl: async () => ({ data: { signedUrl: 'https://private.example.test/'+bucket }, error: null }) };
     } },
     from(table) {
+      if (table === 'motion_clip_assets') return {
+        select() { return this; }, eq() { return this; }, in() { return this; },
+        then(resolve) { return Promise.resolve({data:[{id:'approved-clip-1',project_id:'project-1',visual_plan_id:'plan-1',scene_id:'scene-1',generation_job_id:'motion-job',approved:true,status:'approved'}]}).then(resolve); },
+      };
       assert.equal(table, 'generation_jobs');
       let changes = null;
+      let lookupIds = null;
       const apply = () => { if (changes) job = { ...job, ...changes }; return job; };
       return {
         update(next) { changes = next; return this; },
-        select() { return this; }, eq() { return this; }, in() { return this; },
+        select() { return this; }, eq() { return this; }, in(k,v) { lookupIds=v; return this; },
         async maybeSingle() { return { data: apply(), error: null }; },
         async single() { return { data: apply(), error: null }; },
-        then(resolve) { apply(); return Promise.resolve({ data: [{ id: job.id }], error: null }).then(resolve); },
+        then(resolve) {
+          if (lookupIds?.includes('motion-job')) return Promise.resolve({data:[{id:'motion-job',project_id:'project-1',visual_plan_id:'plan-1',visual_plan_scene_id:'scene-1',job_type:'scene_motion',status:'completed',output:{arena_status_response:{result:{storage_path:'project-1/scene-motion/plan-1/scene-1/motion-job.mp4',verification:{container_verified:true,video_duration_seconds:8}}}}}]}).then(resolve);
+          apply(); return Promise.resolve({ data: [{ id: job.id }], error: null }).then(resolve);
+        },
       };
     },
   };

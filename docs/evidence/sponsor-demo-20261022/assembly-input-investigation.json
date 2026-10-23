@@ -1,0 +1,122 @@
+{
+  "classification": "CONFIRMED",
+  "task": "T13.1a",
+  "base_commit": "372f4a123e7ac68d338351054114facb0b1351cc",
+  "live_generation_before": {
+    "version": 65,
+    "bundle_sha256": "c1798b6cf628ec6c4d15d5ce1c133d99315e53c7c3518bc9700bd36a2c810767"
+  },
+  "arena_source_commit": "cbf4cbcb0a4b8c51d02adc9b67dbc5b4adc5615b",
+  "arena_deployment": "dbfa612c-b176-4839-a50f-066a7e246144",
+  "arena_version": "f3e727e0-661e-47a5-92bb-cbe0eee7deb4",
+  "job_id": "2ee3e58d-3f4d-49b3-a836-0e2fc2fe99de",
+  "project_id": "534adf58-b9a3-4f5f-bb92-eaeb5aea0833",
+  "job_created_at": "2026-10-23T02:02:48.427415Z",
+  "saved_error": {
+    "code": "ARENA_GENERATION_FAILED",
+    "message": "Shotstack 400",
+    "provider": "shotstack",
+    "status": "provider_error"
+  },
+  "provider_validation_body": "UNKNOWN: not persisted; no render resubmission authorized",
+  "expired_clip_scenes": [
+    1,
+    2,
+    4
+  ],
+  "expired_link_get": {
+    "http_status": 400,
+    "error": "InvalidJWT",
+    "message": "\"exp\" claim timestamp check failed"
+  },
+  "clips": [
+    {
+      "scene": 1,
+      "asset_id": "927d0e4d-4428-4c02-be8d-73a5dcf641e7",
+      "job_id": "9eccb1bd-addd-456b-81ef-bd3bab2974f2",
+      "provider": "modal",
+      "required_duration_seconds": 7.799979166666667,
+      "container_verified": true,
+      "measured_duration_seconds": 2.0416666666666665,
+      "subject_motion_verified": false
+    },
+    {
+      "scene": 2,
+      "asset_id": "e818e3d9-5179-4f8e-8bd2-ff6ea1a10c84",
+      "job_id": "8fc3f4f5-96fb-40f3-9dd2-3d4788c6818c",
+      "provider": "modal",
+      "required_duration_seconds": 46.8,
+      "container_verified": true,
+      "measured_duration_seconds": 2.0416666666666665,
+      "subject_motion_verified": false
+    },
+    {
+      "scene": 3,
+      "asset_id": "4fc6664a-575c-4cb2-ace6-ed31b72094ef",
+      "job_id": "4903adce-3ebb-434a-89b7-94f040b18359",
+      "provider": "huggingface-zerogpu",
+      "required_duration_seconds": 26.000000000000007,
+      "container_verified": true,
+      "measured_duration_seconds": 1.9,
+      "subject_motion_verified": false
+    },
+    {
+      "scene": 4,
+      "asset_id": "30d81dc0-19c5-4a65-8a3d-44d27fc5da9b",
+      "job_id": "f5de81d1-6be5-434b-a47f-7a742782e271",
+      "provider": "huggingface-zerogpu",
+      "required_duration_seconds": 67.60000000000001,
+      "container_verified": true,
+      "measured_duration_seconds": 1.9,
+      "subject_motion_verified": false
+    },
+    {
+      "scene": 5,
+      "asset_id": "fa7a18f4-f4da-4cea-84e9-7b6d096cf7df",
+      "job_id": "d74245c1-fa8b-4be0-b632-31daace032f2",
+      "provider": "modal",
+      "required_duration_seconds": 23.399999999999977,
+      "container_verified": true,
+      "measured_duration_seconds": 2.0416666666666665,
+      "subject_motion_verified": false
+    },
+    {
+      "scene": 6,
+      "asset_id": "9f6b8c14-7ea3-4a7f-b545-35d0c41c8d56",
+      "job_id": "1bab7b9f-ca9e-4626-9df7-d2852192cefa",
+      "provider": "huggingface-zerogpu",
+      "required_duration_seconds": 33.80000000000001,
+      "container_verified": true,
+      "measured_duration_seconds": 1.9,
+      "subject_motion_verified": false
+    },
+    {
+      "scene": 7,
+      "asset_id": "b28edd34-8590-439b-bdcf-a055994e86e0",
+      "job_id": "5dba3345-60bf-4893-8215-6ec9372b27ea",
+      "provider": "huggingface-zerogpu",
+      "required_duration_seconds": 20.80000000000001,
+      "container_verified": true,
+      "measured_duration_seconds": 1.9,
+      "subject_motion_verified": false
+    },
+    {
+      "scene": 8,
+      "asset_id": "62a43d13-c340-4fe5-89a7-0c87650631b3",
+      "job_id": "24eb9c99-8a55-4493-ab24-ac11ace73675",
+      "provider": "huggingface-zerogpu",
+      "required_duration_seconds": 23.399999999999977,
+      "container_verified": true,
+      "measured_duration_seconds": 1.9,
+      "subject_motion_verified": false
+    }
+  ],
+  "constraints": {
+    "new_gpu_jobs": 0,
+    "new_assembly_jobs": 0,
+    "creative_approvals": 0,
+    "database_schema_changes": 0,
+    "customer_asset_mutations": 0
+  },
+  "root_cause_boundary": "Expired source access and insufficient measured coverage confirmed. Exact Shotstack 400 validation reason remains UNKNOWN."
+}
