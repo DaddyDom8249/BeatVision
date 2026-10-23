@@ -24,19 +24,20 @@ a sponsor journey PASS. Previous agent/PR narrative is context, not fresh proof.
   Modal transport `fbbcb3d5697f39dcdfd95e32ca77ce58dc46349b`;
   estimate labels `b8baeaad49508577310044d51fb4bd31134606af`.
 - Latest implementation head pushed to existing draft PR #141:
-  `e58261a313b0ffc3e365c0feb06a1c6af88ab3ae`; automatic-fill implementation
+  `0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c`; automatic-fill implementation
   `195c5337324704a91fbf894c83f65db6dce3813b`.
 - Current production: https://beat-vision-theta.vercel.app/; Vercel
-  `dpl_EMshjqMjXf8fxwf3GBgfzY9wKN3Y`, READY, exact frontend commit
-  `e58261a313b0ffc3e365c0feb06a1c6af88ab3ae`.
+  `dpl_4CVPYRJ2yeKDJ4qbKxLo5XEvDSwL`, READY, exact frontend commit
+  `0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c`.
 - Initial production (historical evidence): `dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT`,
   `4a2ebf8bf3e9f30f0cf35442f86662bb6296da86`.
 - Current backend: production migration bundle `20261022170451`; analyze-song v44,
-  interpretation v6, AI Director v3, World v62, Style v30, generation v65.
+  interpretation v6, AI Director v3, World v62, Style v30, generation v66.
   Latest interpretation source/live evidence is automatic-draft-limit15-verification.json.
-  Generation v65 retains the compatible controller/Modal transport, movement-first
-  correction and two Modal-default literals; modal-primary-release.json records
-  exact patch/source/hash. Full candidate Arena controller remains configuration-blocked.
+  Generation v66 retains the compatible controller/Modal transport, movement-first
+  correction and Modal defaults, adding scoped assembly media renewal/measurement
+  checks. assembly-repair-release.json records exact patch/source/hash.
+  Full candidate Arena controller remains configuration-blocked.
 - Supabase `mdofsinyofqbeapzfygu`: ACTIVE_HEALTHY, PostgreSQL 17.6.1.127.
 - Modal `bragoraforge-modal-motion-proof`: deployed/idle control plane and
   billed$0.00 verified in modal-control-plane-verified.json; loaded model/GPU
@@ -58,7 +59,7 @@ T09| Verify Modal configuration, authentication, and GPU spending safeguards| T0
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Existing owner-approved source rows and external Modal outputs observed; isolated sequential journey and authorized post-fix budgeted inference remain unverified; no agent GPU submission
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| Two existing external Modal MP4s decode49frames/2.041667s under T09.3; post-fix directed subject motion, source consistency and BragoraForge playback remain unverified
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
-T13| Run complete sponsor-journey regression testing| T02–T12| IN_PROGRESS| T13.1 scoped read-only diagnosis/fix of user-reported existing final assembly Shotstack400; inspect mobile layout. No new assembly/GPU submission or full-length experiment; full sequential acceptance still blocked.
+T13| Run complete sponsor-journey regression testing| T02–T12| BLOCKED| T13.1a scoped assembly access/coverage repair deployed; CI455 PASS, controlled deployed desktop/Android viewports PASS. Full sequential journey requires T04–T12; actual footage is1.9–2.04s per7.8–67.6s scene. No new render/GPU job. assembly-repair-release.json
 T14| Deliver verified sponsor demo URL, evidence, and remaining funding requirements| T13| BLOCKED| Production/immutable URLs, PR and evidence delivered; fully verified sponsor demo and motion proof blocked by T04–T13
 
 ## Task records
@@ -1801,3 +1802,48 @@ GPU/approved-footage requirement. Approved variants, frozen inputs, prior jobs
 and all provider defaults remain intact. No schema or production data writes.
 Evidence: assembly-input-investigation.json, assembly-repair-tests.json,
 assembly-dispatch.patch. Exact scoped deployment, CI and deployed browser pending.
+
+### T13.1a final verification — scoped repair PASS, full journey BLOCKED
+
+TASK ID: T13.1a (under T13; no main item IN_PROGRESS).
+Objective: Renew frozen private motion access at dispatch and reject actual
+coverage shortages before provider request; expose honest workspace readiness.
+Initial status: FAILED.
+Evidence inspected: assembly-input-investigation.json, assembly-dispatch.patch,
+assembly-repair-tests.json, assembly-repair-release.json and
+assembly-repair-browser.json; exact-source CI39889027957 logs; retrieved live
+function files and canonical Vercel READY/alias identity.
+Confirmed blocker: No remaining blocker for scoped software repair. Exact
+Shotstack400 validation response was not persisted and remains UNKNOWN. Current
+approved footage1.9–2.041667s cannot cover7.8–67.6s scenes; full-song rendering
+was not attempted. A source-access repair does not prove a successful render.
+Files changed: supabase/functions/beatvision-generation/index.ts;
+src/pages/ProductionWorkspacePage.tsx; scripts/test/assembly-media.test.mjs;
+scripts/test/generation-runtime.mjs; scripts/test/hf-motion.test.mjs;
+scripts/test/production-workspace.test.mjs;
+scripts/test/integration-repair-20261011/production_workspace.test.mjs;
+scripts/test/wan-assembly-gates.test.mjs; checklist/log/release/evidence/manifest.
+Commit: 0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c.
+Deployment: Vercel dpl_4CVPYRJ2yeKDJ4qbKxLo5XEvDSwL READY, canonical alias;
+immutable https://beat-vision-dz2o7tp9v-beat-vision.vercel.app/.
+Generationv66 ACTIVE, bundle
+c2362dfab4a95b54cbf56ce136be7c7494de89f7e4bcd5d9e4e81ebf1b43776f.
+All5 files match tested compatible release;4 dependencies and unrelated
+controller code byte-preserved. No full candidate controller deployment.
+Tests performed:12 new backend regressions red0/12 then green12/12; compatible
+controller12/12; real React new failures red41/44 then44/44; focused99/99; full
+455/455,0 skipped,audit/build PASS. Exact-source CI39889027957 completed success
+455/455,audit/build PASS; PG replay39889027960 and offline Modal39889028050
+completed success. Anonymous live POST remains401 with exact production CORS.
+Controlled deployed actual frontend: desktop1440px, Pixel7 emulation393px, mobile
+591px and desktop-mode980px; short footage disables assembly with measured
+shortfall/resource explanation; absent proof disables; adequate measured
+coverage enables. Old Shotstack400 is preserved. No assembly clicks/provider
+POSTs/DB mutations; no new approval/GPU/render. All viewports have zero horizontal
+overflow;390/980px local CSS test also PASS. No physical-Android or customer
+render/playback claim, no CSS edit.
+Verification: PASS for T13.1a implementation/release/controlled UI. Main T13
+BLOCKED by mandatory T04–T12 and complete sequential sponsor acceptance.
+Next task: External artist/financial/runtime gates, followed by a separately
+authorized bounded short-motion proof. T14 remains BLOCKED. No safe independent
+checklist task remains executable without those dependencies.

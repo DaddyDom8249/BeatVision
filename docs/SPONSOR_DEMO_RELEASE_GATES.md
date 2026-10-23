@@ -27,9 +27,9 @@ The preceding503 and its unknown downstream cause remain recorded in
 
 ## Released and verified
 
-Frontend: `e58261a313b0ffc3e365c0feb06a1c6af88ab3ae`, Vercel
-`dpl_EMshjqMjXf8fxwf3GBgfzY9wKN3Y`, READY with the original production alias.
-Immutable release URL: https://beat-vision-py6yftmnm-beat-vision.vercel.app/.
+Frontend: `0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c`, Vercel
+`dpl_4CVPYRJ2yeKDJ4qbKxLo5XEvDSwL`, READY with the original production alias.
+Immutable release URL: https://beat-vision-dz2o7tp9v-beat-vision.vercel.app/.
 Existing draft PR: https://github.com/DaddyDom8249/BeatVision/pull/141.
 The user authorized this reviewed release with “Do it”; no main merge occurred.
 
@@ -49,10 +49,11 @@ through the real frontend; those earlier counts describe the release transaction
 No customer content, audio, approved worlds or assets were overwritten.
 
 Functions (current API inventory): analyze-song v44, song-interpretation v6,
-AI Director v3, World v62, Style v30. Generation v65 retains the compatible
-production controller/Modal transport and movement-first prompt correction, with
-Modal as the default provider. Only two default literals changed fromv64;
-other controller text/dependencies byte-match priorv64.
+AI Director v3, World v62, Style v30. Generation v66 retains the compatible
+production controller/Modal transport, movement-first prompt and Modal default.
+It adds only the scoped assembly-access/coverage repair overv65; four dependencies
+and unrelated controller code byte-matchv65. See
+[assembly receipt](evidence/sponsor-demo-20261022/assembly-repair-release.json).
 The full candidate Arena controller
 is not released: candidate v60's read-only runtime preflight returned false for
 Arena, verified transcription and interpretation-proposal prerequisites.
@@ -76,10 +77,12 @@ Pixel7 reloads retain AIv2; prior manualv1 remains in history. Instrumental QA
 proves provider integration, not sung-lyric accuracy. No creative confirmation
 or motion is claimed. Physical Android browser testing remains unverified.
 
-Latest source CI [39881788868](https://github.com/DaddyDom8249/BeatVision/actions/runs/39881788868)
-PASS at `e58261a313b0ffc3e365c0feb06a1c6af88ab3ae`:440/440, zero skipped,
-audit/build PASS. Exact compatibility controller38/38 offline PASS. Controlled
-deployed desktop/Pixel7 policy checks PASS; no GPU/render test. Earlier automatic-fill frontend CI39861322151 PASS at195c533:431/431,
+Latest source CI [39889027957](https://github.com/DaddyDom8249/BeatVision/actions/runs/39889027957)
+PASS at `0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c`:455/455, zero skipped,
+audit/build PASS. Assembly compatibility controller12/12 offline PASS. Controlled
+deployed desktop/Pixel7/591px/980px readiness/layout checks PASS; no GPU/render
+test. Earlier Modal-default policy CI39881788868 passed440/440 at e58261a.
+ Earlier automatic-fill frontend CI39861322151 PASS at195c533:431/431,
 audit/build PASS. Earlier release CI
 39821652295 passed416/416 at its historical frontend identity.
 Modal offline [39821652417](https://github.com/DaddyDom8249/BeatVision/actions/runs/39821652417)
@@ -398,3 +401,21 @@ pending-job controls and no horizontal overflow. This does not prove live
 fallback inference or improved animation; no real provider call or DB mutation.
 No new motion GPU job, resource, schema, financial setting or creative approval.
 The mandatory artist/financial/runtime/motion acceptance gates remain BLOCKED.
+
+## Reported assembly failure and test access
+
+Open https://beat-vision-theta.vercel.app/auth, sign in to your existing account,
+open the project and Workspace. Use the canonical URL for backend access; the
+immutable URL above identifies this frontend release. QA credentials/session
+secrets are private and excluded from Git. No password/token is needed in chat.
+
+Expired private motion links are now renewed at dispatch for the exact frozen
+asset. Saved container measurements, ownership/lineage and storage path are
+checked before provider submission. Current reported project has1.9–2.041667s
+clips for7.8–67.6s scenes; its full-song readiness explains the actual footage/GPU
+shortfall and keeps the old Shotstack400 visible. Exact provider400 validation
+body was never saved and remains UNKNOWN; no new render proves it resolved.
+Short demos remain the scope before sponsorship. Full-song production still
+needs additional genuine approved motion coverage, continuity/assembly work
+and measured GPU/credit capacity; the precise cost is UNKNOWN. No loops/freezes
+or fabricated four-minute output count as full-song subject motion.

@@ -61,6 +61,7 @@
     "physical_android": "UNKNOWN",
     "css_changes": 0
   },
-  "source_commit": "pending focused implementation commit",
-  "deployed_browser": "pending"
+  "source_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
+  "deployed_browser": "PASS: four controlled deployed viewports, see assembly-repair-browser.json",
+  "ci_log_sha256": "904e74ea1c6106e1c55032ec5b06fbf1e33761fcfd12dbac72692e2b14ed12c0"
 }

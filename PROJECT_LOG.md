@@ -1615,3 +1615,19 @@ loader, checklist and sanitized evidence. DB/schema changes:none. GPU/render
 requests:none. No automatic creative approval. Release/CI/deployed browser
 pending. Sponsor journey remains blocked by earlier explicit approvals and
 financial/runtime/post-fix motion verification; no MVP-ready claim.
+
+
+T13.1a release verified at0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c: CI
+39889027957 success455/455,0 skipped,audit/build PASS; PG39889027960 and
+offline Modal39889028050 success. Generationv66 ACTIVE bundle
+c2362dfab4a95b54cbf56ce136be7c7494de89f7e4bcd5d9e4e81ebf1b43776f;
+all5 retrieved files match tested compatibility patch. Live anonymous401 and
+production CORS retained. Vercel dpl_4CVPYRJ2yeKDJ4qbKxLo5XEvDSwL READY
+with canonical alias and exact source; immutable
+https://beat-vision-dz2o7tp9v-beat-vision.vercel.app/. Actual deployed frontend
+controlled read-only fixtures pass desktop1440, Pixel7/393, mobile591 and
+desktop-mode980px: short/unknown coverage disabled, sufficient measurement
+enabled, historical400 visible, no horizontal overflow. Provider submissions,
+assembly clicks, DB writes and creative approvals:0. No CSS change warranted.
+Full mandatory sponsor journey remains BLOCKED, no new inference/render or
+physical-Android/customer playback claim. PR141 remains draft/unmerged.
