@@ -459,3 +459,14 @@ an exclusive durable receipt prevents another launch. No production/default
 change, new persistent service, customer mutation or automatic creative approval.
 See [authorization and queue evidence](evidence/sponsor-demo-20261022/modal-quality-trial-authorization.json).
 The actual trial result and all mandatory sponsor acceptance gates remain blocked.
+
+Latest approval update (2026-10-23T14:50 UTC): At the owner's resend request,
+the expired input link was refreshed without another upload. Batchd80f5ea5 ran
+but failed on ModuleNotFoundError before app initialization. Its durable receipt
+confirms spawn_attempts=0 and no call/app ID; billing/profile/hash/idle checks
+passed. Conditional recovery batch1f0c166a-c611-474d-9025-54647b9f08d2 is now
+the actionable Termux approval. It confirms the exact missing module first,
+installs pinned binary Pillow11.3.0 only if PIL is missing, then permits only the
+original first invocation after zero-submission and source-integrity guards.
+Other missing modules stop without GPU. No additional inference authorization,
+automatic GPU retry, production release or creative approval. Quality UNKNOWN.

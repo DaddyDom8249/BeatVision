@@ -55,7 +55,7 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Owner Ok/Yes authorizes one credits-only trial and attests usable credits/$0hard paid-spend cap. At owner's resend request, refreshed Termux batchd80f5ea5-90f7-4870-9425-6ea4ace66fc5 queued for device approval; phone online. Prior batch's input link expired. Same exclusive receipt, no GPU call confirmed. modal-quality-trial-authorization.json
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Refreshed batchd80f5ea5 ran/exit2; hash/profile/idle/billing checks PASS, then ModuleNotFoundError before app initialization. Receipt confirms zero GPU submissions. Guarded local-import recovery1f0c166a-c611-474d-9025-54647b9f08d2 queued for device approval; same single-test authorization. modal-quality-trial-authorization.json
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Existing owner-approved source rows and external Modal outputs observed; isolated sequential journey and authorized post-fix budgeted inference remain unverified; no agent GPU submission
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| T09.5 attached Modal/HF MP4s fully decode and play actual bytes in controlled deployed desktop/Pixel7 UI. Modal quality rejected; strict action/identity, owner-storage journey and T10 remain unverified. attached-motion-quality-diagnosis.json
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
@@ -2210,3 +2210,41 @@ approval Required on phone. This supersedes the expired-input entry, not another
 inference authorization. Tests: Python AST parse PASS; exact bundle hash PASS.
 Verification: BLOCKED pending device approval/result; GPU submission UNKNOWN.
 Next task: T09; inspect only the refreshed entry and its same-trial call receipt.
+
+### T09.5c1 — Local import failure before first GPU submission
+
+TASK ID: T09 (sole IN_PROGRESS item).
+Objective: Resolve the confirmed local import exception without repeating a GPU
+submission or changing candidate/model/approved direction.
+Initial status: FAILED preflight, not failed model inference.
+Evidence inspected: exact refreshed Termux batchd80f5ea5 exit2; durable receipt
+created14:44:46, preflight_pass14:44:58, followed by ModuleNotFoundError.
+spawn_attempts=0, last_known_call_id=null, no transient_app_id. Exact3 candidate
+hashes,source/seed,SDK/profile and production idle check passed;$0billed before.
+Confirmed blocker: local worker import fails before app.run. Precise missing
+module was not retained by the first launcher. PROBABLE PIL: media.py imports
+Pillow at module scope, while phone virtualenv is only known to contain Modal.
+Required files: private guarded recovery command, existing phone scratch receipt,
+candidate/request/source, and narrowly scoped pinned local Pillow installation
+only if a repeated non-GPU import confirms the missing module is PIL.
+Expected outcome: record exact module first; if PIL, install only binary
+Pillow11.3.0 with no dependencies/build. Otherwise stop without GPU. Reuse same
+trial receipt, record exclusive recovery claim, require zero prior spawn/call/app,
+then allow only the originally authorized first GPU call. No deletion of receipt,
+no reset of submission count and no automatic inference retry.
+Verification method: import diagnostic, unchanged candidate hashes, profile/idle
+guard; immediate durable call ID after single spawn; same output checks/cleanup.
+Application files/deployment/financial settings remain unchanged. Next: prepare
+one reviewable conditional recovery batch; device approval remains external.
+
+T09.5c1 preparation result: guarded4703-byte command accepted by Termux as
+1f0c166a-c611-474d-9025-54647b9f08d2, approval Required on phone. SHA256
+9c687f1ef423002b163467df5ce122d0fce2f64bde4b8e6917e359428118ea86.
+Python AST parse PASS; one spawn site, zero deploy calls. It exclusively records
+one import-recovery claim and retains the failed preflight receipt. It refuses
+any prior app/call/spawn and checks exact candidate/source/prompt hashes before
+the original first invocation. No candidate changes, extra upload or GPU call
+from preparation. Exact missing module/Pillow installation remain UNKNOWN until
+device-approved diagnostic execution. Main T09 BLOCKED on this approval.
+Verification: confirmed prior preflight FAILED with0GPU submissions; recovery
+execution, output and quality UNKNOWN. Next: read only recovery batch1f0c166a.

@@ -63,7 +63,7 @@
   },
   "motion_verification": {
     "request_authorized": "PASS for this isolated test only",
-    "gpu_job_submitted": "UNKNOWN",
+    "gpu_job_submitted": "FAIL for completed preflight attempt: confirmed zero submissions; guarded first-invocation recovery pending",
     "inference_completed": "UNKNOWN",
     "mp4_persisted": "UNKNOWN",
     "video_decoded": "UNKNOWN",
@@ -72,7 +72,7 @@
   },
   "quality_fix_verified": false,
   "sponsor_journey_ready": false,
-  "verification": "BLOCKED on refreshed Termux device approval; phone online, GPU submission receipt absent.",
+  "verification": "BLOCKED on local-import recovery device approval. Original preflight FAILED before any GPU call; quality remains unverified.",
   "approval_resend": {
     "observed_at": "2026-10-23T14:44:00Z",
     "owner_request": "Resend approval request",
@@ -83,7 +83,7 @@
     "old_signed_expiry_epoch": 1792746701,
     "observation_epoch": 1792766598,
     "new_termux_job_id": "d80f5ea5-90f7-4870-9425-6ea4ace66fc5",
-    "status": "queued; Required on phone",
+    "status": "failed after approved execution, exit2",
     "phone_online": true,
     "new_uploads": 0,
     "application_row_mutations": 0,
@@ -91,6 +91,42 @@
     "same_bundle_hash_verified": true,
     "command_bytes": 1672,
     "command_sha256": "50ff833b208035a56036b9e74bdee3bb152cd4592ba4c8210fa9fe272613f335",
-    "idempotency": "Same trial exclusive receipt. New pre-fetch guard returns existing receipt without relaunch. No additional inference authorization."
+    "idempotency": "Same trial exclusive receipt. New pre-fetch guard returns existing receipt without relaunch. No additional inference authorization.",
+    "result": {
+      "error_type": "ModuleNotFoundError",
+      "state": "blocked_inspect_existing_receipt_and_call_only",
+      "spawn_attempts": 0,
+      "function_call_id": null,
+      "transient_app_id": null,
+      "candidate_hashes": {
+        "contracts.py": "f299170d86d38d93983e6a6b9fafd1dbce6784550f8d18b8e88e83262bb3f92d",
+        "media.py": "d61631975e0654d8d38d70e65fa96745c588f025accd4a121fd60aa523749db1",
+        "worker.py": "c5c7835df0c75fa885feca4c00bf151957c91c13b3b3f6d3bfb521ee3d205882"
+      },
+      "source_sha256": "173bc698e88631749e76a9ad9f2146f457212d1ba1bac948f2499f0b8d0ad349",
+      "prompt_sha256": "8afc29224173adfb2f6089025eaf21e98c099f9d69668613cd99afd3f6946b08",
+      "production_stats": {
+        "backlog": 0,
+        "num_running_inputs": 0,
+        "num_total_runners": 0
+      },
+      "billing_before_summary": "                                     \n  Metered Cost:                0.33  \n    Deployed Apps:             0.24  \n    Network Egress:            0.09  \n    Ephemeral Apps:            0.00  \n  Credits:                    -0.24  \n  Network Egress Allowance:   -0.09  \n  Billed Cost:                $0.00  \n                                     \n",
+      "boundary": "Confirmed local import failure before app.run; no GPU job submitted. Exact missing module not recorded by initial launcher."
+    }
+  },
+  "local_import_recovery": {
+    "task": "T09.5c1",
+    "termux_job_id": "1f0c166a-c611-474d-9025-54647b9f08d2",
+    "status": "queued; Required on phone",
+    "hypothesis": "PIL missing because media.py imports Pillow at module scope. Precise module UNKNOWN until diagnostic.",
+    "conditional_repair": "Only if missing module exactly PIL: binary-only Pillow11.3.0, no dependencies/build, on existing phone virtualenv. Otherwise stop without GPU.",
+    "guards": "Exclusive recovery claim preserving prior receipt; require zero prior app/call/spawn, unchanged candidate/input/model/seed/prompt, profile and idle state. Only original first GPU invocation authorized.",
+    "command_bytes": 4703,
+    "command_sha256": "9c687f1ef423002b163467df5ce122d0fce2f64bde4b8e6917e359428118ea86",
+    "ast_parse": "PASS",
+    "spawn_sites": 1,
+    "production_deploy_calls": 0,
+    "actual_repair": "UNKNOWN",
+    "inference": "UNKNOWN"
   }
 }

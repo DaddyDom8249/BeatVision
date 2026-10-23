@@ -1757,3 +1757,19 @@ includes pre-fetch existing-receipt guard plus original exclusive receipt and
 single spawn. Same trial/source/model/seed/settings; no extra inference approval.
 Accepted batchd80f5ea5-90f7-4870-9425-6ea4ace66fc5 requires device approval.
 No GPU submission confirmed; T09 remains BLOCKED. No application/deployment change.
+
+T09.5c1 actual resend result: batchd80f5ea5 ran/exit2. Durable receipt confirms
+candidate/source/prompt integrity, SDK/profile and idle production preflight PASS,
+$0billed before, then ModuleNotFoundError before app.run. spawn_attempts=0,
+call_id=null, no transient app. Missing module not retained; local media.py
+imports PIL at scope, so PIL is a testable hypothesis, not a confirmed cause.
+Prepared one guarded recovery: exclusive recovery claim preserves prior receipt,
+requires no previous app/call/spawn, diagnoses import, installs only binary pinned
+Pillow11.3.0 without dependencies if and only if PIL missing, then rechecks input/
+profile/idle state before the originally authorized first GPU invocation. Other
+causes stop without GPU. No source/model/seed/creative changes or receipt deletion.
+4703B command AST PASS/one spawn/zero deploy sites; accepted as1f0c166a-c611-
+474d-9025-54647b9f08d2, device approval required. T09 BLOCKED on that external
+gate; actual module repair/inference/output/quality UNKNOWN. Source0b9eb69/v66
+unchanged,455 application CI and20 candidate checks remain applicable. No GPU
+retry or additional inference authorization. Next: inspect exact recovery batch.

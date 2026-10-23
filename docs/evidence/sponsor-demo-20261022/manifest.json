@@ -2,7 +2,7 @@
   "source_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
   "production_frontend_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
   "production_generation_version": 66,
-  "scope": "Application0b9eb69/v66 unchanged. Owner requested approval resend after old input expired. Same hash-verified bundle and one-run receipt; refreshed batchd80f5ea5 queued, phone online, device approval required. No GPU call/output confirmed; quality and sponsor gates remain blocked.",
+  "scope": "Application0b9eb69/v66 unchanged. Requested approval resend executed and failed on local import before app.run, with confirmed zero GPU submissions. Guarded conditional recovery1f0c166a queued for device approval; same one-test authorization, no GPU retry. Output/quality/sponsor journey remain blocked.",
   "private_evidence": "Transcript-bearing candidate images, Android reload screenshot containing profile text, and account/session secrets excluded from Git",
   "files": [
     {
@@ -382,8 +382,8 @@
     },
     {
       "file": "modal-quality-trial-authorization.json",
-      "bytes": 5025,
-      "sha256": "675078d724f984e12e8ff09ec118679f5201f1d77f5ff64f8a499cc27fc52f01"
+      "bytes": 7468,
+      "sha256": "80c22f862a8289a3821af49115a581d2fa7be3ec43d62649e753096f4c904abe"
     },
     {
       "file": "modal-quality-trial-proposal.json",
