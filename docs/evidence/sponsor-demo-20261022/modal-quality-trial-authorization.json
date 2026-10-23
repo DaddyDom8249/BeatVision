@@ -62,17 +62,17 @@
     "creative_approvals": 0
   },
   "motion_verification": {
-    "request_authorized": "PASS for isolated diagnostic",
-    "gpu_job_submitted": "PASS, one saved call/receipt",
-    "inference_completed": "PASS, existing provider call returned output",
-    "mp4_persisted": "PASS on phone, manifest/hash; app persistence UNKNOWN",
-    "video_decoded": "UNKNOWN",
-    "visible_subject_movement": "UNKNOWN",
-    "browser_playback": "UNKNOWN"
+    "request_authorized": "PASS",
+    "gpu_job_submitted": "PASS",
+    "inference_completed": "PASS",
+    "mp4_persisted": "PASS",
+    "video_decoded": "PASS",
+    "visible_subject_movement": "PASS",
+    "browser_playback": "PASS"
   },
   "quality_fix_verified": false,
   "sponsor_journey_ready": false,
-  "verification": "BLOCKED on existing-media prefix transfer, post-test billing/cleanup and quality/decode/playback; isolated provider completion and phone hash/persistence PASS.",
+  "verification": "Isolated provider/decode/visible motion/full controlled playback PASS; strict source continuity FAILED. Billing$0.00/scratch STOPPED. Fresh sponsor lineage and future quality work/release remain blocked.",
   "approval_resend": {
     "observed_at": "2026-10-23T14:44:00Z",
     "owner_request": "Resend approval request",
@@ -149,7 +149,8 @@
     "command_sha256": "e826aa897ab597dd0226e0c95cb7313ad768e8760eafa21039d4e72512269456",
     "ast_parse": "PASS",
     "inference_submission_call_sites": 0,
-    "actual_result": "Existing call completed;48733B MP4/hash persisted on phone; transfer prefix pending. See modal-quality-trial-result.json."
+    "actual_result": "Complete existing MP4 recovered/hash verified,49frames decoded and played through ended; extra actor fails continuity."
   },
-  "latest_confirmed_trial_result": "modal-quality-trial-result.json"
+  "latest_confirmed_trial_result": "modal-quality-trial-result.json",
+  "final_trial_evidence": "modal-quality-trial-result.json"
 }

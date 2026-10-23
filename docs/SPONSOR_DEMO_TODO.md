@@ -55,12 +55,12 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Existing-call readback6433eb05 proves1spawn/completed call and48733B saved MP4/hash. Prefix/billing/scratch cleanup batch583a56b1-ec95-4b94-a9be-6273dbf9f5f9 awaits device approval; latest phone offline. Post-test cost/cleanup and quality verification pending. modal-quality-trial-result.json
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| One authorized isolated GPU trial completed; billing$0.00, scratch stopped,49frames decode and full controlled desktop/Pixel7 playback PASS. Source continuity FAIL; production uncertain-submit reconciliation and fresh approved frontend lineage remain unverified. Further GPU/quality release authorization absent. modal-quality-trial-result.json
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Authorized isolated same-model trial callfc-01M5MRZZJ4W6ETYYX6HZWCJKRT completed with source/hash/model provenance. This uses supplied Scene5 bytes and synthetic IDs, not fresh sponsor frontend lineage; T08/T09 and sequential journey still block mandatory gate. modal-quality-trial-result.json
-T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| Original attached clips decode/play in controlled deployed UI; new trial48733B MP4/hash persisted on phone. Its transfer is truncated; new decode/subject motion/identity/playback UNKNOWN. No quality approval or actual owner-storage journey. modal-quality-trial-result.json
+T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| New trial48733B/49frames/2.041667s fully decodes; visible walking and full-ended deployed desktop/Pixel7 fixture playback PASS. Extra background figure fails source continuity; facial identity UNKNOWN, no creator approval, actual app persistence/lineage and T10 still blocked. modal-quality-trial-result.json
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
 T13| Run complete sponsor-journey regression testing| T02–T12| BLOCKED| T13.1a scoped assembly access/coverage repair deployed; CI455 PASS, controlled deployed desktop/Android viewports PASS. Full sequential journey requires T04–T12; actual footage is1.9–2.04s per7.8–67.6s scene. No new render/GPU job. assembly-repair-release.json
-T14| Deliver verified sponsor demo URL, evidence, and remaining funding requirements| T13| BLOCKED| Production/immutable URLs, PR and evidence delivered; fully verified sponsor demo and motion proof blocked by T04–T13
+T14| Deliver verified sponsor demo URL, evidence, and remaining funding requirements| T13| BLOCKED| Production/immutable URLs, PR, actual isolated MP4 and decode/motion/full-playback proof delivered. Continuity failed and fresh approved sponsor journey T04–T13 remains incomplete; exact full-song GPU budget UNKNOWN. modal-quality-trial-result.json
 
 ## Task records
 
@@ -2334,3 +2334,116 @@ Verification: BLOCKED for complete trial acceptance; provider completion and
 phone persistence/hash PASS, new decode/motion/identity/playback UNKNOWN. No
 further independent main task is eligible before this result and artist gates.
 Next: T09; read only583a56b1, reconstruct existing bytes, inspect/play. No GPU retry.
+
+T09.5c2 transfer resolved:583a56b1 completed/exit0, full48733B workspace MP4
+reconstructed from existing bytes with8732 matching base64 overlap characters,
+full SHA256a1b5ca79284f490c285de4531254ad631076c4c1d7891183d9738a512ee67f0f.
+ffprobe reports H264704x480/yuv420p,24fps,49frames,2.041667s; full decode and
+visible motion not yet inferred from metadata. Billing read: metered0.40,
+apps0.24,egress0.12,ephemeral0.04; credits-0.28,egress allowance-0.12,billed0.00.
+These are rounded workspace totals, not exact per-job accounting or remaining
+credit balance. Scratch AppGetInfo lifecycle APP_STATE_STOPPED, stopped_at
+1792772639.086212, so no additional stop was attempted. Earlier exit1 is now
+consistent with already-stopped CLI behavior. Main T09 resumes IN_PROGRESS for
+full decode, sampled source/subject review and actual-new-byte controlled deployed
+desktop/Pixel7 playback. No provider submission, application mutation or approval.
+
+### T09.5c3 — Correct operator documentation against verified execution
+
+TASK ID: T09 (sole IN_PROGRESS item).
+Objective: Prevent repeat local-import failure and accurately describe the
+existing integration, isolated proof and outstanding acceptance gates.
+Initial status: FAILED documentation accuracy.
+Confirmed defect: providers/modal_motion/README.md still claims undeployed/no
+verified GPU/no production adapter, describes HF as production default, cites an
+old$1 screenshot and omits local Pillow. Current integration/source and the
+completed call contradict those status claims. Also clarify that a CLI dry-run
+can initialize cloud objects, despite not invoking the GPU.
+Root cause: README retained prototype-era setup/status after integration.
+Required files: README, checklist/log and sanitized proof/playback evidence.
+Expected: pin the verified local SDK/Pillow setup, distinguish offline checks
+from cloud app initialization, preserve explicit execution/financial gates and
+document isolated successful motion/playback with continuity failure. No worker
+default/source/deployment change. Verify by cross-checking existing receipts,
+current source and full-ended player output; no repeated GPU/app tests required.
+
+### T09.5c2 / T09.5c3 — Final verified trial and explicit remaining blockers
+
+TASK ID: T09. Objective: close the single authorized diagnostic honestly.
+Initial status: IN_PROGRESS after full transfer; no additional inference allowed.
+Evidence inspected: exact provider call/manifest, all49 decoded frame checksums,
+source plus frames0/12/24/36/48 (including full-size36/48), actual deployed full-
+ended player on desktop and Pixel7 emulation, post-test billing and app lifecycle.
+Application identity freshly rechecked via canonical Vercel alias:
+dpl_4CVPYRJ2yeKDJ4qbKxLo5XEvDSwL READY, source
+0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c, immutable
+https://beat-vision-dz2o7tp9v-beat-vision.vercel.app/.
+
+Tests performed/results: complete ffmpeg decode49frames/no errors, H264704x480,
+24fps,2.041667s. Initial inspection stopped after successful decode because the
+original /tmp attachment path had disappeared; exact56117B source recovered
+from the saved private config and SHA rechecked. Reused the successful unchanged
+decode; contact-sheet generation then passed. No regenerated input/clip. New-byte
+player initially verified1.1s; extended once to the acceptance requirement of
+full ended playback. Desktop and Pixel7 both ended at2.041667s,49 decoded frames,
+0dropped,readyState4,no media error. Zero generation requests/DB writes. REST/
+signing are controlled fixtures in the deployed component; this is not actual
+owner-storage/RLS lineage or physical Android proof. Previous original-clip
+tests retained; no broad app-test rerun. Exact unchanged source455/455,audit/
+TypeScript/Vite build PASS from39889027957 reused; candidate20CPU checks reused.
+
+Direct visual result: background subject visibly steps forward and passes left;
+motion is not inferred from metadata/pixel hashes. An additional distant figure
+appears while the approaching subject is still in the foreground. Strict source/
+actor continuity FAIL; facial identity UNKNOWN in shadow. Detail remains soft,
+gait/limb shape distorts and illumination darkens. Source/candidate preprocessing
+confounders prevent a claim that only sampler settings caused any difference.
+Creator approval remains false. Repository20step/guidance3 defaults and production
+worker are unchanged; the50/5 trial patch remains unapplied.
+
+Motion verification| Result
+---|---
+Request authorized| PASS
+GPU job submitted| PASS
+Inference completed| PASS
+MP4 persisted| PASS
+Video decoded| PASS
+Visible subject movement| PASS
+Browser playback| PASS
+Source/actor continuity| FAIL
+Strict facial identity| UNKNOWN
+Creator quality approval| UNKNOWN
+
+Scope: these rows describe the isolated authorized diagnostic. Persistence is
+private phone/Downloads/workspace, not a new application asset. Playback is actual
+bytes in the controlled deployed component; mandatory T10/T11 sponsor lineage
+does not pass from this table. No creative approval, customer asset mutation or
+production release. Full sponsor acceptance remains BLOCKED.
+
+Cost/cleanup: rounded workspace metered0.40,ephemeral0.04,credits-0.28,
+egress0.12 offset by allowance; billed$0.00. Exact job attribution and numeric
+remaining credits UNKNOWN. Scratch APP_STATE_STOPPED confirmed; no third stop
+was executed. One GPU invocation total, no retry, no new persistent service.
+
+Files changed: providers/modal_motion/README.md (verified local SDK/Pillow,
+accurate current integration/trial status and cloud dry-run cost boundary);
+docs/SPONSOR_DEMO_TODO.md; docs/SPONSOR_DEMO_RELEASE_GATES.md; PROJECT_LOG.md;
+modal-quality-trial-result/authorization/decode/playback evidence and manifest.
+Actual footage/source/derived images/account data remain private outside Git.
+Commit: based on9a4ad63bf9eefa170a9f1c69cdfc8bf50a8cfda4;
+application source0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c unchanged.
+Verification: T09.5c2 FAILED strict continuity/quality acceptance; independent
+motion/decode/playback checks PASS. T09.5c1 dependency repair PASS. T09.5c3 operator
+documentation PASS after source/receipt cross-check; no new inference/test claims.
+
+External blockers: explicit artist confirmations for the isolated sponsor journey
+T04–T08; another specifically authorized bounded GPU test for any further quality
+tuning; separate release approval for a quality-worker change; actual frontend
+approval/source/persistence and uncertain-submit reconciliation acceptance under
+those prerequisites. No such inference or release is authorized by this trial.
+Further credits alone do not establish continuity or full-length capability.
+Existing owner-project footage remains about15.6s for249.6s audio; this isolated
+clip was not added to that project.ceil(249.6/2.041667)=123 units is only arithmetic
+coverage, not proven continuous-generation support or a GPU cost estimate.
+Next task: none independently executable; retain T09 BLOCKED and T10–T14 blocked.
+Stop new inference and deployment; deliver actual proof plus failed quality gate.

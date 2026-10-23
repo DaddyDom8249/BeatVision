@@ -2,7 +2,7 @@
   "source_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
   "production_frontend_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
   "production_generation_version": 66,
-  "scope": "Application0b9eb69/v66 unchanged. Isolated authorized50step/guidance5 same-model trial has one completed provider call and48733B unapproved MP4/hash saved on phone. Transfer capped; prefix/billing/scratch cleanup583a56b1 awaits device approval, phone offline. Decode/subject motion/identity/playback/quality UNKNOWN; full sponsor gates blocked.",
+  "scope": "Application0b9eb69/v66 unchanged and canonical deployment rechecked. One authorized isolated same-model50/5 trial generated48733B MP4;49frames decode/visible walking/full controlled desktop+Pixel7 playback PASS. Extra actor fails source continuity; facial identity UNKNOWN, no creator approval. Billing$0.00/scratch STOPPED. No further inference or quality release authorized; fresh sponsor journey BLOCKED.",
   "private_evidence": "Transcript-bearing candidate images, Android reload screenshot containing profile text, and account/session secrets excluded from Git",
   "files": [
     {
@@ -382,8 +382,18 @@
     },
     {
       "file": "modal-quality-trial-authorization.json",
-      "bytes": 8872,
-      "sha256": "bcb4278f46d64e9c5b28806d7c28614fdfbd5babe8d49ab753469ca2d427e30c"
+      "bytes": 8828,
+      "sha256": "43f540b5f4b11035e62375eb260eedcd8a1c0a46d8a8044954e781c4b9ff221e"
+    },
+    {
+      "file": "modal-quality-trial-browser-playback.json",
+      "bytes": 1299,
+      "sha256": "195d2743475dbc9944cc14dcaefc2264bed68af5041f56f902dbeb2fac3ee9e3"
+    },
+    {
+      "file": "modal-quality-trial-inspection.json",
+      "bytes": 1946,
+      "sha256": "f41817ad4659b0f3661584191590818650c88e689177351474202b27621ccc42"
     },
     {
       "file": "modal-quality-trial-proposal.json",
@@ -392,8 +402,8 @@
     },
     {
       "file": "modal-quality-trial-result.json",
-      "bytes": 4773,
-      "sha256": "c621fa9d758578946c6bbd1a84bbafaa59bedb3ef6293721fd5003479015f9a0"
+      "bytes": 8152,
+      "sha256": "65acfef09dce3db174fca40e15f28d667e4214182356108bf92c3ba11d6b0e14"
     },
     {
       "file": "modal-quality-trial-unapplied.patch",

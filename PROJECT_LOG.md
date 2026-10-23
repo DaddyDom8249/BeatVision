@@ -1810,3 +1810,31 @@ updated with scoped isolated proof but mandatory artist/frontend lineage and
 new decode/motion/playback still blocked. Application0b9eb69/v66 unchanged;
 455 CI/20 candidate tests reused. Post-test cost UNKNOWN; no production release,
 customer-row mutation or creative approval. Next: retrieve same existing bytes.
+
+2026-10-23 T09.5c2 final: prefix583a56b1 exit0;8732-character overlap and SHA
+verify the48733B actual clip. Billing$0.00, rounded ephemeral0.04/credits-0.28;
+not exact per-job cost or remaining balance. Scratch APP_STATE_STOPPED, so no
+third stop. Full49frame decode PASS/no errors,2.041667s H264704x480/24fps.
+First inspection stopped after decode on disappeared /tmp source; recovered
+exact source bytes/hash from private config and reused the completed decode.
+Direct sampled/source/full-size review confirms walking; extra distant figure
+appears while walker is in front, with soft detail/gait distortion/darkening.
+Motion PASS, source/actor continuity FAIL, facial identity UNKNOWN, no approval.
+
+Actual new-byte deployed desktop/Pixel7 fixture playback initially1.1s PASS;
+extended once to full ended acceptance:both49frames/2.041667s/0dropped/no errors.
+No provider submission/DB mutation. Actual owner storage/RLS/fresh sponsor lineage
+and physical Android unverified. Canonical Vercel alias rechecked READY/source
+0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c,dpl_4CVPYRJ2yeKDJ4qbKxLo5XEvDSwL.
+T09.5c3 fixes confirmed stale operator README and missing pinned local Pillow
+setup/cloud dry-run boundary. Worker/contracts/media hashes remain unchanged;
+50/5 temporary trial patch unapplied, no production/default change.455 CI/build/
+audit and20 candidate tests reused; documentation/JSON/hash/link checks only.
+
+One GPU invocation total; trial strict quality gate FAILED. Main T09 BLOCKED
+on remaining production reconciliation/lineage acceptance and authorized quality
+work; artist T04–T08 confirmations and T10–T14 full journey remain blocked. No
+second GPU trial/release authorization; no independent executable task remains.
+Footage/source/derived images stay private; sanitized inspection/playback/result
+receipts added. Full-song capacity/budget UNKNOWN; no sponsorship exhaustion
+claim. Deliver real motion/player proof with failed continuity, not MVP readiness.

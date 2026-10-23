@@ -498,3 +498,30 @@ Full-file decode, subject/source review and new-clip playback remain UNKNOWN.
 Earlier original-clip playback does not substitute for testing these new bytes.
 Post-test billing is not retrieved; timeout/rate arithmetic is not actual cost.
 See [isolated trial result](evidence/sponsor-demo-20261022/modal-quality-trial-result.json).
+
+## Completed isolated test — continuity gate failed
+
+The complete48733-byte file was recovered and its SHA matched the provider
+manifest. All49frames fully decode: H264704x480,24fps,2.041667s. Direct source/
+frame review confirms actual walking toward camera and passing left. It also
+shows an extra distant figure while the walker remains in front, distorted gait,
+soft detail and darkening. Source/actor continuity FAIL; strict facial identity
+UNKNOWN and creator approval absent. Do not release the trial settings as a
+verified quality fix. Production/defaults remain unchanged.
+
+Actual new bytes played through ended on desktop and Pixel7 emulation in the
+deployed component:49frames each,zero dropped/no player errors. REST/signing
+fixtures isolate the player; actual owner storage/RLS, new app-asset persistence,
+fresh artist-approved sponsor lineage and physical Android remain unverified.
+[Decode/visual receipt](evidence/sponsor-demo-20261022/modal-quality-trial-inspection.json)
+and [full playback receipt](evidence/sponsor-demo-20261022/modal-quality-trial-browser-playback.json).
+Canonical alias was rechecked at source0b9eb69/dpl_4CVPYRJ2yeKDJ4qbKxLo5XEvDSwL.
+
+Post-test workspace billing shows$0.00billed; exact per-job cost and remaining
+credits are UNKNOWN. Scratch lifecycle is APP_STATE_STOPPED; no further stop or
+GPU retry. One authorized invocation was consumed. Further quality testing needs
+separate bounded authorization, and any worker release needs separate approval.
+Explicit artist confirmations and real sequential sponsor validation still block
+the mandatory journey. Existing15.6s owner footage cannot cover249.6s audio; full-
+song motion also needs continuity/quality engineering and measured GPU/credit
+capacity. No dollar budget or full-length support is inferred from this trial.

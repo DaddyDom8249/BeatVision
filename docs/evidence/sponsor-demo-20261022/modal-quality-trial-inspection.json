@@ -1,0 +1,55 @@
+{
+  "observed_at": "2026-10-23T16:41:57.121386+00:00",
+  "sha256": "a1b5ca79284f490c285de4531254ad631076c4c1d7891183d9738a512ee67f0f",
+  "bytes": 48733,
+  "metadata": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "index": 0,
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 704,
+        "height": 480,
+        "pix_fmt": "yuv420p",
+        "avg_frame_rate": "24/1",
+        "duration": "2.041667",
+        "nb_frames": "49"
+      }
+    ],
+    "format": {
+      "duration": "2.041667",
+      "size": "48733"
+    }
+  },
+  "full_decode": {
+    "result": "PASS",
+    "frames_decoded": 49,
+    "ffmpeg_exit": 0,
+    "decode_errors": "",
+    "unchanged_first_decode_reused": true
+  },
+  "sampled_frames": [
+    0,
+    12,
+    24,
+    36,
+    48
+  ],
+  "sample_sheet": "quality-trial-source-frames.png",
+  "visible_subject_movement": "PASS: background subject takes steps toward camera and passes left between sampled frames0/12/24/36/48; foreground framing remains largely stable.",
+  "identity_consistency": "UNKNOWN pending direct inspection",
+  "creator_approval": false,
+  "source_identity_consistency": "FAIL for strict source/actor continuity: an additional distant figure appears while the approaching subject occupies the left foreground. Facial identity remains UNKNOWN under shadow.",
+  "quality_observation": "Walking is clear; detail is soft, the gait/limb shape is distorted and illumination darkens. No overall creator approval or claim that sampler-only change caused improvement.",
+  "comparison_boundary": "Original supplied JPEG differs from saved original source bytes and old preprocessing may differ; not a controlled single-variable model ranking.",
+  "visual_review_samples": [
+    0,
+    12,
+    24,
+    36,
+    48
+  ],
+  "review_scope": "Direct source/frame inspection, including full-size frames36/48; no motion claim from metadata or pixel differences alone."
+}

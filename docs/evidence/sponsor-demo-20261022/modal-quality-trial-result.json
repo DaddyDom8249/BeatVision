@@ -1,7 +1,7 @@
 {
   "task": "T09.5c2",
   "observed_at": "2026-10-23T16:27:20.175115+00:00",
-  "classification": "CONFIRMED for existing provider call completion and phone artifact/hash; motion/quality/playback UNKNOWN",
+  "classification": "CONFIRMED: provider generation, full decode, visible subject motion and complete controlled frontend playback. Strict source/actor continuity FAILED; full sponsor journey BLOCKED.",
   "trial_id": "03e1639b-2aa5-4eda-b4e6-f0d02a621751",
   "application_source_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
   "generation_version": 66,
@@ -66,30 +66,86 @@
     "missing_prefix_characters": 7268,
     "prefix_read_characters": 16000,
     "termux_job_id": "583a56b1-ec95-4b94-a9be-6273dbf9f5f9",
-    "status": "awaiting_approval",
-    "phone_online": false,
+    "status": "completed,exit0",
+    "phone_online": true,
     "command_sha256": "e6f2cf16ab80326a87da518a5d7da9a9bb1336493a3ba615687bbac7a100bfeb",
     "ast_parse": "PASS",
-    "new_inference_submissions": 0
+    "new_inference_submissions": 0,
+    "full_workspace_bytes": 48733,
+    "full_sha256_verified": true,
+    "matching_base64_overlap_characters": 8732
   },
   "scratch_cleanup": {
-    "previous_exit": 1,
-    "state": "UNKNOWN; inspect lifecycle before final conditional cleanup",
-    "sdk_source_evidence": "Pinned Modal1.6.2 stop exits1 when already stopped, or requires --yes in noninteractive context. Do not infer live state from exit1 alone.",
-    "next_attempt": "Skip if stopped; else stop only exact completed scratch with --yes then read lifecycle; third/final attempt. Production app excluded."
+    "result": "PASS",
+    "lifecycle": {
+      "app_state": "APP_STATE_STOPPED",
+      "created_at": 1792772402.238579,
+      "stopped_at": 1792772639.086212
+    },
+    "already_stopped": true,
+    "additional_stop_attempts": 0,
+    "boundary": "Earlier CLI exit1 does not alone prove state. This direct AppGetInfo confirms stopped; no third stop attempted."
   },
-  "billing_after": "UNKNOWN; pending existing transfer batch read. Owner-attested usable credits and hard$0paid-spend cap; no setting changed.",
+  "billing_after": {
+    "result": "PASS for observed zero billed workspace total",
+    "source_termux_job": "583a56b1-ec95-4b94-a9be-6273dbf9f5f9",
+    "summary": "                                     \n  Metered Cost:                0.40  \n    Deployed Apps:             0.24  \n    Network Egress:            0.12  \n    Ephemeral Apps:            0.04  \n  Network Egress Allowance:   -0.12  \n  Credits:                    -0.28  \n  Billed Cost:                $0.00  \n                                     \n",
+    "metered_workspace_usd_rounded": "0.40",
+    "ephemeral_workspace_usd_rounded": "0.04",
+    "workspace_credits_usd_rounded": "-0.28",
+    "workspace_billed_usd": "0.00",
+    "exact_per_job_cost": "UNKNOWN; workspace totals may include other activity/rounding/lag",
+    "numeric_remaining_credits": "UNKNOWN",
+    "financial_settings_changed": false
+  },
   "motion_verification": {
-    "request_authorized": "PASS for isolated diagnostic",
-    "gpu_job_submitted": "PASS, one saved call/receipt",
-    "inference_completed": "PASS, existing provider call returned output",
-    "mp4_persisted": "PASS on phone, manifest/hash; app persistence UNKNOWN",
-    "video_decoded": "UNKNOWN",
-    "visible_subject_movement": "UNKNOWN",
-    "browser_playback": "UNKNOWN"
+    "request_authorized": "PASS",
+    "gpu_job_submitted": "PASS",
+    "inference_completed": "PASS",
+    "mp4_persisted": "PASS",
+    "video_decoded": "PASS",
+    "visible_subject_movement": "PASS",
+    "browser_playback": "PASS"
   },
-  "source_identity_consistency": "UNKNOWN pending actual visual review",
+  "source_identity_consistency": {
+    "result": "FAIL for strict source/actor continuity",
+    "observation": "Additional distant figure appears in frame36 while approaching subject is still in left foreground; persists in frame48.",
+    "strict_facial_identity": "UNKNOWN under shadow",
+    "other_quality_observations": "Soft detail, distorted gait/limb shape and darkening.",
+    "approval": false
+  },
   "creator_quality_approval": false,
   "quality_improvement_verified": false,
-  "full_sponsor_journey_verified": false
+  "full_sponsor_journey_verified": false,
+  "final_verified_at": "2026-10-23T16:53:10.689769+00:00",
+  "verification_scope": {
+    "request": "Explicit one-test authorization on user-supplied source; synthetic diagnostic IDs, not fresh sponsor app lineage.",
+    "persistence": "Private phone/Downloads/workspace only; no new application asset row.",
+    "browser": "Actual new bytes in deployed component using isolated REST/signing fixtures; desktop/Pixel7 emulation complete ended/49frames. Actual owner-storage/RLS and physical Android remain UNKNOWN.",
+    "motion": "Direct source/frame review shows subject steps forward and passes left; not inferred from metadata or pixel variation.",
+    "remaining_gate": "Source/actor continuity FAIL: extra distant figure appears while walker is still in foreground. Facial identity UNKNOWN; no creator approval."
+  },
+  "decoded_video": {
+    "codec": "h264",
+    "width": 704,
+    "height": 480,
+    "fps": 24,
+    "frames": 49,
+    "duration_seconds": 2.041667,
+    "full_decode": "PASS",
+    "errors": 0
+  },
+  "browser_playback_evidence": "modal-quality-trial-browser-playback.json",
+  "visual_decode_evidence": "modal-quality-trial-inspection.json",
+  "frontend_deployment_rechecked": {
+    "canonical_url": "https://beat-vision-theta.vercel.app/",
+    "id": "dpl_4CVPYRJ2yeKDJ4qbKxLo5XEvDSwL",
+    "ready_state": "READY",
+    "source_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
+    "immutable_url": "https://beat-vision-dz2o7tp9v-beat-vision.vercel.app/"
+  },
+  "receipt_error_boundary": "Historical initial ModuleNotFoundError field was retained during recovery; current state is completed_unapproved and existing provider call returned output.",
+  "overall_acceptance": "FAILED strict continuity/quality; isolated motion technology and controlled full playback verified, full sponsor MVP BLOCKED.",
+  "future_authorization": "One inference consumed. No further GPU generation or production-worker release authorized. Additional testing needs specific new approval; no automatic retry.",
+  "funding_boundary": "Full249.6s song vs existing owner footage~15.6s; isolated clip not added to project. ceil(249.6/2.041667)=123 units is arithmetic coverage only, not proven continuous generation or a cost estimate. Further GPU/credits and continuity/quality engineering require measured planning; exact budget UNKNOWN."
 }
