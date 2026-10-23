@@ -28,10 +28,25 @@ function legacyRenderHref(value: unknown): string | null {
   }
 }
 
+/** Candidate only: Shotstack status S3 output expires after 24 h.
+ * A separately hosted stage CDN copy may remain. Never accept arbitrary URLs.
+ */
+function hostedShotstackRenderHref(value: unknown): string | null {
+  const temporary = legacyRenderHref(value);
+  if (!temporary) return null;
+  return "https://cdn.shotstack.io/au/stage" + new URL(temporary).pathname;
+}
+
 function productionErrorMessage(error: unknown) {
   const message = typeof error === "string" ? error : getCreativeErrorMessage(error, "Production request failed.");
   if (message.includes("ASSEMBLY_MOTION_NOT_FULLY_APPROVED")) {
     return "Approve a real motion clip for every scene before assembling the final video.";
+  }
+  if (message.includes("ASSEMBLY_CLIP_TOO_SHORT")) {
+    return message + ". The saved short clip does not cover its scene. Full-song motion needs additional approved footage and GPU resources. Existing clips remain available to review.";
+  }
+  if (message.includes("ASSEMBLY_DURATION_UNVERIFIED")) {
+    return message + ". The saved clip's measured duration is unverified. No assembly was submitted to Shotstack.";
   }
   if (/\bHF_QUOTA_EXHAUSTED\b/.test(message)) {
     return "Hugging Face free GPU quota is exhausted. Try after the free allowance resets. No paid provider or automatic retry was used.";
@@ -105,7 +120,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [motionMeasured, setMotionMeasured] = useState<{ assetId: string; seconds: number } | null>(null);
   const [pilotMeasured, setPilotMeasured] = useState<{ url: string; seconds: number } | null>(null);
   const [motionGenerating, setMotionGenerating] = useState(false);
-  const [motionProvider, setMotionProvider] = useState<"huggingface" | "modal">("huggingface");
+  const [motionProvider, setMotionProvider] = useState<"huggingface" | "modal">("modal");
   // Wan ZeroGPU start returns WAN_ELIGIBILITY_UNVERIFIED. Do not submit.
   const wanPreviewEligibilityVerified = false;
   const [freePilotBusy, setFreePilotBusy] = useState(false);
@@ -137,6 +152,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const busy = generating || motionGenerating || assemblyRunning || assetLoading;
   const externalLegacyRenderHref = assemblyJob?.status === "completed" && finalVideo?.downloadable !== true
     ? legacyRenderHref(finalVideo?.video_url) : null;
+  const hostedLegacyRenderHref = externalLegacyRenderHref
+    ? hostedShotstackRenderHref(externalLegacyRenderHref) : null;
+  const finalPreviewUrl = hostedLegacyRenderHref || finalVideo?.video_url || null;
   const sceneSeconds = scene ? Math.max(0, Number(scene.end_time) - Number(scene.start_time)) : 0;
   const savedProof = motionAssetJob?.output?.arena_status_response?.result?.verification;
   const savedProofSeconds = Number(savedProof?.measured_duration_seconds ?? savedProof?.video_duration_seconds);
@@ -283,8 +301,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     let status = { ready: false, message: "Unable to verify approved motion. Assembly remains unavailable." };
     try {
       const [sceneResult, motionResult] = await Promise.all([
-        supabase.from("visual_plan_scenes").select("id,status").eq("project_id", projectId).eq("visual_plan_id", planId),
-        supabase.from("motion_clip_assets").select("id,scene_id,status,approved,video_url").eq("project_id", projectId).eq("visual_plan_id", planId).eq("status", "approved").eq("approved", true),
+        supabase.from("visual_plan_scenes").select("id,status,scene_number,start_time,end_time").eq("project_id", projectId).eq("visual_plan_id", planId),
+        supabase.from("motion_clip_assets").select("id,scene_id,generation_job_id,status,approved,video_url").eq("project_id", projectId).eq("visual_plan_id", planId).eq("status", "approved").eq("approved", true),
       ]);
       if (sceneResult.error) throw sceneResult.error;
       if (motionResult.error) throw motionResult.error;
@@ -306,6 +324,31 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
           : { ready: approved.length === allScenes.length, message: "All scene motion is approved. Final assembly is available." };
         if (!remaining && approved.length !== allScenes.length)
           status = { ready: false, message: "Motion approval records are inconsistent. Final assembly is unavailable." };
+        if (status.ready) {
+          const jobIds = approved.map(clip => clip.generation_job_id).filter(Boolean);
+          const sources = jobIds.length ? await supabase.from("generation_jobs")
+            .select("id,visual_plan_scene_id,status,output").eq("project_id", projectId)
+            .eq("visual_plan_id", planId).eq("job_type", "scene_motion")
+            .eq("status", "completed").in("id", jobIds) : { data: [], error: null };
+          if (sources.error) throw sources.error;
+          for (const item of allScenes) {
+            const clip = approved.find(asset => asset.scene_id === item.id);
+            const source = sources.data?.find(candidate => candidate.id === clip?.generation_job_id &&
+              candidate.visual_plan_scene_id === item.id && candidate.status === "completed");
+            const proof = source?.output?.arena_status_response?.result?.verification;
+            const actual = Number(proof?.video_duration_seconds);
+            const required = Number(item.end_time) - Number(item.start_time);
+            if (proof?.container_verified !== true || !Number.isFinite(actual) || actual <= 0 ||
+                !Number.isFinite(required) || required <= 0) {
+              status = { ready: false, message: "An approved clip's measured duration is unverified. Final assembly is unavailable until its saved media is verified." };
+              break;
+            }
+            if (actual + 0.05 < required) {
+              status = { ready: false, message: "Scene " + item.scene_number + " has " + actual.toFixed(2) + "s of " + required.toFixed(2) + "s. Full-song motion needs additional approved footage and GPU resources. Your short clips remain available to review." };
+              break;
+            }
+          }
+        }
       }
     } catch (reason) {
       status = { ready: false, message: "Could not check approved motion: " + productionErrorMessage(reason) };
@@ -669,10 +712,11 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
               <select aria-label="Motion generator" value={motionProvider}
                 disabled={busy || pending(motionJob)}
                 onChange={event => { setMotionProvider(event.target.value as "huggingface" | "modal"); attemptId.current = null; }}>
-                <option value="huggingface">Hugging Face (existing)</option>
-                <option value="modal">Modal LTX 0.9.5 (account-gated)</option>
+                <option value="modal">Modal LTX 0.9.5 (account-gated) — Primary</option>
+                <option value="huggingface">Hugging Face — Fallback</option>
               </select>
             </label>
+            <p>Modal is the primary motion generator. Select Hugging Face as a fallback if needed; fallback never starts automatically. Check any pending job before starting another render.</p>
             {motionHistory.length > 1 && <label>Saved motion variants<select aria-label="Saved motion variants" value={motion?.id ?? ''} onChange={event => { assetChoice.current.motionId = event.target.value; void refreshScene(scene.id).catch(e => setError(productionErrorMessage(e))); }}>{motionHistory.map((asset, index) => <option key={asset.id} value={asset.id}>Variant {motionHistory.length - index} · {asset.status}</option>)}</select></label>}
             {motion?.provider === "huggingface-zerogpu" && <p>Saved AI-generated motion · LTX 0.9.8 distilled. Two seconds requested; actual media duration is measured below. Singing lip sync is not verified.</p>}
             {motion && <p>{isProceduralMotion ? "Procedural image animation (pan/zoom), not AI-generated subject motion." : `Provider: ${motion.provider} · Model: ${motion.model}`}</p>}
@@ -700,8 +744,8 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             <div className="production-actions">
               {!pending(motionJob) && <label><input type="checkbox" checked={motionTermsAccepted} onChange={event => setMotionTermsAccepted(event.target.checked)} /> I agree to the <a href="https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt" target="_blank" rel="noreferrer">LTX model license and use restrictions</a>, including AI disclosure.</label>}
               {!pending(motionJob) && <p>{motionProvider === "modal"
-                ? "Modal GPU is an opt-in 2-second LTX preview. It starts only if server credentials and the account budget gate are enabled. Existing approved clips are preserved."
-                : "Generate a 2-second AI motion preview. Existing approved clips remain saved; this preview is not full-scene coverage."}</p>}
+                ? "Modal is the primary generator for a 2-second AI motion preview. It starts only if server credentials and the account budget gate are enabled. Existing approved clips are preserved."
+                : "Hugging Face is the fallback for a 2-second AI motion preview, subject to verified free eligibility and quota. Existing approved clips remain saved; this preview is not full-scene coverage."}</p>}
               {!pending(motionJob) && <button className="primary-button" disabled={busy || image?.status !== "approved" || !motionTermsAccepted} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
               {pending(motionJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkMotionStatus()}>{motionGenerating ? "Checking…" : "Check Motion Status"}</button>}
               {motion?.status === "generated" && <button className="secondary-button" onClick={() => void approveMotion()}>Approve Motion</button>}
@@ -746,19 +790,19 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
               {" "}Provider stage: {assemblyJob.output?.arena_status_response?.result?.status ?? assemblyJob.output?.arena_response?.result?.status ?? "Not reported"}.
               {" "}Last checked: {assemblyJob.output?.last_polled_at ?? "Not checked yet"}.
             </p>}
-            {finalVideo?.video_url ? <video key={finalVideo.video_url} src={finalVideo.video_url} controls playsInline
-              onCanPlay={() => setFinalPlayback({ url: finalVideo.video_url, state: "ready" })}
-              onError={() => setFinalPlayback({ url: finalVideo.video_url, state: "failed" })}
+            {finalPreviewUrl ? <video key={finalPreviewUrl} src={finalPreviewUrl} controls playsInline
+              onCanPlay={() => setFinalPlayback({ url: finalPreviewUrl, state: "ready" })}
+              onError={() => setFinalPlayback({ url: finalPreviewUrl, state: "failed" })}
               style={{ width: "100%", maxHeight: 600, borderRadius: 12 }} /> : <p>No completed final video exists yet. Assembly requires every approved scene to have an approved real motion clip.</p>}
             {!finalVideo && <p role="status">{assemblyReadiness.message}</p>}
-            {finalVideo?.video_url && finalPlayback?.url === finalVideo.video_url && finalPlayback?.state === "failed" && <p role="alert">The saved final-video URL could not be played on this device. A completed job does not establish that the file is still accessible.</p>}
+            {finalVideo?.video_url && finalPlayback?.url === finalPreviewUrl && finalPlayback?.state === "failed" && <p role="alert">The saved final-video URL could not be played on this device. A completed job does not establish that the file is still accessible.</p>}
             {finalVideo?.video_url && finalVideo.downloadable !== true && <p role="status">A final render is recorded, but its database record is marked non-downloadable. Do not assume the external render URL is a durable export.</p>}
-            {externalLegacyRenderHref && <p role="status">The original render may still be hosted externally. <a href={externalLegacyRenderHref} target="_blank" rel="noopener noreferrer">Open original render (availability unverified)</a>. If the file opens, use your browser's own save control. This does not start generation or change approvals.</p>}
+            {hostedLegacyRenderHref && <p role="status">The original Shotstack render link was temporary. This player checks the provider-hosted copy without generating new media. <a href={hostedLegacyRenderHref} target="_blank" rel="noopener noreferrer">Open hosted render (availability unverified)</a>. <a href={externalLegacyRenderHref!} target="_blank" rel="noopener noreferrer">Open original render (temporary, availability unverified)</a>. Neither link proves an independently archived export.</p>}
             <div className="production-actions">
               {!finalVideo && !pending(assemblyJob) && <button className="primary-button" disabled={busy || !assemblyReadiness.ready} onClick={() => void assembleFinal()}>{assemblyRunning ? "Starting Assembly…" : "Assemble Final Video"}</button>}
               {pending(assemblyJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkAssemblyStatus()}>{assemblyRunning ? "Checking…" : "Check Assembly Status"}</button>}
-              {finalVideo?.video_url && finalVideo.downloadable === true && finalPlayback?.url === finalVideo.video_url && finalPlayback?.state === "ready" && <button className="secondary-button" disabled={downloading} onClick={() => void downloadFinalVideo()}>{downloading ? "Downloading…" : "Download Video"}</button>}
-              {finalVideo?.video_url && <span className="style-lock-badge">{finalPlayback?.url === finalVideo.video_url && finalPlayback?.state === "ready" ? "FINAL PREVIEW READY" : "RENDER RECORDED · PLAYBACK UNVERIFIED"}</span>}
+              {finalVideo?.video_url && finalVideo.downloadable === true && finalPlayback?.url === finalPreviewUrl && finalPlayback?.state === "ready" && <button className="secondary-button" disabled={downloading} onClick={() => void downloadFinalVideo()}>{downloading ? "Downloading…" : "Download Video"}</button>}
+              {finalVideo?.video_url && <span className="style-lock-badge">{finalPlayback?.url === finalPreviewUrl && finalPlayback?.state === "ready" ? "FINAL PREVIEW READY" : "RENDER RECORDED · PLAYBACK UNVERIFIED"}</span>}
             </div>
           </div>
 

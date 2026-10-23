@@ -1,0 +1,70 @@
+{
+  "task": "T09.5",
+  "observed_at": "2026-10-23T04:38:54.841613+00:00",
+  "scope": "Actual deployed BragoraForge component plays actual attached MP4 bytes. REST and signing responses are isolated controlled fixtures; not actual owner-project storage/RLS end-to-end.",
+  "generation_requests": 0,
+  "db_mutations": 0,
+  "contexts": [
+    {
+      "name": "desktop",
+      "provider": "modal",
+      "job_filename": "d74245c1-fa8b-4be0-b632-31daace032f2",
+      "playback": {
+        "currentTime": 1.11822,
+        "duration": 2.041667,
+        "width": 704,
+        "height": 480,
+        "readyState": 4,
+        "totalFrames": 28,
+        "droppedFrames": 0,
+        "error": null
+      }
+    },
+    {
+      "name": "desktop",
+      "provider": "hf",
+      "job_filename": "5dba3345-60bf-4893-8215-6ec9372b27ea",
+      "playback": {
+        "currentTime": 1.117437,
+        "duration": 1.9,
+        "width": 704,
+        "height": 512,
+        "readyState": 4,
+        "totalFrames": 34,
+        "droppedFrames": 0,
+        "error": null
+      }
+    },
+    {
+      "name": "android-emulated",
+      "provider": "modal",
+      "job_filename": "d74245c1-fa8b-4be0-b632-31daace032f2",
+      "playback": {
+        "currentTime": 1.123459,
+        "duration": 2.041667,
+        "width": 704,
+        "height": 480,
+        "readyState": 4,
+        "totalFrames": 27,
+        "droppedFrames": 0,
+        "error": null
+      }
+    },
+    {
+      "name": "android-emulated",
+      "provider": "hf",
+      "job_filename": "5dba3345-60bf-4893-8215-6ec9372b27ea",
+      "playback": {
+        "currentTime": 1.110224,
+        "duration": 1.9,
+        "width": 704,
+        "height": 512,
+        "readyState": 4,
+        "totalFrames": 34,
+        "droppedFrames": 0,
+        "error": null
+      }
+    }
+  ],
+  "verification": "PASS for actual attached-media playback in controlled deployed UI; no owner-project storage/auth or motion-quality PASS"
+}

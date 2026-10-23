@@ -59,6 +59,24 @@ export default function WorldPage({ projectId, onNavigate }: { projectId: string
     );
   }
 
+  // Legacy completed Worlds remain readable even when their original records
+  // predate interpretation lineage. Only a new World Reveal is gated here;
+  // the server independently enforces lineage for every new generation.
+  if ((!song.current_interpretation_id || !song.interpretation_confirmed_at) && report?.status !== "completed") {
+    return (
+      <div className="app-shell">
+        <StudioHeader projectId={projectId} activeStage="world" />
+        <main className="dashboard">
+          <h1>Confirm the Song Interpretation First</h1>
+          <p>World Reveal is locked until the artist reviews and explicitly confirms an evidence-grounded interpretation in Song Intake Notes.</p>
+          <button className="primary-button" style={{ marginTop: "16px" }} onClick={() => onNavigate(`/projects/${projectId}/song`)}>
+            ← Return to Song Intake Notes
+          </button>
+        </main>
+      </div>
+    );
+  }
+
   if (!report) {
     return (
       <div className="app-shell">
@@ -74,6 +92,27 @@ export default function WorldPage({ projectId, onNavigate }: { projectId: string
               {generating ? "Revealing Visual World…" : "Reveal World →"}
             </button>
             {error && <p className="form-error" role="alert" style={{ marginTop: "16px" }}>{error}</p>}
+          </section>
+        </main>
+      </div>
+    );
+  }
+
+  // A new approved song interpretation must not inherit a completed World
+  // from a different creative revision. Preserve its history; offer a new one.
+  if (report.status === "completed" && song.current_interpretation_id &&
+      report.interpretation_id !== song.current_interpretation_id) {
+    return (
+      <div className="app-shell">
+        <StudioHeader projectId={projectId} activeStage="world" />
+        <main className="dashboard">
+          <section className="create-card">
+            <h1>Reveal a World for the New Interpretation</h1>
+            <p>Your existing approved World remains preserved. Generate a new, separately reviewable World based on the artist-confirmed song interpretation.</p>
+            <button className="primary-button" disabled={generating} type="button" onClick={() => void revealWorld(true)}>
+              {generating ? "Generating Revised World…" : "Generate a Revised World"}
+            </button>
+            {error && <p role="alert" className="form-error">{error}</p>}
           </section>
         </main>
       </div>

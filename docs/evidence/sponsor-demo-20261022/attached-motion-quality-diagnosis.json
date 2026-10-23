@@ -1,0 +1,225 @@
+{
+  "task": "T09.5",
+  "recorded_at": "2026-10-23T04:42:41.293867+00:00",
+  "source_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
+  "documentation_base_commit": "e8566b4c9d0968e2775270aa555857c431e33a59",
+  "production_generation": {
+    "version": 66,
+    "bundle_sha256": "c2362dfab4a95b54cbf56ce136be7c7494de89f7e4bcd5d9e4e81ebf1b43776f"
+  },
+  "attachment_provenance": {
+    "jpgs": 4,
+    "unique_jpgs": 2,
+    "all_jpg_dimensions": [
+      1280,
+      1280
+    ],
+    "identical_pairs": [
+      [
+        1,
+        4
+      ],
+      [
+        2,
+        3
+      ]
+    ],
+    "filename_database_matches": [
+      {
+        "file": "0b16da03-ea23-4fa1-84ee-199ff9780365.jpg",
+        "scene": 5,
+        "source_image_id": "40f92141-799d-4774-b693-96774f0ae04e",
+        "job_filename": "d74245c1-fa8b-4be0-b632-31daace032f2",
+        "provider": "modal"
+      },
+      {
+        "file": "59e16cae-e4e3-4415-9c14-f0f583930fb0.jpg",
+        "scene": 7,
+        "source_image_id": "80823229-5498-4a12-b464-5adc9f904ed7",
+        "job_filename": "5dba3345-60bf-4893-8215-6ec9372b27ea",
+        "provider": "huggingface-zerogpu"
+      }
+    ],
+    "boundary": "Owner-scoped DB filename/source-ID matching plus visual correspondence. Attachment JPEG re-encoding differs from original source-byte digest; no exact original-byte identity claim."
+  },
+  "decode": [
+    {
+      "label": "modal",
+      "clip_file": "1-d74245c1-fa8b-4be0-b632-31daace032f2.mp4",
+      "source_file": "3-0b16da03-ea23-4fa1-84ee-199ff9780365.jpg",
+      "mp4_sha256": "bad7a03e54a94259a940b7dc7aa68c3d3e9b0f68eeb018898b823e26b375d28f",
+      "width": 704,
+      "height": 480,
+      "duration": "2.041667",
+      "decoded_frames": 49,
+      "unique_frame_hashes": 49,
+      "decode": "PASS",
+      "mean_first_last_pixel_delta_0_255": 2.5000267028808594,
+      "mean_consecutive_pixel_delta_0_255": 0.18583154678344727,
+      "first_middle_pixel_delta_0_255": 1.6206330060958862,
+      "initial_vs_contained_source_mean_rgb_delta_0_255": 15.683810234069824,
+      "metrics_boundary": "Pixel differences are not proof of directed subject action, identity consistency or acceptable quality."
+    },
+    {
+      "label": "hf",
+      "clip_file": "2-5dba3345-60bf-4893-8215-6ec9372b27ea.mp4",
+      "source_file": "4-59e16cae-e4e3-4415-9c14-f0f583930fb0.jpg",
+      "mp4_sha256": "d1520a4a8b210747d0719cbb8b29bf664ec554cb4f767b8488202e0ba974531a",
+      "width": 704,
+      "height": 512,
+      "duration": "1.900000",
+      "decoded_frames": 57,
+      "unique_frame_hashes": 57,
+      "decode": "PASS",
+      "mean_first_last_pixel_delta_0_255": 29.830766677856445,
+      "mean_consecutive_pixel_delta_0_255": 3.8813259601593018,
+      "first_middle_pixel_delta_0_255": 28.076826095581055,
+      "initial_vs_contained_source_mean_rgb_delta_0_255": 31.41649627685547,
+      "metrics_boundary": "Pixel differences are not proof of directed subject action, identity consistency or acceptable quality."
+    }
+  ],
+  "visual_observations": {
+    "modal": {
+      "classification": "CONFIRMED in supplied source and sampled decoded frames",
+      "finding": "Subtle foreground posture/arm and background-person position changes; overall soft detail and weak action. Creator reports unacceptable quality. Not a frozen single frame, but not accepted sponsor-quality motion.",
+      "source_identity": "UNKNOWN for strict face/character consistency; face is heavily occluded in source and output.",
+      "quality_acceptance": "FAILED: creator report retained; no quality fix established."
+    },
+    "hf": {
+      "classification": "CONFIRMED in sampled supplied frames",
+      "finding": "Clearer head turn and approach toward the camera, with larger framing changes. Soft/shadowed face remains.",
+      "quality_acceptance": "UNKNOWN: no new creator approval requested or recorded."
+    },
+    "comparison_boundary": "Different Scene5/Scene7 source compositions and potentially different instructions; not a controlled model benchmark. Pixel deltas are not a quality score."
+  },
+  "geometry_diagnostic": [
+    {
+      "provider": "modal",
+      "diagnostic_rgb_MAE": {
+        "stretch": 2.1102183948863638,
+        "center_crop": 13.04806857638889,
+        "contain_black_padding": 15.689332780934343
+      },
+      "boundary": "Reconstruction/generation differences and attachment re-encoding prevent proof of deployed preprocessing from pixel similarity."
+    },
+    {
+      "provider": "hf",
+      "diagnostic_rgb_MAE": {
+        "stretch": 22.49613721442945,
+        "center_crop": 11.077909527402936,
+        "contain_black_padding": 31.41954734108665
+      },
+      "boundary": "Reconstruction/generation differences and attachment re-encoding prevent proof of deployed preprocessing from pixel similarity."
+    }
+  ],
+  "hypotheses": [
+    {
+      "classification": "PROBABLE",
+      "finding": "Modal first frame resembles a stretched square source much more closely than committed aspect-preserving containment; possible old/different deployed preprocessing. Exact live worker code must be inspected before a correction."
+    },
+    {
+      "classification": "PROBABLE contributing configuration, not demonstrated root cause",
+      "finding": "Committed Modal non-distilled0.9.5 uses20 steps/guidance3. Pinned Diffusers docs show50-step examples and higher guidance for non-distilled variants. A budgeted controlled comparison is required before claiming improvement."
+    },
+    {
+      "classification": "PROBABLE weak-action contributor",
+      "finding": "Approved frozen direction explicitly requests minimal movement. Do not silently strengthen it or approve a new creative variant."
+    }
+  ],
+  "reference": {
+    "url": "https://github.com/huggingface/diffusers/blob/v0.35.2/docs/source/en/api/pipelines/ltx_video.md",
+    "sha256": "6b3c5d50ec24001ccc0475e33345d8eed67ff43bf1439c4834fd75024635e285",
+    "boundary": "Reference examples and recommendations are not empirical proof that a setting change fixes these clips."
+  },
+  "playback": {
+    "result": "PASS for actual attached MP4 bytes in actual deployed frontend with controlled REST/signing fixtures",
+    "evidence": "attached-motion-browser-playback.json",
+    "desktop_and_pixel7_emulation": true,
+    "played_beyond_seconds": 1.1,
+    "media_errors": 0,
+    "generation_requests": 0,
+    "database_mutations": 0,
+    "physical_android": "UNKNOWN",
+    "actual_owner_project_storage_RLS_journey": "UNKNOWN; not exercised with creator session"
+  },
+  "harness_attempts": [
+    {
+      "attempt": 1,
+      "result": "FAILED before playback",
+      "cause": "Private diagnostic inspect.py shadowed Python inspect",
+      "change_before_retry": "Renamed private script and removed only its own cached bytecode."
+    },
+    {
+      "attempt": 2,
+      "result": "FAILED before playback",
+      "cause": "Playwright Locator.first property called as a method",
+      "change_before_retry": "Corrected private harness property usage."
+    },
+    {
+      "attempt": 3,
+      "result": "PASS",
+      "contexts": 4
+    }
+  ],
+  "remaining_blockers": {
+    "deployed_modal_worker_source_equivalence": "UNKNOWN: moduleworker/file-based definition, serialized_bytes0, image/mount references exported; Python source content not returned. Local source is not deployed-artifact proof.",
+    "termux_bridge": {
+      "first_read": "completed/exit0",
+      "definition_read": "completed/exit0",
+      "pending_device_approval": false
+    },
+    "new_inference": "BLOCKED pending one credits-only trial authorization and current usable credits/$0paid-spend-cap confirmation.",
+    "quality_fix": "Not implemented: exact cause not proven; do not change models/settings speculatively."
+  },
+  "actions": {
+    "application_source_changes": 0,
+    "new_gpu_jobs": 0,
+    "inference_retries": 0,
+    "worker_deployments": 0,
+    "provider_switches": 0,
+    "creative_approvals": 0,
+    "customer_asset_mutations": 0,
+    "new_repository_test_runs": 0
+  },
+  "private_evidence": "Uploaded images/video, derived contact sheets, diagnostic scripts and player screenshots remain outside Git. Only sanitized measurements/receipts are published.",
+  "motion_verification": [
+    {
+      "stage": "Request authorized",
+      "result": "UNKNOWN",
+      "note": "Original authenticated request not independently retrieved."
+    },
+    {
+      "stage": "GPU job submitted",
+      "result": "PASS",
+      "note": "Existing job provider-response ID was recorded; no new submission."
+    },
+    {
+      "stage": "Inference completed",
+      "result": "PASS",
+      "note": "Existing completed job and supplied matching-name MP4; no claim of accepted creative quality."
+    },
+    {
+      "stage": "MP4 persisted",
+      "result": "UNKNOWN",
+      "note": "Stored asset/path record exists; renewed owner-authenticated cloud retrieval not exercised in this attachment investigation."
+    },
+    {
+      "stage": "Video decoded",
+      "result": "PASS",
+      "note": "All49 Modal and57 HF frames decoded successfully."
+    },
+    {
+      "stage": "Visible subject movement",
+      "result": "UNKNOWN",
+      "note": "Sampled subject posture changes visible; strict intended-action/identity/sponsor-quality acceptance not established and creator rejects Modal quality."
+    },
+    {
+      "stage": "Browser playback",
+      "result": "PASS",
+      "note": "Both actual MP4s advanced beyond1.1s in deployed UI on desktop and Pixel7 emulation using controlled REST/signing."
+    }
+  ],
+  "verification": "PASS for attached-file decode and scoped actual-media browser playback. Quality acceptance FAILED for Modal; root-cause repair and full sponsor acceptance remain BLOCKED.",
+  "control_plane_evidence": "modal-quality-control-plane.json",
+  "prepared_trial": "modal-quality-trial-proposal.json"
+}

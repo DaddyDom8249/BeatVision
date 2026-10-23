@@ -16,6 +16,10 @@ from dataclasses import dataclass
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 MAX_VIDEO_BYTES = 8 * 1024 * 1024
 MAX_PROMPT_CHARS = 1600
+# LTX-Video's text-conditioning path is configured around a 128-token
+# sequence. Keep this limit explicit and apply it with the actual model
+# tokenizer at the last possible boundary before inference.
+MAX_PROMPT_TOKENS = 128
 WIDTH = 704
 HEIGHT = 480
 FRAMES = 49  # ~2 seconds at 24 fps; this is a proof clip, not a full-scene output.
@@ -40,6 +44,74 @@ class MotionRequest:
     image_sha256: str
     prompt: str
     seed: int
+
+
+def budget_ltx_prompt(prompt: str, tokenizer, *, max_tokens: int = MAX_PROMPT_TOKENS,
+                      required_prefix: str = '') -> str:
+    """Token-bound a mandatory preservation prefix before optional scene details.
+
+    The exact loaded model tokenizer performs all counts. Never discard required
+    conditioning to fit optional decoration. BatchEncoding supports Mapping
+    methods without necessarily inheriting from ``dict``.
+    """
+    if not isinstance(prompt, str) or not prompt.strip():
+        raise MotionContractError('PROMPT_INVALID')
+    if not isinstance(max_tokens, int) or isinstance(max_tokens, bool) or max_tokens < 1:
+        raise MotionContractError('PROMPT_TOKEN_BUDGET_INVALID')
+    if not callable(tokenizer) or not callable(getattr(tokenizer, 'decode', None)):
+        raise MotionContractError('PROMPT_TOKENIZER_UNAVAILABLE')
+    if not isinstance(required_prefix, str):
+        raise MotionContractError('PROMPT_TOKEN_BUDGET_INVALID')
+
+    def ids(text: str):
+        try:
+            encoded = tokenizer(text, add_special_tokens=True, truncation=False)
+            token_ids = encoded.get('input_ids') if hasattr(encoded, 'get') else getattr(encoded, 'input_ids', None)
+            if hasattr(token_ids, 'tolist'):
+                token_ids = token_ids.tolist()
+            while isinstance(token_ids, (tuple, list)) and token_ids and isinstance(token_ids[0], (tuple, list)):
+                token_ids = token_ids[0]
+            if not isinstance(token_ids, (tuple, list)) or not token_ids or not all(isinstance(x, int) for x in token_ids):
+                raise ValueError('missing token ids')
+            return list(token_ids)
+        except Exception as exc:
+            raise MotionContractError('PROMPT_TOKENIZATION_FAILED') from exc
+
+    mandatory = required_prefix.strip()
+    if mandatory and len(ids(mandatory)) > max_tokens:
+        raise MotionContractError('PROMPT_REQUIRED_TEXT_TOO_LONG')
+    full = ((mandatory + ' ' + prompt.strip()).strip() if mandatory else prompt.strip())
+    if len(full) > MAX_PROMPT_CHARS:
+        # Overlength optional material cannot displace or truncate required text.
+        full = full[:MAX_PROMPT_CHARS].rstrip()
+    full_ids = ids(full)
+    if len(full_ids) <= max_tokens:
+        return full
+    # Tokenizer exact accounting after decode; special tokens may be inserted
+    # or normalized on decode. Shrink until the final encoded prompt fits.
+    if not mandatory:
+        try:
+            candidate = tokenizer.decode(full_ids[:max_tokens], skip_special_tokens=True,
+                                         clean_up_tokenization_spaces=True).strip()
+        except Exception as exc:
+            raise MotionContractError('PROMPT_TOKENIZATION_FAILED') from exc
+        if 8 <= len(candidate) <= MAX_PROMPT_CHARS and len(ids(candidate)) <= max_tokens:
+            return candidate
+        raise MotionContractError('PROMPT_TOKEN_BUDGET_INVALID')
+    optional = prompt.strip()
+    lo, hi = 0, len(optional)
+    best = mandatory
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        candidate = (mandatory + ' ' + optional[:mid]).strip()[:MAX_PROMPT_CHARS].rstrip()
+        if len(ids(candidate)) <= max_tokens:
+            best = candidate
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    if not best.startswith(mandatory) or len(best) < 8 or len(ids(best)) > max_tokens:
+        raise MotionContractError('PROMPT_TOKEN_BUDGET_INVALID')
+    return best
 
 
 def _uuid(value: str, field: str) -> str:

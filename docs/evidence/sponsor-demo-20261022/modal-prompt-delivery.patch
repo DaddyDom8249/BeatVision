@@ -1,0 +1,22 @@
+--- a/index.ts
++++ b/index.ts
+@@ -589,9 +589,16 @@
+   const bytes=new Uint8Array(await downloaded.data.arrayBuffer());
+   if (bytes.length<16 || bytes.length>MODAL_MOTION.maxBytes) throw new ModalMotionError("MODAL_IMAGE_SIZE_INVALID");
+   const scene=job.input_snapshot?.scene || {};
+-  const prompt=[scene.title,scene.visual_direction,scene.movement_direction,scene.location,
+-    scene.mood,scene.continuity_notes,"Preserve character, face, wardrobe, setting and natural physical motion."]
+-    .filter(x=>typeof x==="string" && x.trim()).join(". ").slice(0,1600);
++  // Order approved movement and continuity before optional atmosphere so LTX's
++  // bounded tokenizer cannot silently prioritize decorative scene prose.
++  const directedParts: Array<[unknown, number]> = [
++    ["Preserve the approved characters, faces, wardrobe, setting and natural physical motion.", 130],
++    [scene.title, 140], [scene.movement_direction, 400],
++    [scene.continuity_notes, 450], [scene.visual_direction, 340],
++    [scene.location, 100], [scene.mood, 90],
++  ];
++  const prompt = directedParts.filter(([x]) => typeof x === "string" && x.trim())
++    .map(([x, limit]) => String(x).trim().slice(0, limit)).join(". ").slice(0,1600);
+   const payload={project_id:job.project_id,scene_id:job.visual_plan_scene_id,
+     source_image_id:frozen.source_image_id,generation_job_id:job.id,
+     image_sha256:await sha256Hex(bytes),prompt,seed:parseInt(job.id.replace(/-/g,"").slice(0,7),16)||42};

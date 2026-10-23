@@ -1,0 +1,23 @@
+{
+  "observed_at": "2026-10-22T20:30:09.910103+00:00",
+  "mode": "red",
+  "evidence_scope": "Controlled HTTP503 frontend regression; not successful provider inference",
+  "actual_provider_submissions": 0,
+  "creative_approvals": 0,
+  "contexts": [
+    {
+      "name": "desktop",
+      "intercepted_proposals": 1,
+      "scripts": [
+        "/assets/index-29wpl7NP.js"
+      ],
+      "displayed_errors": [
+        "Edge Function returned a non-2xx status code"
+      ],
+      "manual_fallback_visible": false,
+      "continue_disabled": true,
+      "draft_badge": "DRAFT V1",
+      "verification": "PASS"
+    }
+  ]
+}

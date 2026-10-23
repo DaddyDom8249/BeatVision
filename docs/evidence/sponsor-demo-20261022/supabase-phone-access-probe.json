@@ -1,0 +1,16 @@
+{
+  "task_id": "T04.6",
+  "phone_job_id": "badbf87f-6bc2-434c-8fbe-583ff93f0920",
+  "bridge_status": "completed",
+  "bridge_exit": 0,
+  "cli_help_result": "FAILED exit 1: Unsupported platform android; management read not executed",
+  "management_access": "UNKNOWN",
+  "raw_output": "READ_ONLY_EXISTING_SUPABASE_ACCESS_NO_VALUES_NO_INFERENCE\n{\"cli_help_ok\": false, \"exit\": 1, \"diagnostic\": \"file:///data/data/com.termux/files/usr/lib/node_modules/supabase/dist/supabase.js:19\\n  throw new Error(`Unsupported platform: ${process.platform}`);\\n        ^\\n\\nError: Unsupported platform: android\\n    at file:///data/data/com.termux/files/usr/lib/node_modules/supabase/dist/supabase.js:19:9\\n    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)\\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:643:26)\\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\\n\\nNode.js v24.18.0\\n\"}\n",
+  "retry": {
+    "job_id": "900e072e-70d0-4005-acfe-b061779596c1",
+    "scope": "One related read-only batch: select existing Linux Node, CLI secret-name presence, phone post-patch CORS header checks",
+    "status": "queued; phone approval required",
+    "attempt": 2
+  },
+  "gpu_submissions": 0
+}

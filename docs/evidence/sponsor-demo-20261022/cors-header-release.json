@@ -1,0 +1,71 @@
+{
+  "source_commit": "2baa6a3041521a8646957b79cdedc50358ff420c",
+  "frontend_commit_unchanged": "63604806744e6d306742c75d399cc001c00aa0e4",
+  "functions": [
+    {
+      "name": "beatvision-song-interpretation",
+      "deployment": {
+        "id": "378e3091-5d41-47f3-a3f2-defafac5a5f6",
+        "slug": "beatvision-song-interpretation",
+        "name": "beatvision-song-interpretation",
+        "status": "ACTIVE",
+        "version": 2,
+        "created_at": 1792688871352,
+        "updated_at": 1792692325145,
+        "verify_jwt": false,
+        "import_map": false,
+        "entrypoint_path": "file:///tmp/user_fn_mdofsinyofqbeapzfygu_378e3091-5d41-47f3-a3f2-defafac5a5f6_2/source/index.ts",
+        "ezbr_sha256": "5a6704dd29ce7b063d4484ea92c259794af7a0e39dc85e031ee86cb77b0f1971"
+      }
+    },
+    {
+      "name": "beatvision-analyze-song",
+      "deployment": {
+        "id": "8fee1774-8566-4351-8db6-aff499cf3fab",
+        "slug": "beatvision-analyze-song",
+        "name": "beatvision-analyze-song",
+        "status": "ACTIVE",
+        "version": 41,
+        "created_at": 1790968015934,
+        "updated_at": 1792692328216,
+        "verify_jwt": false,
+        "import_map": false,
+        "entrypoint_path": "file:///tmp/user_fn_mdofsinyofqbeapzfygu_8fee1774-8566-4351-8db6-aff499cf3fab_41/source/index.ts",
+        "ezbr_sha256": "9c2a466604a7094731510bee59ec3731e1e154b273ea23b14c135b7bac5788e2"
+      }
+    }
+  ],
+  "source_delta": "Only Access-Control-Allow-Headers updated to the SDK canonical header names; origin/method/auth/cost checks unchanged",
+  "red_handler_tests": {
+    "pass": 20,
+    "fail": 2
+  },
+  "green_handler_tests": {
+    "pass": 22,
+    "fail": 0,
+    "skip": 0
+  },
+  "production_audit": "PASS",
+  "screenshot_root_cause": "PROBABLE header-preflight incompatibility; exact screenshot browser headers UNKNOWN pending user retry",
+  "new_gpu_or_provider_submissions": 0,
+  "user_screenshot": {
+    "attachment": "1000088094.jpg",
+    "sha256": "29fdf7c5391c58a7a161cc0df891698a0537554499688fa764831c0272f73617",
+    "original_private": true,
+    "user_confirmed_origin": "https://beat-vision-theta.vercel.app/"
+  },
+  "ci": {
+    "run_id": 39828722358,
+    "event": "workflow_dispatch",
+    "head_sha": "2baa6a3041521a8646957b79cdedc50358ff420c",
+    "conclusion": "success",
+    "tests": {
+      "pass": 418,
+      "fail": 0,
+      "skip": 0
+    },
+    "audit": "PASS",
+    "build": "PASS"
+  },
+  "immutable_origin_defect": "DEFERRED: supplied immutable host absent from exact CORS allowlists; not the user-confirmed failing origin. Use canonical production URL."
+}

@@ -1,0 +1,25 @@
+{
+  "task_id": "T04.6",
+  "phone_job_id": "900e072e-70d0-4005-acfe-b061779596c1",
+  "status": "completed",
+  "bridge_exit": 0,
+  "raw_output": "BATCH_READ_ONLY_NO_SECRET_VALUES_NO_INFERENCE\nNO_EXISTING_LINUX_NODE_FOR_CLI\n{\"function\": \"beatvision-song-interpretation\", \"status\": 200, \"allow_origin\": \"https://beat-vision-theta.vercel.app\", \"missing_sdk_headers\": []}\n{\"function\": \"beatvision-analyze-song\", \"status\": 200, \"allow_origin\": \"https://beat-vision-theta.vercel.app\", \"missing_sdk_headers\": []}\nEND_BATCH_NO_INSTALL_LOGIN_SECRET_VALUES_DIGESTS_SETTINGS_OR_GPU\n",
+  "verification": {
+    "phone_function_origin_and_sdk_headers": "PASS for both canonical endpoints",
+    "supabase_management_access": "UNKNOWN: CLI metadata read not executed",
+    "linux_runtime": "No file at /usr/bin/node or /usr/local/bin/node; other locations not tested in this batch"
+  },
+  "known_runtime_candidate": {
+    "path": "/root/.local/node-v22.16.0-linux-arm64/bin/node",
+    "source": "Previous completed phone commands, including 1e27c7f7-357e-40e9-81e0-8fa7103d24c6",
+    "current_presence": "UNKNOWN pending targeted check"
+  },
+  "final_retry": {
+    "job_id": "e8641d25-720c-4f9a-b6d1-4e6bcd50a7c3",
+    "attempt": 3,
+    "maximum_attempts": 3,
+    "status": "queued; phone approval required",
+    "scope": "Existing known Linux Node, CLI help, all nine required secret-name presences. No repeat of passed CORS checks."
+  },
+  "provider_or_gpu_submissions": 0
+}

@@ -13,7 +13,7 @@ const ALLOWED_ORIGINS = new Set([
 function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("Origin") || "";
   const headers: Record<string, string> = {
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Content-Type": "application/json",
     "Cache-Control": "no-store",
@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
 
     // The owner confirmed this separate key belongs to their Free-plan
     // account. Never fall back to the legacy paid GROQ_API_KEY.
-    const freeAccountVerified = Boolean(groqKey);
+    const freeAccountVerified = Boolean(groqKey) && env("GROQ_FREE_ACCOUNT_VERIFIED") === "true";
     if (!freeAccountVerified) return json({error:"PROVIDER_COST_UNVERIFIED: The dedicated free-account key is not configured. Local analysis remains available."},503);
 
     // Production stores audio in the `songs` bucket (see SongPage/useSong);
@@ -135,6 +135,8 @@ Deno.serve(async (req) => {
       transcription_provider: "groq",
       transcription_model: "whisper-large-v3-turbo",
       transcription_method: "groq_whisper",
+      transcription_status: "completed",
+      status_detail: "",
     };
 
     // Song and project duration are updated in one service-only transaction.

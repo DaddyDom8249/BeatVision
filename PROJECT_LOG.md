@@ -1378,3 +1378,463 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 **CI:** Source commit `09255f2d` completed all five GitHub workflow runs successfully: Modal Motion Proof Offline `39366905066`, BeatVision Production CI `39366904976`, Legacy storage ownership security `39366905081`, Generation enqueue security `39366905040`, and Database migration replay `39366904936`. CI is source-level evidence and cannot prove live generation.
 
 **Remaining:** An owner-authenticated read-only `modal_capability` response is not yet observed. Existing stored browser session attachment failed and there is no confirmed live signed-in browser session available to this agent. No provider job ID, GPU execution, MP4, decoded duration, private output upload or user playback has been proven. Do not interpret the existing Hugging Face clip as Modal success; do not submit inference before the agreed production capability gate.
+
+
+## 2026-10-21 — Song Intelligence candidate verification (local only)
+
+- Base: 7fb7649ad517db558acc445ec0fa478558ed359d; branch: repair/song-intelligence-integrity-20261021.
+- Applied verified Song Intelligence patch; updated legacy Song Intake regression and audio-save test fixtures for visual style fields.
+- Linux ARM64 Node v22.16.0 with experimental type stripping: 53 test files in two batches, 364 tests, 363 pass, 0 fail, 1 skip; targeted audio-save tests 7/7 pass.
+- Modal Python tests: 20/20 pass; TypeScript/Vite build, production audit and git diff integrity pass.
+- No live Supabase migration replay, production deployment, real provider inference, paid GPU, or end-to-end playable MP4 validation performed. Migration authorization and Arena provider URL security remain release gates.
+- Local commit only; no push, main merge, production changes or provider cost claims.
+
+
+## 2026-10-21 — Arena gateway security candidate (testing branch only)
+
+- Arena gateway requires exact `ARENA_GATEWAY_ALLOWED_HOSTS` comma-separated DNS allowlist; `ARENA_GATEWAY_URL` must be HTTPS origin (no embedded credentials, path, query, fragment, IP, internal host or nondefault port).
+- Upstream calls reject redirects, accept v2 paths only, abort after 20 s polling / 90 s submission, and stop responses beyond 16 MiB (allows encoded scene images).
+- Added offline negative-path regressions; configuration must be explicitly set and reviewed before deploying any changed Edge Function. Missing allowlist fails closed.
+- This commit does not change production Edge Functions, database or provider configuration. Live authenticated and no-charge execution remains unverified.
+
+- First Arena security CI pass exposed five legacy test failures from absent new allowlist settings; updated synthetic fixtures and encoded-separator validation. Exact-head CI revalidation required before approval.
+
+- Corrected verified offline regression: legacy Arena polling uses pinned `/v1/video/animate/jobs/<id>` GET and `/v1/video/assemble/status/<id>` POST, while submissions use fixed `/v2` routes. Added successful polling and negative route/method/encoded-ID tests. No GPU/provider requests run.
+
+
+## 2026-10-22 — Authenticated preview legacy-schema compatibility
+
+- On actual Vercel preview commit 163f6a7, real user login succeeded and 12 existing projects loaded; Ghast Song failed because current production songs table lacks visual_style_preferences.
+- New app-only legacy schema fallback queries only columns confirmed present in production when PostgREST reports one of the new Song Intelligence columns absent. Missing-schema state is visible and suppresses new interpretation confirmation and navigation.
+- Old Song Intake details remain real and editable; artist visual-style controls disabled, no fake AI or confirmation. No database writes or project migrations performed by this code change.
+- Isolated QA Supabase project was created on an explicitly zero-monthly-price quote. Its schema/auth/project contents are not yet provisioned for end-to-end tests. Do not mislabel it as usable until separately verified.
+
+
+## 2026-10-22 — Isolated QA Song Intelligence migration and ACL test
+
+- Existing no-cost QA project `llkzohajsoikdbuslxzb` provisioned with an empty, RLS-enabled, service-role-only core fixture. The three published Song Intelligence migrations replayed successfully in QA; production remains unchanged.
+- Supabase security advisor identified two trigger-only SECURITY DEFINER functions executable by anon/authenticated. Forward-only ACL migration removes PUBLIC role invocation; QA re-check cleared both security warnings. Seven remaining `rls_enabled_no_policy` informational findings reflect deliberately inaccessible contract-fixture tables; **not** ready as a real signed-in production-equivalent QA backend.
+- CI PostgreSQL replay now includes new ACL migration and direct role privilege assertions. All four migrations must pass exact-head checks before release promotion.
+
+## 2026-10-22 — Sponsor demo mission: verified intake, bounded Modal transport, external gates
+
+- Authoritative checklist created before source edits: `docs/SPONSOR_DEMO_TODO.md`, initial commit `9140561a38ab00d3c297cdfc9005c2301358af86`. Read-only baseline confirms draft PR #141 head `74f0367f2f3584669d7b91cde6b5111b470c71bc`, production frontend `4a2ebf8bf3e9f30f0cf35442f86662bb6296da86` / Vercel `dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT`, healthy existing Supabase, absent candidate Song Intelligence migrations/functions.
+- T02: one real frontend signup to the user-supplied mailbox returned HTTP 200; the user confirmed the email. Real desktop/Pixel 7 Chromium logins returned HTTP 200 and reached a settled empty dashboard. Initial loading-only observations were not counted as PASS. Password/session files remain private outside Git; no owner-vault account used.
+- T03: real frontend created isolated project `a4841264-fac6-4ec9-ae07-04544493257c` and saved a locally composed 16-second WAV, both HTTP 201. Reload/private audio playback verified on desktop and Android emulation. No existing customer project writes or creative approvals.
+- T04 partial: frontend DSP computed/persisted actual signal results. Exactly one transcription request deliberately aborted before network to prevent unknown-cost provider use; fallback/error honestly displayed. No successful transcription claim. Current deployed analyze-song v39 only checks a dedicated key's presence; candidate requires explicit verified-free flag. Candidate database/functions remain unavailable; no production schema release attempted.
+- Later the isolated project's audio/analysis changed in another session (actor UNKNOWN). New 254.48-second / 5,649,423-byte audio was read-only fetched, hashed and played in both contexts; SHA-256 `2546e9caca999e16180b0196f61f57feb76dfb340db0e94d1d6f8efbd13e8343`. New audio/transcript preserved. Transcript-bearing screenshots remain private outside the repository; no provider result attributed to the earlier blocked test.
+- T04.1: `b8baeaad49508577310044d51fb4bd31134606af` labels tempo/key as estimates and structural boundaries as heuristic candidates. Related song/auth tests 34/34 PASS, TypeScript/Vite build PASS. Local-built desktop/Pixel 7 DOM/screenshot review confirms labels, missing-schema warning, disabled new-style fields and World interpretation gate. Two harness expectation/timing failures retained/disclosed before the final successful inspection; no gate bypass.
+- T09.1: `fbbcb3d5697f39dcdfd95e32ca77ce58dc46349b` fixes actual deployed adapter defects: redirects with Modal proxy headers were permitted, the abort timer ended after headers, and response text was unbounded. Four offline baseline failures reproduced; repair rejects redirects, keeps 20-second timeout through body read, caps JSON at 16 MiB and cancels unread streams. 14/14 adapter tests PASS including max 8 MiB clip envelope; full source suite 413/413 PASS, zero skipped; production audit/build PASS. No Modal/provider inference in these tests.
+- T09 live non-inference checks: own-project modal_capability HTTP 200 (`modal_available=true`), existing foreign-owned project HTTP 404, anonymous HTTP 401. This verifies app authorization/config flags, not worker uptime, billing or inference. Current Modal credits/no-overage safeguards and execution authorization absent; no GPU submission.
+- Exact files/evidence: `docs/evidence/sponsor-demo-20261022/`, checklist, and `docs/SPONSOR_DEMO_RELEASE_GATES.md` (four unchanged migration hashes, coordinated function/frontend/config release requirements, configured L4/model/49-frame workload and honest funding unknowns).
+- Database changes: only the newly authorized test account, isolated project/audio and its local DSP state. No production DDL, provider configuration changes, creative approvals, GPU calls, full-length experiments or production release. Source fixes remain for draft review.
+- Remaining mandatory gate: T04 coordinated backend release/provider evidence and sponsor interpretation confirmation; dependent creative approvals/generation; T09 current financial/worker evidence; T10/T11 real authorized motion and actual MP4/subject movement/playback. T12 cannot claim observed resource exhaustion before proof. T13/T14 remain BLOCKED for full demo acceptance. MVP is not sponsor-ready.
+
+- Remote delivery update: four mission commits pushed as a fast-forward to existing draft PR #141, head `cf2ccb34a2589fe934193aa1f8c2eb145d273332`. Production CI `39738730339` PASS (retrieved job logs: 413/413, zero skipped, audit/build PASS, Node 22); PostgreSQL contract replay `39738730165` PASS; Modal offline `39738730312` PASS. Vercel preview `dpl_6KvH3vMdh6XjsNwAwa7baX1kmx6t` READY at `https://beat-vision-f8nn-e4akic7tp-beat-vision.vercel.app/`; authorized HTTP 200 for app shell and built JS with estimate labels. Hosted interactive preview journey remains unverified; no production release. Sanitized remote-validation.json records exact identities. Following documentation-only evidence updates do not change that app source.
+
+
+## 2026-10-22 — Authorized coordinated sponsor-intake release
+
+- User's “Do it” authorized reviewed backend/frontend rollout; no paid compute or creative approvals. T04 release work tracked before edits in the authoritative checklist.
+- Reproduced actual PostgreSQL42702: generation-lineage trigger local world_id conflicts with a world_reports column. Forward migration20261022165544 renames the local variable, preserves all lineage/owner checks and service-only execution ACL. Expanded real-PG valid/foreign/missing-lock/stale cases fail before and pass after. Commit5699c35f56726ac7597be1b653ca3f8b30ce64e3; QA replay and CI39818827550 PASS.
+- Added owner-only non-inference configuration preflight with runtime tests (69a9578d4952ce8a8cc9ac9951b822c55941187a). Configured/missing fixtures make no provider HTTP calls. Production candidate generationv60 returned all new prerequisite booleans false. No management token or connected secret-edit capability; secure configuration and billing evidence requested from owner, not credentials in chat.
+- Production Supabase mdofsinyofqbeapzfygu applied five original/forward migration bodies atomically as20261022170451 with lock/statement timeouts after actual schema/grant/active-job checks. Existing table counts unchanged; RLS/authority ACLs verified. Private old function bundles retained for rollback.
+- Released analyze-songv40, interpretationv1, AI Directorv1, Worldv60, Stylev28. Restored prior production generation controller with ONLY compatible Modal transport update asv61 because new Arena prerequisites were not ready. Exact component hashes/receipts in production-release-manifest.json. No financial flags or credentials changed.
+- Once the panel was live, reproduced incorrect estimate labeling and unconfirmed/dirty Continue behavior. Commit235b0737c82e60b882388974fed972ab006995b2 labels estimates and disables continuation until a saved confirmed interpretation; two red cases then green. Existing server/World approval gate retained. CI dispatch added in63604806744e6d306742c75d399cc001c00aa0e4 without removing checks.
+- Final Vercel production deploymentdpl_HBVecpyByZ6czJvLHvuHwWajis2W READY at https://beat-vision-666cwas4i-beat-vision.vercel.app/ and original https://beat-vision-theta.vercel.app/; exact frontend636048067… . Production CI39821652295 PASS:416/416,0 skipped,audit/build PASS; Modal offline39821652417 PASS. Earlier same-SHA dispatch39821481478 failed existing Chromium startup10s timeout; retained/disclosed. Exact-head PG job39821651802 has all successful steps but aggregate run still in_progress at retrieval.
+- Real frontend created ONE synthetic projectad266b2c-3e9b-45fb-b8ab-5aabacfe3ac4; preserved earlier project now holding real user audio. Uploaded16s WAV, style/Notes persisted, actual local DSP persisted after transcription was intentionally aborted BEFORE network, manual draftv1 persisted across reload. Server SHA256 b82c95… matches original file, confirmed pointer null. Desktop/Pixel7 emulation no errors/overflow, audio advances, Continue disabled, actual World confirmation gate observed. Two test-harness selector failures corrected by inspecting real DOM and reusing same project/upload. Physical Android and real transcription remain unverified.
+- T09 accessed existing authorized phone-status results only; bridge offline. Historical Modal CLI showed app and $0 billed after credits, not remaining balance/expiry/hard spending limit. No new phone command or GPU request. Fresh worker availability, financial cap and provider duplicate reconciliation remain unverified.
+- Remaining external gates: secure server configuration and verified-free provider facts, artist approvals throughout creative pipeline, current Modal credit/cap evidence and bounded execution authorization. T01–T03 PASS; T04–T14 BLOCKED. No full-length experiments, customer data changes, creative approvals, GPU inference, new infrastructure or main/PR merge. MVP is not sponsor-ready. Evidence and review stay in existing draft PR141.
+
+
+## 2026-10-22 — T09 user-supplied Modal financial evidence
+
+- Visually inspected all five original billing/settings screenshots. Confirmed visible beatvision Starter workspace: $42.50 usage limit including credits, $0 configured spend limit, $0.12 total usage (L4$0.09/CPU$0.02/memory$0.01),1.11GiB egress and estimated egress charge$0.00. Workload-stop text explicitly excludes Volume storage. Original images kept private; sanitized observations and attachment SHA256 in modal-user-financial-evidence.json.
+- Corrected current checklist/release blockers: configured spend-limit proof is no longer missing. $42.38 arithmetic headroom is not confirmed remaining credits. Capture date, compute-credit balance/expiry and exact worker identity are not displayed. Historical L4 charges do not prove a completed video or current GPU availability.
+- Current runtime has no secret/identity bindings; existing phone bridge reports offline with unchanged heartbeat. Repository worker has no persistent Modal Volume configured, but deployed equivalence remains unverified. No phone command queued, provider call, GPU inference, financial-setting change or approval. T09 remains BLOCKED by actual account/worker and remaining prerequisite evidence; T10 additionally needs artist-approved scene inputs. Application code/deployment unchanged; no repeated source tests or build. Evidence integrity checks and focused docs commit only.
+
+
+## 2026-10-22 — T04 Edge transport repair and requested Termux retry
+
+- User screenshot1000088094 shows interpretation/transcription “Failed to send a request”; user confirms canonical theta origin. Production identity unchanged. Exact screenshot root cause remains unconfirmed; logs show200 preflight without POST. Read-only canonical frontend draft loads succeed in desktop/Pixel7 emulation. Independent immutable-origin allowlist defect identified and deferred after the user confirmed another origin; no guessed origin change.
+- Reproduced actual canonical CORS defect using standard traceparent: ordinary unauthenticated browser request returns401; traced request fails preflight. SDK2.118 exported request-header list includes tracing/retry fields absent from both handlers. Red handler tests20 PASS/2 FAIL, narrow two-line correction, green22/22; untrusted/lookalike origins still denied and auth remains401. Source commit2baa6a3041521a8646957b79cdedc50358ff420c pushed to existing draft PR141.
+- Deployed byte-compared committed functions to existing Supabase: interpretationv2 bundle5a6704dd29ce7b063d4484ea92c259794af7a0e39dc85e031ee86cb77b0f1971; analyze-songv41 bundle9c2a466604a7094731510bee59ec3731e1e154b273ea23b14c135b7bac5788e2. Same authentication settings, origins, methods, owner/cost gates. No schema/frontend release, inference or user-project changes.
+- Live post-patch browser reproduction reaches401 with/without traceparent. Actual authenticated frontend with all SDK trace headers loads draft HTTP200 in desktop/Pixel7; intentional empty analysis request returns structured400 before inference. Expected400 console errors recorded rather than hidden. CI39828722358 PASS at exact fix SHA:418/418,0 skipped,audit/build PASS. User-device retry confirmation pending; do not claim the original screenshot fully resolved.
+- Explicitly requested Termux retry returned online with fresh heartbeat. Phone preflight job2daf31ff completed exit0; output has old headers, no completion clock, not post-patch proof. Read-only Modal app/billing/function-stats job63c49cf7 queued once; awaiting bridge-required on-phone approval. No .remote/.spawn, deployment or GPU request. Latest heartbeat18:09:06Z and offline at retrieval; do not conflate transport status with worker readiness. T09 blocked pending owner approval/result; T04 still blocked on user retry/provider setup/artist confirmation. Private original screenshot retained, sanitized artifacts/hashes committed.
+
+
+## 2026-10-22 — T09 corrected phone approval resend
+
+- User requested resending approval. Actual old job63c49cf7 was approved and failed127: /root/modal-env/bin/python does not exist in the outer Termux environment. Prior successful command used proot-distro login debian; agent's earlier direct-path command omitted it.
+- Retry2/3 queues the same bounded read-only app/billing/function-stats checks through the verified existing Debian wrapper. New jobb23ccbf0-449e-4e69-9a4d-32188083f5fa queued; bridge requires approval on phone. No install, new credentials, provider change or GPU inference. Result remains UNKNOWN until actual completion. App source/deployments/tests unchanged; no redundant CI run for evidence-only update.
+
+
+## 2026-10-22 — Modal control-plane verified; related phone diagnostics batched
+
+- Approved corrected Modal read-only jobb23ccbf0 completed exit0. SDK1.6.2 lists exact existing appap-CopCZqKwTuk11VLpDSU0fH deployed with0 tasks. Function stats backlog/runners/running inputs0; billed$0.00 after credits/egress allowance, metered$0.16. Account/control-plane access verified, no GPU invocation or loaded-model claim. modal-control-plane-verified.json retains actual output.
+- Supabase access probebadbf87f completed bridge exit0 but CLI help failed exit1 Unsupported platform android; management authentication/secret-name query never ran. No claim of denied or absent access. Testable retry uses existing native Linux Node in the known Debian guest instead of inherited Android Node; no installs or credential-file reads.
+- User requests bulk approvals to reduce app switching. Persisted preference: group related dependency-ready read-only commands in one script, execute sequentially with one active checklist task, collect reviewable questions together. New request900e072e batches Linux runtime selection, relevant secret-name metadata and phone post-patch canonical CORS. Awaiting required on-phone approval. No settings, source/deployment, financial flag, creative approval or inference changes; no repeated CI. T04/T09 remain partially verified and BLOCKED on stated dependencies.
+
+
+## 2026-10-22 — Approved grouped phone results and final CLI runtime path
+
+- Approved batch900e072e completed exit0. Canonical phone preflights for interpretation/analyze-song return200 with exact origin and missing_sdk_headers=[]. PASS for physical-phone network/header configuration only; no user-browser proposal or creative approval claim.
+- Supabase management read not executed: /usr/bin/node and /usr/local/bin/node absent. Earlier probe's Android wrapper error remains a local runtime issue, not proof of missing authentication. Previous completed phone command metadata identifies /root/.local/node-v22.16.0-linux-arm64; final targeted attempt3/3 queued ase8641d25 using that candidate and one batch of all nine name-presence checks. No repeat of accepted CORS/Modal reads, installation, secret-value inspection, settings change or inference. Required new phone approval is imposed by bridge per command. No further runtime retries after its result.
+- Source/deployments unchanged. Related artifacts and current blockers updated; no redundant source tests/CI.
+
+
+## 2026-10-22 — Final approved CLI attempt closed; consolidated operator setup
+
+- Approved jobe8641d25 completed bridge exit0. Existing native Linux Nodev22.16.0 verified. Actual Supabase CLI help failed exit1: missing linux-arm64 binary package. Management secret metadata/authentication never executed; do not call it denied access. Third execution approach exhausted under user RuleE; no fourth CLI/phone attempt or install queued.
+- Retained phone post-patch CORS PASS and fresh Modal control-plane/billed$0 evidence. Full creative/motion acceptance remains BLOCKED; no provider/GPU inference or content approvals.
+- Prepared one-pass existing Supabase Dashboard configuration packet after required dedicated Groq Free-plan/no-paid-billing confirmation. Source-verified six non-secret flags/model/quota, secure existing-key handling, existing Arena origin/token/exact-host requirements, and secure management-access alternative. Official current Supabase docs confirm Dashboard supports bulk secrets and edits require no function redeploy. No actual secret settings changed or values inspected; recommended quota3 is not claimed as current/account-wide cap. App source/deployments/tests unchanged; no repeated CI.
+
+
+## 2026-10-22 — T04 interpretation error details repair
+
+- Owner confirms dedicated Groq Free/no-paid-billing account; financial attestation resolved, server flags still unknown. One actual canonical frontend proposal on the isolated synthetic fixture returns503 in provider logs at20:22:52.606Z. Harness hangs in Playwright Response.json and is interrupted; envelope/UI not invented. Read-only DB shows only prior manualv1, no quota/inflight rows; no retry, provider-success or creative approval claim.
+- Confirmed app defect: useSongInterpretation ignores FunctionsHttpError.context JSON, hiding actionable server error and manual fallback. Controlled canonical frontend503 reproduces this without contacting inference. Small hook repair parses a cloned Response, retains original body, server message/code/manual_fallback; applies to all interpretation actions without changing auth/cost/approval gates.
+- Tests red2/4 fail then focused8/8 PASS. Full422/422 PASS,0 skipped; production audit and TypeScript/Vite build PASS. Files: hook, regression test, checklist and sanitized evidence. No database/settings changes. Deployment/live corrected UI verification pending; overall T04 remains unverified.
+
+
+## 2026-10-22 — T04 error-handling repair released and browser-verified
+
+- Source64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52 pushed to existing draft PR141. Production dpl_4tzfmck36NYpFTn3xbhzQYhcx8Ft READY, canonical theta alias attached; immutable beat-vision-nlxq3v0z6-beat-vision.vercel.app records release identity. Exact-source CI39849524379 completed success:422/422,0 skipped,audit/build PASS.
+- Canonical controlled503 regression green on desktop/Pixel7 emulation, real provider calls0 for those checks. One actual post-fix frontend retest on unchanged synthetic fixture returns503 PROVIDER_COST_UNVERIFIED; exact server message and manual fallback now displayed. DRAFTv1/Continue gate preserved; read-only DB confirms sole prior manualv1 intact. No successful inference, content approval or GPU claim. Previous terminal503/no-inflight evidence justified this changed-code retest; no further retry queued.
+- Owner's Groq Free/no-paid-billing confirmation accepted; no repeat question. Confirmed remaining external blocker is server provider configuration; individual settings unknown and connected tools lack secret-edit access, phone CLI approach remains closed3/3. Prepared bulk Dashboard setup packet now records attestation resolved. T04 BLOCKED, downstream approvals/input/motion gates blocked; no active task remains. No database/settings changes or main merge. User preference retained: concise outcomes and grouped requests only when access/decision is actually required.
+
+
+## 2026-10-22 — Owner-saved settings verification still blocked
+
+- User reports “Saved” after the grouped existing-project secrets instructions. T04 resumed alone; no source edits. Actual canonical frontend proposal at20:40:20Z on unchanged synthetic16s fixture returns terminal503 PROVIDER_COST_UNVERIFIED/manual_fallback=true. Real UI shows exact message, DRAFTv1, disabled Continue. Existing server combined verified-flag/enable/key/pinned-model guard still fails before quota/provider fetch; exact failed condition UNKNOWN, not assumed to be a bad key or a provider outage.
+- This is third materially justified configuration check after two terminal503 results and a reported settings change. Approach now closed3/3; no fourth submission or further phone CLI attempt. One concise non-secret question asks if GROQ_FREE_API_KEY exists separately from the six pasted settings in the same project. No key value requested/read/logged, source/deployment/financial guards or approvals changed. T04 BLOCKED; downstream dependencies remain blocked. Full422-test/build/CI evidence reused for unchanged source.
+- Evidence: groq-configured-proposal-result.json and isolated panel screenshot; no successful AI/GPU result claimed. Checklist/release/log/manifest updated, draft PR kept open and unmerged.
+
+
+## 2026-10-22 — Supabase secret-list screenshots clarify key presence
+
+- Directly inspected user images1000088112/1000088110. GROQ_FREE_API_KEY name is present in the shown BeatVision/main project; exact ref and key validity remain unknown. The six prepared flags/model/quota are not visible; absence is not asserted from partial screenshots. Dashboard technical-issue banner has no proven causal connection.
+- Key-presence clarification resolved. Provided separate Name/Value setup guidance and save/row-presence check, preserving existing keys. Sanitized observation stores image hashes and names only, no credential values/digests or raw dashboard screenshots in Git. T04 remains BLOCKED; no code/deploy/provider/GPU/creative-approval change, no fourth submission or repeated tests.
+
+
+## 2026-10-22 — Provider settings remediated; real interpretation/transcription and status defect
+
+- New owner screenshot1000088114 shows all six settings; visible SHA prefixes match expected non-secret true/model/quota values. One actual post-remediation frontend proposal returns200 and persists AIv2 de9d52af-5fc2-45c7-838c-36d4766d9ba5, verified-free-provider/openai/gpt-oss-20b, original audio fingerprint and real provider request provenance. Eight evidence-linked claims recorded; prior manualv1 remains with superseded status, neither confirmed. Quota table records one interpretation request.
+- One real frontend Re-Analyze executes dedicated Free Groq Whisper,200 completed, correct16s authoritative duration and model/provider persisted. Instrumental fixture proves integration only, not sung-lyric accuracy. Read-only reload harness sampled initial loading state and failed its draft assertion; this does not prove data loss. DB retains AIv2; no repeated proposal for the harness race.
+- Confirmed integrity defect: successful transcription still inherits unavailable status from saved local analysis; previous failure detail can also survive. Minimal two-field success-path correction stamps completed and clears status_detail within existing revision-aware transaction. No auth/cost/provider/approval changes. Regression red18/19 PASS then focused23/23 PASS, full423/423 PASS,0 skipped,audit/build PASS. Release/browser correction pending.
+- Before mutation, API reports functionv42 with prior bundle9c2a4666; retrieved source byte-identical to committed baseline. Older deployment receipts/harness hardcodedv41 are historical metadata, not current inventory. Actual current rollback snapshot saved privately; release will record returned identity. No customer/approved data altered, no GPU call or content approval.
+
+
+## 2026-10-22 — Success-status fix deployed; real provider pipeline verified to artist gate
+
+- Source978240d1f97fa54ec9e008b9a3f5e201eeca96b0 deployed to existing analyze-songv43, ACTIVE bundle9c9d3254…, unchanged auth/cost/revision gates. Retrieved source byte-matches commit. No frontend/schema/secret mutation by agent. Actual API inventory now interpretation3/Director2/World61/Style29/generation62; interpretation/generation bundles unchanged from accepted source.
+- Exact-head CI39856954325 completed success423/423,0 skipped,audit/build PASS. Actual post-fix frontend transcription200 now persists completed, empty old detail, same audio/revision and16s timeline. Read-only DB confirms. Two Whisper calls total: first exposed stale unavailable status, second verifies changed code. No extra proposal; one actual AIv2 with8 claims/provider provenance and earlier manualv1 preserved.
+- First reload harness sampled early loading state; second exact-label selector failed once textarea was populated. Neither failure justified repeated inference. Third corrected read-only check PASS on desktop/Pixel7 emulation: DRAFTV2 persists, summary128 chars, no errors/overflow, Confirm available to artist and Continue disabled. Failed observations remain recorded. No physical Android/video proof or sung-lyric accuracy claim.
+- Provider configuration blocker resolved. T04 remains BLOCKED solely on required artist confirmation/remaining acceptance scope; dependent World/Style/story/image/motion still unverified. No creative approval, GPU job or merge. No further independent authorized execution remains before artist review and later scene/financial prerequisites. Evidence/checklist/release packet and draft PR updated.
+
+
+## 2026-10-22 — T04.13 Analyze automatically prepares editable interpretation
+
+- User requests all six interpretation panels fill during Analyze. Confirmed SongPage stopped after transcription and required a separate proposal. Existing provider could leave sections empty; transcript was not citable lyric evidence and rationale editor showed internal field paths.
+- Chain one existing guarded proposal after successful saved transcription on an empty editor. Preserve active saved/confirmed interpretations and unsaved text, disable conflicting actions during analysis, keep artist confirmation separate. Optional expected-audio revision rejects stale analysis; automatic empty-only requests reuse an active matching version without inference. No provider fallback, quota or authorization changes.
+- Server includes machine transcript as separate evidence, prefers authoritative artist lyrics, asks for all sections with honest uncertainty and clearly marked creative suggestions, and rejects incomplete responses. Rationale shows validated claim text. Original evidence/source links persist in JSON. Existing versions remain preserved; no auto-approval.
+- Red5/12 PASS then focused20/20 PASS. Initial full430/431 exposed one legacy extracted-handler test missing new context; fixture corrected with regression/state-release checks retained. Final431/431 PASS,0 skipped,audit/build PASS. Prior live interpretationv3 matches baseline; rollback preserved privately. New synthetic16s speech/music fixture created locally for genuine first-analysis acceptance. No new services/schema/dependencies or real user-project writes. Release/live acceptance pending.
+
+
+## 2026-10-22 — Automatic six-section live acceptance; heuristic claim qualification
+
+- Canonical frontend195c533 on dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV READY, interpretationv4 source byte-matches commit. Exact CI39861322151 passed431/431,audit/build. One fresh isolated app projectbb457d64-29ea-4649-a566-c446eef61ad6: real16s speech/music upload, one Analyze click, Whisper200 then automatic AI200, all six sections nonempty/editable, no separate Propose click. All six QA edits saved as artist_editedv2 and survived desktop/Pixel7 reload; AIv1 preserved, no confirmation/GPU call.
+- Direct real generated-text review exposed rationale wording stating heuristic BPM/key as fact. Two-field metric-card labels alone do not qualify the new rationale editor. Small server correction prefixes claims citing heuristic signal refs with Estimate and reinforces prompt; duration/lyric claims and refs unchanged. Regression8/9 PASS before fix,13/13 focused and432/432 full PASS after,audit/build PASS. Currentv4 baseline verified/rollback saved; function-only release and one remaining bounded Free-model variant pending. No repeated transcription or second app project. Earlier images/profile-containing proof remain private; sanitized JSON/hash evidence public.
+
+## 2026-10-22 — Estimate qualification released; provider follow-up blocked
+
+- Commit be15931abdfec4583b2b26cc6a807b83ef41bd73 pushed to existing draft PR141. Interpretationv5 ACTIVE, bundle35409fc23e8ba2cddc8beb3f6c2c6c9143581f61857ef6720c1ddb3eccc0dab0; retrieved source byte-matches commit. Auth, quota, model and approval gates unchanged. No new frontend deployment:195c533/dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV remains live. Exact CI39863365590 completed success432/432,0 skipped,production audit/TypeScript/Vite build PASS.
+- One bounded actual Propose click on the same isolated speech/music fixture returned503 INTERPRETATION_PROVIDER_FAILED at22:16:13Z. No transcription rerun, second project, creative approval or GPU submission. Available handler/source/log evidence establishes a downstream non-2xx; exact provider HTTP status/cause remains UNKNOWN. Do not call it provider quota or configuration failure without evidence. Actor usage is now3/3 today; no retry, quota increase or paid/provider fallback.
+- Read-only DB verifies original AIv1 and artist_editedv2 remain intact, neither confirmed, current pointer null and no inflight row. New AIv3 was not created. Initial retention harness incorrectly blocked existing read action get and timed out; failed artifact retained. Corrected read-only guard permits get/list and blocks mutations; desktop/Pixel7 reload PASS for all six saved edits, editable fields, disabled Continue, enabled artist Confirm, no page errors/overflow. No inference retried.
+- Public sanitized evidence records terminal failure, deployment/source/CI, database state and separate initial/corrected retention checks. T04.13 remains PASS only at its exact initial195c533/v4 live automatic-flow identity. T04.13a new provider-output acceptance BLOCKED. Overall T04 and dependent stages remain BLOCKED on provider/quota and explicit artist review; T09 still has its independent approved-image/financial/runtime gates. No active checklist item remains. No schema/settings/customer data change or merge.
+
+## 2026-10-22 — Owner-raised quota; real estimate-qualified draft acceptance PASS
+
+- Owner reports raising daily allowance to15. Read-only preflight confirms preserved original AIv1/editedv2, request_count3 and no inflight request. Current interpretationv6 source byte-matches be15931 and priorv5 bundle; no agent deployment this turn. A single bounded materially justified retest is attempt2 after the earlier terminal503.
+- Actual frontend Propose returns200 and persists AIv3 a4daad16-803f-45e5-9cae-6dc5f9a27a59, verified-free-provider/openai-gpt-oss20b with provider request provenance. All three heuristic claims qualified as Estimate; all six fields nonempty/editable and exact on desktop/Pixel7 reload, no displayed errors. Continue remains disabled and artist Confirm available. No automatic approval or repeated audio analysis.
+- Read-only DB confirms earlier AIv1 and artist_editedv2 preserved with superseded status, newv3 draft, all confirmations/current pointer null, same fingerprint/revision, request_count4 and no inflight row. Actual fourth reservation proves prior limit3 lifted; exact15 remains owner-reported. The earlier downstream503 cause remains UNKNOWN, and quota increase is not established as its cause/remedy.
+- Inventory shows analyze44/interpretation6/Director3/World62/Style30/generation63 with unchanged preceding bundle hashes. Cause/actor of version increments UNKNOWN. Update current identities without claiming agent deployment. Unchanged source432-test/audit/build/CI evidence reused, no redundant checks/inference. No secrets read/edited, schema change, customer-project mutation, GPU job or merge.
+- T04.13a now PASS with sanitized request/database/source evidence. Overall T04 remains BLOCKED solely on explicit artist confirmation and remaining user acceptance; subsequent creative approvals, eligible image generation and Modal financial/runtime/motion proof remain unverified. No currently executable independent task remains. Checklist, release packet, manifest and existing draft PR updated.
+
+## 2026-10-22 — T09.3 reported weak Modal output; reproduced prompt delivery defect
+
+- User reports absent Modal motion/weak HF output. Read-only metadata now includes four completed Modal assets and two recent jobs in project534adf58-b9a3-4f5f-bb92-eaeb5aea0833; these were not submitted by this mission agent. Two existing approved source-image rows verified; corresponding motion assets unapproved. Existing private MP4s downloaded without generation, full decode49frames/2.041667s/H264/704x480 each. Sampled frames show weak pose/appearance changes, insufficient acceptance of convincing directed action/identity. No frontend playback claim. Raw media, signed URLs and creative text remain private.
+- Live generationv63 still uses old title/long-visual-before-movement prompt, while committed candidate e02a3e already prioritizes approved movement. Actual saved inputs508/562tokens lose movement under the pinned T5 tokenizer and committed worker128-token budget; existing candidate ordering retains both. Pinned tokenizer-only local download/CPU processing, no model weights/GPU. This confirms a delivery defect, not its sole causal effect on output quality or exact deployed worker-source equivalence. Artist-approved direction itself requests minimal movement; do not replace it silently.
+- Small compatible production patch ports only the existing corrected modalBridgeSubmit block; all other live controller/dependency bytes preserved. Added real extracted-function regressions: oldv63 2/3 PASS1FAIL; compatibility-patched function3/3 PASS, candidate+transport18/18 PASS. Full435/435,0 skipped,production audit/build PASS. Release/CI pending. No full candidate Arena controller release, new model/provider, data/schema/settings change, creative approval, media replacement or GPU request.
+- HF read-only history shows five quota-exhaustion failures and one processing job, in addition to completed rows. Counts do not prove usable motion. No uncertain job polled/resubmitted or HF inference attempted. Remaining T09 financial/runtime acceptance and T10/T11 new output/motion/identity/playback proof remain blocked. Evidence in motion-output-diagnosis.json and exact source patch; source/project assets preserved.
+
+## 2026-10-22 — Compatible motion prompt patch live; quality proof still gated
+
+- Commitc1e55a2535e745d182b1f09da0cdf23fa45d7b27 pushed to draft PR141; exact CI39871128656 completed success435/435,0 skipped,audit/build PASS. Before release, livev63 bundle/files still matched private rollback baseline. Ported only the already-committed movement-first modalBridgeSubmit block; no full candidate Arena controller or other dependency change.
+- Existing beatvision-generation nowv64 ACTIVE bundlec1b6f762475d7b98ed2b853b8b982fae74bbaefd2b0d05d3481bb06e78da6092. Retrieved all five files byte-match the tested compatibility release. Canonical frontend rechecked READY dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV/source195c533 unchanged. Auth, approved-source checks, financial guards, polling/provenance and media persistence unchanged.
+- T09.3 diagnosis/T09.3a prompt delivery repair PASS with real extracted-function regression and pinned CPU-tokenizer evidence. Existing saved clips decode; convincing intended subject action/identity and in-app playback are not claimed. No new inference, customer writes, approvals, financial-setting change or merge. Existing clip statuses/assets retained. Post-fix rendered quality remains UNKNOWN; current approved directions request minimal movement and must not be overwritten.
+- T09 overall BLOCKED on remaining credit/runtime/execution prerequisites; T10/T11 need an explicitly authorized bounded GPU test and separate motion/identity/frontend acceptance. No active task remains; other creative gates remain artist-directed. Release packet/checklist/manifest/PR updated with current code and explicit limitations. Do not represent Groq quota15 as a Modal compute authorization or new GPU budget.
+
+## 2026-10-23 — T09.4 requested Modal primary / Hugging Face fallback
+
+- User requests Modal primary and HF fallback. Confirmed frontend and omitted-provider API defaults still HF. Set both defaults to Modal, list Modal primary first/HF fallback second, and explain fallback is explicitly selected. Existing pending-job selector/generation controls, frozen job polling, model terms/ownership/approval/free-provider/budget gates and saved assets remain unchanged. No new fallback engine or automatic GPU switch/retry.
+- Meaningful React checks cover default Modal submission, unavailable Modal without enqueue/autofallback, explicit HF fallback choice and pending Modal/HF polling with no new submission. Actual backend handler/helper verifies omitted provider uses Modal financial guard, explicit HF retains its missing-key/eligibility guard and unsupported providers reject. Red76/79 then corrected focused94/94 PASS; first94-test run exposed one legacy error-envelope expectation and old static/preflight fixture assumptions, all retained in logs.
+- Compatible productionv64 snapshot preserved privately; deployment patch changes only two provider-default literals. Optional test loader executes that exact patched controller;38/38 PASS. Full440/440,0 skipped,production audit/build PASS. Frontend/function release, CI and controlled real-browser check pending. No inference, secret/settings/schema change, creative approval, project/media mutation or merge. T09 alone IN_PROGRESS; all broader motion proof/artist gates remain.
+
+## 2026-10-23 — Modal primary / explicit HF fallback live and browser-verified
+
+- Sourcee58261a313b0ffc3e365c0feb06a1c6af88ab3ae pushed to existing draft PR141. Generationv64 baseline rechecked unchanged, then only two default literals deployed asv65 ACTIVE bundlec1798b6cf628ec6c4d15d5ce1c133d99315e53c7c3518bc9700bd36a2c810767. All five retrieved files byte-match tested compatibility patch. Prior prompt correction/controller/auth/financial guards preserved; full candidate Arena controller remains unreleased.
+- Frontend dpl_EMshjqMjXf8fxwf3GBgfzY9wKN3Y READY, canonical theta alias and immutable beat-vision-py6yftmnm-beat-vision.vercel.app. Exact source CI39881788868 completed success440/440,0 skipped,audit/build PASS. Desktop/Pixel7-emulated real deployed frontend with controlled isolated REST/provider responses verifies Modal primary default, explicit HF fallback, no automatic enqueue on unavailable Modal, exactly one intercepted enqueue after explicit HF choice and saved-ID polling/locked selector for pending Modal/HF jobs. No horizontal overflow. Fixtures are not creative approvals or real GPU/inference proof.
+- No cloud/GPU generation, customer data/media mutation, schema/secret/financial-setting change, automatic provider switch or merge. Existing frozen provider jobs/variants retained. T09.4 policy PASS; mandatory T09/full sponsor journey remain BLOCKED on recorded financial/runtime/artist and motion acceptance. No active checklist item remains. Updated checklist/release/evidence/manifest and existing PR; app is not declared sponsor-ready.
+
+
+## 2026-10-23 — T13.1a: stale assembly sources and measured coverage
+
+User screenshot reports Final assembly: Shotstack400. Read-only latest saved
+job2ee3e58d-3f4d-49b3-a836-0e2fc2fe99de and active generationv65 confirm
+frozen motion URLs are forwarded without renewal. Scene1/2/4 URLs expired
+before assembly; actual Scene1 storage GET returns400 InvalidJWT/expired.
+Arena deployed versionf3e727e0-661e-47a5-92bb-cbe0eee7deb4 probes sources
+before constructing the edit. Exact Shotstack validation body was not saved,
+so attribution of its400 to expiry is PROBABLE, not independently proven.
+Saved container measurements confirm clips1.9/2.041667s allocated to scenes
+7.8–67.6s; approved-clip count alone is insufficient timeline coverage.
+
+Small scoped repair resolves only frozen approved asset IDs, verifies matching
+project/plan/scene/completed-job lineage and exact private storage path, checks
+container-measured duration before signing/upstream, and renews private access
+at dispatch. No saved URL/asset/job/snapshot is rewritten. Frontend readiness
+uses generating-job proof, explains the genuine footage/GPU shortfall and keeps
+old provider errors visible. No loop/freeze/retime or artificial full-song output.
+
+New handler tests red0/12 then green12/12; compatible live-controller patch12/12;
+React red41/44 then44/44; focused99/99; full455/455,0 skipped; audit/build PASS.
+Existing actual local Chromium390/980px layout regression PASS; no CSS fix
+justified. Files: generation index, workspace, focused tests/fixtures/runtime
+loader, checklist and sanitized evidence. DB/schema changes:none. GPU/render
+requests:none. No automatic creative approval. Release/CI/deployed browser
+pending. Sponsor journey remains blocked by earlier explicit approvals and
+financial/runtime/post-fix motion verification; no MVP-ready claim.
+
+
+T13.1a release verified at0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c: CI
+39889027957 success455/455,0 skipped,audit/build PASS; PG39889027960 and
+offline Modal39889028050 success. Generationv66 ACTIVE bundle
+c2362dfab4a95b54cbf56ce136be7c7494de89f7e4bcd5d9e4e81ebf1b43776f;
+all5 retrieved files match tested compatibility patch. Live anonymous401 and
+production CORS retained. Vercel dpl_4CVPYRJ2yeKDJ4qbKxLo5XEvDSwL READY
+with canonical alias and exact source; immutable
+https://beat-vision-dz2o7tp9v-beat-vision.vercel.app/. Actual deployed frontend
+controlled read-only fixtures pass desktop1440, Pixel7/393, mobile591 and
+desktop-mode980px: short/unknown coverage disabled, sufficient measurement
+enabled, historical400 visible, no horizontal overflow. Provider submissions,
+assembly clicks, DB writes and creative approvals:0. No CSS change warranted.
+Full mandatory sponsor journey remains BLOCKED, no new inference/render or
+physical-Android/customer playback claim. PR141 remains draft/unmerged.
+
+
+## 2026-10-23 — T09.5: creator rejects Modal motion quality
+
+Creator describes Modal motion as poor. Latest saved jobsd74245c1-fa8b-4be0-
+b632-31daace032f2 and93833f52-1f9e-4560-b5e4-162769b76098 are after the
+earlier movement-priority repair; current generationv66 retains that correction.
+Do not equate completed49frame/2.04s files with acceptable subject animation.
+One read-only download per newest MP4 returns400 InvalidJWT/expired. Actual
+frame/source comparison is BLOCKED pending creator-scoped media access or
+attachment; isolated QA login cannot access this separate owner's project.
+No credential extraction, owner impersonation, authorization bypass or inference
+retry. Older inspected MP4/tokenizer evidence reused without repeating checks.
+Minimal approved movement may contribute to weak action; exact quality cause
+remains UNKNOWN. No speculative sampler/model/worker changes, new GPU charge,
+provider switch, creative approval or customer mutation. Source/build/CI remain
+unchanged at0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c; earlier455/455 applies.
+Evidence: modal-quality-followup.json. T09.5 diagnosis and sponsor gates BLOCKED;
+creator quality acceptance FAILED. Next dependency is the actual MP4/source.
+
+
+## 2026-10-23 — T09.5 supplied media removes download blocker
+
+Creator supplied two unique1280x1280 sources (four JPEG attachments with duplicate
+pairs), one Modal Scene5 MP4d74245c1 and one HF Scene7 MP45dba3345. Read-only
+asset lookup matches their image filenames/source IDs. Actual Modal49frame/
+2.041667s H264704x480 and HF57frame/1.9s H264704x512 decode fully. Direct
+frame/source review shows subtle Modal posture/arm movement with soft detail;
+HF shows a clearer head turn/forward approach. Creator rejects Modal quality.
+Different sources and shadowed faces prevent model-ranking/identity acceptance.
+
+Modal first frame resembles a stretched square source (RGB MAE2.11) much more
+than committed containment15.69; possible stale live preprocessing is PROBABLE.
+No live-worker-source equivalence is proven. Committed20steps/guidance3 are
+below pinned documentation examples, but a quality fix cannot be inferred from
+a setting change. Termux heartbeat reports offline, blocking artifact inspection.
+
+Actual deployed frontend plays actual attached MP4 bytes on desktop/Pixel7
+emulation with controlled REST/signing. All4 contexts advance>1.1s,27–34 decoded
+frames, zero observed dropped frames/media errors. This isolates a player/
+container failure from quality, while not exercising owner storage/RLS or
+physical Android. Private harness attempts1/2 failed on module shadowing and
+Locator.first API usage; two concrete corrections, final attempt3 PASS. No
+repeat after success. No application source change, new inference/job/provider
+switch, deployment, financial setting, creative approval or customer mutation.
+Private footage/derived images remain outside Git. Public receipts: attached-
+motion-quality-diagnosis.json, attached-motion-browser-playback.json. Source
+0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c/v66 unchanged;455 CI reused.
+T09.5 cause/quality repair and full sponsor acceptance remain BLOCKED. Next:
+existing bridge online, batched read-only worker/budget inspection, then a
+separately authorized bounded comparison after an evidenced correction.
+
+
+T09.5 bridge resumed: approved batcheab6e619 completed/exit0. App deployed/idle;
+functionfu-7utVyRnLk1LGQJWS5xyThX. Metered0.33; apps0.24/egress0.09 offset
+by credits/allowance; billed$0.00. Remaining credits/current caps still UNKNOWN.
+All3 local worker files byte-match repository; no deployed artifact equivalence
+claim. Exact SDK1.6.2 schema/source inspection supports a narrow follow-up
+FunctionGetById/WorkspaceBillingRates read. Batchfe43298d is awaiting phone
+approval; latest heartbeat flagged offline. Device approval is external and
+chat Continue is not a substitute. No duplicate queue/inference/deploy, package
+install, credential read, source change or customer mutation. Source455 CI
+reused. Public modal-quality-control-plane.json records exact first result and
+pending blocker. Main T09 BLOCKED until that result; no false quality success.
+
+
+T09.5b: follow-up device approval resolved; definition batchfe43298d exit0.
+File-based moduleworker,1L4,300s execution, min0/max1/buffer0. Image/mount
+references do not expose mounted Python source; preprocessing parity stays
+UNKNOWN. L4$0.80/hour,CPU$0.04730/core-hour. Prepared unapplied2line sampler
+trial50steps/guidance5 on same pinned0.9.5 model; no app/default/deployment
+change. Temporary-copy existing contract/media20/20 PASS and compile PASS.
+An initial nonexistent-workdir command failed before execution; corrected by
+creating copy first. Existing455 CI reused for unchanged application source.
+Proposal records1job/49frames/no retry, separate unapproved output, no source
+creative change or production-worker redeploy.300s GPU execution arithmetic
+$0.066667 excludes startup/CPU/RAM/build/transfer. Current remaining credits
+and$0hard-spend-cap confirmation plus explicit one-test authorization are
+external gates; read-only approvals do not authorize inference. Source0b9eb69/
+v66 unchanged. No GPU job, new persistent service, customer mutation or
+quality-fix claim. See modal-quality-trial-proposal.json and unapplied patch.
+
+## 2026-10-23 — T09.5c authorized one-shot test queued; device gate remains
+
+Owner Ok/Yes explicitly authorizes one existing-credits-only quality diagnostic
+and attests usable credits plus hard$0paid-spend cap. This resolves the chat
+authorization blocker, not independent API balance/cap verification. Prepared
+private launcher freezes the supplied Scene5 JPEG/hash, prompt and original seed,
+checks exact original/candidate source hashes, SDK/profile/production idle state,
+and writes an exclusive durable receipt before cloud work. It creates only an
+isolated transient run with1L4/300s/retries0/min0/max1, stores call ID immediately
+after the single spawn, preserves unapproved output, and stops only its completed
+scratch app. Unknown call status never triggers resubmission or production stop.
+
+Large embedded-input queue requests failed; the retained second response is
+INVALID_ARGUMENT and history showed no matching entry. The first response id
+was not retained because client code assumed success; status, not that client
+exception, establishes no observed queue entry. Changed transport to one58,911B
+bundle in existing private visual-assets under the isolated QA user's owner prefix,
+using normal QA auth and existing RLS. Upload200/sign200/download SHA verified;
+no upsert/settings/schema/customer-row/approval change. Private transfer preparation
+first failed before any network action on missing requests; standard-library HTTP
+resolved that local dependency. No package install. Private bundle contains no
+credentials; input footage/signed links are excluded from Git.
+
+Short1,407B hash-checking command accepted as1a2818b1-5ebf-4b26-aa5d-563a71aa0d89.
+Latest status: awaiting_approval,exit=null,phone offline. GPU submission UNKNOWN,
+no function-call receipt/output yet. Device approval is explicitly required by
+Termux; do not requeue. Bundle link expires after2h and fails before inference
+if expired. T09 BLOCKED on this external gate; other remaining main tasks depend
+on artist approvals and real motion/journey evidence. Launcher AST PASS; one
+spawn/zero deploy sites; unchanged20 candidate tests and455 application CI reused.
+Application0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c/v66 unchanged, PR remains
+draft/unmerged. Quality repair and sponsor readiness are not verified. Public
+receipt: modal-quality-trial-authorization.json. Next: read exact accepted batch,
+then inspect only its existing call/artifact; no automatic GPU retry.
+
+2026-10-23T14:44 UTC T09.5c: owner requested approval resend. Phone online;
+old batch still awaiting approval, with input GET400 InvalidJWT/exp claim failed
+and past signed expiry. First literal-error assertion failed; inspected exact
+error/timestamp rather than assuming execution. Re-signed same private QA bundle,
+verified unchanged SHA, zero uploads/row mutations. Refreshed1672-byte command
+includes pre-fetch existing-receipt guard plus original exclusive receipt and
+single spawn. Same trial/source/model/seed/settings; no extra inference approval.
+Accepted batchd80f5ea5-90f7-4870-9425-6ea4ace66fc5 requires device approval.
+No GPU submission confirmed; T09 remains BLOCKED. No application/deployment change.
+
+T09.5c1 actual resend result: batchd80f5ea5 ran/exit2. Durable receipt confirms
+candidate/source/prompt integrity, SDK/profile and idle production preflight PASS,
+$0billed before, then ModuleNotFoundError before app.run. spawn_attempts=0,
+call_id=null, no transient app. Missing module not retained; local media.py
+imports PIL at scope, so PIL is a testable hypothesis, not a confirmed cause.
+Prepared one guarded recovery: exclusive recovery claim preserves prior receipt,
+requires no previous app/call/spawn, diagnoses import, installs only binary pinned
+Pillow11.3.0 without dependencies if and only if PIL missing, then rechecks input/
+profile/idle state before the originally authorized first GPU invocation. Other
+causes stop without GPU. No source/model/seed/creative changes or receipt deletion.
+4703B command AST PASS/one spawn/zero deploy sites; accepted as1f0c166a-c611-
+474d-9025-54647b9f08d2, device approval required. T09 BLOCKED on that external
+gate; actual module repair/inference/output/quality UNKNOWN. Source0b9eb69/v66
+unchanged,455 application CI and20 candidate checks remain applicable. No GPU
+retry or additional inference authorization. Next: inspect exact recovery batch.
+
+2026-10-23T16:27 UTC T09.5c2: owner requested resending approval again; bridge
+showed1f0c166a awaiting approval/phone online. Exact4703-byte guarded command
+resent as507adefc; then ran/exit1, assertion line10 requires zero prior spawn,
+no call ID and no transient app ID. At least one receipt field is now set; exact
+current values/actor UNKNOWN. This guard prevented an unsafe repeat; do not claim
+current0GPU submissions based on the earlier14:44 preflight receipt. No retry.
+Prepared existing-state/result retrieval only:4576B, AST PASS, zero spawn/remote/
+deploy call sites. It reads safe receipt fields, polls only saved call ID and
+validates/preserves returned bytes, with completed scratch-only cleanup and
+optional unapproved phone Downloads copy. No source/model/approval/customer
+mutation, deploy or new inference. Accepted6433eb05-0a13-454d-98c4-3f60e3ef6def
+requires phone approval. T09 BLOCKED on this readback, downstream gates unchanged.
+Source0b9eb69/v66 and prior455 CI/20 candidate checks unchanged. Next: inspect
+that exact readback and existing call/output; never reset either execution lock.
+
+2026-10-23T16:33 UTC T09.5c2: readback6433eb05 completed/exit0. Actual receipt
+confirms missing PIL/install0/import PASS, one spawn, scratchap-dGTGk6rM36fE8uHX24TQtu,
+callfc-01M5MRZZJ4W6ETYYX6HZWCJKRT, statecompleted_unapproved. Existing provider
+call returns48733B MP4/manifest, hash a1b5ca79284f490c285de4531254ad631076c4c1d7891183d9738a512ee67f0f.
+Saved on phone and Downloads; candidate/source/prompt/seed match. Exact initiating
+bridge record remains unknown, but receipt/call result independently proves
+isolated completion. No new inference from readback; creator/motion/coverage flags
+false. No quality, visible motion, duration or full frontend journey claim.
+
+Bridge capped output60000characters and kept tail.57712 of64980 base64characters
+retained, missing7268. Prepared bounded first16000-character read, overlap/hash
+verification, billing read and exact completed-scratch lifecycle/cleanup. Two
+earlier stop exit1 outcomes ambiguous; SDK CLI confirms already-stopped exit1 or
+missing noninteractive --yes can cause it. Inspect state first; skip stopped app,
+else use --yes for only completed scratch, then re-read lifecycle. No fourth retry.
+Source AST PASS/no inference/deploy call sites; accepted583a56b1-ec95-4b94-a9be-
+6273dbf9f5f9 awaits device approval, phone offline. Main T09 BLOCKED; T10/T11
+updated with scoped isolated proof but mandatory artist/frontend lineage and
+new decode/motion/playback still blocked. Application0b9eb69/v66 unchanged;
+455 CI/20 candidate tests reused. Post-test cost UNKNOWN; no production release,
+customer-row mutation or creative approval. Next: retrieve same existing bytes.
+
+2026-10-23 T09.5c2 final: prefix583a56b1 exit0;8732-character overlap and SHA
+verify the48733B actual clip. Billing$0.00, rounded ephemeral0.04/credits-0.28;
+not exact per-job cost or remaining balance. Scratch APP_STATE_STOPPED, so no
+third stop. Full49frame decode PASS/no errors,2.041667s H264704x480/24fps.
+First inspection stopped after decode on disappeared /tmp source; recovered
+exact source bytes/hash from private config and reused the completed decode.
+Direct sampled/source/full-size review confirms walking; extra distant figure
+appears while walker is in front, with soft detail/gait distortion/darkening.
+Motion PASS, source/actor continuity FAIL, facial identity UNKNOWN, no approval.
+
+Actual new-byte deployed desktop/Pixel7 fixture playback initially1.1s PASS;
+extended once to full ended acceptance:both49frames/2.041667s/0dropped/no errors.
+No provider submission/DB mutation. Actual owner storage/RLS/fresh sponsor lineage
+and physical Android unverified. Canonical Vercel alias rechecked READY/source
+0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c,dpl_4CVPYRJ2yeKDJ4qbKxLo5XEvDSwL.
+T09.5c3 fixes confirmed stale operator README and missing pinned local Pillow
+setup/cloud dry-run boundary. Worker/contracts/media hashes remain unchanged;
+50/5 temporary trial patch unapplied, no production/default change.455 CI/build/
+audit and20 candidate tests reused; documentation/JSON/hash/link checks only.
+
+One GPU invocation total; trial strict quality gate FAILED. Main T09 BLOCKED
+on remaining production reconciliation/lineage acceptance and authorized quality
+work; artist T04–T08 confirmations and T10–T14 full journey remain blocked. No
+second GPU trial/release authorization; no independent executable task remains.
+Footage/source/derived images stay private; sanitized inspection/playback/result
+receipts added. Full-song capacity/budget UNKNOWN; no sponsorship exhaustion
+claim. Deliver real motion/player proof with failed continuity, not MVP readiness.

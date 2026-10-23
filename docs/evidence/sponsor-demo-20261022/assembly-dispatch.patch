@@ -1,0 +1,87 @@
+--- generationv65/index.ts
++++ generation-scoped-assembly/index.ts
+@@ -103,6 +103,67 @@
+   return type === "scene_image" ? "flux-schnell" : type === "scene_motion" ? "ltx-video" : null;
+ }
+ 
++/** Resolve frozen asset IDs, never a newer variant or an expired saved URL. */
++async function assemblyMotionClips(db: any, job: any, scenes: any[], clips: any[], duration: number) {
++  const fail = (code: string) => { throw new Error(code); };
++  const timeline = new Map<number, any>();
++  let cursor = 0;
++  for (const scene of [...scenes].sort((a, b) => Number(a.start_time) - Number(b.start_time))) {
++    const n = Number(scene.scene_number), start = Number(scene.start_time), end = Number(scene.end_time);
++    if (!Number.isInteger(n) || n < 1 || !scene.id || timeline.has(n) ||
++        !Number.isFinite(start) || !Number.isFinite(end) || end <= start ||
++        Math.abs(start - cursor) > 0.05) fail("ASSEMBLY_TIMELINE_INVALID");
++    timeline.set(n, scene); cursor = end;
++  }
++  if (Math.abs(cursor - duration) > 0.05) fail("ASSEMBLY_TIMELINE_INVALID");
++  const ids = clips.map(clip => String(clip.asset_id || ""));
++  if (ids.some(id => !id) || new Set(ids).size !== ids.length) fail("ASSEMBLY_MOTION_PROVENANCE_INVALID");
++  const assets = await db.from("motion_clip_assets")
++    .select("id,project_id,visual_plan_id,scene_id,generation_job_id,status,approved")
++    .eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).in("id", ids);
++  if (assets.error) fail("ASSEMBLY_MOTION_LOOKUP_FAILED");
++  const assetMap = new Map<string, any>((assets.data || []).map((asset: any) => [asset.id, asset]));
++  const jobIds = [...new Set<string>((assets.data || []).map((asset: any) => String(asset.generation_job_id || "")))];
++  if (!jobIds.length || jobIds.some(id => !id)) fail("ASSEMBLY_MOTION_PROVENANCE_INVALID");
++  const jobs = await db.from("generation_jobs")
++    .select("id,project_id,visual_plan_id,visual_plan_scene_id,job_type,status,output")
++    .eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).in("id", jobIds);
++  if (jobs.error) fail("ASSEMBLY_MOTION_LOOKUP_FAILED");
++  const jobMap = new Map<string, any>((jobs.data || []).map((source: any) => [source.id, source]));
++  const seen = new Set<number>();
++  // Validate all coverage before signing any file or sending an upstream request.
++  const validated = clips.map(clip => {
++    const n = Number(clip.scene), scene = timeline.get(n), asset = assetMap.get(String(clip.asset_id));
++    const source = jobMap.get(String(asset?.generation_job_id));
++    if (!scene || seen.has(n) || !asset || asset.project_id !== job.project_id ||
++        asset.visual_plan_id !== job.visual_plan_id || asset.scene_id !== scene.id ||
++        asset.approved !== true || asset.status !== "approved" || !source ||
++        source.project_id !== job.project_id || source.visual_plan_id !== job.visual_plan_id ||
++        source.visual_plan_scene_id !== scene.id || source.job_type !== "scene_motion" ||
++        source.status !== "completed") fail("ASSEMBLY_MOTION_PROVENANCE_INVALID");
++    seen.add(n);
++    const result = source.output?.arena_status_response?.result;
++    const path = result?.storage_path;
++    const expectedPath = job.project_id + "/scene-motion/" + job.visual_plan_id + "/" + scene.id + "/" + source.id + ".mp4";
++    if (path !== expectedPath) fail("ASSEMBLY_MOTION_PATH_INVALID");
++    const proof = result?.verification;
++    const actual = Number(proof?.video_duration_seconds);
++    if (proof?.container_verified !== true || !Number.isFinite(actual) || actual <= 0)
++      fail("ASSEMBLY_DURATION_UNVERIFIED: scene=" + n);
++    const required = Number(scene.end_time) - Number(scene.start_time);
++    if (actual + 0.05 < required)
++      fail("ASSEMBLY_CLIP_TOO_SHORT: scene=" + n + ":actual=" + actual.toFixed(3) + ":required=" + required.toFixed(3));
++    return { clip, path, actual };
++  });
++  const resolved = [];
++  for (const { clip, path, actual } of validated) {
++    const signed = await db.storage.from("visual-assets").createSignedUrl(path, 3600);
++    if (signed.error || !signed.data?.signedUrl) fail("ASSEMBLY_MOTION_SIGNING_FAILED");
++    resolved.push({ ...clip, video_url: signed.data.signedUrl, actual_duration_seconds: actual });
++  }
++  return resolved;
++}
++
+ async function bridgePayload(db: any, job: any) {
+   const snapshot = job.input_snapshot || {};
+   const lock = snapshot.vision_snapshot || {};
+@@ -119,6 +180,7 @@
+     const motionClips = Array.isArray(snapshot.motion_clips) ? snapshot.motion_clips : [];
+     if (!scenes.length) throw new Error("ASSEMBLY_SCENES_MISSING: No approved master timeline scenes are frozen.");
+     if (motionClips.length !== scenes.length) throw new Error("ASSEMBLY_MOTION_COVERAGE_INVALID: Approved motion does not cover every scene.");
++    const resolvedClips = await assemblyMotionClips(db, job, scenes, motionClips, duration);
+     const audioPath = String(snapshot.audio_path || "").trim();
+     if (!audioPath) throw new Error("ASSEMBLY_AUDIO_MISSING: Frozen song audio path is missing.");
+     const signed = await db.storage.from("songs").createSignedUrl(audioPath, 3600);
+@@ -132,7 +194,7 @@
+       style: { ...style, version: String(style.id || lock.style_bible_id || "style") },
+       vision_lock: { ...lock, locked: true, version: String(lock.id || job.vision_lock_id) },
+       storyboard: { songDuration: duration, song_duration: duration, scenes: scenes.map((item: any) => ({ ...item, scene: Number(item.scene_number), startTime: Number(item.start_time), endTime: Number(item.end_time) })), visual_beats: scenes.map((item: any) => ({ ...item, scene: Number(item.scene_number), startTime: Number(item.start_time), endTime: Number(item.end_time) })) },
+-      motion: { clips: motionClips },
++      motion: { clips: resolvedClips },
+       audio_data: signed.data.signedUrl,
+       generation: { cost_class: "free", model: null, idempotency_key: job.idempotency_key, job_id: job.id },
+     };

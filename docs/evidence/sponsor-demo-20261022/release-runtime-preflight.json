@@ -1,0 +1,12 @@
+{
+  "http": 200,
+  "body": {
+    "modal_supported": true,
+    "modal_available": true,
+    "model": "Lightricks/LTX-Video-0.9.5",
+    "arena_configured": false,
+    "free_transcription_configured": false,
+    "interpretation_proposals_configured": false
+  },
+  "inference_submissions": 0
+}

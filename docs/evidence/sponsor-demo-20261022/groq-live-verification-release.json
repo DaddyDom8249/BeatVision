@@ -1,0 +1,132 @@
+{
+  "observed_at": "2026-10-22T21:28:43.907975+00:00",
+  "task": "T04.10-T04.12",
+  "source_commit": "978240d1f97fa54ec9e008b9a3f5e201eeca96b0",
+  "frontend_commit": "64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52",
+  "frontend_deployment": "dpl_4tzfmck36NYpFTn3xbhzQYhcx8Ft",
+  "canonical_url": "https://beat-vision-theta.vercel.app/",
+  "function_release": {
+    "id": "8fee1774-8566-4351-8db6-aff499cf3fab",
+    "slug": "beatvision-analyze-song",
+    "name": "beatvision-analyze-song",
+    "status": "ACTIVE",
+    "version": 43,
+    "created_at": 1790968015934,
+    "updated_at": 1792704258984,
+    "verify_jwt": false,
+    "import_map": false,
+    "entrypoint_path": "file:///tmp/user_fn_mdofsinyofqbeapzfygu_8fee1774-8566-4351-8db6-aff499cf3fab_43/source/index.ts",
+    "ezbr_sha256": "9c9d325451ba62a3d1e2c53df85733515a3a31e9251cb5e2724404d955011db1",
+    "source_commit": "978240d1f97fa54ec9e008b9a3f5e201eeca96b0",
+    "deployed_source_byte_match": true,
+    "previous_version": 42,
+    "previous_bundle": "9c2a466604a7094731510bee59ec3731e1e154b273ea23b14c135b7bac5788e2"
+  },
+  "current_function_inventory": [
+    {
+      "name": "beatvision-world",
+      "version": 61,
+      "status": "ACTIVE",
+      "verify_jwt": false,
+      "bundle_sha256": "9ae0a5afd7a3dbc9235f41aaa9e29b0e7881e53c4ed4cc23acb9eea2e0a835b0"
+    },
+    {
+      "name": "beatvision-analyze-song",
+      "version": 43,
+      "status": "ACTIVE",
+      "verify_jwt": false,
+      "bundle_sha256": "9c9d325451ba62a3d1e2c53df85733515a3a31e9251cb5e2724404d955011db1"
+    },
+    {
+      "name": "beatvision-generation",
+      "version": 62,
+      "status": "ACTIVE",
+      "verify_jwt": false,
+      "bundle_sha256": "ebfbcec4f265ff66ca8e6dd822886c957a753be33e6a34e6b30e8b7b63c50358"
+    },
+    {
+      "name": "beatvision-style-draft",
+      "version": 29,
+      "status": "ACTIVE",
+      "verify_jwt": true,
+      "bundle_sha256": "dd5e42a77921edf64fc94f109619a1671b4f73bc1fda328d7d5b6d872bbbdb05"
+    },
+    {
+      "name": "beatvision-song-interpretation",
+      "version": 3,
+      "status": "ACTIVE",
+      "verify_jwt": false,
+      "bundle_sha256": "5a6704dd29ce7b063d4484ea92c259794af7a0e39dc85e031ee86cb77b0f1971"
+    },
+    {
+      "name": "beatvision-ai-director",
+      "version": 2,
+      "status": "ACTIVE",
+      "verify_jwt": false,
+      "bundle_sha256": "30c5839b87c474b5fc216f13420d9ab433617824f1057ad4fa2315d9f6458f53"
+    }
+  ],
+  "ci": {
+    "run_id": 39856954325,
+    "url": "https://github.com/DaddyDom8249/BeatVision/actions/runs/39856954325",
+    "head_sha": "978240d1f97fa54ec9e008b9a3f5e201eeca96b0",
+    "status": "completed",
+    "conclusion": "success",
+    "tests": 423,
+    "pass": 423,
+    "fail": 0,
+    "skipped": 0,
+    "audit": "PASS",
+    "build": "PASS"
+  },
+  "real_proposal": {
+    "artifact": "groq-remediated-proposal-result.json",
+    "http_status": 200,
+    "id": "de9d52af-5fc2-45c7-838c-36d4766d9ba5",
+    "version": 2,
+    "status": "draft",
+    "source_type": "ai",
+    "provider": "verified-free-provider",
+    "model": "openai/gpt-oss-20b",
+    "has_provider_request_id": true,
+    "evidence_linked_claims": 8,
+    "prior_manual_version_retained": true,
+    "prior_manual_status": "superseded",
+    "recorded_interpretation_quota_count": 1
+  },
+  "real_transcription": {
+    "initial_artifact": "groq-transcription-result.json",
+    "postfix_artifact": "groq-transcription-postfix-result.json",
+    "provider": "groq",
+    "model": "whisper-large-v3-turbo",
+    "http_status": 200,
+    "saved_status": "completed",
+    "saved_failure_detail": "",
+    "duration_seconds": 16,
+    "source_fingerprint": "b82c95bf0fd6fb5c0f9ca8d6accffe6cf356cbd2dfd67fd5dfb5beaa8bfa1a25",
+    "total_transcription_calls": 2,
+    "accuracy_limit": "Synthetic instrumental fixture; sung-lyric accuracy unverified"
+  },
+  "readonly_reload": {
+    "artifact": "remediated-draft-readonly.json",
+    "desktop": "PASS",
+    "pixel7_emulation": "PASS",
+    "draft": "DRAFT V2",
+    "summary_characters": 128,
+    "continue_disabled": true,
+    "confirm_available_for_artist": true,
+    "no_page_errors_or_overflow": true,
+    "provider_calls": 0
+  },
+  "harness_limitations": [
+    "First reload sampled initial loading state",
+    "Second reload used an exact label selector that stopped matching populated textarea",
+    "Corrected third read-only check waits for DRAFT V2 and uses the observed textarea selector; PASS, no repeated inference for selector failures"
+  ],
+  "creative_approvals": 0,
+  "gpu_requests": 0,
+  "current_interpretation_id": null,
+  "settings_values_read_by_agent": false,
+  "verification": "PASS for configured real AI proposal, transcription and success-status repair; mandatory T04 BLOCKED pending explicit artist confirmation",
+  "next_gate": "Artist reviews and confirms interpretation; dependent World/Style/storyboard/image/motion acceptance remains unverified"
+}

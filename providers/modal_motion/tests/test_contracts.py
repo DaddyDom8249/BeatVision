@@ -7,8 +7,11 @@ import uuid
 
 from providers.modal_motion.contracts import (
     ACKNOWLEDGEMENT, MAX_IMAGE_BYTES, MotionContractError,
-    MotionRequest, manifest, require_execution_authorization, validate_request,
+    MAX_PROMPT_TOKENS, MotionRequest, budget_ltx_prompt, manifest,
+    require_execution_authorization, validate_request,
 )
+from providers.modal_motion.media import prepare_source_image
+from PIL import Image
 
 PNG = b'\x89PNG\r\n\x1a\n' + b'\x00' * 32
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -164,6 +167,77 @@ class ContractTests(unittest.TestCase):
         tree=ast.parse((ROOT/'worker.py').read_text())
         top_level_calls=[n for n in tree.body if isinstance(n,ast.Expr) and isinstance(n.value,ast.Call)]
         self.assertEqual(top_level_calls, [])
+
+    def test_ltx_prompt_is_bounded_by_the_loaded_tokenizer(self):
+        class FakeTokenizer:
+            def __init__(self):
+                self.options = None
+
+            def __call__(self, prompt, **options):
+                self.options = options
+                return {'input_ids': list(range(len(prompt.split())))}
+
+            def decode(self, token_ids, **_options):
+                return 'bounded prompt with enough descriptive words for the proof'
+
+        tokenizer = FakeTokenizer()
+        prompt = ' '.join(['descriptive'] * (MAX_PROMPT_TOKENS + 20))
+        bounded = budget_ltx_prompt(prompt, tokenizer)
+        self.assertEqual(tokenizer.options, {'add_special_tokens': True, 'truncation': False})
+        self.assertLessEqual(len(bounded.split()), 10)
+
+    def test_batch_encoding_compatible_and_required_prefix_preserved(self):
+        class BatchEncodingLike:
+            def __init__(self, values):
+                self.values = values
+            def get(self, key):
+                return self.values.get(key)
+
+        class RealisticTokenizer:
+            def __call__(self, prompt, **_options):
+                return BatchEncodingLike({'input_ids': list(range(len(prompt.split()) + 2))})
+            def decode(self, token_ids, **_options):
+                return ' '.join('word' for _ in token_ids)
+
+        tokenizer = RealisticTokenizer()
+        mandatory = 'Keep the approved people and wardrobe unchanged.'
+        result = budget_ltx_prompt(' '.join(['optional'] * 180), tokenizer,
+                                   max_tokens=25, required_prefix=mandatory)
+        self.assertTrue(result.startswith(mandatory))
+        self.assertLessEqual(len(tokenizer(result).get('input_ids')), 25)
+        with self.assertRaisesRegex(MotionContractError, 'PROMPT_REQUIRED_TEXT_TOO_LONG'):
+            budget_ltx_prompt('Additional information here.', tokenizer,
+                              max_tokens=3, required_prefix=mandatory)
+
+    def test_ltx_prompt_tokenizer_failure_is_fail_closed(self):
+        class BrokenTokenizer:
+            def __call__(self, *_args, **_kwargs):
+                raise RuntimeError('fixture tokenizer failure')
+
+            def decode(self, *_args, **_kwargs):
+                return ''
+
+        with self.assertRaisesRegex(MotionContractError, 'PROMPT_TOKENIZATION_FAILED'):
+            budget_ltx_prompt('A sufficiently descriptive movement prompt.', BrokenTokenizer())
+
+    def test_worker_uses_token_budget_and_exact_source_canvas(self):
+        source = (ROOT / 'worker.py').read_text()
+        self.assertIn('prepare_source_image(opened, WIDTH, HEIGHT)', source)
+        self.assertIn('budget_ltx_prompt(', source)
+        self.assertIn('request.prompt, pipeline.tokenizer,', source)
+        self.assertIn('required_prefix=', source)
+        self.assertNotIn('source.thumbnail((WIDTH, HEIGHT))', source)
+
+    def test_source_image_is_contained_without_stretching(self):
+        source = Image.new('RGB', (200, 100), (255, 0, 0))
+        prepared = prepare_source_image(source, 704, 480)
+        self.assertEqual(prepared.size, (704, 480))
+        # A 2:1 source occupies 704x352 in the 704x480 proof canvas; the
+        # remaining rows are letterboxed instead of stretched or cropped.
+        self.assertEqual(prepared.getpixel((10, 63)), (0, 0, 0))
+        self.assertEqual(prepared.getpixel((10, 64)), (255, 0, 0))
+        self.assertEqual(prepared.getpixel((10, 415)), (255, 0, 0))
+        self.assertEqual(prepared.getpixel((10, 416)), (0, 0, 0))
 
 
 if __name__ == '__main__':

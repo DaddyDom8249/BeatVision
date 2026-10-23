@@ -1,0 +1,33 @@
+{
+  "own_project": {
+    "http": 200,
+    "body": {
+      "modal_supported": true,
+      "modal_available": true,
+      "model": "Lightricks/LTX-Video-0.9.5"
+    }
+  },
+  "foreign_project": {
+    "http": 404,
+    "body": {
+      "error": {
+        "code": "NOT_FOUND",
+        "message": "Project not found."
+      }
+    }
+  },
+  "unauthenticated": {
+    "http": 401,
+    "body": {
+      "error": {
+        "code": "UNAUTHENTICATED",
+        "message": "Authentication required."
+      }
+    }
+  },
+  "function_version": 59,
+  "action": "modal_capability only (read-only env check)",
+  "gpu_submissions": 0,
+  "worker_probe": false,
+  "billing_verified": false
+}

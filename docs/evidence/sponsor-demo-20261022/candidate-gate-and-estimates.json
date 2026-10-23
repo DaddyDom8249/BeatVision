@@ -1,0 +1,42 @@
+[
+  {
+    "context": "desktop",
+    "candidate_assets": "index-Be2u_dCU.js",
+    "schema_warning_visible": true,
+    "style_controls_disabled": true,
+    "continue_control_count": 0,
+    "metric_labels": [
+      "Duration",
+      "BPM estimate",
+      "Musical key estimate",
+      "Time Signature",
+      "Genre & Mood Tags",
+      "Structural candidates",
+      "Vocal Transcript"
+    ],
+    "heuristic_explanation": "Tempo and key are estimates. Structural boundaries are heuristic candidates to review before directing scenes.",
+    "horizontal_overflow": false,
+    "world_interpretation_gate_visible": true,
+    "result": "PASS for labels and boundary gating only"
+  },
+  {
+    "context": "android-emulated",
+    "candidate_assets": "index-Be2u_dCU.js",
+    "schema_warning_visible": true,
+    "style_controls_disabled": true,
+    "continue_control_count": 0,
+    "metric_labels": [
+      "Duration",
+      "BPM estimate",
+      "Musical key estimate",
+      "Time Signature",
+      "Genre & Mood Tags",
+      "Structural candidates",
+      "Vocal Transcript"
+    ],
+    "heuristic_explanation": "Tempo and key are estimates. Structural boundaries are heuristic candidates to review before directing scenes.",
+    "horizontal_overflow": false,
+    "world_interpretation_gate_visible": true,
+    "result": "PASS for labels and boundary gating only"
+  }
+]

@@ -1,0 +1,42 @@
+{
+  "observed_at": "2026-10-22T21:26:29.422325+00:00",
+  "task": "T04.12",
+  "scope": "Real frontend reload only; no creative write or provider generation",
+  "frontend_commit": "64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52",
+  "provider_submissions": 0,
+  "creative_approvals": 0,
+  "gpu_submissions": 0,
+  "blocked_unexpected_function_actions": [],
+  "contexts": [
+    {
+      "name": "desktop",
+      "draft_badge": "DRAFT V2",
+      "interpretation_summary_characters": 128,
+      "continue_disabled": true,
+      "confirm_available_for_artist": true,
+      "horizontal_overflow": false,
+      "displayed_errors": [],
+      "scripts": [
+        "/assets/index-DbGfZ0WS.js"
+      ]
+    },
+    {
+      "name": "android-emulated",
+      "draft_badge": "DRAFT V2",
+      "interpretation_summary_characters": 128,
+      "continue_disabled": true,
+      "confirm_available_for_artist": true,
+      "horizontal_overflow": false,
+      "displayed_errors": [],
+      "scripts": [
+        "/assets/index-DbGfZ0WS.js"
+      ]
+    }
+  ],
+  "verification": "PASS",
+  "private_screenshot": {
+    "name": "remediated-ai-draft-android-emulated.png",
+    "sha256": "00f31a9b754a91b638f39813351cb1c602e78872d0d786399ec3c4fb67e0018c",
+    "reason": "Sticky header includes test-account profile text; sanitized DOM evidence is public"
+  }
+}

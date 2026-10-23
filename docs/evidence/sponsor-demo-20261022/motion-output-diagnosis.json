@@ -1,0 +1,243 @@
+{
+  "task": "T09.3/T09.3a",
+  "initial_report": "Modal produces no motion; Hugging Face barely produced one",
+  "inspection": "Read-only existing jobs, approved source-image metadata, existing private MP4 downloads, decoded sampled frames and pinned CPU tokenizer. No GPU/provider generation.",
+  "production_before": {
+    "function": "beatvision-generation",
+    "version": 63,
+    "bundle_sha256": "ebfbcec4f265ff66ca8e6dd822886c957a753be33e6a34e6b30e8b7b63c50358"
+  },
+  "reused_prompt_source_commit": "e02a3e636b8638a03a6280b021c720d00ba31a41",
+  "code_change": "Only port the existing candidate modalBridgeSubmit prompt ordering into the current compatible live controller. All other controller text and four dependency files unchanged.",
+  "patch": "modal-prompt-delivery.patch",
+  "defect": {
+    "classification": "CONFIRMED in live controller and CPU reproduction",
+    "description": "Long visual prose precedes approved movement. Actual saved input prompts contain508/562 tokens; pinned T5/128-token worker budget drops both movement instructions. Existing candidate ordering retains both.",
+    "quality_causality": "PROBABLE contributing defect; not proven sole cause of weak output. Saved approved direction requests minimal movement.",
+    "deployed_modal_worker_source_equivalence": "UNKNOWN; CPU reproduction uses committed worker/pinned tokenizer. No fresh worker invocation or weight download."
+  },
+  "existing_output_metadata": [
+    {
+      "count": 8,
+      "model": "ltx-video",
+      "status": "generated",
+      "provider": "arena"
+    },
+    {
+      "count": 12,
+      "model": "ltxv-13b-0.9.8-distilled",
+      "status": "approved",
+      "provider": "huggingface-zerogpu"
+    },
+    {
+      "count": 9,
+      "model": "ltxv-13b-0.9.8-distilled",
+      "status": "generated",
+      "provider": "huggingface-zerogpu"
+    },
+    {
+      "count": 1,
+      "model": "ltxv-13b-0.9.8-distilled",
+      "status": "rejected",
+      "provider": "huggingface-zerogpu"
+    },
+    {
+      "count": 4,
+      "model": "Lightricks/LTX-Video-0.9.5",
+      "status": "generated",
+      "provider": "modal"
+    },
+    {
+      "count": 9,
+      "model": "image-motion",
+      "status": "approved",
+      "provider": "shotstack"
+    }
+  ],
+  "huggingface_job_history": [
+    {
+      "provider": "huggingface-zerogpu",
+      "status": "completed",
+      "safe_error_code": null,
+      "count": 21
+    },
+    {
+      "provider": "huggingface-zerogpu",
+      "status": "failed",
+      "safe_error_code": "ARENA_GENERATION_FAILED",
+      "count": 1
+    },
+    {
+      "provider": "huggingface-zerogpu",
+      "status": "failed",
+      "safe_error_code": "HF_GENERATION_FAILED",
+      "count": 3
+    },
+    {
+      "provider": "huggingface-zerogpu",
+      "status": "failed",
+      "safe_error_code": "HF_QUOTA_EXHAUSTED",
+      "count": 5
+    },
+    {
+      "provider": "huggingface-zerogpu",
+      "status": "processing",
+      "safe_error_code": null,
+      "count": 1
+    }
+  ],
+  "media_verification": {
+    "download": "PASS for two existing unapproved Modal assets",
+    "mp4_decode": "PASS:49 frames/2.041667s/H264/704x480 for both",
+    "visible_subject_motion": "UNKNOWN for sponsor acceptance; changing pixels and weak sampled pose changes do not establish convincing directed action",
+    "source_identity_consistency": "UNKNOWN; no complete source/reference/frame acceptance",
+    "bragoraforge_browser_playback": "UNKNOWN in this investigation; private download/decode is separate",
+    "creative_approval": "Not changed"
+  },
+  "gpu_submissions": 0,
+  "generation_resubmissions": 0,
+  "new_services_models": 0,
+  "verification": "PASS for existing-output diagnosis, bounded-prompt software correction, tests and live deployment/source identity. Post-fix real subject motion/identity/app playback remain BLOCKED.",
+  "downloads": [
+    {
+      "job_id": "8fc3f4f5-96fb-40f3-9dd2-3d4788c6818c",
+      "asset_id": "e818e3d9-5179-4f8e-8bd2-ff6ea1a10c84",
+      "http_status": 200,
+      "download": "PASS",
+      "bytes": 70538,
+      "sha256": "d82aac72088570d8a284a428a9aa6535db5ac6dbcbb060fb67ceeaa135b8f0c7"
+    },
+    {
+      "job_id": "9eccb1bd-addd-456b-81ef-bd3bab2974f2",
+      "asset_id": "927d0e4d-4428-4c02-be8d-73a5dcf641e7",
+      "http_status": 200,
+      "download": "PASS",
+      "bytes": 52968,
+      "sha256": "fd35b88cab4b18c3d94290c7d9548eb7fecb0be4470d6cc6907082b9726fc184"
+    }
+  ],
+  "decode": [
+    {
+      "job_id": "8fc3f4f5-96fb-40f3-9dd2-3d4788c6818c",
+      "sha256": "d82aac72088570d8a284a428a9aa6535db5ac6dbcbb060fb67ceeaa135b8f0c7",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 704,
+            "height": 480,
+            "avg_frame_rate": "24/1",
+            "duration": "2.041667",
+            "nb_frames": "49"
+          }
+        ]
+      },
+      "decoded_frames": 49,
+      "unique_gray_frames": 49,
+      "first_middle_mean_absolute_delta": 10.9726,
+      "first_last_mean_absolute_delta": 12.1366,
+      "adjacent_mean_absolute_delta": 1.1835,
+      "first_last_pixels_delta_gt8_fraction": 0.3123,
+      "subject_motion_verified": false,
+      "limitation": "Changing pixels can be codec noise, lighting or camera movement; visual inspection required"
+    },
+    {
+      "job_id": "9eccb1bd-addd-456b-81ef-bd3bab2974f2",
+      "sha256": "fd35b88cab4b18c3d94290c7d9548eb7fecb0be4470d6cc6907082b9726fc184",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 704,
+            "height": 480,
+            "avg_frame_rate": "24/1",
+            "duration": "2.041667",
+            "nb_frames": "49"
+          }
+        ]
+      },
+      "decoded_frames": 49,
+      "unique_gray_frames": 49,
+      "first_middle_mean_absolute_delta": 6.226,
+      "first_last_mean_absolute_delta": 6.3275,
+      "adjacent_mean_absolute_delta": 0.3892,
+      "first_last_pixels_delta_gt8_fraction": 0.1629,
+      "subject_motion_verified": false,
+      "limitation": "Changing pixels can be codec noise, lighting or camera movement; visual inspection required"
+    }
+  ],
+  "token_budget_reproduction": [
+    {
+      "job_id": "8fc3f4f5-96fb-40f3-9dd2-3d4788c6818c",
+      "source": "actual saved scene; livev63 ordering vs existing candidate ordering",
+      "tokenizer_class": "T5Tokenizer",
+      "max_tokens": 128,
+      "deployed_input_tokens": 508,
+      "deployed_bounded_tokens": 128,
+      "deployed_keeps_approved_movement": false,
+      "candidate_bounded_tokens": 128,
+      "candidate_keeps_approved_movement": true,
+      "deployed_bounded_prompt_sha256": "a2d36abc2c50dadb9755ccb756d6d521cbef15227d3fcd9b7ee025fb01db448e",
+      "candidate_bounded_prompt_sha256": "390c2a3db11bdde3052bb92e2ead4c61b74616891832da8d1ea7af645ab948cb",
+      "model_weights_downloaded": false,
+      "gpu_calls": 0
+    },
+    {
+      "job_id": "9eccb1bd-addd-456b-81ef-bd3bab2974f2",
+      "source": "actual saved scene; livev63 ordering vs existing candidate ordering",
+      "tokenizer_class": "T5Tokenizer",
+      "max_tokens": 128,
+      "deployed_input_tokens": 562,
+      "deployed_bounded_tokens": 128,
+      "deployed_keeps_approved_movement": false,
+      "candidate_bounded_tokens": 128,
+      "candidate_keeps_approved_movement": true,
+      "deployed_bounded_prompt_sha256": "89d8e41e819f57ac0aa0b2c609b211ad05a504aa6ac639bb302a849f28ed57e3",
+      "candidate_bounded_prompt_sha256": "21e4cbf3aa906b399bd2bdeb31127d32bd85590b96b819119f1a4042ba052ff6",
+      "model_weights_downloaded": false,
+      "gpu_calls": 0
+    }
+  ],
+  "private_log_hashes": {
+    "prompt-red.txt": "2d4f571339431f2fd7a6a5c90c09138e288807d09e3e27c9c540b94b536adb92",
+    "prompt-green-compatible.txt": "ee19c906065be1d244a141fb1b7a321515fff3e52f023bec92335050c09c9e5b",
+    "prompt-green-candidate.txt": "2a104b75fc51fbf82230e4c759bd56a92e1244fce4345e1c1400159592c86fd2",
+    "full-tests.txt": "b6be02f4647e5b71811e64661c61fb16a09064f8b8f39a28d469c25f0aab5b71",
+    "audit.txt": "d02023ca8be7fb44222a534c8ec5a98eb1007ede71f6360657e09f8855f1bb3d",
+    "build.txt": "7d2b075061bf1b6391ba1e0684903b41005c7aa9586d5f3908bbe004f3c74f2e"
+  },
+  "test_results": {
+    "red_actual_v63": {
+      "tests": 3,
+      "pass": 2,
+      "fail": 1
+    },
+    "green_compatible_patch": {
+      "tests": 3,
+      "pass": 3,
+      "fail": 0
+    },
+    "green_candidate_and_transport": {
+      "tests": 18,
+      "pass": 18,
+      "fail": 0
+    },
+    "full": {
+      "tests": 435,
+      "pass": 435,
+      "fail": 0,
+      "skipped": 0
+    },
+    "production_audit": "PASS",
+    "typescript_vite_build": "PASS"
+  },
+  "private_frame_sheet_hashes": {
+    "8fc3f4f5-96fb-40f3-9dd2-3d4788c6818c-frames.png": "32b47910a059a5c0dfb4055c9a6f939888784ab400764d592e52b1280b6a2746",
+    "9eccb1bd-addd-456b-81ef-bd3bab2974f2-frames.png": "c09d56f765ba15876a740684d17c34df3bfaeb2841867db43055adc47a45ad14"
+  },
+  "release_evidence": "modal-prompt-release.json"
+}

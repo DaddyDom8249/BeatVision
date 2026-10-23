@@ -9,7 +9,7 @@ const end = source.indexOf('\n  if (projectLoading', start);
 assert.ok(start >= 0 && end > start, 'Song submit handler must be present');
 const handler = ts.transpileModule(source.slice(start, end), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 
-function fixture({ failSave = false, replacement = true, newSong = false } = {}) {
+function fixture({ failSave = false, replacement = true, newSong = false, schemaReady = true } = {}) {
   const removed = [];
   const events = [];
   let payload;
@@ -22,8 +22,8 @@ function fixture({ failSave = false, replacement = true, newSong = false } = {})
     storage: { from(bucket) { assert.equal(bucket, 'songs'); return { async upload() { events.push('upload'); return {}; }, async remove(paths) { removed.push(...paths); events.push('remove'); return {}; } }; } },
     from(table) { assert.equal(table, 'songs'); return { update(value) { payload = value; return query; }, insert(value) { payload = value; return query; } }; },
   };
-  const submit = new Function('supabase', 'song', 'audio', 'project', 'projectId', 'crypto', 'saving', 'analyzing', 'setSaving', 'setSaved', 'setError', 'setAudio', 'reload', 'title', 'artist', 'lyrics', 'creativeDirection', 'notes', handler + '\nreturn submit;')(
-    client, song, selectedAudio, { owner_id: 'user-1' }, 'project-1', { randomUUID: () => 'new' }, false, false, () => {}, () => {}, value => { error = value; }, value => { selectedAudio = value; }, async () => { events.push('reload'); }, 'Song', 'Artist', '', '', ''
+  const submit = new Function('supabase', 'song', 'audio', 'project', 'projectId', 'crypto', 'saving', 'analyzing', 'setSaving', 'setSaved', 'setError', 'setAudio', 'reload', 'title', 'artist', 'lyrics', 'creativeDirection', 'notes', 'preferredVisualStyle', 'imageryMode', 'narrativeMode', 'unwantedThemes', 'schemaReady', handler + '\nreturn submit;')(
+    client, song, selectedAudio, { owner_id: 'user-1' }, 'project-1', { randomUUID: () => 'new' }, false, false, () => {}, () => {}, value => { error = value; }, value => { selectedAudio = value; }, async () => { events.push('reload'); }, 'Song', 'Artist', '', '', '', '', '', '', '', schemaReady
   );
   return { submit: () => submit({ preventDefault() {} }), state: () => ({ removed, events, payload, error, selectedAudio }) };
 }
@@ -91,9 +91,21 @@ test('new song inserts include project_id for the owner-scoped RLS policy', asyn
 test('failed mobile decode and unavailable transcription release the analyzing state for retry',async()=>{
  const begin=source.indexOf('  async function analyzeAudio()');const finish=source.indexOf('\n  function continueToWorld',begin);
  const action=ts.transpileModule(source.slice(begin,finish),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
- const calls=[];let reloaded=false;
+ const calls=[];let reloaded=false;const analyzingStates=[];
  const supabase={rpc:async(name,args)=>{calls.push({name,...args});return{error:null}},functions:{invoke:async()=>({error:new Error('PROVIDER_COST_UNVERIFIED')})}};
- const analyze=new Function('supabase','song','projectId','analyzeAudioLocally','formatFailure','setError','setSaved','setAnalyzing','reload','saving','analyzing',action+'\nreturn analyzeAudio;')(
- supabase,{id:'song',audio_url:'https://private.test/song.mp3',audio_revision:'revision'},'project',async()=>{throw Error('decode failed')},(_,error)=>error.message,()=>{},()=>{},()=>{},async()=>{reloaded=true},false,false);
+ const analyze=new Function('supabase','song','projectId','analyzeAudioLocally','formatFailure','setError','setSaved','setAnalyzing','reload','saving','analyzing','interpretation','songIntakeDirty','schemaReady','interpretationDirty','setAnalysisMessage',action+'\nreturn analyzeAudio;')(
+ supabase,{id:'song',audio_url:'https://private.test/song.mp3',audio_revision:'revision'},'project',async()=>{throw Error('decode failed')},(_,error)=>error.message,()=>{},()=>{},value=>analyzingStates.push(value),async()=>{reloaded=true},false,false,{loading:false,working:false},false,true,false,()=>{});
  await analyze();assert.deepEqual(calls.map(call=>call.p_status),['analyzing','failed']);assert.equal(calls.at(-1).p_audio_revision,'revision');assert.equal(reloaded,true);
+ assert.deepEqual(analyzingStates,[true,false]);
+});
+
+test('older production schema can save existing song metadata without nonexistent visual-style column', async () => {
+  const f = fixture({ replacement: false, schemaReady: false });
+  await f.submit();
+  const state = f.state();
+  assert.deepEqual(state.events, ['db-save', 'reload']);
+  assert.equal('visual_style_preferences' in state.payload, false);
+  assert.equal('audio_path' in state.payload, false);
+  assert.equal(state.payload.title, 'Song');
+  assert.equal(state.error, null);
 });

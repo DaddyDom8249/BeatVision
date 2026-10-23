@@ -1,0 +1,49 @@
+{
+  "observed_at": "2026-10-22T20:34:41.575529+00:00",
+  "task": "T04.8",
+  "source_commit": "64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52",
+  "frontend_deployment": "dpl_4tzfmck36NYpFTn3xbhzQYhcx8Ft",
+  "state": "READY",
+  "canonical_url": "https://beat-vision-theta.vercel.app/",
+  "immutable_url": "https://beat-vision-nlxq3v0z6-beat-vision.vercel.app/",
+  "canonical_bundle": "/assets/index-DbGfZ0WS.js",
+  "ci": {
+    "run_id": 39849524379,
+    "url": "https://github.com/DaddyDom8249/BeatVision/actions/runs/39849524379",
+    "head_sha": "64e6edf35a6de2b3da3db63d4ac6be6f19ca7f52",
+    "status": "completed",
+    "conclusion": "success",
+    "tests": 422,
+    "pass": 422,
+    "fail": 0,
+    "skipped": 0,
+    "audit": "PASS",
+    "build": "PASS"
+  },
+  "browser": {
+    "controlled_red": "interpretation-error-browser-red.json",
+    "controlled_green": "interpretation-error-browser-green.json",
+    "actual_guarded_proposal": "groq-postfix-proposal-result.json",
+    "actual_http_status": 503,
+    "actual_error_code": "PROVIDER_COST_UNVERIFIED",
+    "server_message_matches_display": true,
+    "manual_fallback_visible": true,
+    "approval_gate_retained": true,
+    "android_scope": "Pixel 7 emulation, not physical phone"
+  },
+  "database_after_actual_retest": {
+    "drafts": [
+      {
+        "id": "af8f2a18-19a2-4a02-a04e-7c38cfafa76c",
+        "version": 1,
+        "status": "draft",
+        "source_type": "manual"
+      }
+    ]
+  },
+  "setting_changes": 0,
+  "creative_approvals": 0,
+  "gpu_submissions": 0,
+  "verification": "PASS for HTTP error handling repair; BLOCKED for complete T04/sponsor mission",
+  "external_blocker": "Live server rejects missing/mismatched verified-free provider configuration. Individual flag/key/model values UNKNOWN; connected tools cannot edit secrets."
+}

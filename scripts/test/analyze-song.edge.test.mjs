@@ -16,6 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createStubClientFactory, storageBucketCalls } from "./supabase_stub.mjs";
+import { corsHeaders as sdkCorsHeaders } from "@supabase/supabase-js/cors";
 
 const FUNCTION_PATH = fileURLToPath(
   new URL("../../supabase/functions/beatvision-analyze-song/index.ts", import.meta.url)
@@ -99,6 +100,7 @@ async function bootFunction({ authUserId = USER_ID, ownerId = USER_ID, analysis 
           SUPABASE_SERVICE_ROLE_KEY: "stub-service",
           GROQ_API_KEY: "stub-groq",
           GROQ_FREE_API_KEY: freeKey,
+          GROQ_FREE_ACCOUNT_VERIFIED: freeKey ? "true" : "",
         })[key] ?? "",
     },
     serve: (fn) => {
@@ -153,6 +155,30 @@ test("free-key transcription preserves decoded timing and prior signal analysis"
   assert.deepEqual(db.songs[0].analysis.sections, analysis.sections);
   assert.equal(db.songs[0].analysis.transcription_provider, "groq");
   assert.equal(storageBucketCalls.at(-1).bucket, "songs");
+});
+
+test("successful transcription replaces unavailable or failed status and clears stale failure detail", async () => {
+  for (const status of ["unavailable", "failed"]) {
+    const analysis = { duration_seconds: 16, bpm: 117.5,
+      sections: [{ start_time: 0, end_time: 16 }],
+      transcription_status: status, status_detail: "Previous transcription could not run." };
+    const { handler, db, providerCalls } = await bootFunction({
+      freeKey: "fixture-free-key", analysis, groqData: { text: "Fixture transcript", duration: 15.8 },
+    });
+    const response = await call(handler, { projectId: PROJECT_ID });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    for (const saved of [body.analysis, db.songs[0].analysis]) {
+      assert.equal(saved.transcription_status, "completed", status);
+      assert.equal(saved.status_detail || "", "", "do not retain a resolved failure");
+      assert.equal(saved.transcript, "Fixture transcript");
+      assert.equal(saved.transcription_model, "whisper-large-v3-turbo");
+      assert.equal(saved.duration_seconds, 16);
+      assert.equal(saved.bpm, analysis.bpm);
+      assert.deepEqual(saved.sections, analysis.sections);
+    }
+    assert.equal(providerCalls.length, 1, "do not retry successful inference");
+  }
 });
 
 test("audio replaced during Groq request cannot overwrite new-track analysis or project duration", async () => {
@@ -305,4 +331,21 @@ test("song analysis allows canonical origin without wildcard CORS", async () => 
   const denied = await handler(new Request(endpoint, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: "{}" }));
   assert.equal(denied.status, 401);
   assert.equal(denied.headers.get("Access-Control-Allow-Origin"), origin);
+});
+
+test("song analysis preflight allows SDK tracing headers while retaining authentication", async () => {
+  const { handler } = await bootFunction();
+  const origin = "https://beat-vision-theta.vercel.app";
+  const endpoint = `${SUPABASE_URL}/functions/v1/beatvision-analyze-song`;
+  const requested = sdkCorsHeaders["Access-Control-Allow-Headers"].split(",").map((name) => name.trim().toLowerCase());
+  const response = await handler(new Request(endpoint, { method: "OPTIONS", headers: {
+    Origin: origin, "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": requested.join(", "),
+  } }));
+  const allowed = response.headers.get("Access-Control-Allow-Headers").split(",").map((name) => name.trim().toLowerCase());
+  for (const name of requested) assert.ok(allowed.includes(name), `SDK header ${name} must pass preflight`);
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), origin);
+  const denied = await handler(new Request(endpoint, { method: "POST", headers: {
+    Origin: origin, traceparent: "00-11111111111111111111111111111111-2222222222222222-01", "Content-Type": "application/json",
+  }, body: "{}" }));
+  assert.equal(denied.status, 401);
 });

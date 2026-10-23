@@ -1,0 +1,20 @@
+[
+  {
+    "context": "desktop",
+    "login_http": 200,
+    "dashboard_url": "https://beat-vision-theta.vercel.app/",
+    "dashboard_text": "BEATVISION\n[test email]\nYOUR CREATIVE STUDIO\nBeatVision\nStart New Project\n\u2192\nRECENT PROJECTS\n0\nYOUR CREATIVE STUDIO\nRecent Projects\n\u2756\nYour first visual world starts with a song.\n\nUpload a track, define what matters, and let BeatVision reveal the visual foundation for your video.\n\nCreate Your First Project \u2192",
+    "page_errors": [],
+    "horizontal_overflow": false,
+    "empty_fresh_account_verified": true
+  },
+  {
+    "context": "android-emulated",
+    "login_http": 200,
+    "dashboard_url": "https://beat-vision-theta.vercel.app/",
+    "dashboard_text": "BEATVISION\n[test email]\nYOUR CREATIVE STUDIO\nBeatVision\nStart New Project\n\u2192\nRECENT PROJECTS\n0\nYOUR CREATIVE STUDIO\nRecent Projects\n\u2756\nYour first visual world starts with a song.\n\nUpload a track, define what matters, and let BeatVision reveal the visual foundation for your video.\n\nCreate Your First Project \u2192",
+    "page_errors": [],
+    "horizontal_overflow": false,
+    "empty_fresh_account_verified": true
+  }
+]

@@ -1,0 +1,22 @@
+--- a/providers/modal_motion/contracts.py
++++ b/providers/modal_motion/contracts.py
+@@ -24,7 +24,7 @@
+ HEIGHT = 480
+ FRAMES = 49  # ~2 seconds at 24 fps; this is a proof clip, not a full-scene output.
+ FPS = 24
+-STEPS = 20
++STEPS = 50
+ SEED_MIN = 1
+ SEED_MAX = 2_147_483_646
+ ACKNOWLEDGEMENT = 'I_AUTHORIZE_ONE_MODAL_GPU_PROOF_WITHIN_MY_CONFIRMED_BUDGET'
+--- a/providers/modal_motion/worker.py
++++ b/providers/modal_motion/worker.py
+@@ -110,7 +110,7 @@
+         image=source, prompt=prompt,
+         negative_prompt='worst quality, jittery, distorted, static image',
+         width=WIDTH, height=HEIGHT, num_frames=FRAMES,
+-        num_inference_steps=STEPS, guidance_scale=3.0,
++        num_inference_steps=STEPS, guidance_scale=5.0,
+         generator=generator,
+     ).frames[0]
+ 

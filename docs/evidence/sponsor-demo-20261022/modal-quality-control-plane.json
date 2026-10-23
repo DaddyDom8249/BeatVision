@@ -1,0 +1,137 @@
+{
+  "task": "T09.5",
+  "recorded_at": "2026-10-23T06:21:08.001229+00:00",
+  "first_phone_job": {
+    "id": "eab6e619-1a3d-4418-b152-df9f594686bb",
+    "status": "completed",
+    "exit": 0
+  },
+  "app": {
+    "id": "ap-CopCZqKwTuk11VLpDSU0fH",
+    "name": "bragoraforge-modal-motion-proof",
+    "state": "deployed",
+    "tasks": 0
+  },
+  "function": {
+    "id": "fu-7utVyRnLk1LGQJWS5xyThX",
+    "name": "single_motion_proof",
+    "stats": {
+      "backlog": 0,
+      "num_total_runners": 0,
+      "num_running_inputs": 0,
+      "input_headroom": 0
+    }
+  },
+  "billing_displayed": {
+    "metered_cost": "0.33",
+    "deployed_apps": "0.24",
+    "network_egress": "0.09",
+    "credits_applied": "-0.24",
+    "network_allowance": "-0.09",
+    "billed_cost": "$0.00",
+    "remaining_credit_balance": "UNKNOWN",
+    "current_account_usage_and_spend_caps": "UNKNOWN: summary does not expose them"
+  },
+  "local_checkout": {
+    "commit": "e02a3e636b8638a03a6280b021c720d00ba31a41",
+    "files": {
+      "worker.py": {
+        "sha256": "1dcd5ab190c7de817a7d7da25be68db9052bbe136e6903b9f64daf3aea599e6f",
+        "constants": {
+          "MODEL": "Lightricks/LTX-Video-0.9.5",
+          "MODEL_REVISION": "e58e28c39631af4d1468ee57a853764e11c1d37e"
+        },
+        "contains_direct_resize": false,
+        "uses_prepare_source_image": true,
+        "guidance_scale_3": true
+      },
+      "contracts.py": {
+        "sha256": "c786515814adcedb521b98af7e1c48977dc44b6da1eca10a08feb83a9e415af5",
+        "constants": {
+          "WIDTH": 704,
+          "HEIGHT": 480,
+          "FRAMES": 49,
+          "FPS": 24,
+          "STEPS": 20
+        }
+      },
+      "media.py": {
+        "sha256": "d61631975e0654d8d38d70e65fa96745c588f025accd4a121fd60aa523749db1",
+        "constants": {},
+        "contains_imageops_contain": true
+      }
+    },
+    "all_three_worker_files_match_current_repository": {
+      "worker.py": true,
+      "contracts.py": true,
+      "media.py": true
+    },
+    "boundary": "Local source equality does not establish deployed artifact equality."
+  },
+  "deployed_artifact_source": "UNKNOWN: moduleworker/file-based definition, serialized_bytes0, image/mount references exported; Python source content not returned. Local source is not deployed-artifact proof.",
+  "new_inference_authorization": "Not granted. Read-only approvals are completed and do not authorize GPU generation.",
+  "provider_submissions": 0,
+  "deployments": 0,
+  "customer_mutations": 0,
+  "private_result_sha256": "bd069a640c38a37cc6093f142d0abe888acf978b9b72269b3c02561c0360877f",
+  "initial_pending_phone_job": {
+    "id": "fe43298d-5caf-4307-be36-69e15df29de1",
+    "status": "awaiting_approval",
+    "purpose": "Read existing FunctionGetById definition and WorkspaceBillingRates only. No worker run/build/deploy.",
+    "approval_source": "Termux Link queue tool requires approval on the phone; chat Continue does not execute that device approval."
+  },
+  "definition_phone_job": {
+    "id": "fe43298d-5caf-4307-be36-69e15df29de1",
+    "status": "completed",
+    "exit": 0,
+    "function_data": {
+      "module_name": "worker",
+      "function_name": "single_motion_proof",
+      "timeout_secs": 300,
+      "warm_pool_size": 0,
+      "concurrency_limit": 1,
+      "autoscaler_settings": {
+        "min_containers": 0,
+        "max_containers": 1,
+        "buffer_containers": 0,
+        "scaledown_window": 2
+      }
+    },
+    "ranked_function": {
+      "rank": 0,
+      "module_name": "worker",
+      "function_name": "single_motion_proof",
+      "definition_type": 2,
+      "image_id": "im-EtbjAppBBFCc9vnylKk0fW",
+      "mount_ids": [
+        "mo-ZR7PZndBtJSYjmtxNJmFox",
+        "mo-WQUmbZcV5tBKNMl4oLtsHV",
+        "mo-8YvIVQKdYMawNskTJOXtqO"
+      ],
+      "serialized_bytes": 0,
+      "resources": {
+        "gpu_config": {
+          "count": 1,
+          "gpu_type": "L4"
+        }
+      },
+      "timeout_secs": 300,
+      "retry_policy": {
+        "backoff_coefficient": 1.0,
+        "initial_delay_ms": 1000,
+        "max_delay_ms": 60000
+      },
+      "autoscaler_settings": {
+        "min_containers": 0,
+        "max_containers": 1,
+        "buffer_containers": 0,
+        "scaledown_window": 2
+      }
+    }
+  },
+  "rates": {
+    "gpu_l4_usd_per_hour": "0.80000",
+    "cpu_usd_per_core_hour": "0.04730"
+  },
+  "remaining_blocker": "Candidate quality trial requires current usable credits/$0paid-spend confirmation and explicit bounded execution authorization."
+}

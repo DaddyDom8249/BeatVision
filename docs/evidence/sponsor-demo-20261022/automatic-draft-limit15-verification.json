@@ -1,0 +1,121 @@
+{
+  "task": "T04.13a",
+  "recorded_at": "2026-10-22 22:34:50 UTC",
+  "current_backend_inventory": [
+    {
+      "name": "beatvision-world",
+      "version": 62,
+      "status": "ACTIVE",
+      "ezbr_sha256": "9ae0a5afd7a3dbc9235f41aaa9e29b0e7881e53c4ed4cc23acb9eea2e0a835b0"
+    },
+    {
+      "name": "beatvision-analyze-song",
+      "version": 44,
+      "status": "ACTIVE",
+      "ezbr_sha256": "9c9d325451ba62a3d1e2c53df85733515a3a31e9251cb5e2724404d955011db1"
+    },
+    {
+      "name": "beatvision-generation",
+      "version": 63,
+      "status": "ACTIVE",
+      "ezbr_sha256": "ebfbcec4f265ff66ca8e6dd822886c957a753be33e6a34e6b30e8b7b63c50358"
+    },
+    {
+      "name": "beatvision-style-draft",
+      "version": 30,
+      "status": "ACTIVE",
+      "ezbr_sha256": "dd5e42a77921edf64fc94f109619a1671b4f73bc1fda328d7d5b6d872bbbdb05"
+    },
+    {
+      "name": "beatvision-song-interpretation",
+      "version": 6,
+      "status": "ACTIVE",
+      "ezbr_sha256": "35409fc23e8ba2cddc8beb3f6c2c6c9143581f61857ef6720c1ddb3eccc0dab0"
+    },
+    {
+      "name": "beatvision-ai-director",
+      "version": 3,
+      "status": "ACTIVE",
+      "ezbr_sha256": "30c5839b87c474b5fc216f13420d9ab433617824f1057ad4fa2315d9f6458f53"
+    }
+  ],
+  "source_commit": "be15931abdfec4583b2b26cc6a807b83ef41bd73",
+  "frontend_commit": "195c5337324704a91fbf894c83f65db6dce3813b",
+  "frontend_deployment": "dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV",
+  "current_function": {
+    "id": "378e3091-5d41-47f3-a3f2-defafac5a5f6",
+    "slug": "beatvision-song-interpretation",
+    "name": "beatvision-song-interpretation",
+    "status": "ACTIVE",
+    "version": 6,
+    "created_at": 1792688871352,
+    "updated_at": 1792707348208,
+    "verify_jwt": false,
+    "import_map": false,
+    "entrypoint_path": "/tmp/user_fn_mdofsinyofqbeapzfygu_378e3091-5d41-47f3-a3f2-defafac5a5f6_5/source/index.ts",
+    "ezbr_sha256": "35409fc23e8ba2cddc8beb3f6c2c6c9143581f61857ef6720c1ddb3eccc0dab0"
+  },
+  "retrieved_source_byte_matches_commit": true,
+  "agent_function_deployments_this_turn": 0,
+  "operator_reported_daily_limit": 15,
+  "quota_observation": "Actual fourth interpretation reservation completed; previous3-request boundary is lifted. Exact15 value is owner-reported, not independently read.",
+  "request_evidence": "automatic-draft-estimate-retest-limit15.json",
+  "database": {
+    "song": {
+      "id": "0fb1c668-f00e-433f-91b7-d6a07a931887",
+      "audio_revision": "3a13917a-fd92-4dd6-89b5-1c2d5c1665b4",
+      "analysis_status": "completed",
+      "audio_source_fingerprint": "b3d653c4981d741ff9399ae64eca69aa6cf2288eb28cd8894f4a2e1b21308c34",
+      "current_interpretation_id": null,
+      "interpretation_confirmed_at": null
+    },
+    "usage": [
+      {
+        "operation": "interpretation",
+        "usage_day": "2026-10-22",
+        "request_count": 4
+      }
+    ],
+    "versions": [
+      {
+        "id": "7908c96f-6f98-472b-ba7a-f7250d091d85",
+        "model": "openai/gpt-oss-20b",
+        "status": "superseded",
+        "version": 1,
+        "provider": "verified-free-provider",
+        "source_type": "ai",
+        "confirmed_at": null,
+        "has_provider_request_id": true
+      },
+      {
+        "id": "e30734e7-9cf1-4e56-ab88-15e83eb73a96",
+        "model": null,
+        "status": "superseded",
+        "version": 2,
+        "provider": null,
+        "source_type": "artist_edited",
+        "confirmed_at": null,
+        "has_provider_request_id": false
+      },
+      {
+        "id": "a4daad16-803f-45e5-9cae-6dc5f9a27a59",
+        "model": "openai/gpt-oss-20b",
+        "status": "draft",
+        "version": 3,
+        "provider": "verified-free-provider",
+        "source_type": "ai",
+        "confirmed_at": null,
+        "has_provider_request_id": true
+      }
+    ],
+    "active_requests": 0,
+    "heuristic_claims": 3,
+    "all_heuristic_claims_qualified": true
+  },
+  "verification": "PASS for genuine new AI variant, all three heuristic claims qualified, persisted six-field desktop/Android-emulated reload, previous variants preserved and approval gate intact",
+  "previous_failure": "automatic-draft-estimate-verification.json retained; original downstream non-2xx cause remains UNKNOWN, current response200",
+  "tests": "Source unchanged; exact source CI39863365590 remains applicable:432/432,zero skipped,production audit/build PASS. No unnecessary rerun.",
+  "remaining": "T04 still BLOCKED on explicit artist confirmation; downstream creative/image/motion acceptance unverified",
+  "creative_approvals": 0,
+  "gpu_submissions": 0
+}

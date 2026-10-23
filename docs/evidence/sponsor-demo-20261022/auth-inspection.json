@@ -1,0 +1,32 @@
+[
+  {
+    "context": "desktop",
+    "url": "https://beat-vision-theta.vercel.app/auth",
+    "http_status": 200,
+    "title": "BeatVision",
+    "text": "BEATVISION\nSign in\nSTUDIO ACCESS\nEnter your studio.\n\nSign in to access your projects, locked creative worlds, and visual briefs.\n\nEmail Address\nPassword\nSign In to Studio \u2192\nNeed an account? Create one",
+    "page_errors": [],
+    "horizontal_overflow": false,
+    "registration_text": "BEATVISION\nSign in\nCREATE ACCOUNT\nCreate your artist account.\n\nCreate a BeatVision account to save projects and direct your visual music videos.\n\nEmail Address\nPassword\nCreate Studio Account \u2192\nAlready have an account? Sign in",
+    "registration_email_visible": true,
+    "registration_submit_visible": true
+  },
+  {
+    "context": "android-emulated",
+    "url": "https://beat-vision-theta.vercel.app/auth",
+    "http_status": 200,
+    "title": "BeatVision",
+    "text": "BEATVISION\nSign in\nSTUDIO ACCESS\nEnter your studio.\n\nSign in to access your projects, locked creative worlds, and visual briefs.\n\nEmail Address\nPassword\nSign In to Studio \u2192\nNeed an account? Create one",
+    "page_errors": [],
+    "horizontal_overflow": false,
+    "registration_text": "BEATVISION\nSign in\nCREATE ACCOUNT\nCreate your artist account.\n\nCreate a BeatVision account to save projects and direct your visual music videos.\n\nEmail Address\nPassword\nCreate Studio Account \u2192\nAlready have an account? Sign in",
+    "registration_email_visible": true,
+    "registration_submit_visible": true
+  },
+  {
+    "auth_settings_http": 200,
+    "signup_enabled": true,
+    "mailer_autoconfirm": false,
+    "email_provider_enabled": true
+  }
+]

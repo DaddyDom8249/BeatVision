@@ -1,0 +1,103 @@
+{
+  "task": "T09.5",
+  "creator_report": "Modal motion render quality is poor; correction from 'scrappy' to 'crappy'. This is creator feedback, not independent frame review.",
+  "classification": {
+    "creator_quality_acceptance": "FAILED: creator reports unacceptable output",
+    "independent_latest_visual_review": "BLOCKED: expired saved private download URLs",
+    "exact_quality_cause": "UNKNOWN",
+    "deployed_worker_source_equivalence": "UNKNOWN",
+    "quality_fix": "Not established"
+  },
+  "source": {
+    "implementation_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
+    "docs_base_commit": "c83547e13a6f3a38b44711650942ad172fbcc9d5",
+    "generation_version": 66,
+    "generation_bundle_sha256": "c2362dfab4a95b54cbf56ce136be7c7494de89f7e4bcd5d9e4e81ebf1b43776f",
+    "movement_priority_present": true,
+    "previous_prompt_repair_recorded_at": "2026-10-22T23:24:54.628234Z"
+  },
+  "latest_unreviewed_jobs": [
+    {
+      "id": "d74245c1-fa8b-4be0-b632-31daace032f2",
+      "created_at": "2026-10-23 01:56:52.319961+00",
+      "scene": 5,
+      "source_image_id": "40f92141-799d-4774-b693-96774f0ae04e",
+      "model": "Lightricks/LTX-Video-0.9.5",
+      "revision": "e58e28c39631af4d1468ee57a853764e11c1d37e",
+      "container_measurements": {
+        "byte_length": 36155,
+        "audio_samples": 0,
+        "video_samples": 49,
+        "container_verified": true,
+        "audio_duration_seconds": 0,
+        "video_duration_seconds": 2.0416666666666665,
+        "subject_motion_verified": false
+      },
+      "read_only_download": {
+        "attempts": 1,
+        "status": 400,
+        "error": "InvalidJWT",
+        "reason": "\"exp\" claim timestamp check failed"
+      },
+      "source_image_comparison": "BLOCKED: creator-scoped current media access required"
+    },
+    {
+      "id": "93833f52-1f9e-4560-b5e4-162769b76098",
+      "created_at": "2026-10-23 01:52:10.484673+00",
+      "scene": 3,
+      "source_image_id": "e71eea00-badf-46bf-9c30-d774cb7c3815",
+      "model": "Lightricks/LTX-Video-0.9.5",
+      "revision": "e58e28c39631af4d1468ee57a853764e11c1d37e",
+      "container_measurements": {
+        "byte_length": 47662,
+        "audio_samples": 0,
+        "video_samples": 49,
+        "container_verified": true,
+        "audio_duration_seconds": 0,
+        "video_duration_seconds": 2.0416666666666665,
+        "subject_motion_verified": false
+      },
+      "read_only_download": {
+        "attempts": 1,
+        "status": 400,
+        "error": "InvalidJWT",
+        "reason": "\"exp\" claim timestamp check failed"
+      },
+      "source_image_comparison": "BLOCKED: creator-scoped current media access required"
+    }
+  ],
+  "hypotheses": [
+    {
+      "classification": "PROBABLE contributing instruction, not a root-cause conclusion",
+      "description": "Approved motion direction requests slow/minimal movement; stronger action would need an artist-authored revision."
+    },
+    {
+      "classification": "UNKNOWN",
+      "description": "Distortion, identity drift, source mismatch or insufficient sampler quality cannot be diagnosed from MP4 metadata."
+    }
+  ],
+  "committed_worker_settings": {
+    "model": "Lightricks/LTX-Video-0.9.5",
+    "frames": 49,
+    "fps": 24,
+    "width": 704,
+    "height": 480,
+    "inference_steps": 20,
+    "guidance_scale": 3,
+    "max_prompt_tokens": 128,
+    "scope": "Committed source only; live worker-source equivalence still unknown"
+  },
+  "actions": {
+    "new_gpu_jobs": 0,
+    "inference_retries": 0,
+    "worker_deployments": 0,
+    "source_code_changes": 0,
+    "model_provider_switches": 0,
+    "financial_setting_changes": 0,
+    "creative_approvals": 0,
+    "customer_asset_mutations": 0,
+    "application_test_reruns": 0
+  },
+  "verification_dependency": "Actual problematic MP4 and corresponding source, supplied directly or via existing creator-authenticated media access. Do not impersonate project owner or relax authorization.",
+  "policy": "Modal remains primary; Hugging Face remains explicit fallback. No claim of improved quality or sponsor readiness."
+}

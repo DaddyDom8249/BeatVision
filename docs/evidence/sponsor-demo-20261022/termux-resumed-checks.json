@@ -1,0 +1,51 @@
+{
+  "source": "Existing authorized Termux phone-status bridge",
+  "initial_retry": {
+    "online": true,
+    "last_seen_utc": "2026-10-22T17:56:47.719Z"
+  },
+  "latest_observation": {
+    "online": false,
+    "last_seen_utc": "2026-10-22T18:09:06.968Z"
+  },
+  "checks": [
+    {
+      "id": "63c49cf7-1070-4b9a-a3ab-df9cfa991942",
+      "status": "awaiting_approval",
+      "exit": null,
+      "output": null
+    },
+    {
+      "id": "2daf31ff-5148-4db5-b5e3-d841f9c50d9d",
+      "status": "completed",
+      "exit": 0,
+      "output": "{\"function\": \"beatvision-song-interpretation\", \"status\": 200, \"allow_origin\": \"https://beat-vision-theta.vercel.app\", \"allow_headers\": \"authorization, x-client-info, apikey, content-type\"}\n{\"function\": \"beatvision-analyze-song\", \"status\": 200, \"allow_origin\": \"https://beat-vision-theta.vercel.app\", \"allow_headers\": \"authorization, x-client-info, apikey, content-type\"}\nREAD_ONLY_PREFLIGHT_ONLY_NO_AUTH_OR_INFERENCE\n"
+    }
+  ],
+  "phone_preflight_limits": "Queued before header deployment; old header output has no execution completion clock. Not proof of post-patch browser behavior.",
+  "modal_command_scope": "Read-only CLI app list, billing summary, SDK Function.get_current_stats; no remote/spawn/run/deploy or inference.",
+  "approval_source": "queue_termux_command returned Required on phone; actual check awaits owner approval",
+  "gpu_submissions": 0,
+  "approval_resend": {
+    "user_instruction": "Resent approval request",
+    "observed_bridge_online": true,
+    "observed_last_seen_utc": "2026-10-22T19:52:48.452Z",
+    "previous_job": {
+      "id": "63c49cf7-1070-4b9a-a3ab-df9cfa991942",
+      "status": "failed",
+      "exit": 127,
+      "error": "Debian-only /root/modal-env/bin/python path invoked outside Debian"
+    },
+    "confirmed_existing_wrapper_source": "Historical completed read-only job3b56352a-ccde-43f0-93f8-29b726e23586 uses proot-distro login debian",
+    "new_job": {
+      "id": "b23ccbf0-449e-4e69-9a4d-32188083f5fa",
+      "status": "queued",
+      "approval": "Required on phone",
+      "result": "UNKNOWN pending execution"
+    },
+    "attempt": 2,
+    "maximum_attempts": 3,
+    "scope_unchanged": "Read-only CLI app/billing and SDK function stats; no inference",
+    "gpu_submissions": 0
+  }
+}

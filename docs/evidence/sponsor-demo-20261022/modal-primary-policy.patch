@@ -1,0 +1,20 @@
+--- a/index.ts
++++ b/index.ts
+@@ -481,7 +481,7 @@
+ 
+ // Append a model-specific attempt; reuse the canonical RPC's frozen lineage.
+ // Existing approved procedural assets/jobs are never edited or deleted.
+-async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acceptedTerms: boolean, sourceImageId?: string, requestId?: string, provider = "huggingface") {
++async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acceptedTerms: boolean, sourceImageId?: string, requestId?: string, provider = "modal") {
+   if (!acceptedTerms) throw new HttpError(400,"HF_TERMS_REQUIRED","Accept the LTX model use restrictions before AI motion.");
+   if (provider !== "huggingface" && provider !== "modal") throw new HttpError(400,"MOTION_PROVIDER_INVALID","Unsupported motion provider.");
+   if (provider === "modal") {
+@@ -929,7 +929,7 @@
+     });
+     if (action === "enqueue_ai_motion") {
+       // Same project-owner gate above applies; system is the private scheduler.
+-      const job = await enqueueHfMotion(db,projectId,String(body.sceneId || ""),body.acceptedTerms === true,body.sourceImageId,body.requestId,String(body.provider || "huggingface"));
++      const job = await enqueueHfMotion(db,projectId,String(body.sceneId || ""),body.acceptedTerms === true,body.sourceImageId,body.requestId,String(body.provider || "modal"));
+       return json(req, { job });
+     }
+     if (action === "motion_url") return json(req, { video_url: await motionUrl(db, projectId, String(body.assetId || "")) });

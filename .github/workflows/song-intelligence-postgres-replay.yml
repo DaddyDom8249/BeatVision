@@ -1,0 +1,52 @@
+name: Bragora Song Intelligence PostgreSQL Replay
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/202610200*.sql'
+      - 'supabase/migrations/20261022040000_song_intelligence_trigger_execute_acl.sql'
+      - 'supabase/migrations/20261022165544_disambiguate_song_generation_world_lineage.sql'
+      - 'scripts/test/postgres-song-intelligence-*.sql'
+      - '.github/workflows/song-intelligence-postgres-replay.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: synthetic-test-only
+          POSTGRES_DB: bragora_migration_fixture
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bragora_migration_fixture"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: synthetic-test-only
+      PGDATABASE: bragora_migration_fixture
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify isolated PostgreSQL and pgcrypto
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -c 'select version();'
+          psql -X -v ON_ERROR_STOP=1 -f scripts/test/postgres-song-intelligence-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -c "select extname, extnamespace::regnamespace from pg_extension where extname='pgcrypto';"
+      - name: Replay candidate migrations in order
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261020000000_song_intelligence.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261020010000_song_intelligence_integrity.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261020020000_bragora_ai_request_quotas.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261022040000_song_intelligence_trigger_execute_acl.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261022165544_disambiguate_song_generation_world_lineage.sql
+      - name: Assert owner security, creative lineage and request quota
+        run: psql -X -v ON_ERROR_STOP=1 -f scripts/test/postgres-song-intelligence-assertions.sql

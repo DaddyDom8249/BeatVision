@@ -1,0 +1,68 @@
+{
+  "observed_at": "2026-10-22T22:32:07.534233+00:00",
+  "task": "T04.13a",
+  "project_id": "bb457d64-29ea-4649-a566-c446eef61ad6",
+  "frontend_commit": "195c5337324704a91fbf894c83f65db6dce3813b",
+  "frontend_deployment": "dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV",
+  "backend_commit": "be15931abdfec4583b2b26cc6a807b83ef41bd73",
+  "backend_function_version": 6,
+  "backend_bundle_sha256": "35409fc23e8ba2cddc8beb3f6c2c6c9143581f61857ef6720c1ddb3eccc0dab0",
+  "operator_reported_daily_limit": 15,
+  "retest_reason": "Operator raised allowance; prior request terminal503 with no inflight row; source unchanged",
+  "attempt": 2,
+  "analysis_calls": 0,
+  "proposal_clicks": 1,
+  "creative_approvals": 0,
+  "gpu_calls": 0,
+  "contexts": [
+    {
+      "name": "desktop",
+      "all_six_saved_fields_loaded": true,
+      "field_lengths": [
+        130,
+        31,
+        68,
+        37,
+        137,
+        312
+      ],
+      "all_nonempty": true,
+      "all_editable": true,
+      "rationale_estimate_labels": 3,
+      "continue_disabled": true,
+      "confirm_available_for_artist": true,
+      "displayed_errors": []
+    },
+    {
+      "name": "android-emulated",
+      "all_six_saved_fields_loaded": true,
+      "field_lengths": [
+        130,
+        31,
+        68,
+        37,
+        137,
+        312
+      ],
+      "all_nonempty": true,
+      "all_editable": true,
+      "rationale_estimate_labels": 3,
+      "continue_disabled": true,
+      "confirm_available_for_artist": true,
+      "displayed_errors": []
+    }
+  ],
+  "http_status": 200,
+  "draft": {
+    "id": "a4daad16-803f-45e5-9cae-6dc5f9a27a59",
+    "version": 3,
+    "status": "draft",
+    "source_type": "ai",
+    "provider": "verified-free-provider",
+    "model": "openai/gpt-oss-20b",
+    "source_fingerprint": "b3d653c4981d741ff9399ae64eca69aa6cf2288eb28cd8894f4a2e1b21308c34"
+  },
+  "heuristic_claim_count": 3,
+  "all_heuristic_claims_qualified": true,
+  "verification": "PASS for changed server estimate qualification, real new AI variant, and frontend persistence; no transcription rerun or approval"
+}

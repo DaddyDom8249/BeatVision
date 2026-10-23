@@ -1,0 +1,39 @@
+{
+  "observed_at": "2026-10-22T21:23:59.628105+00:00",
+  "task": "T04.12",
+  "red": {
+    "tests": 19,
+    "pass": 18,
+    "fail": 1,
+    "failure": "Successful provider result retained unavailable status"
+  },
+  "green": {
+    "focused_tests": 23,
+    "pass": 23,
+    "fail": 0,
+    "full_tests": 423,
+    "full_pass": 423,
+    "full_fail": 0,
+    "skipped": 0,
+    "audit": "PASS",
+    "typescript_vite_build": "PASS"
+  },
+  "private_logs": {
+    "red": {
+      "path": "/workspace/shared/sponsor-release-backup-20261022/transcription-status-red.txt",
+      "sha256": "e6d38be0d9a1940e17834b485505aa843f4624c28bfcf1a72a351fae4c073a5c"
+    },
+    "green": {
+      "path": "/workspace/shared/sponsor-release-backup-20261022/transcription-status-green.txt",
+      "sha256": "51f6f8a2dbeb7e2d5bab69d9587525c8a66027d2e0d9f632b1a167b7c91b7a59"
+    },
+    "full-tests": {
+      "path": "/workspace/shared/sponsor-release-backup-20261022/transcription-status-full-tests.txt",
+      "sha256": "29cf452f88f6a2c5a9441b7404ae0ca9b204373a0225d4e58759533af8192ad1"
+    },
+    "build": {
+      "path": "/workspace/shared/sponsor-release-backup-20261022/transcription-status-build.txt",
+      "sha256": "ecb654e6e6fd38a02f61e2d1addde068a2efc96e6056d02da3f555cbc496632e"
+    }
+  }
+}

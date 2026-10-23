@@ -1,0 +1,22 @@
+✔ Modal cannot submit without credentials and budget enablement (1.288231ms)
+✔ Modal submit sends exactly one proxy-authenticated HTTPS request with approved input (11.090435ms)
+✔ Invalid source provenance fails before any Modal HTTP request (2.079106ms)
+✔ Invalid Modal submit receipt is rejected without retry (0.968422ms)
+✔ Modal HTTP failure does not retry or silently fall back to Hugging Face (2.558726ms)
+✔ Modal polling performs one authenticated GET; HTTP 202 remains processing (0.610665ms)
+✔ Invalid poll call ID cannot reach Modal; completed poll decodes returned video (0.525458ms)
+✔ App explicitly selects Modal and retains HF as the default (0.532818ms)
+✔ Generation controller fixture loads both providers without GPU calls (34.465866ms)
+✔ Modal transport refuses redirects before forwarding proxy credentials (18.109017ms)
+✔ Modal transport rejects oversized Content-Length before reading the body (0.91442ms)
+✔ Modal transport bounds a chunked body without trusting Content-Length (5.102168ms)
+✔ Modal transport keeps the deadline active while a response body stalls (3.423852ms)
+✔ Modal transport accepts a complete maximum-size base64 clip envelope (74.827781ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 285.12571

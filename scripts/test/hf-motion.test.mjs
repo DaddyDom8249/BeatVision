@@ -165,6 +165,28 @@ for (const action of ['enqueue_ai_motion','motion_url','motion_eligibility']) te
 });
 test('model terms must be accepted before eligibility or any job write',async()=>{const runtime=await loadGeneration();try{await assert.rejects(runtime.enqueueHfMotion({},'project-1','scene-1',false),/Accept the LTX/)}finally{await runtime.cleanup()}});
 
+test('omitted motion provider uses the Modal budget guard; explicit HF keeps its eligibility guard', async () => {
+  const original = globalThis.fetch;
+  let requests = 0;
+  globalThis.fetch = async () => { requests++; throw new Error('Unexpected provider access'); };
+  const client = {auth: {getUser: async () => ({data: {user: {id: 'owner-1'}}})}, from(table) {
+    assert.equal(table, 'projects');
+    return {select() { return this; }, eq() { return this; }, maybeSingle: async () => ({data: {id: 'project-1', owner_id: 'owner-1'}})};
+  }};
+  const runtime = await loadGeneration(client, {}, process.env.BRAGORA_GENERATION_CONTROLLER_FIXTURE);
+  try {
+    for (const [provider, code] of [[undefined, 'MODAL_GPU_UNAVAILABLE'], ['huggingface', 'HF_VIDEO_TOKEN_MISSING'], ['other', 'MOTION_PROVIDER_INVALID']]) {
+      const response = await runtime.handler(new Request('https://test/function', {method: 'POST', headers: {Authorization: 'Bearer fixture-session'},
+        body: JSON.stringify({action: 'enqueue_ai_motion', projectId: 'project-1', sceneId: 'scene-1', acceptedTerms: true, provider})}));
+      const data = await response.json();
+      if (provider === 'huggingface') assert.match(data.error.message, /HF_VIDEO_TOKEN_MISSING/);
+      else assert.equal(data.error.code, code);
+    }
+    assert.equal(requests, 0, 'no GPU/provider request is authorized by a default or missing configuration');
+    await assert.rejects(runtime.enqueueHfMotion({}, 'project-1', 'scene-1', true), /Modal worker or spending safeguard/);
+  } finally { globalThis.fetch = original; await runtime.cleanup(); }
+});
+
 test('HF completion stores immutable private video and pins the generating image', async () => {
   const original = globalThis.fetch;
   globalThis.fetch = async (url) => url.includes('/queue/data')
@@ -204,8 +226,8 @@ for (const approvedPlan of [true,false]) test('HF enqueue '+(approvedPlan?'reuse
   }}};
   const runtime=await loadGeneration(client);globalThis.Deno.env.get=()=> 'test-secret';
   try {
-    if(approvedPlan){assert.deepEqual(await runtime.enqueueHfMotion(client,'project-1','scene-1',true),existing);assert.equal(filters.find(x=>x.table==='scene_image_assets').where.approved,true)}
-    else await assert.rejects(runtime.enqueueHfMotion(client,'project-1','scene-1',true),/approved locked Visual Plan/);
+    if(approvedPlan){assert.deepEqual(await runtime.enqueueHfMotion(client,'project-1','scene-1',true,undefined,undefined,'huggingface'),existing);assert.equal(filters.find(x=>x.table==='scene_image_assets').where.approved,true)}
+    else await assert.rejects(runtime.enqueueHfMotion(client,'project-1','scene-1',true,undefined,undefined,'huggingface'),/approved locked Visual Plan/);
     assert.equal(writes,0);assert.equal(f.calls.filter(c=>c.init.method==='POST').length,0);
   }finally{globalThis.fetch=original;await runtime.cleanup()}
 });
@@ -233,11 +255,11 @@ test('scene image dispatch uses authenticated Arena bridge, never Pixazo directl
     return Response.json({ok:false,status:'provider_unavailable',code:'PROVIDER_COST_UNVERIFIED',
       error:'Workers Free entitlement or AI binding not available'}, {status:503});
   };
-  const runtime=await loadGeneration(db,{ARENA_GATEWAY_URL:'https://arena.fixture.test',ARENA_GATEWAY_TOKEN:'fixture-secret'});
+  const runtime=await loadGeneration(db,{ARENA_GATEWAY_URL:'https://arena.fixture.workers.dev',ARENA_GATEWAY_ALLOWED_HOSTS:'arena.fixture.workers.dev',ARENA_GATEWAY_TOKEN:'fixture-secret'});
   try {
     const result=await runtime.run(db,job);
     assert.equal(calls.length,1);
-    assert.equal(calls[0].url,'https://arena.fixture.test/v2/scene-image');
+    assert.equal(calls[0].url,'https://arena.fixture.workers.dev/v2/scene-image');
     const payload=JSON.parse(calls[0].init.body).payload;
     assert.equal(payload.source.application,'beatvision');
     assert.equal(payload.source.contract,'2.0');
@@ -350,7 +372,7 @@ test('free Shotstack sandbox assembly passes controller cost guard without openi
       song: { id: 'song-1', title: 'Test', artist: 'Test', analysis: { duration_seconds: 8, analysis_method: 'browser_audio_decode' } },
       world: { id: 'world-1' }, style_bible: { id: 'style-1' }, revision_number: 1,
     },
-    scenes: [{ scene_number: 1, start_time: 0, end_time: 8 }],
+    scenes: [{ id: 'scene-1', scene_number: 1, start_time: 0, end_time: 8 }],
     motion_clips: [{ scene: 1, asset_id: 'approved-clip-1', video_url: 'https://existing.example.test/clip.mp4' }],
     audio_path: 'song-1/audio.wav',
   };
@@ -359,19 +381,27 @@ test('free Shotstack sandbox assembly passes controller cost guard without openi
     attempts: 0, input_snapshot: snapshot, output: {} };
   const db = {
     storage: { from(bucket) {
-      assert.equal(bucket, 'songs');
-      return { createSignedUrl: async () => ({ data: { signedUrl: 'https://private.example.test/song.wav' }, error: null }) };
+      assert.ok(['songs','visual-assets'].includes(bucket));
+      return { createSignedUrl: async () => ({ data: { signedUrl: 'https://private.example.test/'+bucket }, error: null }) };
     } },
     from(table) {
+      if (table === 'motion_clip_assets') return {
+        select() { return this; }, eq() { return this; }, in() { return this; },
+        then(resolve) { return Promise.resolve({data:[{id:'approved-clip-1',project_id:'project-1',visual_plan_id:'plan-1',scene_id:'scene-1',generation_job_id:'motion-job',approved:true,status:'approved'}]}).then(resolve); },
+      };
       assert.equal(table, 'generation_jobs');
       let changes = null;
+      let lookupIds = null;
       const apply = () => { if (changes) job = { ...job, ...changes }; return job; };
       return {
         update(next) { changes = next; return this; },
-        select() { return this; }, eq() { return this; }, in() { return this; },
+        select() { return this; }, eq() { return this; }, in(k,v) { lookupIds=v; return this; },
         async maybeSingle() { return { data: apply(), error: null }; },
         async single() { return { data: apply(), error: null }; },
-        then(resolve) { apply(); return Promise.resolve({ data: [{ id: job.id }], error: null }).then(resolve); },
+        then(resolve) {
+          if (lookupIds?.includes('motion-job')) return Promise.resolve({data:[{id:'motion-job',project_id:'project-1',visual_plan_id:'plan-1',visual_plan_scene_id:'scene-1',job_type:'scene_motion',status:'completed',output:{arena_status_response:{result:{storage_path:'project-1/scene-motion/plan-1/scene-1/motion-job.mp4',verification:{container_verified:true,video_duration_seconds:8}}}}}]}).then(resolve);
+          apply(); return Promise.resolve({ data: [{ id: job.id }], error: null }).then(resolve);
+        },
       };
     },
   };
@@ -380,11 +410,11 @@ test('free Shotstack sandbox assembly passes controller cost guard without openi
     calls.push({ url: String(url), init });
     return Response.json({ ok: false, status: 'provider_unavailable', error: 'Sandbox stage unavailable in fixture' }, { status: 503 });
   };
-  const runtime = await loadGeneration(db, { ARENA_GATEWAY_URL: 'https://arena.fixture.test', ARENA_GATEWAY_TOKEN: 'fixture-secret' });
+  const runtime = await loadGeneration(db, { ARENA_GATEWAY_URL: 'https://arena.fixture.workers.dev', ARENA_GATEWAY_ALLOWED_HOSTS: 'arena.fixture.workers.dev', ARENA_GATEWAY_TOKEN: 'fixture-secret' });
   try {
     const result = await runtime.run(db, job);
     assert.equal(calls.length, 1, 'one gateway request only; no Pixazo, production Shotstack, or second attempt');
-    assert.equal(calls[0].url, 'https://arena.fixture.test/v2/assemble');
+    assert.equal(calls[0].url, 'https://arena.fixture.workers.dev/v2/assemble');
     assert.equal(calls[0].init.method, 'POST');
     const body = JSON.parse(calls[0].init.body);
     assert.equal(body.payload.generation.cost_class, 'free');

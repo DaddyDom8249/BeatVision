@@ -1,0 +1,10 @@
+{
+  "origin": "https://beat-vision-theta.vercel.app",
+  "deployment": "dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT",
+  "signup_http": 200,
+  "message": "Account created. Check your email to confirm your account, then sign in.",
+  "error_code": null,
+  "session_returned": false,
+  "submitted_once": true,
+  "sponsor_email_redacted": true
+}

@@ -1,0 +1,67 @@
+{
+  "task": "T13.1a",
+  "scope": "Offline real handler/React and local Chromium tests, no new provider jobs",
+  "backend_red": {
+    "tests": 12,
+    "passed": 0,
+    "failed": 12
+  },
+  "backend_green": {
+    "tests": 12,
+    "passed": 12,
+    "failed": 0
+  },
+  "compatible_controller_green": {
+    "tests": 12,
+    "passed": 12,
+    "failed": 0
+  },
+  "react_red": {
+    "tests": 44,
+    "passed": 41,
+    "failed": 3
+  },
+  "react_green": {
+    "tests": 44,
+    "passed": 44,
+    "failed": 0
+  },
+  "focused": {
+    "tests": 99,
+    "passed": 99,
+    "failed": 0
+  },
+  "full": {
+    "tests": 455,
+    "passed": 455,
+    "failed": 0,
+    "skipped": 0
+  },
+  "audit": "PASS",
+  "typescript_vite_build": "PASS",
+  "build_note": "Existing large-chunk warning retained; no unrelated bundle work",
+  "live_before_version": 65,
+  "live_before_index_sha256": "c50939e9aa2905b1ed04fe0b6985842adc0d15efc0d6947cf9059ab7b813abf7",
+  "compatible_after_index_sha256": "48adbd76428825fb24b82cfcca41f87c08182e78533566b053379237e4e0d77e",
+  "compatibility_scope_check": "PASS: remove added helper and two assembly-only edits to recover exact v65 bytes",
+  "log_sha256": {
+    "red.txt": "ff3df1f172185e251d2a31e45f38337a045fcb8af974131367d3b90109f98206",
+    "green.txt": "1db5412ee1cd994b62d45cf9b6841fe09cd0a1afdb47335d7bd4636230b05275",
+    "compatible.txt": "0d6ec76eec4bf83cdcda52f7dd88e182b9a4b88e4ad9167e9dc98e5cd1147899",
+    "ui-red.txt": "623675365a08149adb8319562888813c951b546c2c7af1c441e6c95c95a79a6f",
+    "ui-green.txt": "32ffb3bb8b31bb07321c671b5ecdc05696d0bb5a4174b72bd834adf7a2c6521b",
+    "focused.txt": "b2fce449c02e19d9ebf615d287ae46ad139405998234b15409e74d362e288d6a",
+    "full-tests.txt": "e004e9ad9e96e2ec614d19366d4dd0f13a6a0e36a57e9f9f5bfae31f49a5a8c2",
+    "audit.txt": "d02023ca8be7fb44222a534c8ec5a98eb1007ede71f6360657e09f8855f1bb3d",
+    "build.txt": "d5c1aacac77b7f00452d7230c94cd52beb44a1b9aed2541356ae860da5a916ac"
+  },
+  "local_browser_layout": {
+    "result": "PASS",
+    "evidence": "Full test log: real workspace CSS compacts mobile scene navigation without changing desktop layout; Chromium390/980px",
+    "physical_android": "UNKNOWN",
+    "css_changes": 0
+  },
+  "source_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
+  "deployed_browser": "PASS: four controlled deployed viewports, see assembly-repair-browser.json",
+  "ci_log_sha256": "904e74ea1c6106e1c55032ec5b06fbf1e33761fcfd12dbac72692e2b14ed12c0"
+}

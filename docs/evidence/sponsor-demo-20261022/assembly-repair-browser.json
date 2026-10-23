@@ -1,0 +1,66 @@
+{
+  "observed_at": "2026-10-23T02:22:52.521857+00:00",
+  "task": "T13.1a",
+  "scope": "Actual deployed frontend, controlled isolated read-only REST data; no provider or assembly generation",
+  "database_mutations": 0,
+  "provider_submissions": 0,
+  "contexts": [
+    {
+      "name": "desktop",
+      "short_clip_assembly_disabled": true,
+      "resource_shortfall_message": true,
+      "historical_error_visible": true,
+      "layout": {
+        "width": 1440,
+        "scroll_width": 1440,
+        "stacked": false
+      },
+      "unknown_duration_disabled": true,
+      "sufficient_measured_coverage_enabled": true,
+      "assembly_clicked": false
+    },
+    {
+      "name": "android-emulated",
+      "short_clip_assembly_disabled": true,
+      "resource_shortfall_message": true,
+      "historical_error_visible": true,
+      "layout": {
+        "width": 412,
+        "scroll_width": 412,
+        "stacked": true
+      },
+      "unknown_duration_disabled": true,
+      "sufficient_measured_coverage_enabled": true,
+      "assembly_clicked": false
+    },
+    {
+      "name": "591px-mobile",
+      "short_clip_assembly_disabled": true,
+      "resource_shortfall_message": true,
+      "historical_error_visible": true,
+      "layout": {
+        "width": 591,
+        "scroll_width": 591,
+        "stacked": true
+      },
+      "unknown_duration_disabled": true,
+      "sufficient_measured_coverage_enabled": true,
+      "assembly_clicked": false
+    },
+    {
+      "name": "980px-desktop-mode",
+      "short_clip_assembly_disabled": true,
+      "resource_shortfall_message": true,
+      "historical_error_visible": true,
+      "layout": {
+        "width": 980,
+        "scroll_width": 980,
+        "stacked": false
+      },
+      "unknown_duration_disabled": true,
+      "sufficient_measured_coverage_enabled": true,
+      "assembly_clicked": false
+    }
+  ],
+  "verification": "PASS for controlled deployed readiness and responsive layout; actual customer render/playback/subject motion unverified"
+}

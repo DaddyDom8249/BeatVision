@@ -1,0 +1,30 @@
+{
+  "observed_at": "2026-10-22T22:18:29.573007+00:00",
+  "task": "T04.13a",
+  "project_id": "bb457d64-29ea-4649-a566-c446eef61ad6",
+  "frontend_commit": "195c5337324704a91fbf894c83f65db6dce3813b",
+  "backend_function_version": 5,
+  "purpose": "Read-only retention after terminal provider503; no inference retries",
+  "blocked_mutations": [],
+  "contexts": [
+    {
+      "name": "desktop",
+      "saved_edited_v2_loaded": true,
+      "all_editable": true,
+      "continue_disabled": true,
+      "confirm_available_for_artist": true,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "name": "android-emulated",
+      "saved_edited_v2_loaded": true,
+      "all_editable": true,
+      "continue_disabled": true,
+      "confirm_available_for_artist": true,
+      "horizontal_overflow": false,
+      "page_errors": []
+    }
+  ],
+  "verification": "PASS for saved-draft retention and unchanged approval gates after failed provider request; changed AI output remains BLOCKED"
+}

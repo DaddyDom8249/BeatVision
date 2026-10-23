@@ -1,0 +1,584 @@
+{
+  "source_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
+  "production_frontend_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
+  "production_generation_version": 66,
+  "scope": "Application0b9eb69/v66 unchanged and canonical deployment rechecked. One authorized isolated same-model50/5 trial generated48733B MP4;49frames decode/visible walking/full controlled desktop+Pixel7 playback PASS. Extra actor fails source continuity; facial identity UNKNOWN, no creator approval. Billing$0.00/scratch STOPPED. No further inference or quality release authorized; fresh sponsor journey BLOCKED.",
+  "private_evidence": "Transcript-bearing candidate images, Android reload screenshot containing profile text, and account/session secrets excluded from Git",
+  "files": [
+    {
+      "file": "assembly-dispatch.patch",
+      "bytes": 6001,
+      "sha256": "855a3bbaeecd39a2a64bfcfac225df3ae93dd08664c5921bd78984985d96ea5a"
+    },
+    {
+      "file": "assembly-input-investigation.json",
+      "bytes": 4197,
+      "sha256": "11550c5b93ffaaa59043dff70343df2b5fcf1d693438f355b77a605a150c3f86"
+    },
+    {
+      "file": "assembly-repair-browser.json",
+      "bytes": 2002,
+      "sha256": "6d3a0f864556068f0f16d877a7149287879a1361d68620994a4c167a437b1225"
+    },
+    {
+      "file": "assembly-repair-release.json",
+      "bytes": 2235,
+      "sha256": "56fbaf28589fad6e78f915ad65b4e8f89cc733046491593649b430776c3baf84"
+    },
+    {
+      "file": "assembly-repair-tests.json",
+      "bytes": 2442,
+      "sha256": "1cd1a9bdaf521344352634b31f676412422a25c1c97c4ad42f540d8253b7bf41"
+    },
+    {
+      "file": "attached-motion-browser-playback.json",
+      "bytes": 1942,
+      "sha256": "02a725358e17194ffb5b163c82941e8584bff6dac7b99933a3bbf331dda2dc18"
+    },
+    {
+      "file": "attached-motion-quality-diagnosis.json",
+      "bytes": 9816,
+      "sha256": "efb0f27ec22223491fa00a207e6b0c11dff91520a9c27f45f4ac85080b4bd147"
+    },
+    {
+      "file": "audio-fixture.json",
+      "bytes": 540,
+      "sha256": "42858b6fbb6181fd76998f767004d01d82042931a245f419f8484e1528443bc9"
+    },
+    {
+      "file": "auth-android-emulated.png",
+      "bytes": 159777,
+      "sha256": "4d6d7f14a2c34ff4ea06620b1c6ccd35210e85aeddd6bdc8a1cb33b8df17d150"
+    },
+    {
+      "file": "auth-desktop.png",
+      "bytes": 54162,
+      "sha256": "0eaf5d7d0ea76d5563d3eb8836fd8a1b25edb1502f5a96e481835f2060f90002"
+    },
+    {
+      "file": "auth-inspection.json",
+      "bytes": 1705,
+      "sha256": "3eadf6c5899ab1ffca8ee4e0b1c207af6d50b06b6bc28124d59530fe0b0912c9"
+    },
+    {
+      "file": "automatic-draft-audio-fixture.json",
+      "bytes": 530,
+      "sha256": "3c00f9a46bef222d746ffe1a3c59dd8d3974c8114da98dbb2b40a1fdc7f05b2f"
+    },
+    {
+      "file": "automatic-draft-estimate-release.json",
+      "bytes": 3814,
+      "sha256": "e91fdb73b34974518f621856cf98621cd4665945a98e3e55a069e8e7125425fe"
+    },
+    {
+      "file": "automatic-draft-estimate-retest-limit15.json",
+      "bytes": 2068,
+      "sha256": "76810f34786664b474a404d3546f4c596059c47bd2550bed8719c531bae8099d"
+    },
+    {
+      "file": "automatic-draft-estimate-tests.json",
+      "bytes": 1417,
+      "sha256": "e4e22271b04ff9a5d01f1ac6edb46666b6863ea3e16096166b7b99a7a534ea03"
+    },
+    {
+      "file": "automatic-draft-estimate-verification.json",
+      "bytes": 956,
+      "sha256": "03d441e71dd734030a24106c4fa57efc2992da283a5e30e2b5c7bd27b58a7c23"
+    },
+    {
+      "file": "automatic-draft-journey.json",
+      "bytes": 4239,
+      "sha256": "de6687db989ca009c8f21a2f9ae20fd804471a60ee6fb4b16971d27c9fdd7ef7"
+    },
+    {
+      "file": "automatic-draft-limit15-verification.json",
+      "bytes": 4537,
+      "sha256": "6062736e5aa49a3496fc235055927f36f3e1cfc873887495c438049d879aadfe"
+    },
+    {
+      "file": "automatic-draft-postfailure-retention-initial.json",
+      "bytes": 611,
+      "sha256": "c006f1ceff37ce402ab86ddec1a3e174f0e9fbd79a15d35681c81f20921f3120"
+    },
+    {
+      "file": "automatic-draft-postfailure-retention.json",
+      "bytes": 1000,
+      "sha256": "c9860a9f554ca9f748bf4ff77985e9181674f12bca4f90cd82e70b4b172e85ee"
+    },
+    {
+      "file": "automatic-draft-tests.json",
+      "bytes": 1995,
+      "sha256": "a49c876f5b5600159c679765f7c0c2927cfaccba2cd0b05bee63eca62932d0f6"
+    },
+    {
+      "file": "baseline.json",
+      "bytes": 20472,
+      "sha256": "dc9b6e3e6b644f7247bed714166fc8e92fe419f05a8ce63066da3320dbdbe7e7"
+    },
+    {
+      "file": "build.txt",
+      "bytes": 733,
+      "sha256": "b9bd52cbbdcbe8da6e5e38b5a12e8307792fd7f01385be20d52ba2bc1b4462b1"
+    },
+    {
+      "file": "candidate-gate-and-estimates.json",
+      "bytes": 1359,
+      "sha256": "5e66405189b70b937d592dfc6c0696084d6a1c40eb96e73c8a95f3913a195473"
+    },
+    {
+      "file": "candidate-schema-result.json",
+      "bytes": 3186,
+      "sha256": "8baad3b4dc4498b65a8db25bacb2e000c17430f0b673f59f4a01ec72c3f252de"
+    },
+    {
+      "file": "candidate-world-gate-android-emulated.png",
+      "bytes": 138650,
+      "sha256": "ce996f24b4e764791de14b48b4d243722d9cfbcbf2b335ad22d3782e7c874060"
+    },
+    {
+      "file": "candidate-world-gate-desktop.png",
+      "bytes": 45284,
+      "sha256": "7c3491f6ec34639df2d9cf21f164da72fcdb704f9c467bc988537c0102ab3a1d"
+    },
+    {
+      "file": "canonical-edge-diagnosis.json",
+      "bytes": 2474,
+      "sha256": "0e8c9b0f77b076ce02f8e4d6b49414c449e2c0bcd345af6b020484e7711c1a8f"
+    },
+    {
+      "file": "canonical-trace-cors-green.json",
+      "bytes": 932,
+      "sha256": "6a0d79d1e0e05e670c04e4c7a1b7aec3e2bafd7fe93d2bf54102d294165bb258"
+    },
+    {
+      "file": "canonical-trace-cors-red.json",
+      "bytes": 1517,
+      "sha256": "2adc4e775c7976e613edcaaf57ffa0e7db4f9209ddc64d05c38a620cd33a3a92"
+    },
+    {
+      "file": "cors-header-release.json",
+      "bytes": 2603,
+      "sha256": "ad89f1844e5a84ea0c05c0ebdcd2125d15d35fe64004842482962142d158cbdb"
+    },
+    {
+      "file": "current-audio-revalidation.json",
+      "bytes": 1073,
+      "sha256": "91d802fec87d474a969928bb4d25ad1b77b09c5788fdd0ed2e466edc220e0e5c"
+    },
+    {
+      "file": "dashboard-android-emulated.png",
+      "bytes": 124887,
+      "sha256": "a207a4bc3b186da96b1a5a3308c16b84bd089e2a97353a22bfa264997b74dd22"
+    },
+    {
+      "file": "dashboard-desktop.png",
+      "bytes": 41082,
+      "sha256": "d887575d901e74e22c241ad87670d78bdc3716f24dc38578a96d89ce639a5493"
+    },
+    {
+      "file": "dashboard-settled-android-emulated.png",
+      "bytes": 197353,
+      "sha256": "61b71021ab457232b98517b2fe1573f9fe2ac86fb816e1dc7b2ee318f5faa244"
+    },
+    {
+      "file": "dashboard-settled-desktop.png",
+      "bytes": 59096,
+      "sha256": "0ba80b3904eb0c256067f0e9dce705bea0361c6f35e3ee2862e9a869d394b1ca"
+    },
+    {
+      "file": "final-release-synthetic-android-emulated.png",
+      "bytes": 1083044,
+      "sha256": "769095ad35b375a7059d9b6bb111276e74af5c277907cf93d31b7ce6ba13c349"
+    },
+    {
+      "file": "final-release-synthetic-desktop.png",
+      "bytes": 319606,
+      "sha256": "0d59449fb79a07e52c77dea086d7b1c2fd1d59cfe50a515d60dbe329bd2fb5be"
+    },
+    {
+      "file": "final-release-synthetic-persistence.json",
+      "bytes": 722,
+      "sha256": "7e1731b2ddd1530db8f0e15723b0b7c06b73070e503cbcec5d56594951d4e6e7"
+    },
+    {
+      "file": "final-release-synthetic-regression.json",
+      "bytes": 2410,
+      "sha256": "ad488f4c35a21a1f485970f821d03167cf2dc5342f58656f8781404bdf940fc0"
+    },
+    {
+      "file": "groq-configured-proposal-result.json",
+      "bytes": 1373,
+      "sha256": "dc8e5b1f2e8430c8063732fe7c3cd739c59b1389687d0579a83796745d42fbe8"
+    },
+    {
+      "file": "groq-configured-proposal.png",
+      "bytes": 138970,
+      "sha256": "0d42a1ad31f65fb7b1feb6f11b8b305a0979b1786c16285873f976c5b2345d60"
+    },
+    {
+      "file": "groq-confirmed-proposal-result.json",
+      "bytes": 1216,
+      "sha256": "930467730b99863bf2605aeb55ab2ee559a79597722d260291b97836584047ce"
+    },
+    {
+      "file": "groq-live-verification-release.json",
+      "bytes": 4890,
+      "sha256": "30d3e62413863b09881a343f7358f0262dd9c34d6a3d56744f65ad8467e58adb"
+    },
+    {
+      "file": "groq-postfix-proposal-result.json",
+      "bytes": 1302,
+      "sha256": "62fa92d651d1d57ef50d8be095afba711fa27ea7de5a80c3564fcc3f602739c7"
+    },
+    {
+      "file": "groq-postfix-proposal.png",
+      "bytes": 139049,
+      "sha256": "940ff57ddf39bd045e847bac3657b54e66ce0c48d85cc81904db7bfc6393ca89"
+    },
+    {
+      "file": "groq-remediated-proposal-result.json",
+      "bytes": 1345,
+      "sha256": "ca69d34f95f4e13cec3ed4f895d7a2ed7c343c9e1607823eb1f958f9f779051c"
+    },
+    {
+      "file": "groq-remediated-proposal.png",
+      "bytes": 130327,
+      "sha256": "d6be038fc6675ed25a48c15fa9a89615ac6e7aebf8007c8c19b587e1e4d6bf37"
+    },
+    {
+      "file": "groq-transcription-postfix-result.json",
+      "bytes": 2866,
+      "sha256": "a4c6435cddfa1bd1346cdced557535e98a8212fee52ddf58cab5c7c24b597f5c"
+    },
+    {
+      "file": "groq-transcription-result.json",
+      "bytes": 3052,
+      "sha256": "5120155eb4e27b1e217240a62b87b389d55f22f229bfd9067cf8e5a4a5e954b8"
+    },
+    {
+      "file": "intake-result.json",
+      "bytes": 957,
+      "sha256": "56bad92ad6a5cb482b69a4ba89e1fccac6fabb0d2e47e748ae56d5b4ff27a03d"
+    },
+    {
+      "file": "interpretation-error-browser-green.json",
+      "bytes": 1142,
+      "sha256": "920487264a71f29e0def2ee7ad87c6fb6b0c0d873f54a082458a5cc62db72df8"
+    },
+    {
+      "file": "interpretation-error-browser-red.json",
+      "bytes": 616,
+      "sha256": "977b7c157dfbc17bd1908813d25dc7b969bec0b6b4ba820d12aee489024f2746"
+    },
+    {
+      "file": "interpretation-error-green-android-emulated.png",
+      "bytes": 541964,
+      "sha256": "16e2e0054d808953bc3bd9bc5450ecfed963f07348868c17076ad707ab827979"
+    },
+    {
+      "file": "interpretation-error-green-desktop.png",
+      "bytes": 139119,
+      "sha256": "89cc9b8ade75f0e367aca0b840bbaf8e2ed5501eb7dc4e1858c8bb75ed6400d2"
+    },
+    {
+      "file": "interpretation-error-red-desktop.png",
+      "bytes": 130513,
+      "sha256": "2c954aed949e3afd20eaad7106af8746b101c794c4935ecc17fccd2ae14eb32e"
+    },
+    {
+      "file": "interpretation-error-release.json",
+      "bytes": 1804,
+      "sha256": "c64739f2b1e14dce9d1d53553f06fcc966de13174bae42471ba7d8c58dbca6a1"
+    },
+    {
+      "file": "interpretation-error-tests.json",
+      "bytes": 906,
+      "sha256": "5461be450f22472b9dc475a2ac0891bb1004c98ab339a5639c35b8d6618e010f"
+    },
+    {
+      "file": "lineage-rollout-green.json",
+      "bytes": 2887,
+      "sha256": "f0135e5802522eeff5381e8f0545214f7d528ba606ec1a26adbfe36be423daa7"
+    },
+    {
+      "file": "lineage-rollout-red.json",
+      "bytes": 3095,
+      "sha256": "554f19064f9f92e95b053ceef741ed9342b940d7221941c5c7dc83769ce25415"
+    },
+    {
+      "file": "local-dsp-fallback.png",
+      "bytes": 188411,
+      "sha256": "1182707227da85047befbb226695bcae4a9d053604f43c03206cabda3b57a16c"
+    },
+    {
+      "file": "local-dsp-result.json",
+      "bytes": 1502,
+      "sha256": "52447c8a9d0ae1f1109f12b5bf84cd88338c59af582fc99da7053ffda0095e44"
+    },
+    {
+      "file": "login-initial-observation.json",
+      "bytes": 875,
+      "sha256": "7849ef18efeb50beb83f238485be2d85dd8df7943fac1592f4994162b4e16bb1"
+    },
+    {
+      "file": "login-result.json",
+      "bytes": 1173,
+      "sha256": "89092cac799d858a4aac2669aa23fe2fecdd2e385e7c4b9d4c88b7e590319474"
+    },
+    {
+      "file": "modal-capability-auth.json",
+      "bytes": 662,
+      "sha256": "cde3a941c797d8c52308fe5cb5ffe3c4b97957c393525dda743c53af0b8bc0d7"
+    },
+    {
+      "file": "modal-control-plane-verified.json",
+      "bytes": 2623,
+      "sha256": "68f5431dabb3448732fa2290007068e325cf18ddd4f31cb7656bb55f54049a77"
+    },
+    {
+      "file": "modal-existing-access.json",
+      "bytes": 1025,
+      "sha256": "50d8cb6ff41adefdf4e511e44875db0d2f745a7a1d981c824f59fd8faa7fcd01"
+    },
+    {
+      "file": "modal-primary-browser.json",
+      "bytes": 2786,
+      "sha256": "eff02d67fd0843d0791bb7962f47db2b41a251081016f1eb59369563dccf06b0"
+    },
+    {
+      "file": "modal-primary-policy.patch",
+      "bytes": 1529,
+      "sha256": "070c6c903a9ec11ef6fc9606f005c2c96290ae97ad056b25dc8b1735c2509613"
+    },
+    {
+      "file": "modal-primary-release.json",
+      "bytes": 3878,
+      "sha256": "23a2fbe86d5d84aaff78cbd7e95a31e0d486eff9f145103e59d7d49824fc9d91"
+    },
+    {
+      "file": "modal-primary-tests.json",
+      "bytes": 1732,
+      "sha256": "51ff5d7c8b734c50c21773b7fb4c10ae59232c2fb4f0ed7be870a109702e3299"
+    },
+    {
+      "file": "modal-prompt-delivery.patch",
+      "bytes": 1482,
+      "sha256": "6ad974c47b0af052c0229641a6e466799be9ad27ca25942146c09ff189e124e4"
+    },
+    {
+      "file": "modal-prompt-release.json",
+      "bytes": 3698,
+      "sha256": "e447ae30c76ac149866000a98e9d7eceb72af15dbc1c8fc968a6e3b5e979c30f"
+    },
+    {
+      "file": "modal-quality-control-plane.json",
+      "bytes": 4469,
+      "sha256": "4191b554579c2017c662001eadc8fc913a0c7ed3d8e60d4c93a9504a085ffc39"
+    },
+    {
+      "file": "modal-quality-followup.json",
+      "bytes": 4070,
+      "sha256": "4857decf7988dbbd970671367b5a0fc82ea4dd66e8b47c0f483ce6e7ba1d90d4"
+    },
+    {
+      "file": "modal-quality-trial-authorization.json",
+      "bytes": 8828,
+      "sha256": "43f540b5f4b11035e62375eb260eedcd8a1c0a46d8a8044954e781c4b9ff221e"
+    },
+    {
+      "file": "modal-quality-trial-browser-playback.json",
+      "bytes": 1299,
+      "sha256": "195d2743475dbc9944cc14dcaefc2264bed68af5041f56f902dbeb2fac3ee9e3"
+    },
+    {
+      "file": "modal-quality-trial-inspection.json",
+      "bytes": 1946,
+      "sha256": "f41817ad4659b0f3661584191590818650c88e689177351474202b27621ccc42"
+    },
+    {
+      "file": "modal-quality-trial-proposal.json",
+      "bytes": 3846,
+      "sha256": "cd3e0b6f5b5257701e4ec581697a27e31a20939da937819b872f99de788ee08c"
+    },
+    {
+      "file": "modal-quality-trial-result.json",
+      "bytes": 8152,
+      "sha256": "65acfef09dce3db174fca40e15f28d667e4214182356108bf92c3ba11d6b0e14"
+    },
+    {
+      "file": "modal-quality-trial-unapplied.patch",
+      "bytes": 784,
+      "sha256": "e1755bab505ae41e9bfef55d5bea2beee1e47314a7dea7f812948c03fec63b51"
+    },
+    {
+      "file": "modal-transport-green.txt",
+      "bytes": 1327,
+      "sha256": "35fa88c2545de1a6b035a30c3bffa6abde41de2c783b5a217845c9754eed2a7f"
+    },
+    {
+      "file": "modal-transport-red.txt",
+      "bytes": 3455,
+      "sha256": "b4f6f318fa7551c27814f084986d94ccd2dc7a490c4ac0ae9b19ec132222ef87"
+    },
+    {
+      "file": "modal-user-financial-evidence.json",
+      "bytes": 3709,
+      "sha256": "ba3cb96e4a9d2c58aae9f9ddfe2d76198c8612dee8c47fec907f36e048842593"
+    },
+    {
+      "file": "motion-output-diagnosis.json",
+      "bytes": 9061,
+      "sha256": "6cf1b9148e00f64afd9a29486de6846ee1319f594f2cbbc0ea49bd27e4149bee"
+    },
+    {
+      "file": "npm-test.txt",
+      "bytes": 36349,
+      "sha256": "657d8db1739ec7d709fb471b4c11ede047ad1690e42cc299e1a6fdcdd1f1d7fe"
+    },
+    {
+      "file": "phone-postfix-cors-and-cli-runtime.json",
+      "bytes": 1488,
+      "sha256": "a4dd3de5bde8d3aa984e69d82ae77d9b7733aa4d6e50e4d23814d94d89bc4ab4"
+    },
+    {
+      "file": "production-audit.txt",
+      "bytes": 200,
+      "sha256": "d02023ca8be7fb44222a534c8ec5a98eb1007ede71f6360657e09f8855f1bb3d"
+    },
+    {
+      "file": "production-release-browser.json",
+      "bytes": 2351,
+      "sha256": "3e09eb2a0e9c9a7bff2ea7c0663d99ed1679c8d95ce4e29853febc961f123be2"
+    },
+    {
+      "file": "production-release-manifest.json",
+      "bytes": 9206,
+      "sha256": "0a3af982f1084a0e6930a4cc851818126e1f8da8dfbe2f048228dd191a858d5d"
+    },
+    {
+      "file": "provider-secrets-screenshot-observations.json",
+      "bytes": 1398,
+      "sha256": "a68a06e7018a06351509f1352242efef65a7dfd2fe8fa50197abad532276e428"
+    },
+    {
+      "file": "provider-settings-remediation-screenshot.json",
+      "bytes": 1379,
+      "sha256": "ce5dcf513cf7a3156db9aa5338aae45988ccb5f529724b02d18456bf144390e8"
+    },
+    {
+      "file": "release-runtime-preflight.json",
+      "bytes": 289,
+      "sha256": "9c8c3c0809d8c543f4963179d81bbe5b36a54e66222d3b6a5b71f11159996a01"
+    },
+    {
+      "file": "remediated-ai-draft-desktop.png",
+      "bytes": 125605,
+      "sha256": "d4f2595422368dfbdab235002827cee2e19735bb86b70cf3888e617a7baf427b"
+    },
+    {
+      "file": "remediated-ai-draft-initial-loading.png",
+      "bytes": 149431,
+      "sha256": "e1be8d71184e055648d9221797555d614f62ad37dc94357f188379b96ad18499"
+    },
+    {
+      "file": "remediated-draft-readonly.json",
+      "bytes": 1321,
+      "sha256": "d605022caceb6ab86d72ce9ea206300157ddf363d1f8cad57a9a5257e9a810f5"
+    },
+    {
+      "file": "remote-validation.json",
+      "bytes": 5122,
+      "sha256": "5e3835883a130c7db369344640c9d47867292ea6568980665978b4f680c49852"
+    },
+    {
+      "file": "signup-result.json",
+      "bytes": 328,
+      "sha256": "fb0f7092973acf40637b51d5ed549eb56a707192d2316f64da1e517927b735f2"
+    },
+    {
+      "file": "song-android-emulated.png",
+      "bytes": 319652,
+      "sha256": "88ab07ff7a54ab37a23e940042008e6431e251699b3a066173c48ebaa92a2a95"
+    },
+    {
+      "file": "song-desktop.png",
+      "bytes": 105733,
+      "sha256": "e8af8b5ebd8fa08f5873765ef2993b3b389c9953adca3b5a0956629ebfdd0f47"
+    },
+    {
+      "file": "song-regression.txt",
+      "bytes": 3361,
+      "sha256": "d48191937b6d5fb80316a9fa97dab0917f92d85267c3223f45e97e0bb9a4c470"
+    },
+    {
+      "file": "supabase-cli-final-result.json",
+      "bytes": 1562,
+      "sha256": "54583aad122fcdaf7c0c4c2a4f2ee41f08320e5187f1f901925326c12f203252"
+    },
+    {
+      "file": "supabase-phone-access-probe.json",
+      "bytes": 1273,
+      "sha256": "023e1980b4d57ec88d74f85c5dba40010f302f22c5cc390098a793e668b994d5"
+    },
+    {
+      "file": "termux-resumed-checks.json",
+      "bytes": 2304,
+      "sha256": "a522e61440bb12125e8144e18f536fe88a523c478a59478bd5ab5b7ba28d8585"
+    },
+    {
+      "file": "traced-app-browser-green.json",
+      "bytes": 1621,
+      "sha256": "4c09f33fa49c3b7b1d91f5b5fec91b039568672517d2e85dde74efb9ea5d34d0"
+    },
+    {
+      "file": "transcription-status-tests.json",
+      "bytes": 1268,
+      "sha256": "8435a2c69db4cd3c95372ee3992ff74f3f48bd0f83c53ff4559a3d9f386526a5"
+    }
+  ],
+  "log_normalization": {
+    "file": "modal-transport-red.txt",
+    "change": "trailing whitespace only; all failures retained",
+    "raw_sha256": "e6f22803d2261face218c443a66920c6e81fc26ae329ff74fa7f77cfcf3708e5",
+    "raw_copy": "private outside Git"
+  },
+  "initial_source_commit": "b8baeaad49508577310044d51fb4bd31134606af",
+  "initial_production_frontend_commit": "4a2ebf8bf3e9f30f0cf35442f86662bb6296da86",
+  "latest_backend_source_commit": "e58261a313b0ffc3e365c0feb06a1c6af88ab3ae",
+  "current_backend_function_versions": {
+    "beatvision-world": 62,
+    "beatvision-analyze-song": 44,
+    "beatvision-generation": 65,
+    "beatvision-style-draft": 30,
+    "beatvision-song-interpretation": 6,
+    "beatvision-ai-director": 3
+  },
+  "production_frontend_deployment": "dpl_EMshjqMjXf8fxwf3GBgfzY9wKN3Y",
+  "production_analysis_version": 44,
+  "production_interpretation_version": 6,
+  "historical_backend_function_versions": {
+    "beatvision-analyze-song": 41,
+    "beatvision-song-interpretation": 2,
+    "beatvision-ai-director": 1,
+    "beatvision-world": 60,
+    "beatvision-style-draft": 28,
+    "beatvision-generation": 61
+  },
+  "latest_ci": {
+    "id": 39881788868,
+    "url": "https://github.com/DaddyDom8249/BeatVision/actions/runs/39881788868",
+    "head_sha": "e58261a313b0ffc3e365c0feb06a1c6af88ab3ae",
+    "status": "completed",
+    "conclusion": "success",
+    "tests": 440,
+    "pass": 440,
+    "fail": 0,
+    "skipped": 0,
+    "audit": "PASS",
+    "build": "PASS",
+    "retrieved_log_sha256": "99a67e956f69e8d0a93870db70769e6919ad60b6f89e26f0abc32d6b8f8fa454"
+  },
+  "latest_live_verification": "automatic-draft-limit15-verification.json",
+  "latest_motion_investigation": "motion-output-diagnosis.json",
+  "latest_provider_policy_verification": "modal-primary-release.json"
+}

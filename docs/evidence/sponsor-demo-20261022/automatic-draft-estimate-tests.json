@@ -1,0 +1,39 @@
+{
+  "observed_at": "2026-10-22T22:13:32.697008+00:00",
+  "task": "T04.13a",
+  "reason": "Observed real AI rationale presented heuristic tempo/key as unqualified facts",
+  "red": {
+    "tests": 9,
+    "pass": 8,
+    "fail": 1
+  },
+  "green": {
+    "focused_tests": 13,
+    "focused_pass": 13,
+    "full_tests": 432,
+    "full_pass": 432,
+    "fail": 0,
+    "skipped": 0,
+    "audit": "PASS",
+    "build": "PASS"
+  },
+  "source_changes": "Qualify saved claims citing signal.bpm/key/sections; reinforce prompt. Frontend and automatic orchestration unchanged from195c533.",
+  "private_logs": {
+    "red": {
+      "path": "/workspace/shared/sponsor-release-backup-20261022/automatic-draft-estimate-red.txt",
+      "sha256": "419600ce4f6ba9348bb74e17cd0ff658be71b3d3052ad7e7a21cb0175dcabeab"
+    },
+    "green": {
+      "path": "/workspace/shared/sponsor-release-backup-20261022/automatic-draft-estimate-green.txt",
+      "sha256": "c51a71d5d047ddd6e5448191cda1fa44ebe679d136dfe851524ef8e154f60ff6"
+    },
+    "full": {
+      "path": "/workspace/shared/sponsor-release-backup-20261022/automatic-draft-estimate-full.txt",
+      "sha256": "ff5199ce2a769a4fbb562c00d24b0c864e20e452a7c4306c400f8f15dfcd8537"
+    },
+    "build": {
+      "path": "/workspace/shared/sponsor-release-backup-20261022/automatic-draft-estimate-build.txt",
+      "sha256": "afe3cd1d467847da2bd655aeafbe3eb5945968bdc12eb61010336b0e7b828203"
+    }
+  }
+}

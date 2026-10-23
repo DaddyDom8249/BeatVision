@@ -1,0 +1,21 @@
+{
+  "observed_at": "2026-10-22T22:16:03.837404+00:00",
+  "task": "T04.13a",
+  "project_id": "bb457d64-29ea-4649-a566-c446eef61ad6",
+  "frontend_commit": "195c5337324704a91fbf894c83f65db6dce3813b",
+  "frontend_deployment": "dpl_34qNmHwuMWKkXpJ6DFydnW2Dh5sV",
+  "backend_commit": "be15931abdfec4583b2b26cc6a807b83ef41bd73",
+  "backend_function_version": 5,
+  "backend_bundle_sha256": "35409fc23e8ba2cddc8beb3f6c2c6c9143581f61857ef6720c1ddb3eccc0dab0",
+  "analysis_calls": 0,
+  "proposal_clicks": 1,
+  "creative_approvals": 0,
+  "gpu_calls": 0,
+  "contexts": [],
+  "http_status": 503,
+  "response_error": {
+    "code": "INTERPRETATION_PROVIDER_FAILED",
+    "message": "The verified interpretation provider is unavailable. Manual interpretation remains available."
+  },
+  "harness_error": "AssertionError: {'code': 'INTERPRETATION_PROVIDER_FAILED', 'message': 'The verified interpretation provider is unavailable. Manual interpretation remains available.'}"
+}

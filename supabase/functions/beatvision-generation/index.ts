@@ -88,9 +88,26 @@ class HttpError extends Error {
 }
 
 function arenaBase() {
-  const value = env("ARENA_GATEWAY_URL").replace(/\/$/, "");
-  if (!value) throw new Error("Arena gateway is not configured.");
-  return value;
+  // Explicitly approved exact DNS hostnames; never trust a suffix or a
+  // user-supplied upstream URL. Missing allowlist means no Arena submission.
+  const raw = env("ARENA_GATEWAY_URL");
+  const configured = env("ARENA_GATEWAY_ALLOWED_HOSTS").split(",").map((host) => host.trim());
+  if (!raw || configured.length === 0 || configured.some((host) => !host))
+    throw new Error("ARENA_GATEWAY_CONFIG_UNVERIFIED");
+  const validHost = (host: string) =>
+    host.length <= 253 && /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(host) &&
+    host.includes(".") && !host.includes("..") && !/^\d+(?:\.\d+){3}$/.test(host) &&
+    !/(?:^|\.)(?:localhost|local|internal|test|invalid)$/.test(host);
+  if (configured.length > 10 || configured.some((host) => !validHost(host)))
+    throw new Error("ARENA_GATEWAY_ALLOWLIST_INVALID");
+  let target: URL;
+  try { target = new URL(raw); }
+  catch { throw new Error("ARENA_GATEWAY_URL_INVALID"); }
+  if (target.protocol !== "https:" || target.username || target.password ||
+      target.port || target.pathname !== "/" || target.search || target.hash ||
+      !validHost(target.hostname) || !configured.includes(target.hostname))
+    throw new Error("ARENA_GATEWAY_ORIGIN_NOT_ALLOWED");
+  return target.origin;
 }
 
 function arenaToken() {
@@ -101,6 +118,67 @@ function arenaToken() {
 
 function modelFor(type: string) {
   return type === "scene_image" ? "flux-schnell" : type === "scene_motion" ? "ltx-video" : null;
+}
+
+/** Resolve frozen asset IDs, never a newer variant or an expired saved URL. */
+async function assemblyMotionClips(db: any, job: any, scenes: any[], clips: any[], duration: number) {
+  const fail = (code: string) => { throw new Error(code); };
+  const timeline = new Map<number, any>();
+  let cursor = 0;
+  for (const scene of [...scenes].sort((a, b) => Number(a.start_time) - Number(b.start_time))) {
+    const n = Number(scene.scene_number), start = Number(scene.start_time), end = Number(scene.end_time);
+    if (!Number.isInteger(n) || n < 1 || !scene.id || timeline.has(n) ||
+        !Number.isFinite(start) || !Number.isFinite(end) || end <= start ||
+        Math.abs(start - cursor) > 0.05) fail("ASSEMBLY_TIMELINE_INVALID");
+    timeline.set(n, scene); cursor = end;
+  }
+  if (Math.abs(cursor - duration) > 0.05) fail("ASSEMBLY_TIMELINE_INVALID");
+  const ids = clips.map(clip => String(clip.asset_id || ""));
+  if (ids.some(id => !id) || new Set(ids).size !== ids.length) fail("ASSEMBLY_MOTION_PROVENANCE_INVALID");
+  const assets = await db.from("motion_clip_assets")
+    .select("id,project_id,visual_plan_id,scene_id,generation_job_id,status,approved")
+    .eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).in("id", ids);
+  if (assets.error) fail("ASSEMBLY_MOTION_LOOKUP_FAILED");
+  const assetMap = new Map<string, any>((assets.data || []).map((asset: any) => [asset.id, asset]));
+  const jobIds = [...new Set<string>((assets.data || []).map((asset: any) => String(asset.generation_job_id || "")))];
+  if (!jobIds.length || jobIds.some(id => !id)) fail("ASSEMBLY_MOTION_PROVENANCE_INVALID");
+  const jobs = await db.from("generation_jobs")
+    .select("id,project_id,visual_plan_id,visual_plan_scene_id,job_type,status,output")
+    .eq("project_id", job.project_id).eq("visual_plan_id", job.visual_plan_id).in("id", jobIds);
+  if (jobs.error) fail("ASSEMBLY_MOTION_LOOKUP_FAILED");
+  const jobMap = new Map<string, any>((jobs.data || []).map((source: any) => [source.id, source]));
+  const seen = new Set<number>();
+  // Validate all coverage before signing any file or sending an upstream request.
+  const validated = clips.map(clip => {
+    const n = Number(clip.scene), scene = timeline.get(n), asset = assetMap.get(String(clip.asset_id));
+    const source = jobMap.get(String(asset?.generation_job_id));
+    if (!scene || seen.has(n) || !asset || asset.project_id !== job.project_id ||
+        asset.visual_plan_id !== job.visual_plan_id || asset.scene_id !== scene.id ||
+        asset.approved !== true || asset.status !== "approved" || !source ||
+        source.project_id !== job.project_id || source.visual_plan_id !== job.visual_plan_id ||
+        source.visual_plan_scene_id !== scene.id || source.job_type !== "scene_motion" ||
+        source.status !== "completed") fail("ASSEMBLY_MOTION_PROVENANCE_INVALID");
+    seen.add(n);
+    const result = source.output?.arena_status_response?.result;
+    const path = result?.storage_path;
+    const expectedPath = job.project_id + "/scene-motion/" + job.visual_plan_id + "/" + scene.id + "/" + source.id + ".mp4";
+    if (path !== expectedPath) fail("ASSEMBLY_MOTION_PATH_INVALID");
+    const proof = result?.verification;
+    const actual = Number(proof?.video_duration_seconds);
+    if (proof?.container_verified !== true || !Number.isFinite(actual) || actual <= 0)
+      fail("ASSEMBLY_DURATION_UNVERIFIED: scene=" + n);
+    const required = Number(scene.end_time) - Number(scene.start_time);
+    if (actual + 0.05 < required)
+      fail("ASSEMBLY_CLIP_TOO_SHORT: scene=" + n + ":actual=" + actual.toFixed(3) + ":required=" + required.toFixed(3));
+    return { clip, path, actual };
+  });
+  const resolved = [];
+  for (const { clip, path, actual } of validated) {
+    const signed = await db.storage.from("visual-assets").createSignedUrl(path, 3600);
+    if (signed.error || !signed.data?.signedUrl) fail("ASSEMBLY_MOTION_SIGNING_FAILED");
+    resolved.push({ ...clip, video_url: signed.data.signedUrl, actual_duration_seconds: actual });
+  }
+  return resolved;
 }
 
 async function bridgePayload(db: any, job: any) {
@@ -119,6 +197,7 @@ async function bridgePayload(db: any, job: any) {
     const motionClips = Array.isArray(snapshot.motion_clips) ? snapshot.motion_clips : [];
     if (!scenes.length) throw new Error("ASSEMBLY_SCENES_MISSING: No approved master timeline scenes are frozen.");
     if (motionClips.length !== scenes.length) throw new Error("ASSEMBLY_MOTION_COVERAGE_INVALID: Approved motion does not cover every scene.");
+    const resolvedClips = await assemblyMotionClips(db, job, scenes, motionClips, duration);
     const audioPath = String(snapshot.audio_path || "").trim();
     if (!audioPath) throw new Error("ASSEMBLY_AUDIO_MISSING: Frozen song audio path is missing.");
     const signed = await db.storage.from("songs").createSignedUrl(audioPath, 3600);
@@ -132,7 +211,7 @@ async function bridgePayload(db: any, job: any) {
       style: { ...style, version: String(style.id || lock.style_bible_id || "style") },
       vision_lock: { ...lock, locked: true, version: String(lock.id || job.vision_lock_id) },
       storyboard: { songDuration: duration, song_duration: duration, scenes: scenes.map((item: any) => ({ ...item, scene: Number(item.scene_number), startTime: Number(item.start_time), endTime: Number(item.end_time) })), visual_beats: scenes.map((item: any) => ({ ...item, scene: Number(item.scene_number), startTime: Number(item.start_time), endTime: Number(item.end_time) })) },
-      motion: { clips: motionClips },
+      motion: { clips: resolvedClips },
       audio_data: signed.data.signedUrl,
       generation: { cost_class: "free", model: null, idempotency_key: job.idempotency_key, job_id: job.id },
     };
@@ -190,8 +269,29 @@ async function bridgePayload(db: any, job: any) {
 }
 
 async function arena(path: string, method: "GET" | "POST", payload: unknown, requestId: string) {
-  const response = await fetch(arenaBase() + path, {
+  const origin = arenaBase();
+  // Permit only fixed submit operations and the two historical poll routes.
+  // Decoding before validation prevents encoded separators and dot traversal.
+  let decodedPath: string;
+  try { decodedPath = decodeURIComponent(path); }
+  catch { throw new Error("ARENA_GATEWAY_PATH_REJECTED"); }
+  if (path.includes("//") || /[?#\\%]/.test(decodedPath) ||
+      decodedPath.includes("//") ||
+      decodedPath.split("/").some((segment) => segment === "." || segment === ".."))
+    throw new Error("ARENA_GATEWAY_PATH_REJECTED");
+  const submit = method === "POST" &&
+    ["/v2/scene-image", "/v2/animate", "/v2/assemble"].includes(path);
+  const polling = (method === "GET" && /^\/v1\/video\/animate\/jobs\/[a-z0-9._:-]{1,256}$/i.test(decodedPath)) ||
+    (method === "POST" && /^\/v1\/video\/assemble\/status\/[a-z0-9._:-]{1,256}$/i.test(decodedPath));
+  if (!submit && !polling) throw new Error("ARENA_GATEWAY_PATH_REJECTED");
+  const target = new URL(path, origin);
+  if (target.origin !== origin)
+    throw new Error("ARENA_GATEWAY_PATH_REJECTED");
+
+  const response = await fetch(target.href, {
     method,
+    redirect: "error", // Never forward the bearer token to an unapproved redirect.
+    signal: AbortSignal.timeout(method === "POST" ? 90_000 : 20_000),
     headers: {
       Authorization: "Bearer " + arenaToken(),
       "Content-Type": "application/json",
@@ -200,9 +300,32 @@ async function arena(path: string, method: "GET" | "POST", payload: unknown, req
     },
     body: method === "POST" ? JSON.stringify({ payload }) : undefined,
   });
-  const raw = await response.text();
+  const MAX_RESPONSE_BYTES = 16 * 1024 * 1024; // Scene images may be base64.
+  const length = response.headers.get("content-length");
+  if (length && (!/^\d+$/.test(length) || Number(length) > MAX_RESPONSE_BYTES))
+    throw new Error("ARENA_GATEWAY_RESPONSE_TOO_LARGE");
+  const reader = response.body?.getReader();
+  let raw = "";
+  if (reader) {
+    const decoder = new TextDecoder();
+    let total = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > MAX_RESPONSE_BYTES)
+          throw new Error("ARENA_GATEWAY_RESPONSE_TOO_LARGE");
+        raw += decoder.decode(value, { stream: true });
+      }
+      raw += decoder.decode();
+    } finally {
+      reader.releaseLock();
+    }
+  }
   let data: any;
-  try { data = raw ? JSON.parse(raw) : {}; } catch { data = { raw: raw.slice(0, 4000) }; }
+  try { data = raw ? JSON.parse(raw) : {}; }
+  catch { data = { raw: raw.slice(0, 4000) }; }
   return { response, data };
 }
 
@@ -481,7 +604,7 @@ async function inspectApprovedImage(db: any,projectId: string,assetId: string) {
 
 // Append a model-specific attempt; reuse the canonical RPC's frozen lineage.
 // Existing approved procedural assets/jobs are never edited or deleted.
-async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acceptedTerms: boolean, sourceImageId?: string, requestId?: string, provider = "huggingface") {
+async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acceptedTerms: boolean, sourceImageId?: string, requestId?: string, provider = "modal") {
   if (!acceptedTerms) throw new HttpError(400,"HF_TERMS_REQUIRED","Accept the LTX model use restrictions before AI motion.");
   if (provider !== "huggingface" && provider !== "modal") throw new HttpError(400,"MOTION_PROVIDER_INVALID","Unsupported motion provider.");
   if (provider === "modal") {
@@ -589,9 +712,16 @@ async function modalBridgeSubmit(db: any,job: any) {
   const bytes=new Uint8Array(await downloaded.data.arrayBuffer());
   if (bytes.length<16 || bytes.length>MODAL_MOTION.maxBytes) throw new ModalMotionError("MODAL_IMAGE_SIZE_INVALID");
   const scene=job.input_snapshot?.scene || {};
-  const prompt=[scene.title,scene.visual_direction,scene.movement_direction,scene.location,
-    scene.mood,scene.continuity_notes,"Preserve character, face, wardrobe, setting and natural physical motion."]
-    .filter(x=>typeof x==="string" && x.trim()).join(". ").slice(0,1600);
+  // Order approved movement and continuity before optional atmosphere so LTX's
+  // bounded tokenizer cannot silently prioritize decorative scene prose.
+  const directedParts: Array<[unknown, number]> = [
+    ["Preserve the approved characters, faces, wardrobe, setting and natural physical motion.", 130],
+    [scene.title, 140], [scene.movement_direction, 400],
+    [scene.continuity_notes, 450], [scene.visual_direction, 340],
+    [scene.location, 100], [scene.mood, 90],
+  ];
+  const prompt = directedParts.filter(([x]) => typeof x === "string" && x.trim())
+    .map(([x, limit]) => String(x).trim().slice(0, limit)).join(". ").slice(0,1600);
   const payload={project_id:job.project_id,scene_id:job.visual_plan_scene_id,
     source_image_id:frozen.source_image_id,generation_job_id:job.id,
     image_sha256:await sha256Hex(bytes),prompt,seed:parseInt(job.id.replace(/-/g,"").slice(0,7),16)||42};
@@ -914,7 +1044,21 @@ Deno.serve(async (req) => {
     if (action === "modal_capability") {
       let available = false;
       try { assertModalSubmissionEnabled(); available = true; } catch { /* no secrets sent to client */ }
-      return json(req, { modal_supported: true, modal_available: available, model: MODAL_MOTION.model });
+      // Owner-scoped release preflight: inspect configuration only. Never call
+      // a provider or reserve a job just to establish whether settings exist.
+      let arenaConfigured = false;
+      try { arenaBase(); arenaToken(); arenaConfigured = true; } catch { /* fixed-host checks fail closed */ }
+      const freeKeyConfigured = Boolean(env("GROQ_FREE_API_KEY"));
+      const dailyQuota = Number(env("BRAGORA_AI_DAILY_QUOTA"));
+      const interpretationConfigured = freeKeyConfigured &&
+        env("BRAGORA_GROQ_FREE_VERIFIED") === "true" &&
+        env("BRAGORA_INTERPRETATION_ENABLED") === "true" &&
+        env("BRAGORA_GROQ_MODEL") === "openai/gpt-oss-20b" &&
+        Number.isInteger(dailyQuota) && dailyQuota >= 1 && dailyQuota <= 20;
+      return json(req, { modal_supported: true, modal_available: available, model: MODAL_MOTION.model,
+        arena_configured: arenaConfigured,
+        free_transcription_configured: freeKeyConfigured && env("GROQ_FREE_ACCOUNT_VERIFIED") === "true",
+        interpretation_proposals_configured: interpretationConfigured });
     }
     if (action === "motion_eligibility") return json(req, {
       eligibility: await hfEligibility(env("HF_VIDEO_TOKEN")),
@@ -922,7 +1066,7 @@ Deno.serve(async (req) => {
     });
     if (action === "enqueue_ai_motion") {
       // Same project-owner gate above applies; system is the private scheduler.
-      const job = await enqueueHfMotion(db,projectId,String(body.sceneId || ""),body.acceptedTerms === true,body.sourceImageId,body.requestId,String(body.provider || "huggingface"));
+      const job = await enqueueHfMotion(db,projectId,String(body.sceneId || ""),body.acceptedTerms === true,body.sourceImageId,body.requestId,String(body.provider || "modal"));
       return json(req, { job });
     }
     if (action === "motion_url") return json(req, { video_url: await motionUrl(db, projectId, String(body.assetId || "")) });

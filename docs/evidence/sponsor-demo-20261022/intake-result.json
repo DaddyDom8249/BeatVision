@@ -1,0 +1,30 @@
+{
+  "origin": "https://beat-vision-theta.vercel.app",
+  "deployment": "dpl_FgoTWCHFi8WZnAgwbQP8RzQzpCkT",
+  "fixture": "audio-fixture.json",
+  "stages": [],
+  "project_create_http": 201,
+  "project_id": "a4841264-fac6-4ec9-ae07-04544493257c",
+  "song_save_http": 201,
+  "song_route": "https://beat-vision-theta.vercel.app/projects/a4841264-fac6-4ec9-ae07-04544493257c/song",
+  "desktop_saved_duration": 16,
+  "desktop_reload_persisted": true,
+  "desktop_audio_playback": {
+    "duration": 16,
+    "currentTime": 0.273906,
+    "paused": false,
+    "error": null
+  },
+  "desktop_page_errors": [],
+  "desktop_horizontal_overflow": false,
+  "android_title": "Sponsor Intake Instrumental Fixture",
+  "android_artist": "BragoraForge QA Fixture",
+  "android_audio_playback": {
+    "duration": 16,
+    "currentTime": 0.265649,
+    "paused": false,
+    "error": null
+  },
+  "android_horizontal_overflow": false,
+  "result": "PASS for isolated audio intake fixture"
+}

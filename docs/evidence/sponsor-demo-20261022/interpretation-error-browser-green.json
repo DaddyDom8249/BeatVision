@@ -1,0 +1,37 @@
+{
+  "observed_at": "2026-10-22T20:32:07.717115+00:00",
+  "mode": "green",
+  "evidence_scope": "Controlled HTTP503 frontend regression; not successful provider inference",
+  "actual_provider_submissions": 0,
+  "creative_approvals": 0,
+  "contexts": [
+    {
+      "name": "desktop",
+      "intercepted_proposals": 1,
+      "scripts": [
+        "/assets/index-DbGfZ0WS.js"
+      ],
+      "displayed_errors": [
+        "AI interpretation is unavailable until a no-charge provider is verified. Manual interpretation editing remains available."
+      ],
+      "manual_fallback_visible": true,
+      "continue_disabled": true,
+      "draft_badge": "DRAFT V1",
+      "verification": "PASS"
+    },
+    {
+      "name": "android-emulated",
+      "intercepted_proposals": 1,
+      "scripts": [
+        "/assets/index-DbGfZ0WS.js"
+      ],
+      "displayed_errors": [
+        "AI interpretation is unavailable until a no-charge provider is verified. Manual interpretation editing remains available."
+      ],
+      "manual_fallback_visible": true,
+      "continue_disabled": true,
+      "draft_badge": "DRAFT V1",
+      "verification": "PASS"
+    }
+  ]
+}

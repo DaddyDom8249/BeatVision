@@ -1,0 +1,32 @@
+{
+  "observed_at": "2026-10-22T20:30:51.472236+00:00",
+  "task": "T04.7",
+  "project_id": "ad266b2c-3e9b-45fb-b8ab-5aabacfe3ac4",
+  "authorization": "Owner confirmed dedicated Groq Free account with paid billing disabled",
+  "frontend_commit": "63604806744e6d306742c75d399cc001c00aa0e4",
+  "backend_commit": "2baa6a3041521a8646957b79cdedc50358ff420c",
+  "proposal_clicks": 1,
+  "server_evidence": {
+    "source": "Supabase function_edge_logs",
+    "timestamp": "2026-10-22T20:22:52.606000",
+    "message": "POST | 503 | https://mdofsinyofqbeapzfygu.supabase.co/functions/v1/beatvision-song-interpretation"
+  },
+  "browser_harness": "Interrupted after hanging in Playwright response.json; response envelope and original UI observation UNKNOWN",
+  "database_evidence": {
+    "versions": [
+      {
+        "id": "af8f2a18-19a2-4a02-a04e-7c38cfafa76c",
+        "version": 1,
+        "status": "draft",
+        "source_type": "manual"
+      }
+    ],
+    "actor_quota_rows": [],
+    "project_inflight_rows": []
+  },
+  "provider_success": "UNKNOWN; no successful generation claimed",
+  "repeated_proposals": 0,
+  "creative_approvals": 0,
+  "gpu_submissions": 0,
+  "verification": "FAILED: live proposal returned HTTP503"
+}

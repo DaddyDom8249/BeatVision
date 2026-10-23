@@ -12,8 +12,8 @@ test("WAN ZeroGPU new submissions are unavailable, but existing ticket polling s
 });
 test("final assembly requires plan-wide approved motion with exact coverage",()=>{
  assert.match(page,/const refreshAssemblyReadiness = useCallback/);
- assert.match(page,/\.from\("visual_plan_scenes"\)\.select\("id,status"\)/);
- assert.match(page,/\.from\("motion_clip_assets"\)\.select\("id,scene_id,status,approved,video_url"\)/);
+ assert.match(page,/\.from\("visual_plan_scenes"\)\.select\("id,status,scene_number,start_time,end_time"\)/);
+ assert.match(page,/\.from\("motion_clip_assets"\)\.select\("id,scene_id,generation_job_id,status,approved,video_url"\)/);
  assert.match(page,/allScenes\.filter\(row => counts\.get\(row\.id\) !== 1\)/);
  assert.match(page,/approved\.length === allScenes\.length/);
  assert.match(page,/disabled=\{busy \|\| !assemblyReadiness\.ready\}/);

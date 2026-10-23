@@ -3,9 +3,11 @@ import type { FormEvent } from "react";
 import { supabase } from "../lib/supabase/client";
 import { useProject } from "../hooks/useProject";
 import { useSong } from "../hooks/useSong";
+import { useSongInterpretation } from "../hooks/useSongInterpretation";
 import { analyzeAudioLocally } from "../lib/musicAnalysis";
 import { formatFailure } from "../lib/errorDetails";
 import StudioHeader from "../components/navigation/StudioHeader";
+import SongInterpretationPanel from "../components/song/SongInterpretationPanel";
 
 interface Props {
   projectId: string;
@@ -13,15 +15,23 @@ interface Props {
 
 export default function SongPage({ projectId }: Props) {
   const { project, loading: projectLoading, error: projectError } = useProject(projectId);
-  const { song, loading: songLoading, error: songError, reload } = useSong(projectId);
+  const { song, loading: songLoading, error: songError, schemaReady = true, reload } = useSong(projectId);
+  const interpretation = useSongInterpretation(projectId, song?.id, song?.current_interpretation_id);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [lyrics, setLyrics] = useState("");
   const [creativeDirection, setCreativeDirection] = useState("");
   const [notes, setNotes] = useState("");
+  const [preferredVisualStyle, setPreferredVisualStyle] = useState("");
+  const [imageryMode, setImageryMode] = useState("");
+  const [narrativeMode, setNarrativeMode] = useState("");
+  const [unwantedThemes, setUnwantedThemes] = useState("");
   const [audio, setAudio] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [draftingInterpretation, setDraftingInterpretation] = useState(false);
+  const [interpretationDirty, setInterpretationDirty] = useState(false);
+  const [analysisMessage, setAnalysisMessage] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,15 +42,25 @@ export default function SongPage({ projectId }: Props) {
     setLyrics(song.lyrics ?? "");
     setCreativeDirection(song.creative_direction ?? "");
     setNotes(song.notes ?? "");
-  }, [song?.id, song?.title, song?.artist, song?.lyrics, song?.creative_direction, song?.notes]);
+    setPreferredVisualStyle(song.visual_style_preferences?.preferred_visual_style ?? "");
+    setImageryMode(song.visual_style_preferences?.imagery_mode ?? "");
+    setNarrativeMode(song.visual_style_preferences?.narrative_mode ?? "");
+    setUnwantedThemes(song.visual_style_preferences?.unwanted_themes ?? "");
+  }, [song?.id, song?.title, song?.artist, song?.lyrics, song?.creative_direction, song?.notes, song?.visual_style_preferences]);
 
   async function analyzeAudio() {
-    if (saving || analyzing || song?.analysis_status === "analyzing") return;
+    if (saving || analyzing || interpretation.loading || interpretation.working || song?.analysis_status === "analyzing") return;
     if (!song?.audio_url) {
       setError("Save an audio track before analyzing it.");
       return;
     }
+    if (songIntakeDirty) {
+      setError("Save song details before analyzing the track.");
+      return;
+    }
+    const createFirstDraft = schemaReady && !interpretation.latestDraft && !interpretation.confirmed && !interpretationDirty;
     setError(null);
+    setAnalysisMessage(null);
     setSaved(false);
     setAnalyzing(true);
     let local: Awaited<ReturnType<typeof analyzeAudioLocally>> | null = null;
@@ -84,6 +104,23 @@ export default function SongPage({ projectId }: Props) {
       }
 
       await reload();
+      if (!invokeError && createFirstDraft) {
+        setDraftingInterpretation(true);
+        try {
+          const draft = await interpretation.propose({ audioRevision: song.audio_revision, onlyIfEmpty: true });
+          if (draft) {
+            await reload();
+            setAnalysisMessage("Music analyzed. Your interpretation draft is ready to edit and confirm.");
+          }
+          else setAnalysisMessage("Music analysis was saved. The interpretation could not be generated; review the error below or retry Propose AI Interpretation.");
+        } catch (e) {
+          setError(formatFailure("Interpretation draft", e, { projectId, songId: song.id }) + " | Music analysis was saved.");
+        } finally {
+          setDraftingInterpretation(false);
+        }
+      } else if (!invokeError && schemaReady) {
+        setAnalysisMessage("Music analyzed. Your existing interpretation and edits were kept.");
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : "Song analysis failed.";
       if (local && localPersisted) {
@@ -136,7 +173,15 @@ export default function SongPage({ projectId }: Props) {
         artist: artist.trim(),
         lyrics: lyrics.trim() || null,
         creative_direction: creativeDirection.trim() || null,
-        notes: notes.trim() || null
+        notes: notes.trim() || null,
+      };
+      // Do not send nonexistent columns to an older database. Visual-style
+      // controls remain disabled in this state; backend interpretation stays off.
+      if (schemaReady) payload.visual_style_preferences = {
+        preferred_visual_style: preferredVisualStyle.trim(),
+        imagery_mode: imageryMode || null,
+        narrative_mode: narrativeMode || null,
+        unwanted_themes: unwantedThemes.trim(),
       };
       if (audio) payload.audio_path = audioPath;
       const result = song
@@ -157,6 +202,17 @@ export default function SongPage({ projectId }: Props) {
       setSaving(false);
     }
   }
+
+  const songIntakeDirty = Boolean(audio || (song && (
+    title !== song.title || artist !== song.artist || lyrics !== (song.lyrics ?? "") ||
+    creativeDirection !== (song.creative_direction ?? "") || notes !== (song.notes ?? "") ||
+    (schemaReady && (
+      preferredVisualStyle !== (song.visual_style_preferences?.preferred_visual_style ?? "") ||
+      imageryMode !== (song.visual_style_preferences?.imagery_mode ?? "") ||
+      narrativeMode !== (song.visual_style_preferences?.narrative_mode ?? "") ||
+      unwantedThemes !== (song.visual_style_preferences?.unwanted_themes ?? "")
+    ))
+  )));
 
   if (projectLoading || songLoading) {
     return (
@@ -197,6 +253,12 @@ export default function SongPage({ projectId }: Props) {
             The audio track is the primary source material. Provide song details and artistic intent for BeatVision to analyze before World Reveal.
           </p>
 
+          {!schemaReady && <p className="form-message" role="status">
+            This preview can read and edit your existing song details. New Song Intelligence
+            features require a database upgrade and are unavailable until that migration is approved.
+            Your existing project and audio have not been changed.
+          </p>}
+
           <form onSubmit={submit}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
               <label>
@@ -236,15 +298,19 @@ export default function SongPage({ projectId }: Props) {
                   type="button"
                   className="secondary-button"
                   onClick={() => void analyzeAudio()}
-                  disabled={saving || analyzing || song.analysis_status === "analyzing"}
+                  disabled={saving || analyzing || interpretation.loading || interpretation.working || songIntakeDirty || song.analysis_status === "analyzing"}
                   style={{ alignSelf: "flex-start" }}
                 >
-                  {analyzing || song.analysis_status === "analyzing"
+                  {draftingInterpretation
+                    ? "Drafting Interpretation…"
+                    : analyzing || song.analysis_status === "analyzing"
                     ? "Analyzing Music Signal…"
                     : song.analysis_status === "completed"
                     ? "Re-Analyze Music"
                     : "Analyze Music Signal"}
                 </button>
+                {songIntakeDirty && <p role="status">Save your song changes before analyzing.</p>}
+                {analysisMessage && <p role="status">{analysisMessage}</p>}
               </div>
             )}
 
@@ -268,6 +334,28 @@ export default function SongPage({ projectId }: Props) {
               />
             </label>
 
+            <fieldset className="song-style-preferences" disabled={!schemaReady}>
+              <legend>Artist-directed visual style (optional)</legend>
+              <label>Preferred visual style
+                <input value={preferredVisualStyle} onChange={(event) => { setPreferredVisualStyle(event.target.value); setSaved(false); }}
+                  placeholder="Naturalistic, ink illustration, film noir, etc." />
+              </label>
+              <label>Imagery
+                <select value={imageryMode} onChange={(event) => { setImageryMode(event.target.value); setSaved(false); }}>
+                  <option value="">Artist decides later</option><option value="realistic">Realistic</option><option value="stylized">Stylized</option>
+                </select>
+              </label>
+              <label>Visual storytelling
+                <select value={narrativeMode} onChange={(event) => { setNarrativeMode(event.target.value); setSaved(false); }}>
+                  <option value="">Artist decides later</option><option value="narrative">Narrative</option><option value="abstract">Abstract</option>
+                </select>
+              </label>
+              <label>Unwanted visual themes
+                <textarea rows={2} value={unwantedThemes} onChange={(event) => { setUnwantedThemes(event.target.value); setSaved(false); }}
+                  placeholder="Things Bragora must not introduce without approval" />
+              </label>
+            </fieldset>
+
             <label>
               Notes
               <textarea
@@ -278,18 +366,38 @@ export default function SongPage({ projectId }: Props) {
               />
             </label>
 
+            {schemaReady ? <SongInterpretationPanel
+              song={song}
+              loading={interpretation.loading}
+              working={analyzing || interpretation.working}
+              error={interpretation.error}
+              manualFallback={interpretation.manualFallback}
+              latestDraft={interpretation.latestDraft}
+              confirmed={interpretation.confirmed}
+              saveDraft={interpretation.saveDraft}
+              propose={interpretation.propose}
+              confirm={interpretation.confirm}
+              onConfirmed={reload}
+              songIntakeDirty={songIntakeDirty}
+              onDirtyChange={setInterpretationDirty}
+            /> : <p role="status">Interpretation and World confirmation are locked until the Song Intelligence database migration is available.</p>}
+
             <button className="primary-button large" disabled={saving || analyzing}>
               {saving ? "Saving Song…" : saved ? "Song Saved ✓" : "Save Song Details →"}
             </button>
           </form>
 
-          {(saved || song?.analysis_status === "completed") && (
+          {schemaReady && (saved || song?.analysis_status === "completed") && (
             <section aria-label="Next step" className="create-card" style={{ marginTop: "24px", background: "var(--bg-surface-0)" }}>
               {saved && <p role="status" style={{ color: "var(--color-success)", fontWeight: 600 }}>Song details saved successfully.</p>}
               {song?.analysis_status === "completed" ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <p>Musical signal analysis is complete. Ready to reveal the visual world for this song.</p>
-                  <button type="button" className="primary-button large" onClick={continueToWorld}>
+                  <p>{songIntakeDirty
+                    ? "Save your song changes, then save and confirm the interpretation before World Reveal."
+                    : interpretation.confirmed
+                    ? "Musical analysis and artist interpretation are confirmed. Continue to World Reveal."
+                    : "Musical signal analysis is complete. Save and confirm the interpretation above before World Reveal."}</p>
+                  <button type="button" className="primary-button large" disabled={songIntakeDirty || !interpretation.confirmed} onClick={continueToWorld}>
                     Continue to World Reveal →
                   </button>
                 </div>
@@ -303,6 +411,7 @@ export default function SongPage({ projectId }: Props) {
             <section style={{ marginTop: "32px", borderTop: "1px solid var(--border-subtle)", paddingTop: "24px" }}>
               <div className="eyebrow">MUSICAL SIGNAL ANALYSIS</div>
               <h2 style={{ fontSize: "20px", color: "#ffffff", marginBottom: "16px" }}>Track Intelligence Breakdown</h2>
+              <p>Tempo and key are estimates. Structural boundaries are heuristic candidates to review before directing scenes.</p>
 
               <div className="analysis-dashboard-grid">
                 <div className="analysis-metric-card">
@@ -310,11 +419,11 @@ export default function SongPage({ projectId }: Props) {
                   <span className="metric-value">{hasValidAnalysisDuration ? `${durationSeconds.toFixed(1)}s` : "Unavailable"}</span>
                 </div>
                 <div className="analysis-metric-card">
-                  <span className="metric-label">BPM</span>
+                  <span className="metric-label">BPM estimate</span>
                   <span className="metric-value">{analysis.bpm ? String(analysis.bpm) : "N/A"}</span>
                 </div>
                 <div className="analysis-metric-card">
-                  <span className="metric-label">Musical Key</span>
+                  <span className="metric-label">Musical key estimate</span>
                   <span className="metric-value">{analysis.key ?? "N/A"}</span>
                 </div>
                 <div className="analysis-metric-card">
@@ -331,9 +440,9 @@ export default function SongPage({ projectId }: Props) {
                   </span>
                 </div>
                 <div className="analysis-metric-card">
-                  <span className="metric-label">Structural Segments</span>
+                  <span className="metric-label">Structural candidates</span>
                   <span className="metric-value" style={{ fontSize: "14px", fontWeight: 500 }}>
-                    {analysis.sections?.length ?? 0} structural regions detected • Instruments: {analysis.instruments?.slice(0, 6).join(", ") || "N/A"}
+                    {analysis.sections?.length ?? 0} candidate regions • Instruments: {analysis.instruments?.slice(0, 6).join(", ") || "N/A"}
                   </span>
                 </div>
                 {analysis.description && (

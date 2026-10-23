@@ -1,0 +1,87 @@
+{
+  "observed_at": "2026-10-22T17:59:34.744209+00:00",
+  "canonical_origin": "https://beat-vision-theta.vercel.app",
+  "contexts": [
+    {
+      "name": "desktop",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/functions/v1/beatvision-song-interpretation",
+          "header_names": [
+            "sec-ch-ua-platform",
+            "authorization",
+            "referer",
+            "sec-ch-ua",
+            "sec-ch-ua-mobile",
+            "x-client-info",
+            "user-agent",
+            "content-type",
+            "apikey"
+          ],
+          "client_info": "supabase-js/2.118.0; runtime=web"
+        }
+      ],
+      "responses": [
+        {
+          "status": 200,
+          "path": "/functions/v1/beatvision-song-interpretation"
+        }
+      ],
+      "failures": [],
+      "console_errors": [],
+      "interpretation_draft_loaded": true,
+      "panel_error": [],
+      "scripts": [
+        "/assets/index-29wpl7NP.js",
+        "/static/1.438.12/surveys.js",
+        "/array/phc_xTQarA73QXM2htyjuFajfqTxMmNoyF8gDp37m7BwhDqA/config.js"
+      ],
+      "continue_disabled": true
+    },
+    {
+      "name": "android-emulated",
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/functions/v1/beatvision-song-interpretation",
+          "header_names": [
+            "sec-ch-ua-platform",
+            "authorization",
+            "referer",
+            "sec-ch-ua",
+            "sec-ch-ua-mobile",
+            "x-client-info",
+            "user-agent",
+            "content-type",
+            "apikey"
+          ],
+          "client_info": "supabase-js/2.118.0; runtime=web"
+        }
+      ],
+      "responses": [
+        {
+          "status": 200,
+          "path": "/functions/v1/beatvision-song-interpretation"
+        }
+      ],
+      "failures": [
+        {
+          "path": "https://mdofsinyofqbeapzfygu.supabase.co/storage/v1/object/sign/songs/844ec48d-c252-4fb1-984e-2d93e0335670/ad266b2c-3e9b-45fb-b8ab-5aabacfe3ac4/bb7838c8-7b9a-48c8-851c-837f6b20ce97.wav",
+          "failure": "net::ERR_ABORTED"
+        }
+      ],
+      "console_errors": [],
+      "interpretation_draft_loaded": true,
+      "panel_error": [],
+      "scripts": [
+        "/assets/index-29wpl7NP.js",
+        "/static/1.438.12/surveys.js",
+        "/array/phc_xTQarA73QXM2htyjuFajfqTxMmNoyF8gDp37m7BwhDqA/config.js"
+      ],
+      "continue_disabled": true
+    }
+  ],
+  "provider_submissions": 0,
+  "creative_approvals": 0
+}

@@ -189,8 +189,8 @@ Deno.serve(async (req) => {
 
     // Only the dedicated key from the owner's confirmed Free-plan account
     // is eligible. The legacy paid key is never read or used as a fallback.
-    const freeAccountVerified = Boolean(groqKey);
-    if (!freeAccountVerified) throw new HttpError("PROVIDER_COST_UNVERIFIED",503,"The dedicated free-account key is not configured. Existing descriptions remain editable.");
+    const freeAccountVerified = Boolean(groqKey) && env("GROQ_FREE_ACCOUNT_VERIFIED") === "true";
+    if (!freeAccountVerified) throw new HttpError("PROVIDER_COST_UNVERIFIED",503,"The dedicated provider's no-charge eligibility is unverified. Existing descriptions remain editable.");
 
     const required = FIELDS[kind];
     const source = {
