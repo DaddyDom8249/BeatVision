@@ -26,7 +26,7 @@ await writeFile(join(dir, 'header.mjs'), 'export default function StudioHeader()
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
-async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, imageUrlError = null, stored = false, rpcError = null, runJob = null, approvedMotionSceneIds = ['scene-1'], sceneRecord = null } = {}) {
+async function mount({ imageAssets = null, motionAssets = null, motionJob = null, imageJob = null, assemblyJob = null, motionAsset = null, historicalJob = null, runError = null, imageUrlError = null, stored = false, rpcError = null, runJob = null, approvedMotionSceneIds = ['scene-1'], sceneRecord = null, modalAvailable = true } = {}) {
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://beat-vision-theta.vercel.app' });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
@@ -56,7 +56,8 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
     rpc: async (_name, args) => { rpcCalls.push({ name: _name, args }); return { data: rpcError ? null : { id: 'job-1', status: 'queued', job_type: args.p_job_type }, error: rpcError }; },
     functions: { invoke: async (_name, { body }) => {
       calls.push(body);
-      if (body.action === 'enqueue_ai_motion') return { data: { job: { id: 'job-1', status: 'queued', job_type: 'scene_motion' } }, error: runError ? new Error(runError) : null };
+      if (body.action === 'modal_capability') return { data: { modal_supported: true, modal_available: modalAvailable }, error: null };
+      if (body.action === 'enqueue_ai_motion') return { data: { job: { id: 'job-1', status: 'queued', job_type: 'scene_motion', provider: body.provider === 'modal' ? 'modal' : 'huggingface-zerogpu', input_snapshot: body.provider === 'modal' ? {modal_motion: {}} : {hf_motion: {}} } }, error: runError ? new Error(runError) : null };
       if (body.action === 'motion_url') return { data: { video_url: 'https://fresh.test/motion.mp4' }, error: null };
       if (body.action === 'image_url') return imageUrlError
         ? { data: null, error: new Error(imageUrlError) }
@@ -80,6 +81,52 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
     cleanup: async () => { await act(async () => root.unmount()); dom.window.close(); delete globalThis.__uiDb; },
   };
 }
+
+test('Modal is the primary default and a generation click submits only Modal', async () => {
+  const view = await mount();
+  try {
+    const select = document.querySelector('[aria-label="Motion generator"]');
+    assert.equal(select.value, 'modal');
+    assert.equal(select.options[0].value, 'modal');
+    assert.match(select.options[0].textContent, /primary/i);
+    assert.match(select.options[1].textContent, /fallback/i);
+    await view.click('Generate Motion');
+    const submissions = view.calls.filter(c => c.action === 'enqueue_ai_motion');
+    assert.equal(submissions.length, 1);
+    assert.equal(submissions[0].provider, 'modal');
+    assert.equal(view.calls.filter(c => c.action === 'modal_capability').length, 1);
+  } finally { await view.cleanup(); }
+});
+
+test('unavailable Modal never silently falls back; explicit HF choice submits once', async () => {
+  const view = await mount({modalAvailable: false});
+  try {
+    await view.click('Generate Motion');
+    assert.equal(view.calls.filter(c => c.action === 'enqueue_ai_motion').length, 0);
+    const select = document.querySelector('[aria-label="Motion generator"]');
+    assert.equal(select.value, 'modal');
+    await act(async () => { select.value = 'huggingface'; select.dispatchEvent(new window.Event('change', {bubbles: true})); });
+    assert.equal(view.calls.filter(c => c.action === 'enqueue_ai_motion').length, 0);
+    await view.click('Generate Motion');
+    const submissions = view.calls.filter(c => c.action === 'enqueue_ai_motion');
+    assert.equal(submissions.length, 1);
+    assert.equal(submissions[0].provider, 'huggingface');
+  } finally { await view.cleanup(); }
+});
+
+for (const provider of ['modal', 'huggingface-zerogpu']) test('pending ' + provider + ' job blocks switching and only polls its original ID', async () => {
+  const job = {id: 'existing-' + provider, provider, status: 'processing'};
+  const view = await mount({motionJob: job});
+  try {
+    assert.equal(document.querySelector('[aria-label="Motion generator"]').disabled, true);
+    assert.equal(view.button('Generate Motion'), undefined);
+    await view.click('Check Motion Status');
+    const polls = view.calls.filter(c => c.action === 'poll');
+    assert.equal(polls.length, 1);
+    assert.equal(polls[0].jobId, job.id);
+    assert.equal(view.calls.filter(c => c.action === 'enqueue_ai_motion').length, 0);
+  } finally { await view.cleanup(); }
+});
 
 test('async motion keeps the workspace and exposes status without a completed asset', async () => {
   const view = await mount();
@@ -196,7 +243,7 @@ test('a new motion job still dispatches once with run', async () => {
     assert.equal(view.calls.at(-1).action, 'run');
     assert.equal(view.rpcCalls.length, 0);
     assert.equal(view.calls.filter(call => call.action === 'enqueue_ai_motion').length, 1);
-    assert.equal(view.calls[0].acceptedTerms, true);
+    assert.equal(view.calls.find(c => c.action === 'enqueue_ai_motion').acceptedTerms, true);
   } finally { await view.cleanup(); }
 });
 
@@ -297,8 +344,8 @@ test('AI motion requires model terms and appends beside an approved procedural c
     assert.ok(button); assert.equal(button.disabled, true);
     assert.match(document.body.textContent, /2-second AI motion preview/);
     await view.click('Generate Motion');
-    assert.equal(view.calls[0].action, 'enqueue_ai_motion');
-    assert.equal(view.calls[0].acceptedTerms, true);
+    assert.equal(view.calls.find(c => c.action === 'enqueue_ai_motion').provider, 'modal');
+    assert.equal(view.calls.find(c => c.action === 'enqueue_ai_motion').acceptedTerms, true);
     assert.equal(view.rpcCalls.length, 0);
     assert.equal(view.calls.filter(c => c.action === 'run').length, 1);
   } finally { await view.cleanup(); }

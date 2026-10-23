@@ -54,7 +54,7 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| T09.3a prompt cutoff repaired/livev64; CI435 and source match PASS. Existing output decoded read-only; remaining credits/deployed worker equivalence and post-fix execution safeguards unverified. modal-prompt-release.json
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| IN_PROGRESS| T09.4 requested provider policy: Modal primary/default, Hugging Face explicit fallback; retain pending-job controls, provider eligibility, spending/approval gates and existing frozen jobs. No inference.
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Existing owner-approved source rows and external Modal outputs observed; isolated sequential journey and authorized post-fix budgeted inference remain unverified; no agent GPU submission
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| Two existing external Modal MP4s decode49frames/2.041667s under T09.3; post-fix directed subject motion, source consistency and BragoraForge playback remain unverified
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
@@ -1653,3 +1653,46 @@ Next task: Budget/execution-authorized short proof with the existing approved
 source/action, or explicit artist revision if stronger movement is wanted.
 Other mandatory tasks retain their recorded artist/input dependencies. No GPU
 job, paid provider, creative approval, stored asset replacement or merge performed.
+
+### T09.4 — Modal primary with explicit Hugging Face fallback
+
+TASK ID: T09 (sole IN_PROGRESS item).
+Objective / acceptance: User requests Modal as primary motion provider and
+Hugging Face as fallback. New workspace and omitted-provider API requests default
+to Modal; selector lists Modal primary first and HF fallback second. HF remains
+explicitly selectable and follows existing verified-free/terms/approval guards.
+Pending jobs disable provider switching/new generation and retain their frozen
+provider when polled. Failure/unavailable/uncertain requests never automatically
+submit the alternate provider or retry GPU work. Existing media/versions preserved.
+Initial status: FAILED for requested priority: current UI initializes Hugging
+Face, lists it first and backend defaults omitted provider to huggingface.
+Evidence inspected: ProductionWorkspacePage.tsx; enqueueHfMotion/handler;
+existing workspace/Modal/HF regressions. Read-only current deployment snapshot
+will precede compatible release. No autonomous inference or model changes.
+Confirmed cause: Explicit frontend and backend Hugging Face defaults. Existing
+provider choice/pending controls and eligibility mechanisms can be reused.
+Required files: src/pages/ProductionWorkspacePage.tsx;
+supabase/functions/beatvision-generation/index.ts (two default literals only);
+scoped existing workspace/HF tests, checklist/log/release/evidence. Release only
+those two literals into compatible live controller, preserving prior prompt fix.
+Expected outcome: Modal is primary, HF available as explicit fallback; no silent
+switch, provider migration, new service/schema, paid fallback or creative approval.
+Verification: meaningful actual React default/preflight/explicit-fallback/pending
+checks; actual backend omitted/explicit provider guards; full tests/audit/build,
+CI, authorized existing frontend/function release and controlled real-browser
+checks without provider generation. Mock/controlled paths are not motion proof.
+Commit: base3ab4f0f9b6f7403af0a372f2aa9b517a22e5ca4e; implementation pending.
+Next task: Finish T09.4, then retain explicit external gates for T09–T14 and
+artist approval dependencies. This request is not a GPU-spending authorization.
+
+T09.4 implementation results: new actual React/handler tests reproduce wrong
+priority (red76/79,3 failures). After minimal default/copy changes, one missing-HF-
+key code expectation and three old default/preflight assertions required fixture
+correction; first focused90/94 then final94/94 PASS. Compatible live controller
+with only two default literals changed passes38/38 HF/handler tests. Full440/440,
+0 skipped,production audit/build PASS. Old HF-specific direct helper fixtures now
+explicitly select HF, preserving their approval/lineage acceptance tests. Test
+loader optionally executes the exact compatibility controller; all original
+candidate tests remain enabled. No provider call, schema or data mutation.
+Evidence: modal-primary-tests.json and modal-primary-policy.patch. Production
+frontend/function release and controlled real-browser verification pending.

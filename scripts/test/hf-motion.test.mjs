@@ -165,6 +165,28 @@ for (const action of ['enqueue_ai_motion','motion_url','motion_eligibility']) te
 });
 test('model terms must be accepted before eligibility or any job write',async()=>{const runtime=await loadGeneration();try{await assert.rejects(runtime.enqueueHfMotion({},'project-1','scene-1',false),/Accept the LTX/)}finally{await runtime.cleanup()}});
 
+test('omitted motion provider uses the Modal budget guard; explicit HF keeps its eligibility guard', async () => {
+  const original = globalThis.fetch;
+  let requests = 0;
+  globalThis.fetch = async () => { requests++; throw new Error('Unexpected provider access'); };
+  const client = {auth: {getUser: async () => ({data: {user: {id: 'owner-1'}}})}, from(table) {
+    assert.equal(table, 'projects');
+    return {select() { return this; }, eq() { return this; }, maybeSingle: async () => ({data: {id: 'project-1', owner_id: 'owner-1'}})};
+  }};
+  const runtime = await loadGeneration(client, {}, process.env.BRAGORA_GENERATION_CONTROLLER_FIXTURE);
+  try {
+    for (const [provider, code] of [[undefined, 'MODAL_GPU_UNAVAILABLE'], ['huggingface', 'HF_VIDEO_TOKEN_MISSING'], ['other', 'MOTION_PROVIDER_INVALID']]) {
+      const response = await runtime.handler(new Request('https://test/function', {method: 'POST', headers: {Authorization: 'Bearer fixture-session'},
+        body: JSON.stringify({action: 'enqueue_ai_motion', projectId: 'project-1', sceneId: 'scene-1', acceptedTerms: true, provider})}));
+      const data = await response.json();
+      if (provider === 'huggingface') assert.match(data.error.message, /HF_VIDEO_TOKEN_MISSING/);
+      else assert.equal(data.error.code, code);
+    }
+    assert.equal(requests, 0, 'no GPU/provider request is authorized by a default or missing configuration');
+    await assert.rejects(runtime.enqueueHfMotion({}, 'project-1', 'scene-1', true), /Modal worker or spending safeguard/);
+  } finally { globalThis.fetch = original; await runtime.cleanup(); }
+});
+
 test('HF completion stores immutable private video and pins the generating image', async () => {
   const original = globalThis.fetch;
   globalThis.fetch = async (url) => url.includes('/queue/data')
@@ -204,8 +226,8 @@ for (const approvedPlan of [true,false]) test('HF enqueue '+(approvedPlan?'reuse
   }}};
   const runtime=await loadGeneration(client);globalThis.Deno.env.get=()=> 'test-secret';
   try {
-    if(approvedPlan){assert.deepEqual(await runtime.enqueueHfMotion(client,'project-1','scene-1',true),existing);assert.equal(filters.find(x=>x.table==='scene_image_assets').where.approved,true)}
-    else await assert.rejects(runtime.enqueueHfMotion(client,'project-1','scene-1',true),/approved locked Visual Plan/);
+    if(approvedPlan){assert.deepEqual(await runtime.enqueueHfMotion(client,'project-1','scene-1',true,undefined,undefined,'huggingface'),existing);assert.equal(filters.find(x=>x.table==='scene_image_assets').where.approved,true)}
+    else await assert.rejects(runtime.enqueueHfMotion(client,'project-1','scene-1',true,undefined,undefined,'huggingface'),/approved locked Visual Plan/);
     assert.equal(writes,0);assert.equal(f.calls.filter(c=>c.init.method==='POST').length,0);
   }finally{globalThis.fetch=original;await runtime.cleanup()}
 });

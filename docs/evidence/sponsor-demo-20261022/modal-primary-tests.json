@@ -1,0 +1,41 @@
+{
+  "observed_at": "2026-10-23T01:03:21.763332+00:00",
+  "task": "T09.4",
+  "scope": "Modal primary/default, HF explicit fallback; no automatic provider switch or inference",
+  "baseline_generation_version": 64,
+  "red": {
+    "tests": 79,
+    "pass": 76,
+    "fail": 3
+  },
+  "first_green_observation": {
+    "tests": 94,
+    "pass": 90,
+    "fail": 4,
+    "explanation": "One test expected a typed missing-HF-key code but legacy controller wraps its message; old static test expected HF default; two old workspace assertions assumed enqueue was first call before the new default Modal preflight. Harness expectations corrected while retaining guard, terms and single-dispatch checks."
+  },
+  "green": {
+    "focused_tests": 94,
+    "focused_pass": 94,
+    "compatible_production_handler_tests": 38,
+    "compatible_production_handler_pass": 38,
+    "full_tests": 440,
+    "full_pass": 440,
+    "fail": 0,
+    "skipped": 0,
+    "production_audit": "PASS",
+    "build": "PASS"
+  },
+  "private_logs": {
+    "red.txt": "5e83782441399032d53a696332406edfc8a08da4feab4e60239e64f1bf38128c",
+    "green.txt": "0fe238d68eb81ea094342ac3ec6ad1fd4f15185e0b1aeded91dffeee6ea13eeb",
+    "green-final.txt": "0a88884558c1c0ebfbf5e311d2bb999a2b22d639ff2036b075af8bae0c1710c2",
+    "green-compatible.txt": "0f5b8cd3e29527b3bb20ede670c9316758e852f2cb6bf9b6f866d21c89e5fd10",
+    "full-tests.txt": "61b8be421184d5e2a89e1e0d55ab823a4d50e80fa87031b66f45d919fe9efc58",
+    "audit.txt": "d02023ca8be7fb44222a534c8ec5a98eb1007ede71f6360657e09f8855f1bb3d",
+    "build.txt": "36b06afd3ca547d3b0799917944617188258b45829a1b5a65435ed52cfd1dcda"
+  },
+  "provider_gpu_calls": 0,
+  "database_mutations": 0,
+  "production_release_browser_verification": "PENDING"
+}

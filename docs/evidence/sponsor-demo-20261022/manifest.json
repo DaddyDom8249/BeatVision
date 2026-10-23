@@ -306,6 +306,16 @@
       "sha256": "50d8cb6ff41adefdf4e511e44875db0d2f745a7a1d981c824f59fd8faa7fcd01"
     },
     {
+      "file": "modal-primary-policy.patch",
+      "bytes": 1529,
+      "sha256": "070c6c903a9ec11ef6fc9606f005c2c96290ae97ad056b25dc8b1735c2509613"
+    },
+    {
+      "file": "modal-primary-tests.json",
+      "bytes": 1732,
+      "sha256": "51ff5d7c8b734c50c21773b7fb4c10ae59232c2fb4f0ed7be870a109702e3299"
+    },
+    {
       "file": "modal-prompt-delivery.patch",
       "bytes": 1482,
       "sha256": "6ad974c47b0af052c0229641a6e466799be9ad27ca25942146c09ff189e124e4"

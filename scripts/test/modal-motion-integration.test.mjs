@@ -129,8 +129,8 @@ test('Invalid poll call ID cannot reach Modal; completed poll decodes returned v
   assert.deepEqual(result.video,fixtureImage());
   assert.equal(result.manifest.model,MODAL_MOTION.model);
 });
-test('App explicitly selects Modal and retains HF as the default',()=>{
-  assert.match(ui,/useState<"huggingface" \| "modal">\("huggingface"\)/);
+test('App defaults to Modal and retains HF as an explicit fallback',()=>{
+  assert.match(ui,/useState<"huggingface" \| "modal">\("modal"\)/);
   assert.match(ui,/provider: motionProvider/);
   assert.match(ui,/action: "modal_capability", projectId/);
   assert.match(ui,/modal_supported !== true \|\| probe\.data\?\.modal_available !== true/);
