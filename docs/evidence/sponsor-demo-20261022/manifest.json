@@ -2,7 +2,7 @@
   "source_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
   "production_frontend_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
   "production_generation_version": 66,
-  "scope": "Assembly fix unchanged at0b9eb69/v66. Actual attached Modal/HF decode and controlled deployed playback PASS; Modal quality rejected. First read-only Termux batch PASS, idle/$0 billed/local hashes match. Follow-up deployed definition awaits phone approval. No new source/GPU/render/approval or full-sponsor acceptance.",
+  "scope": "Application0b9eb69/v66 unchanged. Actual attached decode/playback PASS; Modal quality rejected. Both read-only Termux checks completed. Unapplied same-model sampler trial prepared;20 offline tests PASS. Credits/$0spend-cap confirmation and one-test execution authorization required; zero GPU jobs or quality-fix claim.",
   "private_evidence": "Transcript-bearing candidate images, Android reload screenshot containing profile text, and account/session secrets excluded from Git",
   "files": [
     {
@@ -37,8 +37,8 @@
     },
     {
       "file": "attached-motion-quality-diagnosis.json",
-      "bytes": 9778,
-      "sha256": "33e4e80c5541f657a70f7699fb538691287d5572b2df60c900c492f31fdae094"
+      "bytes": 9816,
+      "sha256": "efb0f27ec22223491fa00a207e6b0c11dff91520a9c27f45f4ac85080b4bd147"
     },
     {
       "file": "audio-fixture.json",
@@ -372,13 +372,23 @@
     },
     {
       "file": "modal-quality-control-plane.json",
-      "bytes": 2894,
-      "sha256": "7b1541d67b199b44df3b3b73ef8d8afb6a07b89c7bfe4aea9557fd7d04be0315"
+      "bytes": 4469,
+      "sha256": "4191b554579c2017c662001eadc8fc913a0c7ed3d8e60d4c93a9504a085ffc39"
     },
     {
       "file": "modal-quality-followup.json",
       "bytes": 4070,
       "sha256": "4857decf7988dbbd970671367b5a0fc82ea4dd66e8b47c0f483ce6e7ba1d90d4"
+    },
+    {
+      "file": "modal-quality-trial-proposal.json",
+      "bytes": 3691,
+      "sha256": "9d7919cc009b810284f0f710aa9cbd3bf7e2b24be82ffd08370afeb1d4db2003"
+    },
+    {
+      "file": "modal-quality-trial-unapplied.patch",
+      "bytes": 784,
+      "sha256": "e1755bab505ae41e9bfef55d5bea2beee1e47314a7dea7f812948c03fec63b51"
     },
     {
       "file": "modal-transport-green.txt",

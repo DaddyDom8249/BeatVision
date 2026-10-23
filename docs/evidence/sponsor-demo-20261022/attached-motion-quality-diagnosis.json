@@ -162,14 +162,13 @@
     }
   ],
   "remaining_blockers": {
-    "deployed_modal_worker_source_equivalence": "UNKNOWN: local source matches repo, follow-up server definition read awaits phone approval",
+    "deployed_modal_worker_source_equivalence": "UNKNOWN: moduleworker/file-based definition, serialized_bytes0, image/mount references exported; Python source content not returned. Local source is not deployed-artifact proof.",
     "termux_bridge": {
-      "first_batched_read": "completed/exit0",
-      "pending_job_id": "fe43298d-5caf-4307-be36-69e15df29de1",
-      "pending_status": "awaiting_approval",
-      "latest_heartbeat_status": "offline at last poll; first batch ran while online"
+      "first_read": "completed/exit0",
+      "definition_read": "completed/exit0",
+      "pending_device_approval": false
     },
-    "new_inference": "BLOCKED pending verified available credits/spending controls and bounded execution authorization",
+    "new_inference": "BLOCKED pending one credits-only trial authorization and current usable credits/$0paid-spend-cap confirmation.",
     "quality_fix": "Not implemented: exact cause not proven; do not change models/settings speculatively."
   },
   "actions": {
@@ -221,5 +220,6 @@
     }
   ],
   "verification": "PASS for attached-file decode and scoped actual-media browser playback. Quality acceptance FAILED for Modal; root-cause repair and full sponsor acceptance remain BLOCKED.",
-  "control_plane_evidence": "modal-quality-control-plane.json"
+  "control_plane_evidence": "modal-quality-control-plane.json",
+  "prepared_trial": "modal-quality-trial-proposal.json"
 }

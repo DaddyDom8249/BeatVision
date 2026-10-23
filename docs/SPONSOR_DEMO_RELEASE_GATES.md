@@ -440,3 +440,13 @@ This approval does not authorize GPU generation. See
 [attached-file diagnosis](evidence/sponsor-demo-20261022/attached-motion-quality-diagnosis.json),
 [actual-media playback](evidence/sponsor-demo-20261022/attached-motion-browser-playback.json)
 and [control-plane evidence](evidence/sponsor-demo-20261022/modal-quality-control-plane.json).
+
+The follow-up read-only definition batch has now completed. It confirms1L4/
+300s execution and$0.80/hour GPU pricing, but does not export mounted Python
+source or current remaining credits/spend caps. A two-line unapplied sampler
+trial is prepared (50steps/guidance5, same model/source/49frames);20/20 offline
+contract/media tests and compilation pass. Production is unchanged and output
+quality remains unverified. See
+[reviewable trial](evidence/sponsor-demo-20261022/modal-quality-trial-proposal.json).
+One credits-only test needs explicit execution authorization and owner
+confirmation of usable credits and a hard$0paid-spend cap.

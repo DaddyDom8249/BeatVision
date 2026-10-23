@@ -68,16 +68,70 @@
     },
     "boundary": "Local source equality does not establish deployed artifact equality."
   },
-  "deployed_artifact_source": "UNKNOWN pending follow-up definition read; SDK1.6.2 read schema was inspected without unpickling/executing source or calling GPU functions.",
-  "pending_phone_job": {
+  "deployed_artifact_source": "UNKNOWN: moduleworker/file-based definition, serialized_bytes0, image/mount references exported; Python source content not returned. Local source is not deployed-artifact proof.",
+  "new_inference_authorization": "Not granted. Read-only approvals are completed and do not authorize GPU generation.",
+  "provider_submissions": 0,
+  "deployments": 0,
+  "customer_mutations": 0,
+  "private_result_sha256": "bd069a640c38a37cc6093f142d0abe888acf978b9b72269b3c02561c0360877f",
+  "initial_pending_phone_job": {
     "id": "fe43298d-5caf-4307-be36-69e15df29de1",
     "status": "awaiting_approval",
     "purpose": "Read existing FunctionGetById definition and WorkspaceBillingRates only. No worker run/build/deploy.",
     "approval_source": "Termux Link queue tool requires approval on the phone; chat Continue does not execute that device approval."
   },
-  "new_inference_authorization": "Not requested or granted; this read-only approval does not authorize inference.",
-  "provider_submissions": 0,
-  "deployments": 0,
-  "customer_mutations": 0,
-  "private_result_sha256": "bd069a640c38a37cc6093f142d0abe888acf978b9b72269b3c02561c0360877f"
+  "definition_phone_job": {
+    "id": "fe43298d-5caf-4307-be36-69e15df29de1",
+    "status": "completed",
+    "exit": 0,
+    "function_data": {
+      "module_name": "worker",
+      "function_name": "single_motion_proof",
+      "timeout_secs": 300,
+      "warm_pool_size": 0,
+      "concurrency_limit": 1,
+      "autoscaler_settings": {
+        "min_containers": 0,
+        "max_containers": 1,
+        "buffer_containers": 0,
+        "scaledown_window": 2
+      }
+    },
+    "ranked_function": {
+      "rank": 0,
+      "module_name": "worker",
+      "function_name": "single_motion_proof",
+      "definition_type": 2,
+      "image_id": "im-EtbjAppBBFCc9vnylKk0fW",
+      "mount_ids": [
+        "mo-ZR7PZndBtJSYjmtxNJmFox",
+        "mo-WQUmbZcV5tBKNMl4oLtsHV",
+        "mo-8YvIVQKdYMawNskTJOXtqO"
+      ],
+      "serialized_bytes": 0,
+      "resources": {
+        "gpu_config": {
+          "count": 1,
+          "gpu_type": "L4"
+        }
+      },
+      "timeout_secs": 300,
+      "retry_policy": {
+        "backoff_coefficient": 1.0,
+        "initial_delay_ms": 1000,
+        "max_delay_ms": 60000
+      },
+      "autoscaler_settings": {
+        "min_containers": 0,
+        "max_containers": 1,
+        "buffer_containers": 0,
+        "scaledown_window": 2
+      }
+    }
+  },
+  "rates": {
+    "gpu_l4_usd_per_hour": "0.80000",
+    "cpu_usd_per_core_hour": "0.04730"
+  },
+  "remaining_blocker": "Candidate quality trial requires current usable credits/$0paid-spend confirmation and explicit bounded execution authorization."
 }

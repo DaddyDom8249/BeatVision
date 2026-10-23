@@ -1695,3 +1695,20 @@ chat Continue is not a substitute. No duplicate queue/inference/deploy, package
 install, credential read, source change or customer mutation. Source455 CI
 reused. Public modal-quality-control-plane.json records exact first result and
 pending blocker. Main T09 BLOCKED until that result; no false quality success.
+
+
+T09.5b: follow-up device approval resolved; definition batchfe43298d exit0.
+File-based moduleworker,1L4,300s execution, min0/max1/buffer0. Image/mount
+references do not expose mounted Python source; preprocessing parity stays
+UNKNOWN. L4$0.80/hour,CPU$0.04730/core-hour. Prepared unapplied2line sampler
+trial50steps/guidance5 on same pinned0.9.5 model; no app/default/deployment
+change. Temporary-copy existing contract/media20/20 PASS and compile PASS.
+An initial nonexistent-workdir command failed before execution; corrected by
+creating copy first. Existing455 CI reused for unchanged application source.
+Proposal records1job/49frames/no retry, separate unapproved output, no source
+creative change or production-worker redeploy.300s GPU execution arithmetic
+$0.066667 excludes startup/CPU/RAM/build/transfer. Current remaining credits
+and$0hard-spend-cap confirmation plus explicit one-test authorization are
+external gates; read-only approvals do not authorize inference. Source0b9eb69/
+v66 unchanged. No GPU job, new persistent service, customer mutation or
+quality-fix claim. See modal-quality-trial-proposal.json and unapplied patch.

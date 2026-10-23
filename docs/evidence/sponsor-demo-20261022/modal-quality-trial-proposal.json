@@ -1,0 +1,63 @@
+{
+  "task": "T09.5b",
+  "recorded_at": "2026-10-23T06:33:18.766806+00:00",
+  "status": "PREPARED, NOT EXECUTED",
+  "source_commit": "0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c",
+  "documentation_base_commit": "7da027ce00e6eb6f4816cea0d3c56c528df221d4",
+  "patch": "modal-quality-trial-unapplied.patch",
+  "patch_sha256": "e1755bab505ae41e9bfef55d5bea2beee1e47314a7dea7f812948c03fec63b51",
+  "patch_scope": "Unapplied two-line candidate only: STEPS20->50, guidance3->5. Application repository Python source and live worker remain unchanged.",
+  "hypothesis": "Documented non-distilled LTX sampler settings plus existing aspect-preserving preparation may improve the supplied poor-quality result. No empirical quality fix is established.",
+  "reference": "https://github.com/huggingface/diffusers/blob/v0.35.2/docs/source/en/api/pipelines/ltx_video.md",
+  "model": "Lightricks/LTX-Video-0.9.5",
+  "model_revision": "e58e28c39631af4d1468ee57a853764e11c1d37e",
+  "planned_trial": {
+    "invocations": 1,
+    "max_retries": 0,
+    "frames": 49,
+    "fps": 24,
+    "gpu": "L4",
+    "max_containers": 1,
+    "min_containers": 0,
+    "execution_timeout_seconds": 300,
+    "source": "Supplied Scene5 source JPEG, unchanged. Preserve approved composition using committed image containment.",
+    "seed": "Freeze original d74245c1 seed from existing controller derivation.",
+    "prompt": "Reuse approved frozen direction; no invented stronger action.",
+    "output": "Separate unapproved test artifact; preserve all existing projects/assets/videos.",
+    "production_worker_redeploy": false,
+    "database_mutations": 0,
+    "provider_switch": false,
+    "new_persistent_service": false,
+    "boundary": "Isolated quality diagnostic, not a full owner-authenticated application pipeline acceptance. Supplied JPEG re-encoding and possible old preprocessing are comparison confounders; do not claim a pure single-variable benchmark."
+  },
+  "cost_evidence": {
+    "gpu_l4_usd_per_hour": "0.80000",
+    "gpu_execution_only_300s_usd": "0.06666666666666666666666666667",
+    "cpu_usd_per_core_hour": "0.04730",
+    "boundary": "GPU execution arithmetic only; excludes GPU startup/teardown, CPU, RAM, build and transfer. 300s execution timeout is not a total monetary cap. Current billing shows$0 so far, not future zero-cost proof.",
+    "current_usable_credit_balance": "UNKNOWN",
+    "current_paid_spend_cap": "UNKNOWN to API; requires owner confirmation of $0 hard cap before test."
+  },
+  "offline_validation": {
+    "worker_contract_media_tests": {
+      "tests": 20,
+      "passed": 20,
+      "failed": 0
+    },
+    "python_compile": "PASS for temporary patched worker/contracts/media only",
+    "log_sha256": "93080c4f807559446b69f68bfc3c219bf807c7d74a446540ec7e78fee9a49f0c",
+    "compile_or_tests_allocate_gpu": false,
+    "application_tests_reused": "455/455,audit/build PASS at unchanged deployed source; no irrelevant full rerun."
+  },
+  "acceptance_after_authorization": [
+    "No inference unless usable credits and hard$0paid-spend cap are confirmed and one-test authorization exists.",
+    "One durable attempt receipt before submission; inspect same job if status uncertain, never resubmit automatically.",
+    "Check output MP4, full decode/duration, visible subject action/source identity and actual playback separately.",
+    "Creator judges quality; output remains unapproved. No MVP-ready claim from this isolated trial."
+  ],
+  "execution_authorization": "BLOCKED: explicit approval for one credits-only trial and current financial safeguards not yet provided.",
+  "gpu_jobs_submitted": 0,
+  "worker_deployments": 0,
+  "application_source_changes": 0,
+  "quality_fix_verified": false
+}

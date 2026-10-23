@@ -55,7 +55,7 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| T09.5 supplied clips decoded/played; Modal quality rejected. First Termux read PASS: idle app,$0 billed; local source matches repo. Deployed-definition read awaits phone approval; financial/quality gates remain. modal-quality-control-plane.json
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Both Termux reads completed; idle1L4/300s,$0 billed so far. Unapplied quality trial prepared;20 offline tests PASS. Usable credits/$0spend-cap confirmation and one-test execution authorization remain required. Quality still FAILED. modal-quality-trial-proposal.json
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Existing owner-approved source rows and external Modal outputs observed; isolated sequential journey and authorized post-fix budgeted inference remain unverified; no agent GPU submission
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| T09.5 attached Modal/HF MP4s fully decode and play actual bytes in controlled deployed desktop/Pixel7 UI. Modal quality rejected; strict action/identity, owner-storage journey and T10 remain unverified. attached-motion-quality-diagnosis.json
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
@@ -2054,3 +2054,72 @@ Verification: BLOCKED on exact device approval, then live-code/config inference
 and separately authorized budgeted proof. No quality fix or MVP-ready claim.
 Next task: Retrieve exact pending batch result once approved, then scope the
 smallest confirmed correction. Never submit a GPU test from this approval.
+
+### T09.5b — Completed worker read; prepare a bounded quality trial
+
+TASK ID: T09 (sole IN_PROGRESS item).
+Objective: Turn the attached poor-quality report into a concrete, reviewable
+existing-model trial with offline validation before any GPU permission request.
+Initial status: BLOCKED on device approval; batchfe43298d now completed/exit0.
+Confirmed evidence: live file-based moduleworker, single_motion_proof,1L4,
+timeout300s,min0/max1/buffer0/scaledown2; serialized code bytes0, image
+im-EtbjAppBBFCc9vnylKk0fW and3 mount references. Exact mounted source not
+exported by this read, so live image preprocessing/sampler parity stays UNKNOWN.
+Provider rate L4$0.80/hour, CPU$0.04730/core-hour. Neither remaining credits
+nor live workspace spend cap is exposed; billed$0.00 is not a future free-work
+authorization. Existing-model20step/guidance3 is the committed configuration,
+not independently extracted deployed source.
+Testable hypothesis: same pinned non-distilledLTX0.9.5 with documented50step/
+guidance5 settings and existing aspect-preserving source preparation may improve
+quality. No causal claim or stronger creative direction is approved.
+Required files: unapplied patch for providers/modal_motion/contracts.py and
+worker.py, temporary offline validation copy; checklist/log/evidence only.
+No application source/default/settings/model change or live deployment occurs
+during preparation. Preserve original49frames/24fps,1L4,max1,retries0,300s
+execution timeout and explicit GPU authorization gate.
+Expected: a reviewable trial package, not an unverified production quality fix.
+Verification: existing worker contract/media tests on temporary patched copy,
+compile/dry-run without GPU, inspect exact diff and fixed resource bounds.
+Only a separately authorized credit-bounded inference can verify improvement.
+Commit: base7da027ce00e6eb6f4816cea0d3c56c528df221d4; app source0b9eb69/v66
+unchanged. Next: finish offline trial package; record exact remaining budget/
+execution blocker before any deployment or inference.
+
+### T09.5b final record — trial prepared; financial execution gate BLOCKED
+
+TASK ID: T09.5b; main T09 BLOCKED, no item IN_PROGRESS.
+Objective: Prepare a concrete existing-model quality comparison before asking
+for permission to consume GPU credits.
+Initial status: BLOCKED on phone approval, now resolved.
+Evidence inspected: definition batchfe43298d completed/exit0. Live function
+moduleworker, file-based definition_type2,serialized_bytes0,image
+im-EtbjAppBBFCc9vnylKk0fW;3 mounted-code references.1L4,300s execution,min0/
+max1/buffer0/scaledown2. Source files are not returned, so no deployed-source
+equality or confirmed resize-operation claim. Rate L4$0.80/hour, CPU$0.04730/
+core-hour. Earlier$0billed is historical usage, not remaining-credit proof.
+Confirmed blocker: current usable credits and$0paid-spend cap need owner
+confirmation; one GPU-trial execution authorization has not been granted.
+Read-only command approvals do not cover GPU inference.
+Files changed: unapplied modal-quality-trial-unapplied.patch;
+modal-quality-trial-proposal.json; control-plane/attached diagnosis,
+checklist/PROJECT_LOG/release/evidence/manifest. No app source or deployed
+default changes. Temporary candidate copy changes only20->50steps and3->5
+guidance, retaining original49frames/24fps,model+revision,resource/ack guards,
+source containment and no creative changes. This is a quality hypothesis.
+Commit: application source remains0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c;
+preparation based on7da027ce00e6eb6f4816cea0d3c56c528df221d4.
+Tests performed:20/20 existing contract/media tests PASS on the temporary
+candidate; Python compilation PASS. Initial test command could not chdir into
+a not-yet-created temporary directory and did not execute; directory preparation
+was then separated before one successful run. No app tests invalidated;455 CI
+reused. No model weights, deployment, inference, DB write or creative approval.
+Verification: PASS for read-only metadata and reviewable offline trial package;
+BLOCKED for real quality improvement, spending/credit verification and execution.
+A300s L4 execution segment costs$0.066667 GPU only; startup/CPU/RAM/build/
+transfer are additional and unmeasured. The execution timeout is not a total
+monetary cap. Proposed test is one isolated2s artifact, no retries, no new
+persistent service or production-worker redeploy, preserving previous assets.
+Next task: Owner confirms usable credits/$0hard paid-spend cap and explicitly
+authorizes one credits-only test; only then materialize the reviewed candidate
+and single-attempt receipt. No further GPU action is authorized by chat Ok
+for the preceding read-only request. Full sponsor gates remain BLOCKED.
