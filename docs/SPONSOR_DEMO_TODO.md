@@ -55,7 +55,7 @@ T05| Verify World Reveal, editing, and approval| T04| BLOCKED| T04; deployed Wor
 T06| Verify Style Bible, characters, environments, and approvals| T05| BLOCKED| T05; explicit sponsor creative approvals required
 T07| Verify story, storyboard, and approval| T06| BLOCKED| T06
 T08| Verify real scene-image generation and approval| T07| BLOCKED| T07; no approved isolated sponsor scene
-T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| T09.4 Modal primary/default and explicit HF fallback deployed; controlled desktop/Pixel7 policy checks and CI440 PASS. Mandatory financial/runtime and post-fix motion proofs remain unverified. modal-primary-release.json
+T09| Verify Modal configuration, authentication, and GPU spending safeguards| T01| BLOCKED| Modal primary/HF fallback retained; creator reports poor motion quality. T09.5 independent newest-clip review blocked by expired links. Financial/runtime/proof gates remain. modal-quality-followup.json
 T10| Verify short real AI-motion generation from an approved scene| T08, T09| BLOCKED| Existing owner-approved source rows and external Modal outputs observed; isolated sequential journey and authorized post-fix budgeted inference remain unverified; no agent GPU submission
 T11| Verify generated MP4 integrity, visible subject motion, and frontend playback| T10| BLOCKED| Two existing external Modal MP4s decode49frames/2.041667s under T09.3; post-fix directed subject motion, source consistency and BragoraForge playback remain unverified
 T12| Verify clear full-length GPU sponsorship stopping point| T11| BLOCKED| No verified short proof or observed resource exhaustion; do not fabricate a funding stop
@@ -1847,3 +1847,61 @@ BLOCKED by mandatory T04–T12 and complete sequential sponsor acceptance.
 Next task: External artist/financial/runtime gates, followed by a separately
 authorized bounded short-motion proof. T14 remains BLOCKED. No safe independent
 checklist task remains executable without those dependencies.
+
+### T09.5 — User-reported poor Modal motion quality
+
+TASK ID: T09 (sole IN_PROGRESS item).
+Objective: Inspect previously unreviewed saved Modal outputs after the prompt
+repair and compare source identity/motion with approved instructions; isolate
+a confirmed implementation cause before any code/settings change.
+Initial status: FAILED from creator quality report; exact cause UNKNOWN.
+Evidence inspected: Latest read-only owner-project metadata shows completed
+Modal jobs d74245c1-fa8b-4be0-b632-31daace032f2 (01:56UTC) and
+93833f52-1f9e-4560-b5e4-162769b76098 (01:52UTC),49frames/2.041667s,
+subject_motion_verified=false. Older two outputs already inspected under T09.3
+will not be decoded again. A completed MP4 is not creative-quality acceptance.
+Confirmed blocker/hypothesis: Need direct inspection of these existing outputs,
+matching source and exact frozen/live model parameters before attributing poor
+quality to model settings, prompt, source mismatch or transport.
+Required files: existing worker/adapter and job metadata (read-only), private
+existing media, checklist/log/sanitized evidence. No application source change
+is proposed without a confirmed cause and recorded files/test. No model switch,
+worker deployment, parameter increases, approval or regeneration authorized.
+Commit: basec83547e13a6f3a38b44711650942ad172fbcc9d5; latest releasev66.
+Verification: bounded read-only existing-media diagnosis; no GPU/provider
+submission, no inference retry or project/approved-asset mutation.
+Next task: Complete T09.5 diagnosis or precise access/resource blocker; T10/T11
+remain dependent on separately authorized proof and artist acceptance.
+
+### T09.5 final record — poor-quality report retained; diagnosis BLOCKED
+
+TASK ID: T09.5 under T09 (no main item IN_PROGRESS).
+Objective: Diagnose the actual newest poor-quality output without another GPU
+attempt or speculative model/parameter changes.
+Initial status: FAILED for creator-reported motion quality; root cause UNKNOWN.
+Evidence inspected: Latest Modal job metadata; live generationv66 bundle
+c2362dfab4a95b54cbf56ce136be7c7494de89f7e4bcd5d9e4e81ebf1b43776f;
+committed worker/contracts/media preparation; prior T09.3 evidence reused.
+Confirmed blocker: Both previously unreviewed latest MP4 downloads return400
+InvalidJWT/exp timestamp check failed, one read-only attempt per asset. Their
+creator-scoped current media access is unavailable to the isolated QA login.
+No owner impersonation or auth bypass is justified. Actual MP4/source is needed
+for visual diagnosis; metadata cannot establish identity drift or distortion.
+Latest jobs01:52/01:56UTC occurred after prompt repair recorded23:24UTC. The
+current controller retains movement-first order, so do not claim the earlier
+truncation fix solved this new quality complaint. Approved direction asks for
+minimal movement; that is a possible contributor to weak movement, not proof
+of the cause of poor quality. Committed49frames/20steps/guidance3/704x480
+are confirmed source settings; exact deployed worker-source parity UNKNOWN.
+Files changed: checklist, PROJECT_LOG.md, modal-quality-followup.json, manifest.
+Commit: implementation remains0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c;
+documentation cycle based onc83547e13a6f3a38b44711650942ad172fbcc9d5.
+Tests performed: Read-only DB/function inspection succeeded; two storage GETs
+FAILED with expired-link400. No application changes, so prior455/455 CI is
+reused for unchanged source; no new test/build or visual-quality PASS claimed.
+Verification: BLOCKED for independent new-output diagnosis; creator quality
+acceptance FAILED. No new GPU/job/retry/deployment, provider switch, spending
+change, creative approval or customer-asset mutation. Modal remains primary,
+Hugging Face explicit fallback. All prior mandatory sponsor gates remain.
+Next task: Obtain actual problematic MP4 and source through creator-authorized
+media access or direct attachment, then inspect without GPU regeneration.

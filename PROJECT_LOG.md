@@ -1631,3 +1631,22 @@ enabled, historical400 visible, no horizontal overflow. Provider submissions,
 assembly clicks, DB writes and creative approvals:0. No CSS change warranted.
 Full mandatory sponsor journey remains BLOCKED, no new inference/render or
 physical-Android/customer playback claim. PR141 remains draft/unmerged.
+
+
+## 2026-10-23 — T09.5: creator rejects Modal motion quality
+
+Creator describes Modal motion as poor. Latest saved jobsd74245c1-fa8b-4be0-
+b632-31daace032f2 and93833f52-1f9e-4560-b5e4-162769b76098 are after the
+earlier movement-priority repair; current generationv66 retains that correction.
+Do not equate completed49frame/2.04s files with acceptable subject animation.
+One read-only download per newest MP4 returns400 InvalidJWT/expired. Actual
+frame/source comparison is BLOCKED pending creator-scoped media access or
+attachment; isolated QA login cannot access this separate owner's project.
+No credential extraction, owner impersonation, authorization bypass or inference
+retry. Older inspected MP4/tokenizer evidence reused without repeating checks.
+Minimal approved movement may contribute to weak action; exact quality cause
+remains UNKNOWN. No speculative sampler/model/worker changes, new GPU charge,
+provider switch, creative approval or customer mutation. Source/build/CI remain
+unchanged at0b9eb696cf7be3c109a513cdbedc8bd4d4fe067c; earlier455/455 applies.
+Evidence: modal-quality-followup.json. T09.5 diagnosis and sponsor gates BLOCKED;
+creator quality acceptance FAILED. Next dependency is the actual MP4/source.
