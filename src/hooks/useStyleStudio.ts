@@ -73,7 +73,12 @@ function materializeWorldDrafts(world: WorldReport, projectId: string, styleBibl
     : {};
   const continuityText = formatCreativeLines(world.continuity_rules).join("; ");
   const immutableLines = formatCreativeLines(world.immutable_continuity);
-  const figureIdentity = immutableLines.find((line) => /\b(?:central figure|main character|protagonist)\b/i.test(line)) ?? "";
+  const figureIdentity = immutableLines.find((line) =>
+    /\b(?:central figure|main character|protagonist)\b/i.test(line) ||
+    // Some confirmed Worlds identify the cast as a subject in fact/detail rows.
+    // Require an affirmative human identity; scenery or absence is not a cast.
+    /\bsubject\s+(?:is|:)\s+(?:(?:a|an|the|lone|single|male|female|young|older|adult)\s+)*(?:person|human|man|woman|boy|girl|figure|character)\b/i.test(line)
+  ) ?? "";
 
   const clothing = typeof immutable.central_figure_clothing === "string" ? immutable.central_figure_clothing : "";
   const keyProp = typeof immutable.key_prop === "string" ? immutable.key_prop : "";
