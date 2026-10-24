@@ -58,6 +58,13 @@ export default function AuthPage({ onNavigate }: Props) {
               ? "Sign in to access your projects, locked creative worlds, and visual briefs."
               : "Create a BeatVision account to save projects and direct your visual music videos."}
           </p>
+          <p aria-label="Prototype scope">
+            BragoraForge (formerly BeatVision) is a development prototype.
+            Start with your own audio, review the song interpretation, and approve
+            each creative stage before continuing. Short motion generation depends
+            on available provider resources; full-song video delivery and singing
+            lip sync are still in development.
+          </p>
 
           <form onSubmit={submit}>
             <label>

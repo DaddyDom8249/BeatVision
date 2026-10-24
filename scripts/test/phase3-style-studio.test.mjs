@@ -270,6 +270,23 @@ test("another-go World produces persisted central figure and enriched Dim Apartm
     "motifs do not justify inventing a person");
   assert.equal(compile(sceneryOnly, "scenery", "bible").environments.length, 1);
 
+  // Actual Bragora World shape: a literal human subject in a fact/detail record.
+  const subjectWorld = { ...sceneryOnly, immutable_continuity: [
+    { fact: "subject is a lone male figure", detail: "no other characters unless explicitly introduced" },
+    { fact: "setting includes dim apartment interior", detail: "flickering candle" },
+  ] };
+  const subject = compile(subjectWorld, "subject-project", "subject-bible").characters;
+  assert.equal(subject.length, 1, "an explicitly identified human subject must seed a reviewable draft");
+  assert.equal(subject[0].status, "draft");
+  assert.match(subject[0].sheet.identity, /subject is a lone male figure/i);
+  assert.equal(subject[0].sheet.appearance, "");
+  assert.equal(subject[0].sheet.wardrobe, "");
+  assert.equal(subject[0].sheet.behavior, "");
+  for (const fact of ["subject is a rain-soaked street", "no human subject is present", "subject is not a person"]) {
+    assert.equal(compile({ ...sceneryOnly, immutable_continuity: [{ fact }] }, "scenery", "bible").characters.length, 0,
+      "scenery, absence and negation must not manufacture a cast: " + fact);
+  }
+
   // Existing/new Bible transition must repopulate without a reload or manual Save.
   assert.match(hook, /if \(!styleBible\?\.id\) return;\s*void load\(\)\.catch/s);
 });
