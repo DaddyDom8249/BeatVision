@@ -29,6 +29,17 @@ def valid_request(**overrides):
 
 
 class ContractTests(unittest.TestCase):
+    def test_frame_count_is_bounded_aligned_and_legacy_default(self):
+        self.assertEqual(valid_request().frames, 49)
+        for frames in (49, 57, 121, 161):
+            request = valid_request(frames=frames)
+            self.assertEqual(validate_request(request, PNG).frames, frames)
+            blob = b'\x00\x00\x00\x18ftypisom' + b'moov' + b'mdat' + b'0' * 1030
+            self.assertEqual(manifest(request, blob, model='ltx', revision='test')['frames_requested'], frames)
+        for frames in (None, True, '121', 48, 50, 169, 1, 121.0):
+            with self.subTest(frames=frames), self.assertRaisesRegex(MotionContractError, 'FRAME_COUNT_INVALID'):
+                validate_request(valid_request(frames=frames), PNG)
+
     def test_valid_image_and_ids(self):
         self.assertEqual(validate_request(valid_request(), PNG), valid_request())
 

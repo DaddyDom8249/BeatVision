@@ -1,9 +1,9 @@
-"""Single-proof Modal LTX image-to-video worker (NOT connected to production).
+"""Bounded Modal LTX image-to-video worker.
 
 The GPU function remains private. A proxy-authenticated HTTP bridge submits and
 polls durable calls from the server-side generation controller. No browser receives
 Modal credentials, signed storage URLs, API keys, or private Supabase credentials.
-All image bytes originate from a locally supplied file and are bounded.
+Source image bytes come from the authenticated backend or a local CLI file and are bounded.
 
 SAFETY: Deploying or running may consume chargeable Modal compute. NO invocation
 is made during import, code inspection, compile, tests, or dry-run.
@@ -57,7 +57,7 @@ web_image = modal.Image.debian_slim(python_version='3.11').pip_install(
     name='single_motion_proof',
 )
 def single_motion_proof(payload: dict, image_bytes: bytes, ack: str) -> dict:
-    """One bounded 49-frame model inference; no external public endpoint.
+    """One bounded 49–161-frame model inference; no external public endpoint.
 
     The caller must already have authenticated through Modal and must separately
     establish source ownership/approval from the application database. This
@@ -109,7 +109,7 @@ def single_motion_proof(payload: dict, image_bytes: bytes, ack: str) -> dict:
     output = pipeline(
         image=source, prompt=prompt,
         negative_prompt='worst quality, jittery, distorted, static image',
-        width=WIDTH, height=HEIGHT, num_frames=FRAMES,
+        width=WIDTH, height=HEIGHT, num_frames=request.frames,
         num_inference_steps=STEPS, guidance_scale=3.0,
         generator=generator,
     ).frames[0]
@@ -213,6 +213,7 @@ def main(
     output_dir: str = './modal-motion-proof',
     acknowledgment: str = '',
     execute: bool = False,
+    frames: int = FRAMES,
 ):
     """Dry-run by default; --execute additionally requires local env + full ack.
 
@@ -228,7 +229,7 @@ def main(
         source_image_id=source_image_id,
         generation_job_id=generation_job_id,
         image_sha256=hashlib.sha256(image_bytes).hexdigest(),
-        prompt=prompt, seed=seed,
+        prompt=prompt, seed=seed, frames=frames,
     )
     validate_request(request, image_bytes)
     if not execute:

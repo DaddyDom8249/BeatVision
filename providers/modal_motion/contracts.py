@@ -22,7 +22,8 @@ MAX_PROMPT_CHARS = 1600
 MAX_PROMPT_TOKENS = 128
 WIDTH = 704
 HEIGHT = 480
-FRAMES = 49  # ~2 seconds at 24 fps; this is a proof clip, not a full-scene output.
+FRAMES = 49  # Legacy/default proof length; longer requests are explicit.
+MAX_FRAMES = 161  # Bounded LTX 0.9.5 duration trial; not a full-song promise.
 FPS = 24
 STEPS = 20
 SEED_MIN = 1
@@ -44,6 +45,7 @@ class MotionRequest:
     image_sha256: str
     prompt: str
     seed: int
+    frames: int = FRAMES
 
 
 def budget_ltx_prompt(prompt: str, tokenizer, *, max_tokens: int = MAX_PROMPT_TOKENS,
@@ -137,6 +139,8 @@ def validate_request(request: MotionRequest, image: bytes) -> MotionRequest:
         raise MotionContractError('PROMPT_INVALID')
     if not isinstance(request.seed, int) or isinstance(request.seed, bool) or not SEED_MIN <= request.seed <= SEED_MAX:
         raise MotionContractError('SEED_INVALID')
+    if type(request.frames) is not int or not FRAMES <= request.frames <= MAX_FRAMES or (request.frames - 1) % 8:
+        raise MotionContractError('FRAME_COUNT_INVALID')
     return request
 
 
@@ -162,7 +166,7 @@ def manifest(request: MotionRequest, output: bytes, *, model: str, revision: str
         'provider': 'modal',
         'model': model,
         'revision': revision,
-        'frames_requested': FRAMES,
+        'frames_requested': request.frames,
         'fps_requested': FPS,
         'seed': request.seed,
         'creator_approved': False,
