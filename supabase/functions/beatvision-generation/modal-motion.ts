@@ -8,6 +8,7 @@ export const MODAL_MOTION = Object.freeze({
   model: "Lightricks/LTX-Video-0.9.5",
   revision: "e58e28c39631af4d1468ee57a853764e11c1d37e",
   frames: 49,
+  maxFrames: 161,
   fps: 24,
   maxBytes: 8 * 1024 * 1024,
 });
@@ -18,6 +19,35 @@ const readEnv: EnvReader = (key) => String(Deno.env.get(key) || "").trim();
 export class ModalMotionError extends Error {
   code: string;
   constructor(code: string) { super(code); this.code = code; }
+}
+// Legacy snapshots omit frames. Reject malformed explicit values instead of coercing.
+export function assertModalFrameCount(value: unknown): number {
+  const frames = value === undefined ? MODAL_MOTION.frames : value;
+  if (typeof frames !== "number" || !Number.isInteger(frames) || frames < MODAL_MOTION.frames ||
+      frames > MODAL_MOTION.maxFrames || (frames - 1) % 8 !== 0)
+    throw new ModalMotionError("MODAL_FRAME_COUNT_INVALID");
+  return frames;
+}
+function modalFrameLimit(env: EnvReader): number {
+  // Increasing this operator cap requires a newly verified duration budget and worker.
+  // Missing configuration preserves all current two-second behavior.
+  const raw = env("BRAGORA_MODAL_MAX_FRAMES");
+  if (!raw) return MODAL_MOTION.frames;
+  if (!/^\d+$/.test(raw)) throw new ModalMotionError("MODAL_FRAME_LIMIT_INVALID");
+  let cap: number;
+  try { cap = assertModalFrameCount(Number(raw)); }
+  catch { throw new ModalMotionError("MODAL_FRAME_LIMIT_INVALID"); }
+  return cap;
+}
+export function modalFramesForScene(scene: Record<string, unknown>, env: EnvReader = readEnv): number {
+  const cap = modalFrameLimit(env);
+  if (cap === MODAL_MOTION.frames) return cap;
+  const start = scene.start_time, end = scene.end_time;
+  if (typeof start !== "number" || typeof end !== "number" || !Number.isFinite(start) ||
+      !Number.isFinite(end) || start < 0 || end <= start)
+    throw new ModalMotionError("MODAL_SCENE_DURATION_INVALID");
+  const needed = Math.ceil(((end - start) * MODAL_MOTION.fps - 1) / 8) * 8 + 1;
+  return Math.min(cap, Math.max(MODAL_MOTION.frames, needed));
 }
 function requireCredentials(env: EnvReader) {
   if (!env("MODAL_TOKEN_ID") || !env("MODAL_TOKEN_SECRET"))
@@ -130,6 +160,8 @@ export async function submitModalMotion(
   requester: Fetcher = fetch,
 ): Promise<{status: string; job_id: string; provider: string; model: string; source_sha256: string}> {
   assertModalSubmissionEnabled(env);
+  const frames = assertModalFrameCount(payload.frames);
+  if (frames > modalFrameLimit(env)) throw new ModalMotionError("MODAL_DURATION_NOT_ENABLED");
   checkedBytes(source);
   for (const id of ["project_id","scene_id","source_image_id","generation_job_id"])
     if (!uuid(payload[id])) throw new ModalMotionError("MODAL_REQUEST_ID_INVALID");
