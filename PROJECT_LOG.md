@@ -2032,3 +2032,18 @@ rendered-output/quality/credit sufficiency remains UNVERIFIED. At least48 actual
 short clips are required for240s (more when retaining musical section boundaries).
 Adding scene rows does not demonstrate continuous subject/identity quality or
 fund the GPU work. Original approved work remains available in plan history.
+
+Release verified: published PR145/source1299152b0b63042fabddbf73a7412c432395a37c,
+exact remote/local tree99e30a161a1d6030be0b5fe6d8298ccecae32c46 (fetch/diff exit0).
+Source Actions40214727819 completed SUCCESS. Vercel production deployment
+dpl_AkRurqF6vq3TCifLkEfKH6PKPB4P READY at that exact source; independent alias
+lookup assigns beat-vision-theta.vercel.app to it. Public HTML/JS fetch verifies
+the shipped button, new RPC call and full-song explanation. This proves released
+code, not an authenticated owner click or generated final video. Canonical
+anonymous auth boundary and existing generationv68/Modal worker unchanged.
+Post-ledger-rename DB regressions8/8 pass, exit0. Source bytes are unchanged from
+the full475-test pass. Existing user plan read-only:264.95997916666664s,8approved
+scenes, first0/last264.95997916666664, object direction; splitting would produce
+57shots. No customer revision was created or approved automatically. Main readback
+still3e26d8556e62b40e9f20823cb253854ae5efcec6. Full footage/quality/credit acceptance
+remains unverified; use the new explicit planning action to continue.
