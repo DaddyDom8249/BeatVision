@@ -1963,3 +1963,13 @@ UNVERIFIED: post-fix render quality, intended anatomy/identity and sponsor accep
 No GPU request, paid call, schema/RLS/secret change, creative approval, data rewrite,
 main merge or automatic retry. A fresh creator-requested render is still required
 to evaluate quality; do not call a prompt repair a verified visual-quality fix.
+
+Publication/readback: draft PR144 head87718b2d983c3855960696eab5dfe3ff0ddf1d70,
+target feat/modal-duration-20261024. Remote/local source trees both
+5f074007a11a94f814ff63c22cf97643f5061577; git fetch/diff exit0. Live anonymous
+modal_capability POST returned401, no inference. Exact-head Actions40213360424
+and40213360512 started; results pending at this entry, not counted as passes.
+First GitHub tree upload exposed stdout truncation of the long project log;
+reconstructed bounded chunks and verified all four blob SHAs plus tree before
+publishing. First branch-update rejected nonexistent ref422 (no ref changed);
+created branch explicitly, then PR creation succeeded. No main or force push.
