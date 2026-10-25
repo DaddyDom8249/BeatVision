@@ -41,7 +41,7 @@ function blockedPlan(error) {
   return { hook: load(hookPath).useVisualPlan("project"), state, calls };
 }
 
-function approvedPlanRevision() {
+function approvedPlanRevision(maxShotSeconds) {
   const state = [null, null, null, { id: "approved-plan", status: "approved" }, null, [], false, false, null, []];
   let cursor = 0;
   const react = {
@@ -60,8 +60,9 @@ function approvedPlanRevision() {
   };
   const supabase = {
     async rpc(name, args) {
-      assert.equal(name, "create_visual_plan_revision");
+      assert.equal(name, maxShotSeconds === undefined ? "create_visual_plan_revision" : "create_renderable_shot_revision");
       assert.equal(args.p_plan_id, "approved-plan");
+      if (maxShotSeconds !== undefined) assert.equal(args.p_max_shot_seconds, maxShotSeconds);
       return { data: { id: "draft-plan", status: "draft" }, error: null };
     },
     from(table) {
@@ -110,4 +111,10 @@ test("creating a revision selects the returned draft before reloading", async ()
   const { hook, window } = approvedPlanRevision();
   await assert.rejects(hook.revisePlan(), /LOAD_REACHED_WITH_NEW_REVISION_SELECTED/);
   assert.equal(window.location.search, "?plan=draft-plan");
+});
+
+test("preparing full-song shots calls the atomic owner RPC and selects its returned draft", async () => {
+  const {hook,window}=approvedPlanRevision(5);
+  await assert.rejects(hook.revisePlan(5),/LOAD_REACHED_WITH_NEW_REVISION_SELECTED/);
+  assert.equal(window.location.search,'?plan=draft-plan');
 });

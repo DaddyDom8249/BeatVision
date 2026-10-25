@@ -1973,3 +1973,62 @@ First GitHub tree upload exposed stdout truncation of the long project log;
 reconstructed bounded chunks and verified all four blob SHAs plus tree before
 publishing. First branch-update rejected nonexistent ref422 (no ref changed);
 created branch explicitly, then PR creation succeeded. No main or force push.
+
+## 2026-10-25 — Full-song timeline with short renderable shots
+
+User requests at least four-minute output and authorizes more scenes. Existing
+plans use song sections as scenes, often much longer than the five-second Modal
+cap. Existing assembly already demands one approved, measured clip covering each
+scene; extra alternate clips do not fill a long scene. Preserve this integrity gate.
+
+Implemented owner-checked atomic create_renderable_shot_revision RPC. It copies
+the latest saved plan into a new unapproved revision, partitions each original
+scene into balanced shots of at most five seconds, retains exact song endpoints,
+section boundaries/directions/lyrics/continuity and original Vision Lock, and
+never updates/deletes old scenes or media. Draft and approved source plans work.
+Project/source/scene row locks serialize requests; repeated identical requests
+reuse the child, conflicting existing revisions reject. Null/invalid/unbounded
+caps, gaps/overlaps/bad lineage/numbering and more than500shots fail atomically.
+No media is cloned or labelled approved, no jobs are enqueued by planning.
+
+Visual Plan has Create 5-second shot revision for a current plan with long scenes.
+It tells the creator to save edits, review/lock the new draft and generate/approve
+each shot image and motion. Hook calls the RPC and selects its returned revision
+before reload. Existing edit/approval/history/navigation controls are preserved.
+Fresh plan creation remains the existing World/Style approval-gated builder.
+
+Tests: initial missing-RPC regression failed; first implementation7checks had one
+fixture failure because the PGlite helper lacked approve_visual_plan. Loaded the
+actual canonical approval function, then all7 passed; added500-shot boundary for
+8 DB regressions.240s/two sections produce49shots, each renderable within121frames;
+264.95997916666664s draft retains its exact endpoint and saved direction. Source
+scene rows remain byte-equivalent; owner isolation, anon execute denial, revoked
+direct INSERT, cap/idempotency and rollback checks pass. Real assembly controller
+fixtures carry48 measured121-frame clips across240s, and reject one short clip.
+These are synthetic offline contract tests, not generated four-minute footage.
+
+Final npm test475total/474pass/0fail/1existing local-browser-layout skip, exit0.
+Focused UI/hook/assembly28/28 exit0; build, audit, diffcheck exit0. Prior baseline
+already passed463tests; original main3e26d85 is not merged. Exact frontend diff
+against servingfb9f5e is only the three intended UI/hook/error files. Reused exactly
+Jules5991285972289398122; reported IN_PROGRESS with unreadable activities. No
+uninspected Jules result accepted.
+
+Migration CLI created20261025165429 before automatic approval review blocked its
+unexpected PostHog analytics egress (payload not established). Did not retry or
+bypass analytics. Used already-created file and connected migration interface.
+Production additive function migration succeeded at ledger20261025170119; renamed
+the file/test reference to the actual returned ledger version. No live plan,
+scene, asset or job was created by deployment. Readback function body matches
+tested SQL exactly, fixed public/pg_temp search_path, anon EXECUTE false and
+authenticated EXECUTE true. Security advisor adds only the expected signed-in
+SECURITY DEFINER notice for this explicitly owner-checked insertion RPC; existing
+anon enqueue notice, service-only RLS notices and password advisory unchanged.
+
+Frontend release and authenticated owner click pending at this checkpoint.
+No GPU/image generation, creative approval, paid/unknown provider, budget-setting
+change, source-media replacement, RLS weakening or main merge. Four-minute
+rendered-output/quality/credit sufficiency remains UNVERIFIED. At least48 actual
+short clips are required for240s (more when retaining musical section boundaries).
+Adding scene rows does not demonstrate continuous subject/identity quality or
+fund the GPU work. Original approved work remains available in plan history.

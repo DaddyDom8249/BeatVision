@@ -120,7 +120,8 @@ for (const approved of [false, true]) {
   test("Visual Plan retains " + (approved ? "approved revision controls" : "editable scene timing"), async (t) => {
     const f = await fixture(t);
     let revisions = 0;
-    const plan = { id: "saved-plan", title: "Fixture plan", revision_number: 2, status: approved ? "approved" : "draft" };
+    const shotRevisions = [];
+    const plan = { id: "saved-plan", title: "Fixture plan", revision_number: 2, duration_seconds: 240, status: approved ? "approved" : "draft" };
     const Page = f.compile("src/pages/VisualPlanPage.tsx", {
       "../hooks/useVisualPlan": { useVisualPlan: () => ({
         world: { status: "completed", confirmed_at: "fixture" },
@@ -132,7 +133,7 @@ for (const approved of [false, true]) {
           camera_direction: "Still", movement_direction: "Slow", transition_style: "Cut", continuity_notes: "Same room",
           status: approved ? "approved" : "draft" }],
         loading: false, working: false, error: null,
-        revisePlan: async () => { revisions++; },
+        revisePlan: async (cap) => { if (cap === undefined) revisions++; else shotRevisions.push(cap); },
       }) },
     });
     await f.render(Page, { projectId: "project-1" });
@@ -141,6 +142,9 @@ for (const approved of [false, true]) {
     assert.deepEqual(times.map(input => input.value), ["0", "60"]);
     assert.ok(times.every(input => input.disabled === approved));
     assert.equal(f.document.querySelectorAll('[aria-label="Plan revisions"] a').length, 2);
+    const prepare = [...f.document.querySelectorAll('button')].find(button => button.textContent === 'Create 5-second shot revision');
+    assert.ok(prepare);assert.match(f.document.body.textContent, /full 04:00 song/);
+    await f.click(prepare);assert.deepEqual(shotRevisions,[5]);
     if (approved) {
       await f.click([...f.document.querySelectorAll("button")].find(button => button.textContent === "Create Editable Revision"));
       assert.equal(revisions, 1);

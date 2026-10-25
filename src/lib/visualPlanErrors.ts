@@ -1,6 +1,14 @@
 import { getCreativeErrorMessage } from "./formatCreativeText";
 
 const approvalMessages: Record<string, string> = {
+  VISUAL_PLAN_REVISION_ALREADY_EXISTS:
+    "A revision already exists. Open the newest revision to prepare its shots.",
+  VISUAL_PLAN_REVISE_CURRENT_REVISION:
+    "Open the newest plan revision before preparing shots.",
+  VISUAL_PLAN_TIMELINE_INVALID:
+    "Fix scene gaps, overlaps or song coverage before preparing or locking the plan.",
+  VISUAL_PLAN_TOO_MANY_SCENES:
+    "This plan exceeds the 500-shot limit. Use longer shots within the supported render limit.",
   VISION_LOCK_ENVIRONMENTS_NOT_APPROVED:
     "Approve the remaining environment drafts in Style Bible before building the Visual Plan.",
   VISION_LOCK_CHARACTERS_NOT_APPROVED:

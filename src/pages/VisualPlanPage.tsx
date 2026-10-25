@@ -140,6 +140,19 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
             )}
           </section>
 
+          {plan.id === planHistory[0]?.id && scenes.some(scene => scene.end_time - scene.start_time > 5) && (
+            <section className="style-section">
+              <div>
+                <h2>Prepare full-song motion</h2>
+                <p>Cover the full {formatTime(Number(plan.duration_seconds))} song with shots up to 5 seconds each. This creates a new draft using saved directions; save your edits first.</p>
+                <p>Review and lock the new plan, then generate and approve an image and motion clip for each shot. Generation uses your available credits. Assembly requires real footage for every shot.</p>
+              </div>
+              <button className="secondary-button" disabled={working} onClick={() => void revisePlan(5).catch(() => undefined)}>
+                {working ? "Preparing shots…" : "Create 5-second shot revision"}
+              </button>
+            </section>
+          )}
+
           <section>
             <h2>Timeline</h2>
             {scenes.map((scene) => (

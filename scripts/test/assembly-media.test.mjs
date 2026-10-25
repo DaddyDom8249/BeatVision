@@ -24,7 +24,7 @@ function fixture() {
       return { select() { return this; }, eq(k,v) { filters[k]=v; return this; }, in(k,v) { filters[k]=v; return this; },
         then(resolve) {
           queries.push({table,filters});
-          return Promise.resolve({data: table === 'motion_clip_assets' ? [asset] : [motionJob], error: null}).then(resolve);
+          return Promise.resolve({data: table === 'motion_clip_assets' ? (state.assets || [asset]) : (state.motionJobs || [motionJob]), error: null}).then(resolve);
         } };
     },
     storage: { from(bucket) { return { async createSignedUrl(path, ttl) {
@@ -89,4 +89,37 @@ test('failed signing cannot fall back to the expired URL', async () => {
 test('duplicate or gapped storyboard scenes are rejected without provider calls', async () => {
   const f=fixture(); f.job.input_snapshot.scenes[0].start_time=1;
   await check(f,r=>assert.rejects(r.bridgePayload(f.db,f.job),/ASSEMBLY_TIMELINE_INVALID/));
+});
+
+function fourMinuteFixture() {
+  const f=fixture();
+  f.job.input_snapshot.plan.duration_seconds=240;
+  f.job.input_snapshot.vision_snapshot.song.analysis.duration_seconds=240;
+  f.job.input_snapshot.scenes=[];f.job.input_snapshot.motion_clips=[];
+  f.state.assets=[];f.state.motionJobs=[];
+  for(let i=1;i<=48;i++){
+    f.job.input_snapshot.scenes.push({id:'scene-'+i,scene_number:i,start_time:(i-1)*5,end_time:i*5});
+    f.job.input_snapshot.motion_clips.push({asset_id:'clip-'+i,scene:i,generation_type:'GENERATIVE_VIDEO',video_url:'https://expired.test/clip.mp4'});
+    f.state.assets.push({...f.asset,id:'clip-'+i,scene_id:'scene-'+i,generation_job_id:'motion-'+i});
+    const job=structuredClone(f.motionJob);job.id='motion-'+i;job.visual_plan_scene_id='scene-'+i;
+    job.output.arena_status_response.result={storage_path:`project-1/scene-motion/plan-1/scene-${i}/motion-${i}.mp4`,verification:{container_verified:true,video_duration_seconds:121/24}};
+    f.state.motionJobs.push(job);
+  }
+  return f;
+}
+
+test('four-minute assembly carries all 48 measured short clips and the complete timeline',async()=>{
+  const f=fourMinuteFixture(),before=structuredClone(f.job);
+  await check(f,async r=>{
+    const payload=await r.bridgePayload(f.db,f.job);
+    assert.equal(payload.motion.clips.length,48);
+    assert.equal(f.signs.filter(s=>s.bucket==='visual-assets').length,48);
+    assert.deepEqual(f.job,before);
+  });
+});
+
+test('four-minute assembly still refuses one insufficient clip',async()=>{
+  const f=fourMinuteFixture();
+  f.state.motionJobs[20].output.arena_status_response.result.verification.video_duration_seconds=2;
+  await check(f,r=>assert.rejects(r.bridgePayload(f.db,f.job),/ASSEMBLY_CLIP_TOO_SHORT.*scene=21/));
 });
