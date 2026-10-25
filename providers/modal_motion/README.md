@@ -67,3 +67,7 @@ The owner authorized activation after worker deployment and supplied the current
 The exact patch from live v66 is recorded in releases/generation-v66-five-second.patch; it is not permission to replace live backend source from this branch blindly. Deployment readback matched all five submitted files byte-for-byte. Browser authentication is required for the approved-source trial.
 
 The recorded release patch uses zero context; validate/apply it with git apply --unidiff-zero against the exact v66 baseline.
+
+
+### API startup repair (2026-10-25)
+Modal logs confirmed repeated missing-PIL startup failures in the separate CPU API image. Media preparation now imports only inside the GPU function. Reviewed worker8ddc75b was deployed; the identical worker module passed a real CPU-only Modal runtime/ASGI validation check in run40197208526. This verifies startup and malformed-request handling, not a successful authenticated render. The earlier shell check failed internally despite exit0; only the replacement runtime check is accepted. No new GPU inference was invoked.
