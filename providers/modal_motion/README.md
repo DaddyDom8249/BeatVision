@@ -21,7 +21,7 @@ For the completed single trial, the owner confirmed usable credits and a hard $0
 
 1. Separately check authentic project owner, approved source image, source digest, and intended scene in Supabase. This CLI does NOT prove approval or ownership from IDs alone.
 2. Authenticate Modal CLI locally, do not copy tokens to source/chat.
-3. The verified local environment used Modal 1.6.2 and Pillow 11.3.0: `python -m pip install modal==1.6.2 Pillow==11.3.0`. Pillow is needed locally because `media.py` imports it when the worker module loads. The initial trial preflight failed before GPU submission until this dependency was installed. After cloud execution is authorized, the existing CLI dry-run accepts real values:
+3. The verified local environment used Modal 1.6.2 and Pillow 11.3.0: `python -m pip install modal==1.6.2 Pillow==11.3.0`. Pillow is required for offline media tests and GPU image preparation. Media preparation is imported inside the GPU function so the separate FastAPI container can start without Pillow, torch or diffusers. After cloud execution is authorized, the existing CLI dry-run accepts real values:
 
     modal run providers/modal_motion/worker.py --image-path PATH --project-id UUID --scene-id UUID --source-image-id UUID --generation-job-id UUID --prompt "Describe actual subject movement"
 

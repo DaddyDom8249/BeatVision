@@ -33,6 +33,12 @@ jobs:
         run: python -m py_compile providers/modal_motion/contracts.py providers/modal_motion/worker.py
       - name: Run offline contract regressions
         run: python -m unittest discover -s providers/modal_motion/tests -v
+      - name: Start the API in an isolated environment without GPU dependencies
+        run: |
+          set -euo pipefail
+          python -m venv /tmp/modal-api-startup
+          /tmp/modal-api-startup/bin/pip install --disable-pip-version-check modal==1.6.2 'fastapi[standard]==0.139.2'
+          /tmp/modal-api-startup/bin/python -m providers.modal_motion.api_startup_check
   deploy:
     if: github.event_name == 'workflow_dispatch' && inputs.deploy && github.repository == 'DaddyDom8249/BeatVision' && github.ref == 'refs/heads/feat/modal-duration-20261024'
     needs: contracts

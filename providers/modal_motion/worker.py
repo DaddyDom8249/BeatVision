@@ -21,7 +21,6 @@ from providers.modal_motion.contracts import (
     STEPS, WIDTH, MotionContractError, MotionRequest, budget_ltx_prompt, manifest,
     manifest_json, require_execution_authorization, validate_request,
 )
-from providers.modal_motion.media import prepare_source_image
 
 # Modal SDK is only needed when running "modal run" or deploying this file.
 import modal
@@ -75,6 +74,7 @@ def single_motion_proof(payload: dict, image_bytes: bytes, ack: str) -> dict:
     import tempfile
     import torch
     from PIL import Image, UnidentifiedImageError
+    from providers.modal_motion.media import prepare_source_image
     from diffusers import LTXImageToVideoPipeline
     from diffusers.utils import export_to_video
 
