@@ -1,0 +1,85 @@
+name: One-time Modal API startup repair
+'on':
+  push:
+    branches:
+    - feat/modal-duration-20261024
+    paths:
+    - .github/workflows/modal-api-startup-release-20261025.yml
+permissions:
+  contents: read
+jobs:
+  deploy:
+    if: github.event_name == 'push' && github.repository == 'DaddyDom8249/BeatVision' && github.ref == 'refs/heads/feat/modal-duration-20261024'
+      && github.event.head_commit.message == 'Release Modal API startup repair 20261025'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: bragoraforge-modal-worker-release
+      cancel-in-progress: false
+    steps:
+    - name: Check out the reviewed worker release
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        ref: 8ddc75b348c878ea152f8724c07f140355ee33ea
+        persist-credentials: false
+    - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      with:
+        python-version: '3.11'
+    - name: Install pinned deployment dependencies
+      run: python -m pip install --disable-pip-version-check modal==1.6.2 Pillow==11.3.0
+    - name: Verify the exact release before exposing credentials
+      run: 'set -euo pipefail
+
+        test "$(git rev-parse HEAD)" = 8ddc75b348c878ea152f8724c07f140355ee33ea
+
+        python -m unittest discover -s providers/modal_motion/tests -v
+
+        python -m py_compile providers/modal_motion/contracts.py providers/modal_motion/worker.py
+
+        '
+    - name: Read recent API startup exceptions
+      env:
+        MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+        MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        MODAL_ENVIRONMENT: main
+      run: 'set -euo pipefail
+
+        python - <<''PYLOG''
+
+        import subprocess
+
+        r=subprocess.run([''modal'',''app'',''logs'',''bragoraforge-modal-motion-proof'',''--tail'',''80''],capture_output=True,text=True,timeout=45)
+
+        lines=[line for line in (r.stdout+r.stderr).splitlines() if ''ModuleNotFoundError'' in line or ''No module named'' in line]
+
+        print(''HISTORICAL_STARTUP_EXCEPTION_LINES'',len(lines))
+
+        for line in lines: print(line)
+
+        if r.returncode: print(''LOG_READ_EXIT'',r.returncode)
+
+        PYLOG'
+    - name: Deploy the worker without invoking inference
+      env:
+        MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+        MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        MODAL_ENVIRONMENT: main
+      run: "set -euo pipefail\nif [ -z \"$MODAL_TOKEN_ID\" ] || [ -z \"$MODAL_TOKEN_SECRET\" ]; then\n  echo 'Missing MODAL_TOKEN_ID or MODAL_TOKEN_SECRET\
+        \ repository secret.' >&2\n  exit 1\nfi\nmodal deploy -m providers.modal_motion.worker\n"
+    - name: Verify the actual CPU API image without GPU inference
+      timeout-minutes: 4
+      env:
+        MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+        MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        MODAL_ENVIRONMENT: main
+      run: 'set -euo pipefail
+
+        modal shell --no-pty -m providers.modal_motion.worker::motion_api --cmd ''python -m providers.modal_motion.api_startup_check''
+
+        '
+    - name: Record deployment scope
+      run: 'echo ''Worker deploy command succeeded for reviewed commit 8ddc75b348c878ea152f8724c07f140355ee33ea.'' >> "$GITHUB_STEP_SUMMARY"
+
+        echo ''No GPU inference requested. No app duration cap changed. No main merge.'' >> "$GITHUB_STEP_SUMMARY"
+
+        '
