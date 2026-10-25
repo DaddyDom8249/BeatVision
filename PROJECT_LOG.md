@@ -2107,3 +2107,14 @@ Frontend release pending at this checkpoint. Full-video footage shortage and
 motion quality remain separate; replacing a1.9s take with5.04s does not cover its
 52.44s scene. No GPU/provider request, deletion, RLS weakening, secret/budget
 change, automatic creative approval or main merge.
+
+Motion-choice release verified: PR146 source6e6ef6110a3e25205eb784a72b840224b98cb0dd,
+remote/local treeabb762f38acf9f8e077113c5feff6fc7e7859a54 identical (fetch/diff0).
+Source Actions40218844239 completed SUCCESS. Vercel deployment
+dpl_V9SerePdFEbZG7QrdTD4jxY6toRE READY at exact source; independent canonical
+alias lookup confirms beat-vision-theta.vercel.app uses this deployment. Public
+HTML/JS fetch verifies Use This Motion Instead, replacement RPC, expected-old-ID
+guard and earlier-render notice. Post-ledger rename safety suite9/9 exit0.
+No automatic creative decision or GPU call. Actual owner replacement click on
+the supplied production take remains unverified; creator now has the explicit
+control. Generationv68/Modal worker unchanged. Full-song coverage remains gated.
