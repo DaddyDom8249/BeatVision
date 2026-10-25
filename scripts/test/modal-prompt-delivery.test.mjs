@@ -81,6 +81,32 @@ test('minimal approved action is preserved without inventing a stronger action',
   assert.doesNotMatch(f.submissions[0].payload.prompt, /walk|run|jump|dance/i);
 });
 
+test('structured approved direction is readable and precedes generated timing metadata', async () => {
+  const f = fixture({title: 'Section 8 (262.19997916666665–264.95997916666664s)',
+    movement_direction: '{"actor": "subtle gestures, restrained, occasional frantic motion", "camera": "slow, deliberate, occasional jerky for tension"}',
+    continuity_notes: '["protagonist hair and clothing remain consistent", "lighting remains unchanged"]',
+    visual_direction: '{"lighting":"low-key","style":"realistic"}'});
+  await f.run();
+  const prompt = f.submissions[0].payload.prompt;
+  assert.ok(prompt.startsWith('actor: subtle gestures, restrained, occasional frantic motion; camera: slow, deliberate, occasional jerky for tension'),
+    'approved movement must reach the tokenizer before redundant preservation text or timing metadata');
+  assert.doesNotMatch(prompt, /[{}\[\]"]/);
+  assert.ok(prompt.indexOf('lighting remains unchanged') < prompt.indexOf('Section 8'));
+  assert.doesNotMatch(prompt, /walk|run|jump|dance/i);
+});
+
+test('plain creator directions and malformed JSON remain literal; objects keep only textual directions', async () => {
+  for (const movement of ['Hold position; do not move the left hand.', '{keep this creator text']) {
+    const f = fixture({movement_direction: movement});
+    await f.run();
+    assert.ok(f.submissions[0].payload.prompt.startsWith(movement));
+  }
+  const f = fixture({movement_direction: {actor: 'Keep the head still.', camera: ['Slow pan.', 'Hold framing.'], unused: null}});
+  await f.run();
+  assert.ok(f.submissions[0].payload.prompt.startsWith('actor: Keep the head still.; camera: Slow pan.; Hold framing.'));
+  assert.doesNotMatch(f.submissions[0].payload.prompt, /null|undefined|\[object Object\]/);
+});
+
 test('missing approved input still rejects before download or Modal submission', async () => {
   const f = fixture({movement_direction: 'Move slowly.'}, false);
   await assert.rejects(f.run(), /MODAL_APPROVED_IMAGE_REQUIRED/);

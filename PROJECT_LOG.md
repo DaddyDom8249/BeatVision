@@ -1907,3 +1907,69 @@ After repair Python22/22 PASS; real Modal1.6.2/FastAPI0.139.2 isolated venv with
 Replaced shell verification with an explicit transient CPU-only Modal function using the exact web_image and real ASGI startup check. Actions run40197208526/job121180523365 at reviewedca9999fbe39802ffff3feb117d21c5f9efab5394 passed22/22 offline tests and real Modal runtime check. Remote output: MODAL_CPU_RUNTIME_STARTUP_PASS_NO_GPU plus api_startup PASS, submit_validation400, poll_validation400, gpu_inference_requested false. Check app ap-6UyiKn7WdVtesIJn4arq12 stopped automatically on entrypoint completion. Worker.py bytes unchanged between deployed8ddc75b and checkedca9999fb; source media dependencies no longer load in API runtime. No new render or output media generated.
 Removed one-time push release trigger after verification; retained manual default-off immutable release workflow, now with runtime check. Production backendv67 and frontend remain unchanged. All published code tree hashes matched tested local trees. Existing draft PR143 updated; no main merge. Exact per-check billing not retrieved; no GPU or paid fallback invoked. Actual authenticated HTTP submit/poll and five-second rendered MP4 remain UNVERIFIED; user may now retest Modal through the existing app.
 Deployment evidence: https://github.com/DaddyDom8249/BeatVision/actions/runs/40197039344 ; runtime evidence: https://github.com/DaddyDom8249/BeatVision/actions/runs/40197208526 .
+
+## 2026-10-25 — Creator render inspection and continuity-conditioning repair
+
+User supplied Android recording 1000088308.mp4: visible Modal/LTX 0.9.5
+playback contains movement but a large malformed hand/arm appears and detail
+warps. This is failed visual acceptance, not an approved sponsor clip. Read-only
+saved job e51edca0-b0a9-4957-af0e-d7114d27cc0d confirms completed, generated/
+unapproved asset, 73 video samples and 3.041667s. Its frozen approved scene is
+2.76s, so 73 aligned frames are intentional; five seconds is an upper cap.
+No duration defect or automatic extension of that scene is justified.
+
+Baseline main remains 3e26d8556e62b40e9f20823cb253854ae5efcec6; repair starts
+at remote duration branch adf3e149137e60a570392079be83978b5dc076c9. Read
+AGENTS.md, project history and prior quality evidence. Exactly existing Jules
+session 5991285972289398122 reused for independent read-only review; reported
+IN_PROGRESS, activity retrieval unreadable HTTP200/INVALID_ARGUMENT. No Jules
+implementation or findings accepted without evidence. Local baseline focused
+JS10/10 and Python22/22 passed.
+
+Confirmed conditioning defect: raw JSON movement/continuity and a generated
+timestamp title consume the 128-token model budget. Reconstructed actual saved
+scene through the real production submission function, then CPU-only tokenized
+with spiece.model from pinned model revision e58e28c39631af4d1468ee57a853764e11c1d37e
+and the existing worker budget helper. The T5 SentencePiece wrapper adds EOS;
+no model weights or GPU used. Old input377 tokens: movement survives, but all
+four complete continuity rules are lost. Patched input321 tokens: movement and
+all four continuity rules survive in128 tokens. This proves conditioning loss,
+not that it is the sole cause of the malformed hand.
+
+Small fix: render serialized creative structures as readable labelled text,
+put approved movement first, move optional section/timing title last; preserve
+plain creator prose, negations, approved snapshots and source bytes. No invented
+movement, sampler/model/worker change, increased steps, new budget or inference.
+Only modalBridgeSubmit changed in live controller. All Arena compatibility,
+auth/ownership, approval gates, frame caps, polling and persistence preserved.
+
+Regression: actual livev67 fails2/6 new/existing prompt checks (exit1);
+candidate/live-compatible patch6/6, focused27/27 (exit0). Full npm test464 total:
+463 pass,0 fail,1 existing local browser-layout skip (exit0). Python22/22,
+TypeScript/Vite build, production audit and diff check pass (exit0). Initial
+tokenizer.json URL404 corrected after repository tree inspection to spiece.model;
+initial absolute-path git apply check rejected, corrected relative check passed.
+No failures are counted as verification successes.
+
+Released only compatibility patch to beatvision-generation v68 ACTIVE, bundle
+3f53b78788482c7a00ab7af77a3d0c61a28dc3e80f7f297f5a2047b90b8fca7c.
+Independent get_edge_function verifies all five source files byte-identical to
+tested submission; previousv67 rollback source retained privately. JWT gateway
+setting unchanged with existing in-function authentication. Frontend/Modal worker
+unchanged. Exact live patch is providers/modal_motion/releases/generation-v67-readable-direction.patch.
+
+IMPLEMENTED/TESTED/DEPLOYED: prompt serialization/priority and continuity delivery.
+UNVERIFIED: post-fix render quality, intended anatomy/identity and sponsor acceptance.
+No GPU request, paid call, schema/RLS/secret change, creative approval, data rewrite,
+main merge or automatic retry. A fresh creator-requested render is still required
+to evaluate quality; do not call a prompt repair a verified visual-quality fix.
+
+Publication/readback: draft PR144 head87718b2d983c3855960696eab5dfe3ff0ddf1d70,
+target feat/modal-duration-20261024. Remote/local source trees both
+5f074007a11a94f814ff63c22cf97643f5061577; git fetch/diff exit0. Live anonymous
+modal_capability POST returned401, no inference. Exact-head Actions40213360424
+and40213360512 started; results pending at this entry, not counted as passes.
+First GitHub tree upload exposed stdout truncation of the long project log;
+reconstructed bounded chunks and verified all four blob SHAs plus tree before
+publishing. First branch-update rejected nonexistent ref422 (no ref changed);
+created branch explicitly, then PR creation succeeded. No main or force push.
