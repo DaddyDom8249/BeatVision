@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validateImage, readImage } from "./image-media.ts";
 import { verifyFinalMedia } from "./final-media.ts";
 import { HF_MOTION, hfEligibility, hfSubmit, hfPoll, hfDownload, hfJobSeed, HfMotionError, validateMp4 } from "./hf-motion.ts";
-import { MODAL_MOTION, assertModalSubmissionEnabled, submitModalMotion, pollModalMotion, sha256Hex, ModalMotionError } from "./modal-motion.ts";
+import { MODAL_MOTION, assertModalFrameCount, modalFramesForScene, assertModalSubmissionEnabled, submitModalMotion, pollModalMotion, sha256Hex, ModalMotionError } from "./modal-motion.ts";
 
 const ALLOWED_ORIGINS = new Set([
   "https://beat-vision-f8nn.vercel.app",
@@ -623,9 +623,11 @@ async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acce
   const template = await db.from("generation_jobs").select("*").eq("project_id", projectId).eq("visual_plan_id", scene.data.visual_plan_id).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_image").eq("id", image.data.generation_job_id).single();
   if (template.error || template.data?.status !== "completed" || template.data?.input_snapshot?.scene?.id !== sceneId || template.data.vision_lock_id !== plan.data.vision_lock_id) throw new HttpError(409, "FROZEN_LINEAGE_REQUIRED", "Approved image must have its original generation snapshot.");
   const base = template.data;
+  const modalFrames = provider === "modal" ? modalFramesForScene(base.input_snapshot.scene) : MODAL_MOTION.frames;
   if (requestId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) throw new HttpError(400,"GENERATION_REQUEST_ID_INVALID","Invalid request ID.");
   const key = (provider === "modal" ? "modal-motion:" : "hf-motion:") + sceneId + ":" + image.data.id + ":" +
-    (provider === "modal" ? MODAL_MOTION.revision : HF_MOTION.revision) + (requestId ? ":variant:" + requestId : "");
+    (provider === "modal" ? MODAL_MOTION.revision : HF_MOTION.revision) +
+    (provider === "modal" && modalFrames !== MODAL_MOTION.frames ? ":frames:" + modalFrames : "") + (requestId ? ":variant:" + requestId : "");
   const existing = await db.from("generation_jobs").select("*").eq("project_id", projectId).eq("idempotency_key", key).maybeSingle();
   if (existing.error) throw new Error("HF_JOB_LOOKUP_FAILED");
   if (existing.data) return existing.data;
@@ -634,7 +636,7 @@ async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acce
     visual_plan_scene_id: sceneId, job_type: "scene_motion", idempotency_key: key,
     input_snapshot: {...base.input_snapshot, ...(provider === "modal"
       ? {modal_motion:{source_image_id:image.data.id,model:MODAL_MOTION.model,revision:MODAL_MOTION.revision,
-          duration_seconds:MODAL_MOTION.frames/MODAL_MOTION.fps,terms_accepted_at:new Date().toISOString()}}
+          frames:modalFrames,duration_seconds:modalFrames/MODAL_MOTION.fps,terms_accepted_at:new Date().toISOString()}}
       : {hf_motion:{source_image_id:image.data.id,space:HF_MOTION.space,revision:HF_MOTION.revision,
           duration_seconds:HF_MOTION.duration,terms_accepted_at:new Date().toISOString()}})},
   }).select("*").single();
@@ -724,6 +726,7 @@ async function modalBridgeSubmit(db: any,job: any) {
     .map(([x, limit]) => String(x).trim().slice(0, limit)).join(". ").slice(0,1600);
   const payload={project_id:job.project_id,scene_id:job.visual_plan_scene_id,
     source_image_id:frozen.source_image_id,generation_job_id:job.id,
+    ...(assertModalFrameCount(frozen.frames) === MODAL_MOTION.frames ? {} : {frames: assertModalFrameCount(frozen.frames)}),
     image_sha256:await sha256Hex(bytes),prompt,seed:parseInt(job.id.replace(/-/g,"").slice(0,7),16)||42};
   const data=await submitModalMotion(payload,bytes);
   return {response:new Response(null,{status:200}),data};
@@ -738,7 +741,8 @@ async function modalBridgePoll(db: any,job: any) {
       manifest.source_sha256!==job.output?.arena_response?.source_sha256 ||
       manifest.video_sha256!==await sha256Hex(result.video) ||
       manifest.model!==MODAL_MOTION.model || manifest.revision!==MODAL_MOTION.revision ||
-      manifest.creator_approved!==false)
+      manifest.frames_requested!==assertModalFrameCount(job.input_snapshot?.modal_motion?.frames) ||
+      manifest.fps_requested!==MODAL_MOTION.fps || manifest.creator_approved!==false)
     throw new ModalMotionError("MODAL_PROVENANCE_INVALID");
   const verification=validateMp4(result.video);
   const path=job.project_id+"/scene-motion/"+job.visual_plan_id+"/"+job.visual_plan_scene_id+"/"+job.id+".mp4";

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
-import {MODAL_MOTION, ModalMotionError, sha256Hex} from '../../supabase/functions/beatvision-generation/modal-motion.ts';
+import {MODAL_MOTION, ModalMotionError, sha256Hex, assertModalFrameCount} from '../../supabase/functions/beatvision-generation/modal-motion.ts';
 
 // Optional fixture checks the exact retrieved production controller offline.
 // No provider request, renderer, credentials or global fetch is used.
@@ -15,7 +15,7 @@ const code = ts.transpileModule(source.slice(start, end), {
   compilerOptions: {target: ts.ScriptTarget.ES2022},
 }).outputText;
 
-function fixture(scene, approved = true) {
+function fixture(scene, approved = true, frames) {
   const project = '00000001-0000-4000-8000-000000000001';
   const imageId = '00000002-0000-4000-8000-000000000002';
   const filters = [], submissions = [], downloads = [];
@@ -40,12 +40,13 @@ function fixture(scene, approved = true) {
     submissions.push({payload, bytes});
     return {status: 'processing', job_id: 'fc-offline-fixture'};
   };
-  const run = new Function('MODAL_MOTION', 'ModalMotionError', 'sha256Hex', 'submitModalMotion',
-    code + '\nreturn modalBridgeSubmit;')(MODAL_MOTION, ModalMotionError, sha256Hex, submit);
+  const run = new Function('MODAL_MOTION', 'ModalMotionError', 'sha256Hex', 'submitModalMotion', 'assertModalFrameCount',
+    code + '\nreturn modalBridgeSubmit;')(MODAL_MOTION, ModalMotionError, sha256Hex, submit, assertModalFrameCount);
   const job = Object.freeze({id: '00000004-0000-4000-8000-000000000004',
     project_id: project, visual_plan_id: 'plan-fixture', visual_plan_scene_id: 'scene-fixture',
     input_snapshot: Object.freeze({scene: Object.freeze(scene), modal_motion: Object.freeze({
       model: MODAL_MOTION.model, revision: MODAL_MOTION.revision, source_image_id: imageId,
+      ...(frames === undefined ? {} : {frames}),
     })}),
   });
   return {run: () => run(db, job), filters, submissions, downloads, image, imageId};
@@ -84,5 +85,17 @@ test('missing approved input still rejects before download or Modal submission',
   const f = fixture({movement_direction: 'Move slowly.'}, false);
   await assert.rejects(f.run(), /MODAL_APPROVED_IMAGE_REQUIRED/);
   assert.equal(f.downloads.length, 0);
+  assert.equal(f.submissions.length, 0);
+});
+
+
+test('frozen long duration reaches the worker while legacy/default payloads stay compatible', async () => {
+  for (const frames of [undefined, 49, 121, 161]) {
+    const f = fixture({movement_direction: 'Move slowly.'}, true, frames);
+    await f.run();
+    assert.equal(f.submissions[0].payload.frames, frames > 49 ? frames : undefined);
+  }
+  const f = fixture({movement_direction: 'Move slowly.'}, true, 169);
+  await assert.rejects(f.run(), /MODAL_FRAME_COUNT_INVALID/);
   assert.equal(f.submissions.length, 0);
 });

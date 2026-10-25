@@ -21,7 +21,7 @@ For the completed single trial, the owner confirmed usable credits and a hard $0
 
 1. Separately check authentic project owner, approved source image, source digest, and intended scene in Supabase. This CLI does NOT prove approval or ownership from IDs alone.
 2. Authenticate Modal CLI locally, do not copy tokens to source/chat.
-3. The verified local environment used Modal 1.6.2 and Pillow 11.3.0: `python -m pip install modal==1.6.2 Pillow==11.3.0`. Pillow is needed locally because `media.py` imports it when the worker module loads. The initial trial preflight failed before GPU submission until this dependency was installed. After cloud execution is authorized, the existing CLI dry-run accepts real values:
+3. The verified local environment used Modal 1.6.2 and Pillow 11.3.0: `python -m pip install modal==1.6.2 Pillow==11.3.0`. Pillow is required for offline media tests and GPU image preparation. Media preparation is imported inside the GPU function so the separate FastAPI container can start without Pillow, torch or diffusers. After cloud execution is authorized, the existing CLI dry-run accepts real values:
 
     modal run providers/modal_motion/worker.py --image-path PATH --project-id UUID --scene-id UUID --source-image-id UUID --generation-job-id UUID --prompt "Describe actual subject movement"
 
@@ -43,3 +43,31 @@ References: https://modal.com/docs/sdk/py/latest/App , https://modal.com/pricing
 ## Exact-snapshot loader repair (2026-10-19)
 
 The initial proof branch pinned `Lightricks/LTX-Video` at `84631c2`, a legacy weights tree without `model_index.json`. A Diffusers `from_pretrained` call therefore could not boot from that snapshot. The worker now pins `Lightricks/LTX-Video-0.9.5` at `e58e28c39631af4d1468ee57a853764e11c1d37e`, whose tree includes `model_index.json`, text encoder, tokenizer, transformer and VAE. This fixes the source/model contract, **not** a remotely verified cold start, license compliance, GPU output, runtime cost or full-song export. Never launch without a separately verified no-overage billing policy.
+
+
+## Bounded duration candidate (2026-10-24; not enabled in production)
+
+The worker accepts an optional integer `frames`: 49 through 161 in steps of 8 (49, 57, …, 161), at 24 fps. Omission retains the existing 49-frame / 2.04-second request. The LTX 0.9.5 official model card demonstrates 161 frames; this does not verify our L4 runtime, quality, credits, or per-job cost. The existing 300-second timeout, 8 MiB media limit, single container, no retries, and creator review remain unchanged.
+
+The backend defaults to 49 frames. Only after verifying the updated worker, remaining credits, account spending controls, and a bounded trial budget may the operator set `BRAGORA_MODAL_MAX_FRAMES` to an aligned limit up to 161. It selects enough frames for the approved source snapshot's scene duration, capped by that limit, and freezes the frame count and duration in each new job. Longer requests have distinct idempotency keys; legacy two-second requests retain their old key and wire payload. Lowering the operator cap blocks subsequent submission of longer queued jobs; it does not cancel already running GPU work.
+
+The CLI accepts `--frames 121` (approximately 5.04 seconds) or `--frames 161` (approximately 6.71 seconds); retain dry-run mode until a specific execution budget is verified. No longer inference was performed during implementation.
+
+Release order: update the authenticated Modal worker first, verify its contract without spawning GPU work, then deploy a minimal backend patch based on the currently deployed function rather than blindly replacing it with the candidate controller. Current production v66 differs in Arena configuration/transport and capability reporting. Keep the extended cap unset until the longer trial is authorized and credit-backed.
+
+This does not combine multiple variants into a scene, revise approved plans, stretch/loop clips, or add lip sync. A 7.8-second scene still lacks coverage at the maximum 161/24-second clip length; assembly must continue to reject it. Full-song delivery needs an explicitly approved plan of shorter shots or a separately validated continuation/segment implementation, followed by actual decoded full-timeline playback and download verification.
+
+Reference: https://huggingface.co/Lightricks/LTX-Video-0.9.5
+
+
+## Five-second backend activation (2026-10-24)
+
+The owner authorized activation after worker deployment and supplied the current billing/spend-limit screenshots. Generation controller v67 now includes the duration patch while preserving the deployed v66 Arena compatibility functions. The production adapter's environment reader defaults BRAGORA_MODAL_MAX_FRAMES to121 (approximately5.04s); explicitly set49 to restore proof-only length. Source snapshots and legacy requests still default missing frame metadata to49. Model execution remains20steps, timeout300s, maximum one container and no retries. No GPU trial has been run for this activation.
+
+The exact patch from live v66 is recorded in releases/generation-v66-five-second.patch; it is not permission to replace live backend source from this branch blindly. Deployment readback matched all five submitted files byte-for-byte. Browser authentication is required for the approved-source trial.
+
+The recorded release patch uses zero context; validate/apply it with git apply --unidiff-zero against the exact v66 baseline.
+
+
+### API startup repair (2026-10-25)
+Modal logs confirmed repeated missing-PIL startup failures in the separate CPU API image. Media preparation now imports only inside the GPU function. Reviewed worker8ddc75b was deployed; the identical worker module passed a real CPU-only Modal runtime/ASGI validation check in run40197208526. This verifies startup and malformed-request handling, not a successful authenticated render. The earlier shell check failed internally despite exit0; only the replacement runtime check is accepted. No new GPU inference was invoked.

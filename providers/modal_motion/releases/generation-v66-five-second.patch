@@ -1,0 +1,64 @@
+--- a/index.ts
++++ b/index.ts
+@@ -7 +7 @@
+-import { MODAL_MOTION, assertModalSubmissionEnabled, submitModalMotion, pollModalMotion, sha256Hex, ModalMotionError } from "./modal-motion.ts";
++import { MODAL_MOTION, assertModalFrameCount, modalFramesForScene, assertModalSubmissionEnabled, submitModalMotion, pollModalMotion, sha256Hex, ModalMotionError } from "./modal-motion.ts";
+@@ -564,0 +565 @@
++  const modalFrames = provider === "modal" ? modalFramesForScene(base.input_snapshot.scene) : MODAL_MOTION.frames;
+@@ -567 +568,2 @@
+-    (provider === "modal" ? MODAL_MOTION.revision : HF_MOTION.revision) + (requestId ? ":variant:" + requestId : "");
++    (provider === "modal" ? MODAL_MOTION.revision : HF_MOTION.revision) +
++    (provider === "modal" && modalFrames !== MODAL_MOTION.frames ? ":frames:" + modalFrames : "") + (requestId ? ":variant:" + requestId : "");
+@@ -576 +578 @@
+-          duration_seconds:MODAL_MOTION.frames/MODAL_MOTION.fps,terms_accepted_at:new Date().toISOString()}}
++          frames:modalFrames,duration_seconds:modalFrames/MODAL_MOTION.fps,terms_accepted_at:new Date().toISOString()}}
+@@ -665,0 +668 @@
++    ...(assertModalFrameCount(frozen.frames) === MODAL_MOTION.frames ? {} : {frames: assertModalFrameCount(frozen.frames)}),
+@@ -680 +683,2 @@
+-      manifest.creator_approved!==false)
++      manifest.frames_requested!==assertModalFrameCount(job.input_snapshot?.modal_motion?.frames) ||
++      manifest.fps_requested!==MODAL_MOTION.fps || manifest.creator_approved!==false)
+--- a/modal-motion.ts
++++ b/modal-motion.ts
+@@ -10,0 +11 @@
++  maxFrames: 161,
+@@ -17 +18,3 @@
+-const readEnv: EnvReader = (key) => String(Deno.env.get(key) || "").trim();
++// Operator-approved five-second release; explicit 49 restores proof-only mode.
++const readEnv: EnvReader = (key) => String(Deno.env.get(key) ||
++  (key === "BRAGORA_MODAL_MAX_FRAMES" ? "121" : "")).trim();
+@@ -20,0 +24,29 @@
++}
++// Legacy snapshots omit frames. Reject malformed explicit values instead of coercing.
++export function assertModalFrameCount(value: unknown): number {
++  const frames = value === undefined ? MODAL_MOTION.frames : value;
++  if (typeof frames !== "number" || !Number.isInteger(frames) || frames < MODAL_MOTION.frames ||
++      frames > MODAL_MOTION.maxFrames || (frames - 1) % 8 !== 0)
++    throw new ModalMotionError("MODAL_FRAME_COUNT_INVALID");
++  return frames;
++}
++function modalFrameLimit(env: EnvReader): number {
++  // Increasing this operator cap requires a newly verified duration budget and worker.
++  // Missing configuration preserves all current two-second behavior.
++  const raw = env("BRAGORA_MODAL_MAX_FRAMES");
++  if (!raw) return MODAL_MOTION.frames;
++  if (!/^\d+$/.test(raw)) throw new ModalMotionError("MODAL_FRAME_LIMIT_INVALID");
++  let cap: number;
++  try { cap = assertModalFrameCount(Number(raw)); }
++  catch { throw new ModalMotionError("MODAL_FRAME_LIMIT_INVALID"); }
++  return cap;
++}
++export function modalFramesForScene(scene: Record<string, unknown>, env: EnvReader = readEnv): number {
++  const cap = modalFrameLimit(env);
++  if (cap === MODAL_MOTION.frames) return cap;
++  const start = scene.start_time, end = scene.end_time;
++  if (typeof start !== "number" || typeof end !== "number" || !Number.isFinite(start) ||
++      !Number.isFinite(end) || start < 0 || end <= start)
++    throw new ModalMotionError("MODAL_SCENE_DURATION_INVALID");
++  const needed = Math.ceil(((end - start) * MODAL_MOTION.fps - 1) / 8) * 8 + 1;
++  return Math.min(cap, Math.max(MODAL_MOTION.frames, needed));
+@@ -132,0 +165,2 @@
++  const frames = assertModalFrameCount(payload.frames);
++  if (frames > modalFrameLimit(env)) throw new ModalMotionError("MODAL_DURATION_NOT_ENABLED");
+@@ -167 +200,0 @@
+-

@@ -29,6 +29,17 @@ def valid_request(**overrides):
 
 
 class ContractTests(unittest.TestCase):
+    def test_frame_count_is_bounded_aligned_and_legacy_default(self):
+        self.assertEqual(valid_request().frames, 49)
+        for frames in (49, 57, 121, 161):
+            request = valid_request(frames=frames)
+            self.assertEqual(validate_request(request, PNG).frames, frames)
+            blob = b'\x00\x00\x00\x18ftypisom' + b'moov' + b'mdat' + b'0' * 1030
+            self.assertEqual(manifest(request, blob, model='ltx', revision='test')['frames_requested'], frames)
+        for frames in (None, True, '121', 48, 50, 169, 1, 121.0):
+            with self.subTest(frames=frames), self.assertRaisesRegex(MotionContractError, 'FRAME_COUNT_INVALID'):
+                validate_request(valid_request(frames=frames), PNG)
+
     def test_valid_image_and_ids(self):
         self.assertEqual(validate_request(valid_request(), PNG), valid_request())
 
@@ -245,6 +256,39 @@ if __name__ == '__main__':
 
 
 class LocalEntryPointTests(unittest.TestCase):
+    def test_api_worker_module_imports_without_gpu_media_dependencies(self):
+        # The CPU API image only ships FastAPI. Recreate its missing Pillow,
+        # torch and diffusers even when the test runner has those installed.
+        import subprocess
+        import sys
+        script = '''
+import builtins, runpy, sys
+from types import SimpleNamespace
+class FakeImage:
+    @staticmethod
+    def debian_slim(**kwargs): return FakeImage()
+    def pip_install(self, *args): return self
+    def add_local_python_source(self, *args): return self
+class FakeApp:
+    def __init__(self, *_): pass
+    def function(self, **kwargs): return lambda fn: fn
+    def local_entrypoint(self): return lambda fn: fn
+sys.modules['modal'] = SimpleNamespace(App=FakeApp, Image=FakeImage,
+    asgi_app=lambda **kwargs: (lambda fn: fn))
+original_import = builtins.__import__
+def api_import(name, *args, **kwargs):
+    if name.split('.')[0] in {'PIL', 'torch', 'diffusers'}:
+        raise ModuleNotFoundError("API_IMAGE_MISSING_DEPENDENCY: " + name)
+    return original_import(name, *args, **kwargs)
+builtins.__import__ = api_import
+runpy.run_module('providers.modal_motion.worker', run_name='api_startup_fixture')
+print('API_MODULE_STARTUP_PASS')
+'''
+        result = subprocess.run([sys.executable, '-c', script],
+                                cwd=ROOT.parents[1], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('API_MODULE_STARTUP_PASS', result.stdout)
+
     def test_dry_run_never_submits_and_execution_requires_env(self):
         import contextlib
         import importlib.util
