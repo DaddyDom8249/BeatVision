@@ -81,11 +81,13 @@ export function useVisualPlan(projectId: string) {
     finally { setWorking(false); }
   }, [projectId, world, styleBible, song, plan, load]);
 
-  const revisePlan = useCallback(async () => {
-    if (!plan || plan.status !== 'approved') throw new Error('Only a locked plan can be revised.');
+  const revisePlan = useCallback(async (maxShotSeconds?: number) => {
+    if (!plan || (maxShotSeconds === undefined && plan.status !== 'approved')) throw new Error('Only a locked plan can be revised.');
     setWorking(true); setError(null);
     try {
-      const result = await supabase.rpc('create_visual_plan_revision', {p_plan_id: plan.id});
+      const result = maxShotSeconds === undefined
+        ? await supabase.rpc('create_visual_plan_revision', {p_plan_id: plan.id})
+        : await supabase.rpc('create_renderable_shot_revision', {p_plan_id: plan.id, p_max_shot_seconds: maxShotSeconds});
       if (result.error) throw result.error;
       const revisedPlan = result.data as VisualPlan | null;
       if (!revisedPlan?.id) throw new Error('Visual Plan revision did not return a draft.');
