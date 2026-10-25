@@ -58,3 +58,12 @@ Release order: update the authenticated Modal worker first, verify its contract 
 This does not combine multiple variants into a scene, revise approved plans, stretch/loop clips, or add lip sync. A 7.8-second scene still lacks coverage at the maximum 161/24-second clip length; assembly must continue to reject it. Full-song delivery needs an explicitly approved plan of shorter shots or a separately validated continuation/segment implementation, followed by actual decoded full-timeline playback and download verification.
 
 Reference: https://huggingface.co/Lightricks/LTX-Video-0.9.5
+
+
+## Five-second backend activation (2026-10-24)
+
+The owner authorized activation after worker deployment and supplied the current billing/spend-limit screenshots. Generation controller v67 now includes the duration patch while preserving the deployed v66 Arena compatibility functions. The production adapter's environment reader defaults BRAGORA_MODAL_MAX_FRAMES to121 (approximately5.04s); explicitly set49 to restore proof-only length. Source snapshots and legacy requests still default missing frame metadata to49. Model execution remains20steps, timeout300s, maximum one container and no retries. No GPU trial has been run for this activation.
+
+The exact patch from live v66 is recorded in releases/generation-v66-five-second.patch; it is not permission to replace live backend source from this branch blindly. Deployment readback matched all five submitted files byte-for-byte. Browser authentication is required for the approved-source trial.
+
+The recorded release patch uses zero context; validate/apply it with git apply --unidiff-zero against the exact v66 baseline.

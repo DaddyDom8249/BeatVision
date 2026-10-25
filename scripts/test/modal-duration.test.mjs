@@ -67,7 +67,7 @@ test('duration is frozen with a distinct idempotency key; existing source snapsh
       async single(){return {data:inserted||template};}
     };
   }};
-  for(const cap of ['', '161']) {
+  for(const cap of ['49', '161']) {
     const runtime=await loadGeneration(client,{MODAL_TOKEN_ID:'fixture',MODAL_TOKEN_SECRET:'fixture',
       BRAGORA_MODAL_GPU_ENABLED:'true',BRAGORA_MODAL_BUDGET_VERIFIED:'true',BRAGORA_MODAL_MAX_FRAMES:cap});
     try {await runtime.enqueueHfMotion(client,'project-1',scene.id,true);}
@@ -99,4 +99,18 @@ test('completed worker output with wrong frozen frame rate or length cannot reac
     manifest={...manifest,frames_requested:121,fps_requested:25};
     await assert.rejects(runtime.modalBridgePoll(db,job),/MODAL_PROVENANCE_INVALID/);
   } finally {globalThis.fetch=originalFetch;await runtime.cleanup();}
+});
+
+
+test('authorized production default selects a five-second clip; explicit 49 restores legacy length',async()=>{
+  const runtime=await loadGeneration();
+  try {
+    const result=await import('../../supabase/functions/beatvision-generation/modal-motion.ts');
+    assert.equal(result.modalFramesForScene({start_time:0,end_time:7.8}),121);
+  } finally {await runtime.cleanup();}
+  const restored=await loadGeneration({}, {BRAGORA_MODAL_MAX_FRAMES:'49'});
+  try {
+    const result=await import('../../supabase/functions/beatvision-generation/modal-motion.ts');
+    assert.equal(result.modalFramesForScene({start_time:0,end_time:7.8}),49);
+  } finally {await restored.cleanup();}
 });

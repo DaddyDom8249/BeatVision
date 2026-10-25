@@ -15,7 +15,9 @@ export const MODAL_MOTION = Object.freeze({
 const ACK = "I_AUTHORIZE_ONE_MODAL_GPU_PROOF_WITHIN_MY_CONFIRMED_BUDGET";
 type EnvReader = (key: string) => string;
 type Fetcher = typeof fetch;
-const readEnv: EnvReader = (key) => String(Deno.env.get(key) || "").trim();
+// Operator-approved five-second release; explicit 49 restores proof-only mode.
+const readEnv: EnvReader = (key) => String(Deno.env.get(key) ||
+  (key === "BRAGORA_MODAL_MAX_FRAMES" ? "121" : "")).trim();
 export class ModalMotionError extends Error {
   code: string;
   constructor(code: string) { super(code); this.code = code; }

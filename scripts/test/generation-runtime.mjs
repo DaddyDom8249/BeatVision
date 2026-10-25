@@ -15,7 +15,7 @@ export async function loadGeneration(client = {}, envVars = {}, sourceOverride) 
     await writeFile(join(dir, 'modal-motion.ts'), await readFile(new URL('../../supabase/functions/beatvision-generation/modal-motion.ts', import.meta.url), 'utf8'));
     await writeFile(join(dir, 'image-media.ts'), (await readFile(new URL('../../supabase/functions/beatvision-generation/image-media.ts', import.meta.url), 'utf8')).replace('npm:jpeg-js@0.4.4', new URL('../../node_modules/jpeg-js/index.js', import.meta.url).href).replace('npm:pngjs@7.0.0', new URL('../../node_modules/pngjs/lib/png.js', import.meta.url).href));
     await writeFile(join(dir, 'final-media.ts'), await readFile(new URL('../../supabase/functions/beatvision-generation/final-media.ts', import.meta.url), 'utf8'));
-    const source = await readFile(sourceOverride || new URL('../../supabase/functions/beatvision-generation/index.ts', import.meta.url), 'utf8');
+    const source = await readFile(sourceOverride || process.env.BRAGORA_GENERATION_SOURCE || new URL('../../supabase/functions/beatvision-generation/index.ts', import.meta.url), 'utf8');
     await writeFile(join(dir, 'function.ts'), source
       .replace('import "jsr:@supabase/functions-js/edge-runtime.d.ts";', '')
       .replace('from "https://esm.sh/@supabase/supabase-js@2"', 'from "./stub.mjs"')
