@@ -2047,3 +2047,74 @@ scenes, first0/last264.95997916666664, object direction; splitting would produce
 57shots. No customer revision was created or approved automatically. Main readback
 still3e26d8556e62b40e9f20823cb253854ae5efcec6. Full footage/quality/credit acceptance
 remains unverified; use the new explicit planning action to continue.
+
+## 2026-10-25 — Explicit motion variant approval replacement
+
+Creator cannot approve the new5.04s Scene1 Modal take while its1.9s HF take is
+approved. Read-only rows confirm candidatea55c62cd versus approved5896de48;
+actual old approve_motion_clip_asset reproduces
+MOTION_CLIP_ALREADY_APPROVED_USE_PLAN_REVISION. Approved takes cannot be rejected
+through the candidate-only reject RPC. No existing take-swap RPC is deployed.
+
+Added explicit owner-only replace_approved_motion_clip(target,expected_current).
+It rechecks completed generating job, approved source-image/plan/scene lineage,
+locks owner/project then plan/scene/takes, rejects stale choices and pending
+assembly, switches only status/approval, and appends protected owner-readable
+approval history with before/after records. Both original media rows/URLs/IDs/
+source lineage stay immutable. Same successful choice is idempotent; previous
+saved take can be chosen again. No client asset/history write privileges granted.
+
+Existing enqueue_assembly_generation was retrieved from production and changed
+only to reuse snapshots matching the exact currently approved asset IDs and to
+include that set in new idempotency keys. Completed/failed old job snapshots stay
+unchanged. A replacement therefore does not return a completed render of old
+takes. Pending assembly blocks replacement instead of invalidating frozen media.
+Measured-coverage guards remain in the unchanged generation controller.
+
+Workspace now shows Use This Motion Instead for a candidate when another take
+is approved. It sends the expected old ID, disables duplicate decisions, refreshes
+history/readiness, and explains stale/in-progress errors. Changed motion selection
+marks a prior final render as earlier footage and exposes a new assembly action
+only when real coverage is sufficient. No generation or approval runs on load.
+
+Verification:9 PGlite safety/lineage/history/owner/idempotency/frozen-snapshot tests
+pass; media-immutability triggers enabled.47 real-component checks pass including
+new take replacement, stale failure preservation and an earlier render retaining
+its preview while new assembly becomes available. Full recursively discovered
+63files:487tests,486pass,0fail,1existing browser-layout skip,exit0 at concurrency2.
+Build/audit/diffcheck pass. Original conflict reproduced before implementation.
+Initial new-migration tests failed absent draft file; first SQL prototype missed
+the terminator on copied pg_get_functiondef and failed locally; corrected before
+deployment. One later default-concurrency run returned partial26-line output
+without summary despite exit0; NOT accepted. Lower-concurrency run required a
+complete summary and passed. An earlier default run485tests also passed before
+two additional safety regressions; final487-test result is authoritative.
+
+Production additive migration motion_variant_selection applied at returned
+ledger20261025175243. Prepared SQL was renamed to that actual ledger version;
+no retry of the previously blocked CLI analytics path. All three retrieved
+function bodies match tested source; fixed public/pg_temp search_paths, anon
+EXECUTE false for replacement/enqueue, authenticated true; trigger function
+direct execution revoked. History table RLS owner SELECT only, writes revoked.
+Security advisor adds only expected authenticated-definer notice (11→12);
+pre-existing anon enqueue and password/RLS notices unchanged. Both actual user
+take row hashes unchanged across deployment; no creative decision performed.
+
+Base remote190aaafb3ce55711b7863fc686b1acaca7763b53/tree3b18005770aea8c0de7e9d1a685501acbde36548.
+Main remains3e26d85. Same Jules5991285972289398122 reused for read-only review;
+activities unreadableHTTP200/INVALID_ARGUMENT, no uninspected findings accepted.
+Frontend release pending at this checkpoint. Full-video footage shortage and
+motion quality remain separate; replacing a1.9s take with5.04s does not cover its
+52.44s scene. No GPU/provider request, deletion, RLS weakening, secret/budget
+change, automatic creative approval or main merge.
+
+Motion-choice release verified: PR146 source6e6ef6110a3e25205eb784a72b840224b98cb0dd,
+remote/local treeabb762f38acf9f8e077113c5feff6fc7e7859a54 identical (fetch/diff0).
+Source Actions40218844239 completed SUCCESS. Vercel deployment
+dpl_V9SerePdFEbZG7QrdTD4jxY6toRE READY at exact source; independent canonical
+alias lookup confirms beat-vision-theta.vercel.app uses this deployment. Public
+HTML/JS fetch verifies Use This Motion Instead, replacement RPC, expected-old-ID
+guard and earlier-render notice. Post-ledger rename safety suite9/9 exit0.
+No automatic creative decision or GPU call. Actual owner replacement click on
+the supplied production take remains unverified; creator now has the explicit
+control. Generationv68/Modal worker unchanged. Full-song coverage remains gated.

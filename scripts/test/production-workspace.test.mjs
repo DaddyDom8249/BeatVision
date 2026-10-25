@@ -54,7 +54,16 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
       };
       return query;
     },
-    rpc: async (_name, args) => { rpcCalls.push({ name: _name, args }); return { data: rpcError ? null : { id: 'job-1', status: 'queued', job_type: args.p_job_type }, error: rpcError }; },
+    rpc: async (_name, args) => {
+      rpcCalls.push({ name: _name, args });
+      if (_name === 'replace_approved_motion_clip' && !rpcError) {
+        const selected=motionAssets?.find(asset=>asset.id===args.p_asset_id);
+        assert.ok(selected);
+        for(const asset of motionAssets){asset.approved=asset===selected;asset.status=asset===selected?'approved':'generated';}
+        return {data:selected,error:null};
+      }
+      return { data: rpcError ? null : { id: 'job-1', status: 'queued', job_type: args.p_job_type }, error: rpcError };
+    },
     functions: { invoke: async (_name, { body }) => {
       calls.push(body);
       if (body.action === 'modal_capability') return { data: { modal_supported: true, modal_available: modalAvailable }, error: null };
@@ -82,6 +91,47 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
     cleanup: async () => { await act(async () => root.unmount()); dom.window.close(); delete globalThis.__uiDb; },
   };
 }
+
+test('a new variant can explicitly replace the approved clip without deleting either take or generating again', async () => {
+  const assets=[{id:'new-take',scene_id:'scene-1',provider:'fixture',model:'fixture',video_url:'https://fixture.test/new.mp4',status:'generated',approved:false},
+    {id:'old-take',scene_id:'scene-1',provider:'fixture',model:'fixture',video_url:'https://fixture.test/old.mp4',status:'approved',approved:true}];
+  const view=await mount({motionAssets:assets});
+  try {
+    const variants=document.querySelector('[aria-label="Saved motion variants"]');
+    assert.equal(variants.value,'old-take');
+    await act(async()=>{variants.value='new-take';variants.dispatchEvent(new window.Event('change',{bubbles:true}));});
+    assert.ok(view.button('Use This Motion Instead'));
+    await view.click('Use This Motion Instead');
+    assert.deepEqual(view.rpcCalls,[{name:'replace_approved_motion_clip',args:{p_asset_id:'new-take',p_expected_approved_id:'old-take'}}]);
+    assert.equal(assets.length,2);assert.equal(assets[1].video_url,'https://fixture.test/old.mp4');
+    assert.equal(assets[0].approved,true);assert.equal(assets[1].approved,false);
+    assert.equal(view.calls.filter(call=>call.action==='enqueue_ai_motion').length,0);
+    assert.equal(view.button('Use This Motion Instead'),undefined);
+  } finally {await view.cleanup();}
+});
+
+test('replacement errors explain stale approval while preserving the approved variant',async()=>{
+  const assets=[{id:'new-take',video_url:'https://fixture.test/new.mp4',status:'generated',approved:false},
+    {id:'old-take',video_url:'https://fixture.test/old.mp4',status:'approved',approved:true}];
+  const view=await mount({motionAssets:assets,rpcError:{message:'MOTION_APPROVAL_CHANGED'}});
+  try {
+    const variants=document.querySelector('[aria-label="Saved motion variants"]');
+    await act(async()=>{variants.value='new-take';variants.dispatchEvent(new window.Event('change',{bubbles:true}));});
+    await view.click('Use This Motion Instead');
+    assert.match(document.body.textContent,/approved motion changed in another session/);
+    assert.equal(assets[1].approved,true);assert.ok(view.button('Use This Motion Instead'));
+  }finally{await view.cleanup();}
+});
+
+test('an earlier completed video does not hide assembly after the approved clip selection changes',async()=>{
+  const view=await mount({assemblyJob:{id:'previous-render',status:'completed',input_snapshot:{motion_clips:[{asset_id:'earlier-take'}]},output:{final_video:{video_url:'https://fixture.test/earlier.mp4',downloadable:false}}}});
+  try {
+    assert.match(document.body.textContent,/earlier render uses a different motion selection/);
+    assert.ok(view.button('Assemble Final Video'));
+    assert.equal(view.button('Assemble Final Video').disabled,false);
+    assert.equal(view.calls.filter(call=>call.action==='run').length,0);
+  }finally{await view.cleanup();}
+});
 
 test('Modal is the primary default and a generation click submits only Modal', async () => {
   const view = await mount();
