@@ -152,9 +152,9 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
         <h3>Scene {request.scene.scene_number}: {request.scene.title}</h3>
         {request.issue ? <p className="form-error">{request.issue}</p> : <p style={{whiteSpace:"pre-wrap"}}>{request.prompt}</p>}
       </article>)}
-      <a href={`/projects/${projectId}/visual-plan?plan=${planId}`}>Edit shot direction in an editable plan revision</a>
+      <a href={`/projects/${projectId}/visual-plan?plan=${planId}&help=directions`}>Beginner help: fix these shot directions</a>
     </details>
-    {directionIssues.length > 0 && <p role="status">{directionIssues.length} shots need clear direction. Motion generation and batch resume are blocked until these are corrected in an editable revision.</p>}
+    {directionIssues.length > 0 && <p role="status">{directionIssues.length} shots need clear direction. Use <a href={`/projects/${projectId}/visual-plan?plan=${planId}&help=directions`}>Beginner help</a> to choose a fix or write your own. Motion generation and batch resume stay blocked until directions are corrected.</p>}
     <p>Motion uses Modal and your configured GPU budget. Clips are up to 5 seconds, aligned to each shot. This does not approve media or assemble the final video.</p>
     {!shortShots && <p>Create and lock a <a href={`/projects/${projectId}/visual-plan?plan=${planId}`}>5-second shot revision</a> before generating all motion.</p>}
     <div className="production-actions">
