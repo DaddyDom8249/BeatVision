@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase/client";
 import { formatCreativeText, getCreativeErrorMessage } from "../lib/formatCreativeText";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 import StudioHeader from "../components/navigation/StudioHeader";
+import BatchProductionPanel from "../components/production/BatchProductionPanel";
 
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
@@ -153,7 +154,9 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const scene = scenes[selectedIndex] ?? null;
   const selectedSceneId = useRef<string | undefined>(scene?.id);
   selectedSceneId.current = scene?.id;
-  const busy = generating || motionGenerating || assemblyRunning || assetLoading || decidingMotion;
+  const [batchBusy, setBatchBusy] = useState(false);
+  const individualBusy = generating || motionGenerating || assemblyRunning || assetLoading || decidingMotion;
+  const busy = individualBusy || batchBusy;
   const frozenMotion = assemblyJob?.input_snapshot?.motion_clips;
   const assemblyOutdated = approvedMotionIds !== null && Array.isArray(frozenMotion) &&
     JSON.stringify(frozenMotion.map((clip: any) => clip.asset_id).sort()) !== JSON.stringify(approvedMotionIds);
@@ -671,6 +674,10 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         <a className="secondary-button" href={`/projects/${projectId}/scenes?plan=${plan.id}`}>Production Briefs</a>
       </div>
 
+      <BatchProductionPanel key={projectId + ":" + plan.id} projectId={projectId} planId={plan.id} scenes={scenes}
+        disabled={individualBusy || pending(assemblyJob)} onBusy={setBatchBusy}
+        onRefresh={async () => { await Promise.all([refreshScene(scene.id), refreshAssemblyReadiness(plan.id), refreshFinal(plan.id)]); }} />
+
       <section className="production-layout">
         <aside className="production-scene-list">
           <span className="panel-label">SCENES</span>
@@ -758,7 +765,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             <div className="production-actions">
               {!pending(motionJob) && <label><input type="checkbox" checked={motionTermsAccepted} onChange={event => setMotionTermsAccepted(event.target.checked)} /> I agree to the <a href="https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt" target="_blank" rel="noreferrer">LTX model license and use restrictions</a>, including AI disclosure.</label>}
               {!pending(motionJob) && <p>{motionProvider === "modal"
-                ? "Modal is the primary generator for a 2-second AI motion preview. It starts only if server credentials and the account budget gate are enabled. Existing approved clips are preserved."
+                ? "Modal generates AI motion up to 5 seconds, aligned to the selected scene. It starts only if server credentials and the account budget gate are enabled. Existing approved clips are preserved."
                 : "Hugging Face is the fallback for a 2-second AI motion preview, subject to verified free eligibility and quota. Existing approved clips remain saved; this preview is not full-scene coverage."}</p>}
               {!pending(motionJob) && <button className="primary-button" disabled={busy || image?.status !== "approved" || !motionTermsAccepted} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
               {pending(motionJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkMotionStatus()}>{motionGenerating ? "Checking…" : "Check Motion Status"}</button>}

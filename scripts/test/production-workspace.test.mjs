@@ -15,7 +15,8 @@ const transformed = ts.transpileModule(
   source
     .replace('"../lib/supabase/client"', '"./stub.mjs"')
     .replace('"../lib/formatCreativeText"', '"./formatCreativeText.mjs"')
-    .replace('"../components/navigation/StudioHeader"', '"./header.mjs"'),
+    .replace('"../components/navigation/StudioHeader"', '"./header.mjs"')
+    .replace('"../components/production/BatchProductionPanel"', '"./batch.mjs"'),
   { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }
 ).outputText;
 await writeFile(join(dir, 'page.mjs'), transformed);
@@ -23,6 +24,7 @@ const errorHelper = await readFile(new URL('../../src/lib/formatCreativeText.ts'
 await writeFile(join(dir, 'formatCreativeText.mjs'), ts.transpileModule(errorHelper, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText);
 await writeFile(join(dir, 'stub.mjs'), 'export const supabase = new Proxy({}, { get: (_, key) => globalThis.__uiDb[key] });');
 await writeFile(join(dir, 'header.mjs'), 'export default function StudioHeader() { return null; }');
+await writeFile(join(dir, 'batch.mjs'), 'export default function BatchProductionPanel() { return null; }');
 const Page = (await import(pathToFileURL(join(dir, 'page.mjs')).href)).default;
 after(() => rm(dir, { recursive: true, force: true }));
 
@@ -393,7 +395,7 @@ test('AI motion requires model terms and appends beside an approved procedural c
   try {
     const button = [...document.querySelectorAll('button')].find(b => b.textContent === 'Generate Motion');
     assert.ok(button); assert.equal(button.disabled, true);
-    assert.match(document.body.textContent, /2-second AI motion preview/);
+    assert.match(document.body.textContent, /AI motion up to 5 seconds/);
     await view.click('Generate Motion');
     assert.equal(view.calls.find(c => c.action === 'enqueue_ai_motion').provider, 'modal');
     assert.equal(view.calls.find(c => c.action === 'enqueue_ai_motion').acceptedTerms, true);
