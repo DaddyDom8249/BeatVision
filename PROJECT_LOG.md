@@ -2470,3 +2470,17 @@ creative approval or provider call initiated by this work. User must explicitly 
 then review reused images in the UI. Frontend/source publication pending. Real
 owner phone reuse/motion generation and improved MP4 remain UNVERIFIED. Physical
 Modal strict-tokenizer release from prior turn still not verified as deployed.
+
+Revision-media release verified: source f12753567f5d76e8bca5fb86553f5cc4ad598504,
+exact local/remote treecb64400885fe34d1884471b781872df8341ec7b1, draftPR151
+(base feat/guided-shot-repair-20261026). Vercel dpl_5fsuzQs98hLRfhdVaCjcxikTPaLa
+READY at source; canonical alias independently verified. Public JS includes existing-
+image availability, revision context/reuse RPCs, previous footage navigation and
+explicit no-new-generation caption. Exact-source hostedCI40284954766 SUCCESS;
+audit job121446310779 decoded logs confirm545tests545pass0fail0skip. This supersedes
+local incomplete-report uncertainty for the released repository suite. Worker
+check40284954741 SUCCESS (checks only, no physical worker deploy). Review threads
+empty; main independently unchanged3e26d8556e62b40e9f20823cb253854ae5efcec6.
+No production image reference creation/approval/inference initiated by this repair.
+Owner must choose reuse and review in app. Original media/approvals remain intact;
+real authenticated phone reuse and improved motion output remain UNVERIFIED.
