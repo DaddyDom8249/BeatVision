@@ -9,7 +9,7 @@ import * as jsx from "react/jsx-runtime";
 import { createRoot } from "react-dom/client";
 import { JSDOM } from "jsdom";
 
-function compile(path, dependencies, window) {
+function compile(path, dependencies, window, asModule=false) {
   const source = readFileSync(new URL("../../" + path, import.meta.url), "utf8");
   const code = ts.transpileModule(source, { compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
@@ -19,14 +19,14 @@ function compile(path, dependencies, window) {
   runInNewContext(code, {
     module: mod, exports: mod.exports, window, URL, URLSearchParams,
     require(name) {
-      if (name === "../../supabase/functions/beatvision-generation/shot-direction") return shotDirection;
+      if (["../../supabase/functions/beatvision-generation/shot-direction","../../../supabase/functions/beatvision-generation/shot-direction"].includes(name)) return shotDirection;
       if (name === "react") return React;
       if (name === "react/jsx-runtime") return jsx;
       if (Object.hasOwn(dependencies, name)) return dependencies[name];
       throw new Error("Unexpected test dependency: " + name);
     },
   });
-  return mod.exports.default;
+  return asModule ? mod.exports : mod.exports.default;
 }
 
 async function fixture(t, { url = "https://fixture.test/projects/project-1/visual-plan?plan=saved-plan", rejectAuth = false } = {}) {
@@ -43,6 +43,10 @@ async function fixture(t, { url = "https://fixture.test/projects/project-1/visua
   const Header = compile("src/components/navigation/StudioHeader.tsx", {
     "../../lib/supabase/client": { supabase },
   }, dom.window);
+  const engine = compile("src/lib/guidedShotRepair.ts", {}, dom.window, true);
+  const BeginnerHelp = compile("src/components/plan/BeginnerShotHelp.tsx", {
+    "../../lib/supabase/client": {supabase:{}}, "../../lib/guidedShotRepair": engine,
+  }, dom.window);
   const root = createRoot(dom.window.document.getElementById("root"));
   t.after(async () => {
     await act(async () => root.unmount());
@@ -52,7 +56,8 @@ async function fixture(t, { url = "https://fixture.test/projects/project-1/visua
   return {
     document: dom.window.document, window: dom.window, Header,
     compile: (path, dependencies) => compile(path, {
-      "../components/navigation/StudioHeader": { default: Header }, ...dependencies,
+      "../components/navigation/StudioHeader": { default: Header },
+      "../components/plan/BeginnerShotHelp": {default: BeginnerHelp}, ...dependencies,
     }, dom.window),
     render: async (Component, props) => {
       await act(async () => root.render(React.createElement(Component, props)));

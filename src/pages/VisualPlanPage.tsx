@@ -1,4 +1,5 @@
 import { inspectMotionDirection } from "../../supabase/functions/beatvision-generation/shot-direction";
+import BeginnerShotHelp from "../components/plan/BeginnerShotHelp";
 import { useState } from "react";
 import { useVisualPlan } from "../hooks/useVisualPlan";
 import type { VisualPlanScene } from "../types/visualPlan";
@@ -80,7 +81,7 @@ function SceneEditor({ scene, working, onSave }: {
 }
 
 export default function VisualPlanPage({ projectId }: { projectId: string }) {
-  const { world, styleBible, song, plan, planHistory, scenes, loading, working, error, createPlan, revisePlan, saveScene, approvePlan } = useVisualPlan(projectId);
+  const { world, styleBible, song, plan, planHistory, scenes, loading, working, error, createPlan, revisePlan, saveScene, approvePlan, reload } = useVisualPlan(projectId);
 
   if (loading) return <div className="app-shell"><StudioHeader projectId={projectId} activeStage="visual-plan" /><main className="dashboard"><p>Loading Visual Plan…</p></main></div>;
 
@@ -160,6 +161,8 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
             </section>
           )}
 
+          <BeginnerShotHelp key={plan.id} planId={plan.id} locked={plan.status === "approved"} scenes={scenes} working={working}
+            onCreateRevision={()=>revisePlan()} onSaved={reload} />
           <section>
             <h2>Timeline</h2>
             {scenes.map((scene) => (

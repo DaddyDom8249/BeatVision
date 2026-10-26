@@ -2348,3 +2348,62 @@ all6 retrieved files byte-match tested candidate. Existing auth/Arena/scheduler
 preserved; no schema/RLS change. Broad live-vs-repo Arena contract mismatch from
 prior cycle remains outside this repair. UI deployment/source publication and
 strict physical Modal worker deployment pending. Real improved MP4 UNVERIFIED.
+
+## 2026-10-26 America/Chicago — Optional Beginner help for shot issues
+
+Creator narrows scope: preserve existing platform, add a beginner menu that explains
+many affected shots, offers options or custom wording, previews and applies fixes.
+Added BeginnerShotHelp alongside the existing Visual Plan editors. Production issue
+messages link directly to the opened menu. It explains incomplete/generic movement,
+lets the artist choose an existing-subject action and camera or supply literal
+custom text, and validates the proposed request with the same shared render compiler.
+No selections/default actions are assumed. Same-choice application across all
+selected affected shots is clearly disclosed; valid directions remain untouched.
+Explicit review confirmation precedes draft save. Locked plans offer the existing
+editable-revision action; approved assets/plan are not rewritten. Story/timing/
+location/continuity notes remain intact. No new creative approvals or generation.
+
+New owner-checked atomic save_guided_shot_directions RPC saves only action/camera
+on draft scenes in a draft owned plan, requires exact expected prior directions,
+rejects duplicate/oversized/invalid requests, locks rows and rolls back the whole
+save on a stale/missing/locked scene. Additive migration actual ledger
+20261026040549_guided_shot_direction_repairs. Retrieved body matches repository SQL,
+anonymous execute denied, authenticated execute granted with owner checks and
+fixed search_path. Security advisor counts unchanged except intentional owner-
+checked authenticated definer function16 vs15; existing unrelated findings remain.
+No RLS grants/policies changed. No production creative data modified to test it.
+
+Baseline520tests519pass0fail1skip. Final534tests533pass0fail1existing layoutskip;
+14new focused helper/UI/database checks pass, including55-shot atomic save,
+late-stale rollback, protected plans/scenes, another owner, anonymous permissions,
+custom wording, no defaults, review confirmation and changed-choice invalidation.
+Initial DB fixture failures lacked required World lineage/locked timestamp; fixed
+fixture to actual constraints without disabling production guards. Build and
+production audit pass, existing bundle warning retained. Small scoped studio-theme
+CSS gives touch-sized radio choices. No paid UI generation service used.
+
+Previous motion request release source f82c5ae60e28d374082c6545528b8fe7cd0aa05b,
+PR149, Vercel dpl_4wQhiDyfUuxnXK43CZx5SURMxxek READY, canonical alias and
+public JS request-preview/strict-direction strings verified. HostedCI40266115056
+and worker-check40266115058 SUCCESS. This documents the previous turn's release.
+Physical Modal strict tokenizer update remains pending Termux job
+858cc857-9ab4-4d36-9be9-c77a656b98dc; bridge offline/phone approval required at
+last check. No completed worker deployment is claimed.
+
+Current batch985cf5ed remains paused with0active; no new GPU inference, automatic
+retry, approval or main merge. Main last independent readback3e26d8556e62b40e9f20823cb253854ae5efcec6.
+Current Beginner help source publication/frontend release pending. Authenticated
+physical-phone save workflow and improved real MP4 remain UNVERIFIED.
+
+Beginner help release verified: source dd250bb944b88285a36a96221217fcb48c71a624,
+exact local/remote tree1fc5da53777cda673fde8148dc04ab3e053fa74c, draftPR150
+(base repair/tight-modal-shot-request-20261026). Vercel
+dpl_DKTQ8PcaWAwPYPjQwLb87G8PB1dC READY at that source; independent alias lookup
+confirms beat-vision-theta.vercel.app points there. Retrieved public JS contains
+Beginner help, proposed-fix preview, custom action, editable-copy action, atomic-save
+RPC and no-render confirmation strings. HostedCI40280759579/audit121433300542
+completedSUCCESS including tests,audit,build. Review threads empty at check.
+Main independently unchanged3e26d8556e62b40e9f20823cb253854ae5efcec6.
+Production batch remains paused/0active. No production creative save, new approval,
+provider inference or main merge. Live authenticated phone save remains UNVERIFIED;
+local real React plus database tests cover it offline. Improved MP4 not verified.
