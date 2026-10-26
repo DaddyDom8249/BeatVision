@@ -13,14 +13,15 @@ const compile=source=>ts.transpileModule(source,{compilerOptions:{target:ts.Scri
 for(const [source,dest] of [['src/lib/batchProduction.ts','engine.mjs'],['src/lib/formatCreativeText.ts','errors.mjs'],['supabase/functions/beatvision-generation/shot-direction.ts','shot.mjs']])
   await writeFile(join(dir,dest),compile(await readFile(join(rootDir,source),'utf8')));
 await writeFile(join(dir,'stub.mjs'),'export const supabase = new Proxy({}, {get:(_,key)=>globalThis.__batchDb[key]});');
+await writeFile(join(dir,'revision.mjs'),compile((await readFile(join(rootDir,'src/components/production/RevisionMediaPanel.tsx'),'utf8')).replace('"../../lib/supabase/client"','"./stub.mjs"')));
 await writeFile(join(dir,'panel.mjs'),compile((await readFile(join(rootDir,'src/components/production/BatchProductionPanel.tsx'),'utf8'))
-  .replace('"../../../supabase/functions/beatvision-generation/shot-direction"','"./shot.mjs"').replace('"../../lib/supabase/client"','"./stub.mjs"').replace('"../../lib/batchProduction"','"./engine.mjs"').replace('"../../lib/formatCreativeText"','"./errors.mjs"')));
+  .replace('"./RevisionMediaPanel"','"./revision.mjs"').replace('"../../../supabase/functions/beatvision-generation/shot-direction"','"./shot.mjs"').replace('"../../lib/supabase/client"','"./stub.mjs"').replace('"../../lib/batchProduction"','"./engine.mjs"').replace('"../../lib/formatCreativeText"','"./errors.mjs"')));
 const {approvalCandidates,approveBatch}=await import(pathToFileURL(join(dir,'engine.mjs')));
 const Panel=(await import(pathToFileURL(join(dir,'panel.mjs')))).default;
 after(()=>rm(dir,{recursive:true,force:true}));
 const scenes=n=>Array.from({length:n},(_,i)=>({id:'scene-'+i,scene_number:i+1,status:'approved',title:'Shot '+(i+1),movement_direction:'Lift the left hand slowly.',camera_direction:'Locked camera.',start_time:i*5,end_time:(i+1)*5}));
-function fixture({count=3,kind='image',failedAt=-1,transportFail=false,missingImage=-1,capability=true}={}) {
-  const all=scenes(count), assets=[], jobs=[],calls=[],rpcCalls=[],events=[],batches=[];
+function fixture({count=3,kind='image',failedAt=-1,transportFail=false,missingImage=-1,capability=true,reuseCandidates=[],history=[]}={}) {
+  const all=scenes(count), assets=[], jobs=[],calls=[],rpcCalls=[],events=[],batches=[],media={candidates:reuseCandidates,history};
   const image=(scene,approved=true)=>({id:'source-'+scene.id,scene_id:scene.id,project_id:'p',visual_plan_id:'v',storage_path:'p/scene-images/'+scene.id,image_url:'https://fixture.test/image.png',status:approved?'approved':'generated',approved});
   if(kind==='motion') all.forEach((s,i)=>{if(i!==missingImage)assets.push({...image(s),kind:'image'});});
   const db={from(table){const filters={};const q={select(){return q;},eq(k,v){filters[k]=v;return q;},order(){return q;},limit(){return q;},maybeSingle(){return q;},then(resolve,reject){
@@ -30,6 +31,8 @@ function fixture({count=3,kind='image',failedAt=-1,transportFail=false,missingIm
     return Promise.resolve({data:table==='generation_jobs'?matches.at(-1)??null:[...matches].reverse(),error:null}).then(resolve,reject);
   }};return q;},
   async rpc(name,args){rpcCalls.push({name,args});
+    if(name==='revision_media_context')return {data:{plan_id:'v',candidates:structuredClone(media.candidates),history:structuredClone(media.history)},error:null};
+    if(name==='reuse_revision_images'){const n=media.candidates.length;media.candidates=[];return {data:n,error:null};}
     if(name==='get_generation_batch_progress')return {data:structuredClone(batches),error:null};
     if(name==='start_generation_batch'){
       if(!batches.length)batches.push({id:'batch-1',kind:args.p_kind,status:'running',done:0,total:count,current_scene:1,failed:0});
@@ -54,7 +57,7 @@ function fixture({count=3,kind='image',failedAt=-1,transportFail=false,missingIm
   function newJob(sceneId,type,requestId,source){const existing=jobs.find(j=>j.requestId===requestId);if(existing)return {...existing};
     const j={id:'job-'+jobs.length,project_id:'p',visual_plan_id:'v',visual_plan_scene_id:sceneId,job_type:type==='image'?'scene_image':'scene_motion',status:'queued',requestId,input_snapshot:type==='motion'?{modal_motion:{source_image_id:source}}:{}};jobs.push(j);return {...j};}
   const progress=[];const options={db,projectId:'p',planId:'v',scenes:all,kind,acceptedTerms:true,stopped:()=>false,progress:p=>progress.push(p),wait:async()=>{}};
-  return {db,all,assets,jobs,calls,rpcCalls,events,options,progress,image,batches};
+  return {db,all,assets,jobs,calls,rpcCalls,events,options,progress,image,batches,media};
 }
 function seedSaved(f) {
   for(const s of f.all)f.assets.push({id:'saved-'+s.id,scene_id:s.id,project_id:'p',visual_plan_id:'v',kind:f.options.kind,generation_job_id:'saved-job-'+s.id,image_url:'https://fixture.test/a.png',storage_path:'p/scene-images/a.png',video_url:'https://fixture.test/a.mp4',status:'generated',approved:false});
@@ -139,5 +142,18 @@ test('production request review shows deterministic saved action without generat
    assert.match(document.body.textContent,/Camera: Locked camera/);
    assert.match(document.body.textContent,/Model output still needs your review/);
    assert.equal(f.calls.length,0);
+ }finally{await v.cleanup();}
+});
+
+test('revision images are offered before duplicate generation and previous footage stays accessible',async()=>{
+ const candidates=Array.from({length:57},(_,i)=>({scene_id:'scene-'+i,source_asset_id:'old-'+i}));
+ const f=fixture({count:57,reuseCandidates:candidates,history:[{id:'prior-plan',revision_number:2,images:57,clips:3}]});const v=await mount(f);try{
+ assert.equal(v.button('Generate All Scene Images').disabled,true);
+ assert.match(document.body.textContent,/57 approved images from the previous plan/);
+ assert.ok(document.querySelector('a[href="/projects/p/production?plan=prior-plan"]'));
+ assert.equal(f.rpcCalls.filter(x=>x.name==='reuse_revision_images').length,0);
+ await v.click('Reuse 57 existing images');assert.equal(f.rpcCalls.filter(x=>x.name==='reuse_revision_images').length,1);
+ assert.equal(f.calls.length,0);assert.equal(f.rpcCalls.filter(x=>x.name.startsWith('approve_')).length,0);
+ assert.equal(v.button('Generate All Scene Images').disabled,false);
  }finally{await v.cleanup();}
 });

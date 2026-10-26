@@ -7,7 +7,7 @@ import BatchProductionPanel from "../components/production/BatchProductionPanel"
 
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
-const imageFields = "id,project_id,visual_plan_id,scene_id,generation_job_id,provider,model,image_url,storage_path,status,approved,created_at,updated_at";
+const imageFields = "id,project_id,visual_plan_id,scene_id,generation_job_id,reused_from_image_id,source_generation_job_id,provider,model,image_url,storage_path,status,approved,created_at,updated_at";
 const SIGNED_MEDIA_REUSE_MS = 50 * 60 * 1000; // Supabase signs clips and images for 60 minutes.
 
 /** Legacy completed renders may reside only at an external Shotstack stage URL.
@@ -183,6 +183,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     { label: "Final assembly", job: assemblyJob },
   ]) {
     if (job?.status !== "failed") continue;
+    if (label === "Scene image" && image?.reused_from_image_id) continue;
     const message = productionErrorMessage(job.error ?? "Generation failed.");
     const labels = jobFailureMap.get(message) ?? [];
     if (!labels.includes(label)) labels.push(label);
@@ -714,6 +715,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-provider-note">
             <span className="panel-label">SCENE IMAGE</span>
+            {image?.reused_from_image_id && <p role="status">Existing image reused from the previous revision. No new image generation was performed.</p>}
             {imageHistory.length > 1 && <label>Saved image variants<select aria-label="Saved image variants" value={image?.id ?? ''} onChange={event => { assetChoice.current.imageId = event.target.value; void refreshScene(scene.id).catch(e => setError(productionErrorMessage(e))); }}>{imageHistory.map((asset, index) => <option key={asset.id} value={asset.id}>Variant {imageHistory.length - index} · {asset.status}</option>)}</select></label>}
             {image?.image_url ? <img src={image.image_url} alt={scene.title} style={{ width: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 12 }} />
               : image ? <p role="alert">The approved scene image is preserved, but its preview is temporarily unavailable{imagePreviewFailure ? ": " + imagePreviewFailure : "."}</p>

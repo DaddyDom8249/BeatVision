@@ -2407,3 +2407,66 @@ Main independently unchanged3e26d8556e62b40e9f20823cb253854ae5efcec6.
 Production batch remains paused/0active. No production creative save, new approval,
 provider inference or main merge. Live authenticated phone save remains UNVERIFIED;
 local real React plus database tests cover it offline. Improved MP4 not verified.
+
+## 2026-10-26 America/Chicago — Preserve and reuse revision imagery
+
+Creator reports57approvedimages and earlier motion missing after Beginner help
+created/locked revision3. Confirmed preservation gap: revision2 e4c19a8c retains
+57approvedimages/3clips, all physical storage objects present; revision1 retains
+9images/10clips. Revision3 0afbd251 hasnew scene IDs and no assets. Files were not
+deleted, but earlier reassurance failed to distinguish retained files from reuse
+in the revised workflow. New image batch hit Cloudflare daily free-neuron quota.
+
+Implemented explicit compatible-image reuse, not counterfeit generation. Assets
+can now be either original generated records (generation_job_id required) or
+reuse references (generation_job_id null; immutable original source asset and
+source-generation-job references required). Existing uniqueness remains; additional
+reuse uniqueness and guarded lineage enforce project, immediate parent revision,
+Vision Lock, World/Style/song, shot number/time, visual direction, location, mood,
+lyric context and continuity compatibility. Action/camera may intentionally differ.
+Original asset/job/approval/bytes remain unchanged. Reuse creates unapproved review
+candidates with the same storage path,provider/model and original lineage. It never
+marks a generation completed or silently transfers creative approval.
+
+Owner-checked revision_media_context and reuse_revision_images RPCs show prior media
+and atomically link user-selected candidates. A paused duplicate-image batch retires
+only the reused items; original failed/queued jobs stay in history and cannot dispatch
+through the batch guard. Active/running image generation and individual pending work
+block reuse. New image batch creation fails while compatible sources need review.
+Explicit image approval rechecks provenance and preserves exactly-one-approved guard.
+Service-only motion_snapshot_for_image binds approved reuse to current frozen shot
+instructions while retaining original image-job provenance. Both individual Modal/HF
+and batch preparation support this lineage; no fake image jobs. Nullable job ID is
+restricted by the generation-or-reuse CHECK, not a weakening of ownership/RLS.
+
+New RevisionMediaPanel offers reuse before Generate All Images, exposes earlier
+revision footage links, fails closed if media eligibility cannot be checked, and
+requires subsequent image review/approval. Reused-image label and resolved duplicate-
+attempt banner handling avoid presenting old quota failure as missing saved media.
+Original motion remains accessible in its actual revision; it is not represented
+as satisfying changed motion instructions. No original media is copied/deleted.
+
+Verification:24 focused UI/DB/edge checks pass (55image reference test, explicit
+approval, current-direction motion provenance, individual/batch enqueue, late error
+rollback, other-owner/anon/service-only protection and paused dispatch retirement).
+Live-compatible focused runtime33/33pass. Predeployment full suite543tests542pass,
+0fail,1existing layoutskip before two additional edge tests. Final low-concurrency
+70-file command returned0 but local capture has no final summary; no final aggregate
+pass count claimed from that incomplete report. Build and production-audit pass.
+Fixture fixes: SQL separators, existing SELECT grants and JSON composite decoding;
+no production guard was disabled. Initial full run before migration file placement
+failed new tests because fixture path was unset; final repo path recorded below.
+
+Production additive migration actual ledger20261026071054_revision_image_reuse_provenance;
+all7 retrieved function bodies byte-match tested SQL. New owner RPCs authenticated-
+definer warnings18vs16; existing RLS/anon/password advisories unchanged. Internal
+compatibility/snapshot helpers service-only; anonymous owner RPC execution denied.
+Controller v72 ACTIVE, bundle00b8bf05ce195737281d0a8b6aee4b32692c364d0f12bfadf1d803b8128dcf87,
+all6 files retrieved byte-match tested live-compatible submission. Existing Arena,
+auth and scheduler preserved; broad pre-existing live/repo Arena mismatch remains.
+Read-only production compatibility check confirms57eligible old images forrevision3.
+Original image/clip counts and approvals rechecked unchanged. No production reuse,
+creative approval or provider call initiated by this work. User must explicitly link
+then review reused images in the UI. Frontend/source publication pending. Real
+owner phone reuse/motion generation and improved MP4 remain UNVERIFIED. Physical
+Modal strict-tokenizer release from prior turn still not verified as deployed.
