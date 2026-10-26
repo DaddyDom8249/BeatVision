@@ -800,6 +800,11 @@ async function run(db: any, job: any) {
     throw new Error("GENERATION_JOB_TYPE_NOT_SUPPORTED: only scene_image, scene_motion, and assembly are controller-backed.");
   }
   if (job.status !== "queued") return job;
+  if (job.input_snapshot?.generation_batch_id) {
+    const permission = await db.rpc("generation_batch_dispatch_allowed", {p_job_id: job.id});
+    if (permission.error) throw new Error("BATCH_DISPATCH_CHECK_FAILED");
+    if (permission.data !== true) return job;
+  }
 
   const requestId = "beatvision:" + job.id;
   const claim = await db.from("generation_jobs")
@@ -1038,7 +1043,7 @@ Deno.serve(async (req) => {
       // query lets eight long-running provider jobs permanently starve newer
       // queued work from ever being submitted.
       const [queued, active] = await Promise.all([
-        db.from("generation_jobs").select("*").eq("status", "queued").order("created_at", { ascending: true }).limit(8),
+        db.rpc("get_generation_dispatch_queue", {p_limit: 8}),
         db.from("generation_jobs").select("*").in("status", ["submitted", "processing"]).order("created_at", { ascending: true }).limit(8),
       ]);
       if (queued.error) throw new Error(queued.error.message);

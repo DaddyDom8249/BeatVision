@@ -8,7 +8,7 @@ function fixture({ status = 'processing', age = 0, upstream = null, race = null,
   let writes = 0;
   let selectedStatuses;
   const client = {
-    rpc: async () => ({ data: 'test-queue-secret' }),
+    rpc: async name => ({ data: name === 'get_generation_dispatch_queue' ? [] : 'test-queue-secret' }),
     from(table) {
       assert.equal(table, 'generation_jobs');
       let changes;
@@ -113,7 +113,7 @@ test('scheduler reserves dispatch capacity when eight older provider jobs are st
   const active = Array.from({ length: 8 }, (_, index) => ({ id: `active-${index}`, job_type: 'scene_motion', status: 'processing', created_at: new Date(Date.now() - 60_000).toISOString(), updated_at: new Date().toISOString(), output: { upstream_job_id: `provider-${index}`, dispatch_started_at: new Date().toISOString() } }));
   const queued = { id: 'queued-new-work', job_type: 'scene_image', status: 'queued', created_at: new Date().toISOString(), output: {} };
   const selected = [];
-  const client = { rpc: async () => ({ data: 'test-queue-secret' }), from(table) { assert.equal(table, 'generation_jobs'); let statuses = []; return { select() { return this; }, eq(key, value) { if (key === 'status') statuses = [value]; return this; }, in(key, values) { if (key === 'status') statuses = values; return this; }, order() { return this; }, async limit() { selected.push(statuses); return { data: statuses.includes('queued') ? [queued] : active }; } }; } };
+  const client = { rpc: async name => {if(name==='get_generation_dispatch_queue'){selected.push(['queued']);return {data:[queued]};}return {data:'test-queue-secret'};}, from(table) { assert.equal(table, 'generation_jobs'); let statuses = []; return { select() { return this; }, eq(key, value) { if (key === 'status') statuses = [value]; return this; }, in(key, values) { if (key === 'status') statuses = values; return this; }, order() { return this; }, async limit() { selected.push(statuses); return { data: statuses.includes('queued') ? [queued] : active }; } }; } };
   const runtime = await loadGeneration(client);
   const originalRun = globalThis.fetch;
   globalThis.fetch = async () => new Response(JSON.stringify({ error: 'provider must not be called by fixture' }), { status: 503 });

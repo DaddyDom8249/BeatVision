@@ -1,0 +1,11 @@
+--- a/index.ts
++++ b/index.ts
+@@ -741,0 +742,5 @@
++  if (job.input_snapshot?.generation_batch_id) {
++    const permission = await db.rpc("generation_batch_dispatch_allowed", {p_job_id: job.id});
++    if (permission.error) throw new Error("BATCH_DISPATCH_CHECK_FAILED");
++    if (permission.data !== true) return job;
++  }
+@@ -980 +985 @@
+-        db.from("generation_jobs").select("*").eq("status", "queued").order("created_at", { ascending: true }).limit(8),
++        db.rpc("get_generation_dispatch_queue", {p_limit: 8}),

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase/client";
-import { generateBatch, approvalCandidates, approveBatch, type BatchKind, type BatchProgress } from "../../lib/batchProduction";
+import { approvalCandidates, approveBatch, type BatchKind, type BatchProgress } from "../../lib/batchProduction";
 import { getCreativeErrorMessage } from "../../lib/formatCreativeText";
 import type { VisualPlanScene } from "../../types/visualPlan";
 
@@ -14,14 +14,34 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
   const [terms, setTerms] = useState(false);
   const [reviewed, setReviewed] = useState(false);
   const [review, setReview] = useState<{ kind: BatchKind; candidates: Candidate[] } | null>(null);
+  const [batches, setBatches] = useState<any[]>([]);
+  const [progressError, setProgressError] = useState<string | null>(null);
+  const progressVersion = useRef(0);
   const life = useRef(0);
   const stop = useRef(true);
   const active = useRef(false);
   useEffect(() => {
     life.current++; stop.current = false;
-    setProgress(null); setError(null); setReview(null); setReviewed(false);
+    setProgress(null); setError(null); setReview(null); setReviewed(false); setBatches([]);
     return () => { life.current++; stop.current = true; onBusy(false); };
   }, [projectId, planId]);
+  const refreshProgress = useCallback(async () => {
+    const epoch = life.current, version = ++progressVersion.current;
+    const response = await supabase.rpc("get_generation_batch_progress", {p_plan_id: planId});
+    if (epoch !== life.current || version !== progressVersion.current) return;
+    if (response.error || !Array.isArray(response.data)) {
+      setProgressError("Saved batch progress is temporarily unavailable. Rendering does not depend on this page.");
+      return;
+    }
+    setBatches(response.data); setProgressError(null);
+  }, [planId]);
+  useEffect(() => {
+    let mounted = true;
+    void refreshProgress().catch(() => {if(mounted) setProgressError("Could not load saved batch progress. Reopen this page to check again.");});
+    const timer = window.setInterval(() => { void refreshProgress().catch(() => undefined); }, 5000);
+    return () => {mounted=false; window.clearInterval(timer); progressVersion.current++;};
+  }, [projectId, refreshProgress]);
+  const serverRunning = batches.some(batch => batch.status === "running");
   const shortShots = scenes.every(s => Number.isFinite(s.end_time-s.start_time) && s.end_time > s.start_time && s.end_time-s.start_time <= 5.000001);
 
   async function operation(work: (stopped: () => boolean, update: (value: BatchProgress) => void) => Promise<void>) {
@@ -41,7 +61,11 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
       }
     } catch (reason) {
       if (life.current === epoch) {
-        setError(getCreativeErrorMessage(reason, "Batch paused. Check saved jobs before resuming."));
+        const message = getCreativeErrorMessage(reason, "Batch paused. Check saved jobs before resuming.");
+        setError(message.includes("BATCH_APPROVED_IMAGE_REQUIRED") ? "Approve a stored image for every scene before starting all motion clips. No partial batch was queued."
+          : message.includes("BATCH_INDIVIDUAL_RETRY_REQUIRED") ? "A scene needs an individual regeneration. Finish that scene, then resume the batch. No automatic retry was sent."
+          : message.includes("BATCH_SHORT_SHOT_REVISION_REQUIRED") ? "Create and lock the 5-second shot revision before starting all motion clips."
+          : message);
         await onRefresh().catch(() => undefined);
       }
     } finally {
@@ -51,8 +75,27 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
   }
   function generate(kind: BatchKind) {
     setReview(null); setReviewed(false);
-    void operation((stopped, update) => generateBatch({ db: supabase, projectId, planId, scenes, kind,
-      acceptedTerms: terms, stopped, progress: update, wait: () => new Promise(resolve => window.setTimeout(resolve, 5000)) }));
+    void operation(async (stopped, update) => {
+      update({done:0,total:scenes.length,message:"Saving the complete server batch…"});
+      if (kind === "motion") {
+        if (!terms || !shortShots) throw new Error("Accept the LTX license and lock a 5-second shot revision first.");
+        const probe = await supabase.functions.invoke("beatvision-generation", {body:{action:"modal_capability",projectId}});
+        if (probe.error || !probe.data?.modal_available || !probe.data?.modal_supported)
+          throw new Error("Modal GPU is unavailable. No batch motion was submitted.");
+      }
+      if (stopped()) return;
+      const response = await supabase.rpc("start_generation_batch", {p_plan_id:planId,p_kind:kind,p_accepted_terms:kind === "motion" && terms});
+      if (response.error) throw response.error;
+      if (!response.data?.id) throw new Error("No saved batch was returned. Reopen this page before retrying.");
+      if (!stopped()) {setProgress(null); await refreshProgress();}
+    });
+  }
+  function setPaused(batch: any, paused: boolean) {
+    void operation(async () => {
+      const response = await supabase.rpc("set_generation_batch_paused",{p_batch_id:batch.id,p_paused:paused});
+      if (response.error) throw response.error;
+      await refreshProgress();
+    });
   }
   function loadReview(kind: BatchKind) {
     setReview(null); setReviewed(false);
@@ -92,19 +135,29 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
   return <section className="style-section" aria-label="Batch scene production">
     <h2>Produce all scenes</h2>
     <p>Generate missing media one scene at a time. Existing images and clips are kept. Review and approve images before generating motion. Individual regeneration remains available below.</p>
-    <p>Keep this page open for the batch. Pause stops new requests; an already submitted job may finish. After reopening, use the same Generate All button to resume. Provider failures stop the batch; failed scenes need an individual retry.</p>
+    <p>Batches run on the server, even after you leave this page or close the browser. Return here to see saved progress. The scheduler checks about once a minute. Pause stops later scenes; an already submitted job may finish. Failures pause the batch; retry that scene individually, then Resume.</p>
     <div className="production-actions">
-      <button className="primary-button" disabled={blocked} onClick={() => generate("image")}>Generate All Scene Images</button>
+      <button className="primary-button" disabled={blocked || serverRunning} onClick={() => generate("image")}>Generate All Scene Images</button>
       <button className="secondary-button" disabled={blocked} onClick={() => loadReview("image")}>Review &amp; Approve All Images</button>
     </div>
     <label><input type="checkbox" checked={terms} disabled={blocked} onChange={e => setTerms(e.target.checked)} /> I agree to the <a href="https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt" target="_blank" rel="noreferrer">LTX license and use restrictions</a>, including AI disclosure.</label>
     <p>Motion uses Modal and your configured GPU budget. Clips are up to 5 seconds, aligned to each shot. This does not approve media or assemble the final video.</p>
     {!shortShots && <p>Create and lock a <a href={`/projects/${projectId}/visual-plan?plan=${planId}`}>5-second shot revision</a> before generating all motion.</p>}
     <div className="production-actions">
-      <button className="primary-button" disabled={blocked || !terms || !shortShots} onClick={() => generate("motion")}>Generate All 5-Second Motion Clips</button>
+      <button className="primary-button" disabled={blocked || serverRunning || !terms || !shortShots} onClick={() => generate("motion")}>Generate All 5-Second Motion Clips</button>
       <button className="secondary-button" disabled={blocked} onClick={() => loadReview("motion")}>Review &amp; Approve All Motion</button>
-      {running && <button className="secondary-button" onClick={() => {stop.current = true;}}>Pause Batch</button>}
+      {running && <button className="secondary-button" onClick={() => {stop.current = true;}}>Stop Review / Approval</button>}
     </div>
+    {progressError && <p role="status">{progressError}</p>}
+    {batches.map(batch => <div key={batch.id} role="status" aria-live="polite">
+      <label>{batch.kind === "image" ? "Scene images" : "Motion clips"}: {batch.done} of {batch.total} · {batch.status}
+        <progress aria-label={batch.kind === "image" ? "Scene image batch progress" : "Motion batch progress"} value={batch.done} max={Math.max(1,batch.total)} style={{width:"100%"}} />
+      </label>
+      {batch.current_scene && batch.status !== "completed" && <p>Current scene: {batch.current_scene}.{batch.failed > 0 ? " A saved job failed. Regenerate it individually, then resume this batch." : " Progress is saved on the server."}</p>}
+      {batch.status !== "completed" && <button className="secondary-button" disabled={blocked} onClick={() => setPaused(batch,batch.status === "running")}>
+        {batch.status === "running" ? "Pause" : "Resume"} {batch.kind === "image" ? "Image" : "Motion"} Batch
+      </button>}
+    </div>)}
     {progress && <div role="status" aria-live="polite">
       <label>Batch progress: {progress.done} of {progress.total}<progress aria-label="Batch progress" value={progress.done} max={Math.max(1, progress.total)} style={{width:"100%"}} /></label>
       <p>{progress.message}</p>
