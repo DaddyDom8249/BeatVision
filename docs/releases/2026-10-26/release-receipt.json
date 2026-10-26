@@ -1,0 +1,52 @@
+{
+  "frontend": {
+    "source_commit": "26e69d48aade6a98ca1861dd79541f38fb95f312",
+    "deployment_id": "dpl_C2jUmi1vDeaFeich3YeZYwsWhsKg",
+    "alias": "beat-vision-theta.vercel.app",
+    "public_bundle": "/assets/index-CjPVycHR.js",
+    "status": "VERIFIED"
+  },
+  "checks": {
+    "production_ci": 40382121297,
+    "audit_job": 121780810277,
+    "tests": 560,
+    "passed": 560,
+    "failed": 0,
+    "skipped": 0,
+    "postgres_replay_ci": 40382121302,
+    "postgres_job": 121780811475,
+    "fresh_install_owner_contract": "PASS",
+    "npm_audit_known_vulnerabilities": 0
+  },
+  "dependencies": {
+    "package_sha256": "21381e449e2b90425ade3418ea43b6d56cd2004666bd629f778ccb009be8becb",
+    "lock_sha256": "fd43bfa7804f4fe891bdb1f6205229103e80436c285b449cc091f3463610d06d",
+    "clean_npm_ci": "PASS"
+  },
+  "security": {
+    "legacy_files_now_private": 100,
+    "stored_objects_preserved": 365,
+    "before_after_object_digest": "48211a401c0e8c8061db0e06cd7ba34c",
+    "anonymous_legacy_http_status": 400,
+    "client_quota_mutations_denied": true,
+    "anonymous_variant_execution_denied": true,
+    "paid_only_leaked_password_protection": "UNRESOLVED"
+  },
+  "image_reuse": {
+    "compatible_images_for_revision5": 57,
+    "source_objects_present": 57,
+    "owner_authenticated_flow": "UNVERIFIED"
+  },
+  "generation": {
+    "version": 72,
+    "bundle_sha256": "00b8bf05ce195737281d0a8b6aee4b32692c364d0f12bfadf1d803b8128dcf87",
+    "physical_strict_worker_update": "UNVERIFIED",
+    "new_inference_calls": 0
+  },
+  "blocked": [
+    "Owner browser authentication timed out; session handle lost.",
+    "Termux bridge offline; existing worker update remains queued.",
+    "Professional-quality motion and complete sponsor workflow require real owner/provider/visual verification."
+  ],
+  "main_merged": false
+}

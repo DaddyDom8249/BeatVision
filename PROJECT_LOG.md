@@ -2615,3 +2615,21 @@ creative data or migration change. Rechecking the exact updated head is required
 Secure browser-auth request timed out and its session handle was lost; authentication
 state remains UNKNOWN, no owner reuse verified. Phone still offline and old worker
 update queued. No duplicate auth request, new job, inference or approval attempted.
+
+Final security/reuse source26e69d48aade6a98ca1861dd79541f38fb95f312 verified:
+ProductionCI40382121297/audit121780810277 confirms560/560tests,0fail/skip, npmci,
+snapshot, dependency audit0, build/production-audit pass. Full PostgreSQL replay
+40382121302/postgres121780811475 SUCCESS including every migration and corrected
+FRESH_INSTALL_PROJECT_SONG_PASS with owner isolation. Fixture repair uses actual
+manual interpretation RPCs in disposable DB; no product guard relaxed.
+Vercel dpl_C2jUmi1vDeaFeich3YeZYwsWhsKg READY, canonical alias independently matched,
+publicJS/assets/index-CjPVycHR.js includes ancestor-reuse wording, reuse action and
+scene-specific Beginner preparation. Originalgenerationv72 retained unchanged.
+Current release receipt and sponsor gate documents distinguish live evidence from
+historical snapshots. Reviewthreads empty; main3e26d8556e62b40e9f20823cb253854ae5efcec6
+unchanged. Owner authentication remains UNKNOWN after secure auth timeout/session
+loss; no further credential request or production reuse/approval attempted. Phone
+stilloffline, worker update queued. Professional clip and sponsor completion remain
+BLOCKED, no new inference/charge/email/merge. Next required: usable owner session
+and reviewed reuse, reconnect Termux, verify existing worker update/credits, then
+one bounded real clip and complete visual review before sponsor assembly/download.
