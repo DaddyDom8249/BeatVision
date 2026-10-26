@@ -2232,3 +2232,15 @@ real batch initiated by this work. Real57-shot unattended GPU completion and fin
 four-minute playback remain UNVERIFIED. Do not roll back to v68 while queued batch
 jobs exist: rollback must retain the batch dispatch guard to avoid parallel release.
 Frontend publication/hosted CI pending at this entry. Main remains unchanged.
+
+Durable batch release verified: source fc218bea0f167f6cb262aa632a5243c12b692913,
+exact local/remote tree b66836427f75c79c45faa6b5a3141218fc5913e4, draftPR148
+(base feat/batch-scene-generation-20261026). Vercel
+dpl_D67MCLSqE2QEBbot1XZf7gW9dSmY READY at that source; independent alias readback
+confirms beat-vision-theta.vercel.app points to it. Public HTML/JS includes server
+batch messaging and start/progress/pause RPC names; foreground keep-page-open
+message absent. Hosted production CI40252758080 and Modal checks40252758127 both
+SUCCESS. Review threads empty at check; main independently unchanged at
+3e26d8556e62b40e9f20823cb253854ae5efcec6. No main merge, actual generation,
+creative approval or worker deployment. Real unattended GPU completion remains
+UNVERIFIED; existing approvals and costs were not changed.
