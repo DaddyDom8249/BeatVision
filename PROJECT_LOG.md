@@ -2484,3 +2484,37 @@ empty; main independently unchanged3e26d8556e62b40e9f20823cb253854ae5efcec6.
 No production image reference creation/approval/inference initiated by this repair.
 Owner must choose reuse and review in app. Original media/approvals remain intact;
 real authenticated phone reuse and improved motion output remain UNVERIFIED.
+
+## 2026-10-26 America/Chicago — Scene-specific Beginner help
+
+Creator requested actual problem-specific fixes instead of applying the same action
+and camera to every shot. Root cause: proposeShotRepairs accepted one global pair,
+then mapped it to every failing scene. Replaced that path with per-scene diagnosis,
+independent action/camera choices, and a scene-indexed edit map. Clear saved fields
+remain literal, and untouched scenes never enter the repair payload. Suggestions
+come only from the current scene's explicit saved action/camera fields (including
+structured arrays/alternatives); negatives are not split into contradictory options.
+No subject, action or story is inferred from lyrics, moods, locations or neighbouring
+shots. Missing intent requires creator input; clarity checks are not visual QA.
+
+Beginner menu now shows each scene's title, time, location and saved visual/continuity
+context; explains the individual field problem; offers authored alternatives and
+explicit camera choices; permits custom edits and per-scene discard. Navigation
+retains independent edits. Repeated passing directions are flagged for review, not
+automatically declared invalid or replaced. Individual before/after fields and exact
+renderer requests are shown before one reviewed atomic save. Incomplete edited
+scenes block preview; unedited scenes can be addressed later. Editing invalidates
+previous review. Locked plans still require editable revision, with existing media
+reuse/history preserved. No production creative edits, approvals, generation or
+batch resumption initiated. No migration or provider/controller change required.
+
+Files: guidedShotRepair.ts, BeginnerShotHelp.tsx, existing styles.css, focused tests.
+Validation: 27 focused real React/engine/DB/layout checks pass, including 55 distinct
+edits in one RPC, action-only/camera-only preservation, unknown scene rejection,
+negatives, arrays, navigation and explicit review. Build and production audit pass;
+existing bundle size warning remains. Initial array fixture assertion incorrectly
+omitted the fixture's separate saved visual action; corrected fixture, no guard
+relaxed. Pre-final broad suite547/546pass/0fail/1skip before added array coverage.
+Final broad command returned0 but captured log lacks aggregate footer, so no final
+aggregate count claimed pending hosted CI. Authenticated phone workflow UNVERIFIED.
+Publication/deployment pending at this entry. Main remains unchanged.
