@@ -17,7 +17,7 @@ A limited technical-pilot inquiry is supportable. This is not a production-ready
 Use Node 22 or newer. This repository currently has no committed dependency lockfile.
 
 ```sh
-npm install --ignore-scripts --package-lock=false --no-audit --no-fund
+npm ci --ignore-scripts --no-audit --no-fund
 npm test
 npm run production-audit
 npm run build

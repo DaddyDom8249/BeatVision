@@ -715,7 +715,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
 
           <div className="production-provider-note">
             <span className="panel-label">SCENE IMAGE</span>
-            {image?.reused_from_image_id && <p role="status">Existing image reused from the previous revision. No new image generation was performed.</p>}
+            {image?.reused_from_image_id && <p role="status">Existing image reused from an earlier revision. No new image generation was performed.</p>}
             {imageHistory.length > 1 && <label>Saved image variants<select aria-label="Saved image variants" value={image?.id ?? ''} onChange={event => { assetChoice.current.imageId = event.target.value; void refreshScene(scene.id).catch(e => setError(productionErrorMessage(e))); }}>{imageHistory.map((asset, index) => <option key={asset.id} value={asset.id}>Variant {imageHistory.length - index} · {asset.status}</option>)}</select></label>}
             {image?.image_url ? <img src={image.image_url} alt={scene.title} style={{ width: "100%", maxHeight: 520, objectFit: "contain", borderRadius: 12 }} />
               : image ? <p role="alert">The approved scene image is preserved, but its preview is temporarily unavailable{imagePreviewFailure ? ": " + imagePreviewFailure : "."}</p>

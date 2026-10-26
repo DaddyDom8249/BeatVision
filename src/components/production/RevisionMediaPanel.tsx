@@ -24,7 +24,7 @@ export default function RevisionMediaPanel({projectId,planId,disabled,onRefresh,
  return <aside className="style-section" aria-label="Media from earlier revisions">
   {context?.candidates.length>0 && <>
    <h2>Your existing images are available</h2>
-   <p>{context.candidates.length} approved images from the previous plan match this revision’s visual world, shot timing, appearance and continuity notes. Direction edits created new scenes; they did not delete those originals.</p>
+   <p>{context.candidates.length} approved images from earlier plan revisions match this revision’s visual world, shot timing, appearance and continuity notes. Direction edits created new scenes; they did not delete those originals.</p>
    <p>Reuse the same stored files without image generation. Reused images keep their original generation history and need your review and approval for this revision. Earlier clips stay in their original revision; changed motion instructions need separate review.</p>
    <button className="primary-button" disabled={disabled||busy} onClick={()=>void reuse()}>{busy?"Linking existing images…":`Reuse ${context.candidates.length} existing images`}</button>
   </>}

@@ -1,5 +1,11 @@
 # Sponsor demo release and remaining gates
 
+Current26October2026execution record: [SPONSOR_WORKFLOW_CURRENT.md](SPONSOR_WORKFLOW_CURRENT.md).
+Security/release/reuse lookup repairs are deployed;560tests and fresh database
+replay pass. Owner-authenticated reuse and professional motion/sponsor proof remain
+blocked. The dated release evidence below is historical, not the current runtime
+inventory.
+
 The authorized software release is live at https://beat-vision-theta.vercel.app/.
 The full sponsor demo remains BLOCKED. The authoritative record is
 [SPONSOR_DEMO_TODO.md](SPONSOR_DEMO_TODO.md).

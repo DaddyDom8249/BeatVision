@@ -281,23 +281,16 @@ Never rewrite history to hide a failure.
 
 ## Priority order
 
-1. production blockers
-2. authentication
-3. project creation
-4. song intake/save
-5. song analysis
-6. World Reveal
-7. world editing
-8. Vision Lock
-9. Scene Direction
-10. generation
-11. approval/continuity
-12. motion
-13. timeline
-14. final output
-15. cleanup
+Creator's explicit order (2026-10-26):
+1. Fix confirmed security vulnerabilities.
+2. Stabilize production release history and reproducibility.
+3. Verify reuse of existing imagery without regeneration or silent approval.
+4. Generate and review one professional-quality motion clip.
+5. Complete the end-to-end sponsor workflow.
 
-Do not prioritize social publishing, marketplace/community, team collaboration, sophisticated editor, or automatic creative Autopilot until the core loop works.
+Do not describe playable output as professional quality without visual review.
+Do not bypass owner authentication or creative approval to advance a gate.
+Do not merge main without explicit authorization or substitute paid providers.
 
 ## Human approval required
 

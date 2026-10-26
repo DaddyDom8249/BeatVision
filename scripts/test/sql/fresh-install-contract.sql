@@ -21,9 +21,24 @@ reset role;
 -- The isolated fixture administrator stands in for server-side analysis writes.
 update public.songs set analysis_status='completed',analysis='{"duration_seconds":4}',analysis_audio_revision=audio_revision,analyzed_at=now()
 where project_id='00000000-0000-0000-0000-000000000100';
+-- Complete the required interpretation lineage through its actual server RPCs.
+-- This is synthetic input in the disposable replay database, not production audio
+-- analysis or an AI/creator approval claim.
+do $fixture$ declare song public.songs; draft public.song_interpretations; begin
+ select * into song from public.songs where project_id='00000000-0000-0000-0000-000000000100';
+ perform public.record_song_source_fingerprint(song.project_id,song.id,
+  '00000000-0000-0000-0000-000000000001',song.audio_revision,repeat('a',64),256);
+ draft:=public.save_song_interpretation_draft(song.project_id,song.id,
+  '00000000-0000-0000-0000-000000000001',song.audio_revision,repeat('a',64),
+  '{"schema_version":1,"summary":"Synthetic artist fixture.","themes":["fixture"],"emotional_arc":"Stillness.","visual_motifs":["lamp"],"narrative":"An isolated fixture.","claims":[]}'::jsonb,
+  '[]'::jsonb,'manual','','','{"fixture":true}'::jsonb);
+ perform public.confirm_song_interpretation(song.project_id,song.id,draft.id,
+  '00000000-0000-0000-0000-000000000001');
+end $fixture$;
 set role authenticated;
-insert into public.world_reports(id,project_id,status)
-values ('00000000-0000-0000-0000-000000000500','00000000-0000-0000-0000-000000000100','completed');
+insert into public.world_reports(id,project_id,status,interpretation_id,interpretation_source_fingerprint)
+select '00000000-0000-0000-0000-000000000500',project_id,'completed',current_interpretation_id,audio_source_fingerprint
+from public.songs where project_id='00000000-0000-0000-0000-000000000100';
 select public.confirm_world_atomic('00000000-0000-0000-0000-000000000100');
 insert into public.style_bibles(id,project_id,world_report_id)
 values ('00000000-0000-0000-0000-000000000600','00000000-0000-0000-0000-000000000100','00000000-0000-0000-0000-000000000500');

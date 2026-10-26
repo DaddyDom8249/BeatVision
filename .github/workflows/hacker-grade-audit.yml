@@ -30,7 +30,7 @@ jobs:
           test -d supabase/functions
           test -d supabase/migrations
       - name: Install
-        run: npm install
+        run: npm ci
       - name: TypeScript/Vite production build
         run: npm run build
       - name: Existing test suite

@@ -12,7 +12,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm ci
+      - run: node scripts/verify-release-snapshot.mjs
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm test
       - run: npm run production-audit
       - run: npm run build
