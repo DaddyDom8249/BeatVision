@@ -47,6 +47,9 @@ async function fixture(t, { url = "https://fixture.test/projects/project-1/visua
   const BeginnerHelp = compile("src/components/plan/BeginnerShotHelp.tsx", {
     "../../lib/supabase/client": {supabase:{}}, "../../lib/guidedShotRepair": engine,
   }, dom.window);
+  const LyricHelp = compile("src/components/plan/LyricSceneHelp.tsx", {
+    "../../lib/supabase/client": {supabase:{}},
+  }, dom.window);
   const root = createRoot(dom.window.document.getElementById("root"));
   t.after(async () => {
     await act(async () => root.unmount());
@@ -57,6 +60,7 @@ async function fixture(t, { url = "https://fixture.test/projects/project-1/visua
     document: dom.window.document, window: dom.window, Header,
     compile: (path, dependencies) => compile(path, {
       "../components/navigation/StudioHeader": { default: Header },
+      "../components/plan/LyricSceneHelp": {default: LyricHelp},
       "../components/plan/BeginnerShotHelp": {default: BeginnerHelp}, ...dependencies,
     }, dom.window),
     render: async (Component, props) => {

@@ -103,16 +103,19 @@ export function useVisualPlan(projectId: string) {
 
   const saveScene = useCallback(async (sceneId: string, changes: Partial<Pick<VisualPlanScene, "start_time" | "end_time" | "title" | "visual_direction" | "camera_direction" | "movement_direction" | "location" | "mood" | "lyric_moment" | "transition_style" | "continuity_notes">>) => {
     if (!plan || plan.status !== "draft") throw new Error("The Visual Plan is locked.");
+    const expected = scenes.find(scene => scene.id === sceneId);
+    if (!expected) throw new Error("The scene changed. Reload before saving.");
     setWorking(true); setError(null);
     try {
-      const result = await supabase.from("visual_plan_scenes").update(changes).eq("id", sceneId).eq("visual_plan_id", plan.id).eq("status", "draft").select(sceneFields).single();
+      const result = await supabase.from("visual_plan_scenes").update(changes).eq("id", sceneId).eq("visual_plan_id", plan.id).eq("status", "draft").eq("updated_at", expected.updated_at).select(sceneFields).single();
+      if (result.error?.code === "PGRST116") throw new Error("This scene changed in another session. Reload and review before saving.");
       if (result.error) throw result.error;
       setScenes((current) => current.map((scene) => scene.id === sceneId ? result.data as VisualPlanScene : scene));
     } catch (e) {
       const message = getVisualPlanErrorMessage(e, "Unable to save scene direction.");
       setError(message); throw e;
     } finally { setWorking(false); }
-  }, [plan]);
+  }, [plan, scenes]);
 
   const approvePlan = useCallback(async () => {
     if (!plan || scenes.length === 0) throw new Error("Create the Visual Plan and at least one scene before locking it.");

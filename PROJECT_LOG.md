@@ -2615,3 +2615,59 @@ creative data or migration change. Rechecking the exact updated head is required
 Secure browser-auth request timed out and its session handle was lost; authentication
 state remains UNKNOWN, no owner reuse verified. Phone still offline and old worker
 update queued. No duplicate auth request, new job, inference or approval attempted.
+
+## 2026-10-26 America/Chicago — Lyric-specific scene proposals
+
+User authorized accurate lyric actions/objects/emotion and requested tight scope
+and triple checks. Main is 3e26d8556e62b40e9f20823cb253854ae5efcec6; work starts
+from actual serving frontend 26e69d48aade6a98ca1861dd79541f38fb95f312 on
+feature/lyric-scene-accuracy-20261026. Current AGENTS, project history, request
+quality rules and release baseline reviewed. Existing Jules session
+8349488310053633241 reused with evidence requirements, no new task. Followup
+accepted but task remains FAILED and activity transport closed; no worker output
+accepted as implementation/test proof. Implementation is local and independent.
+
+Root cause: plan creation copies global World/Style movement into sections;
+short-shot revisions copy the parent's entire lyric moment. Existing beginner
+repair intentionally cannot infer meaning. Add a read-only propose_scene action
+to existing AI Director with unchanged owner, confirmed/current interpretation,
+verified-free provider, quota, model and approval gates. Server resolves the
+actual draft scene/plan and locked song lineage, selects overlapping word
+timestamps before transcript segments, or requires explicit exact-lyric assignment.
+Manual lyrics take precedence over conflicting transcription. No timing is
+invented; machine alignment remains an estimate. Literal/symbolic/mixed selection
+is explicit; prompt handles negation, figurative language, concrete visible
+objects, observable emotional performance and continuity. Typed validated output
+cannot supply status, timestamps, IDs or arbitrary database fields.
+
+Visual Plan scene editor now offers Match this scene to its lyrics. Proposals
+show meaning, required objects, action, emotion, image/camera direction and timing
+uncertainty. Artist explicitly applies to editable fields, then uses existing
+Save Scene Direction and plan approval. Existing image/motion fields carry the
+specific direction; no generation-controller/worker change. Appearance changes
+continue to invalidate image-reuse compatibility through existing server rules.
+Saved-scene version comparison rejects concurrent edits; stale proposal responses
+are discarded. Locked plans/media are unchanged. No schema/RLS, costs, model,
+provider fallback, creative approval, batch resume or automatic render changes.
+
+Verification: npm ci --ignore-scripts --no-audit --no-fund exit0. Baseline npm test
+exit0:560 total,559pass,0fail,1 existing unavailable local-Chromium skip. Five new
+API behavior tests failed against baseline (4 existing tests pass). Focused final
+API/React/save tests pass; actual versioned deployed-generation source exercised
+offline to confirm exact lyric visuals/mood reach image bridge and the shared
+motion compiler retains phone vibration/dread. Full npm test exit0:572total,
+571pass,0fail,1same browser skip before the final additional bridge regression;
+that added test passes in focused rerun. Build, production-audit, release snapshot
+10-file verification, Edge TypeScript check with environmental declarations and
+git diff --check all exit0. Existing bundle-size advisory remains. One test caught
+an in-memory snapshot reference mutation; replaced with a filtered copy before
+release. One UI harness imported the new component as a module object; corrected
+its fixture, not application behavior.
+
+Live Director v3 one-file source matches the serving Git baseline byte-for-byte;
+JWT gateway false and explicit in-function owner authentication preserved.
+Source publication/deployment pending at this entry. No model or GPU inference,
+production creative save, asset replacement, approval, main merge or paid call.
+Real owner lyric proposal/save and generated visual adherence remain UNVERIFIED.
+A prompt/contract check cannot prove that a future generated phone rings visibly,
+that emotion is convincing, or that singing/word synchronization is exact.

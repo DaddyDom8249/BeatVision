@@ -118,3 +118,13 @@ test("preparing full-song shots calls the atomic owner RPC and selects its retur
   await assert.rejects(hook.revisePlan(5),/LOAD_REACHED_WITH_NEW_REVISION_SELECTED/);
   assert.equal(window.location.search,'?plan=draft-plan');
 });
+
+test("scene save rejects a concurrent edit using the loaded version without overwriting it",async()=>{
+ const original={id:'scene',visual_plan_id:'plan',status:'draft',updated_at:'old-version',visual_direction:'Original saved direction'};
+ const state=[null,null,null,{id:'plan',status:'draft'},null,[original],false,false,null,[]];let cursor=0;const filters=[];let writes=0;
+ const react={useState(){const i=cursor++;return [state[i],v=>state[i]=typeof v==='function'?v(state[i]):v];},useEffect(){},useCallback:f=>f};
+ const supabase={from(){const q={update(){return q;},eq(k,v){filters.push([k,v]);return q;},select(){return q;},single:async()=>{if(filters.some(([k,v])=>k==='updated_at'&&v==='old-version'))return {data:null,error:{code:'PGRST116',message:'No matching row'}};writes++;return {data:{...original,visual_direction:'Overwritten'},error:null};}};return q;}};
+ function load(path){const module={exports:{}};runInNewContext(ts.transpileModule(readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{module,exports:module.exports,require(name){if(name==='react')return react;if(name.endsWith('/supabase/client'))return {supabase};return load(resolve(dirname(path),name+'.ts'));}});return module.exports;}
+ const hook=load(hookPath).useVisualPlan('project');await assert.rejects(hook.saveScene('scene',{visual_direction:'AI-reviewed edit'}),/changed in another session/);
+ assert.equal(writes,0);assert.equal(state[5][0],original);assert.equal(state[7],false);
+});
