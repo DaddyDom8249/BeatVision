@@ -2701,3 +2701,26 @@ Published draft PR154; concurrent security release receipt6c43450 preserved with
 both histories. Initial backendv4 deployed/readback source matches its exact
 candidate, anonymousPOST401 and tracedOPTIONS200. Final emotion validation adds
 one boundary check; final exact-source CI and frontend/backend release follow.
+
+Release verified: application source050acf56370df5e43fa2f698d9785070e03e77f3,
+exact local/remote tree4d246183da6d37cce70432afcf338627fa8053d3, draftPR154.
+Hosted ProductionCI40385420314/audit121792283246 SUCCESS:573/573tests,
+0fail/0skip, dependency audit, snapshot, production audit and build pass.
+Isolated PostgreSQL replay40385420514/job121792283802 SUCCESS, including all
+migrations and fresh project/song owner isolation. No production SQL applied.
+Directorv5 ACTIVE bundlea36bc46d7ba3aaf8df23db6674f03266543bf8bd6ff068e0bceed5d6203782f1;
+retrieved index.ts exactly matches tested final source; explicit auth preserved.
+Vercel productiondpl_21XTNQAS4fng6uxT4CvnmULLeULQ READY at exact application
+source; independent canonical alias lookup confirms beat-vision-theta.vercel.app.
+Public HTML/asset200, /assets/index-CYPbMeJ-.js hash
+bf74e264a2efa220d3b1688ac02b10cf7d51a9e76e8accde5afd378a61419163 includes
+all three lyric-proposal/review/apply controls, timing provenance and emotion
+composition. Live final anonymousPOST401; traced preflight200 previously verified.
+Preview target literal was rejected400, then omitted-target preview built READY;
+its promotion rejected422, so a pinned production build succeeded. Neither failed
+request is reported as release success. No main merge, media generation, creative
+approval, customer edit or provider spend. Existing images/motion unchanged.
+User entry: Visual Plan -> Match this scene to its lyrics -> review proposal ->
+Use proposal in editable fields -> Save Scene Direction; locked plans first use
+Create Editable Revision. Owner-authenticated real model proposal/save and rendered
+lyric/action/emotion fidelity remain UNVERIFIED, not inferred from CI/asset strings.
