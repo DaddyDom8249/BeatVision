@@ -3,7 +3,7 @@ const ids={o:'31000000-0000-4000-8000-000000000001',p:'31000000-0000-4000-8000-0
 test.before(async()=>{
  db=await database();await db.exec(await readMigration('20261014021400_atomic_visual_plan_revisions.sql'));
  await db.exec('alter table scene_image_assets add column storage_path text;');await db.exec(await readMigration('20261006042846_scene_image_persistence.sql'));await db.exec(await readMigration('20261026010325_durable_generation_batches.sql'));
- await db.exec(await readFile(process.env.REVISION_REUSE_MIGRATION || new URL('../../supabase/migrations/20261026071054_revision_image_reuse_provenance.sql',import.meta.url),'utf8'));await db.exec('grant select on scene_image_assets to authenticated;');
+ await db.exec(await readFile(process.env.REVISION_REUSE_MIGRATION || new URL('../../supabase/migrations/20261026071054_revision_image_reuse_provenance.sql',import.meta.url),'utf8'));await db.exec(await readFile(process.env.REVISION_ANCESTRY_MIGRATION || new URL('../../supabase/migrations/20261026180757_reuse_images_across_ancestor_revisions.sql',import.meta.url),'utf8'));await db.exec('grant select on scene_image_assets to authenticated;');
  await db.exec(`insert into projects(id,owner_id,world_report_id) values('${ids.p}','${ids.o}','${ids.w}');
  insert into world_reports(id,project_id,status,confirmed_at) values('${ids.w}','${ids.p}','completed',now());
  insert into style_bibles(id,project_id,world_report_id,status,approved_at) values('${ids.s}','${ids.p}','${ids.w}','approved',now());
@@ -59,4 +59,41 @@ test('reuse retires only the paused duplicate-image batch items without fake com
  const pending=(await db.query("insert into generation_jobs(project_id,visual_plan_id,visual_plan_scene_id,vision_lock_id,job_type,status,input_snapshot) values($1,$2,$3,$4,'scene_image','queued','{}') returning id",[ids.p,ids.new,choices[0].scene_id,ids.v])).rows[0].id;
  await db.query('insert into generation_batch_items(batch_id,project_id,scene_id,scene_number,job_id) values($1,$2,$3,1,$4)',[batch,ids.p,choices[0].scene_id,pending]);await db.exec('set local role authenticated');
  await reuse([choices[0]]);assert.equal((await db.query('select status from generation_batches where id=$1',[batch])).rows[0].status,'completed');await db.exec('reset role');assert.equal((await db.query('select generation_batch_dispatch_allowed($1) allowed',[pending])).rows[0].allowed,false);assert.equal((await db.query('select status from generation_jobs where id=$1',[pending])).rows[0].status,'queued');
+});
+
+async function descendant(parent,revision=3){
+ await db.exec('reset role');
+ const plan=(await db.query("insert into visual_plans(project_id,world_report_id,style_bible_id,song_id,vision_lock_id,revision_number,parent_plan_id,status,locked_at) values($1,$2,$3,$4,$5,$6,$7,'approved',now()) returning id",[ids.p,ids.w,ids.s,ids.song,ids.v,revision,parent])).rows[0].id;
+ await db.query("insert into visual_plan_scenes(project_id,visual_plan_id,world_report_id,style_bible_id,song_id,scene_number,start_time,end_time,title,visual_direction,location,mood,lyric_moment,continuity_notes,movement_direction,camera_direction,status) select project_id,$1,world_report_id,style_bible_id,song_id,scene_number,start_time,end_time,title,visual_direction,location,mood,lyric_moment,continuity_notes,'The subject holds the saved pose.','Camera pans left.','approved' from visual_plan_scenes where visual_plan_id=$2",[plan,ids.new]);
+ await db.exec('set local role authenticated');return plan;
+}
+test('revision5 can reuse55images across empty revisions without regenerating or approving',async()=>{
+ const third=await descendant(ids.new),fourth=await descendant(third,4),fifth=await descendant(fourth,5);
+ const context=(await db.query('select revision_media_context($1) context',[fifth])).rows[0].context;
+ assert.equal(context.candidates.length,55);assert.ok(context.candidates.every(x=>choices.some(c=>c.source_asset_id===x.source_asset_id)));
+ assert.equal((await db.query('select reuse_revision_images($1,$2) n',[fifth,JSON.stringify(context.candidates)])).rows[0].n,55);
+ const a=(await db.query('select * from scene_image_assets where visual_plan_id=$1',[fifth])).rows;
+ assert.equal(a.length,55);assert.ok(a.every(x=>!x.approved&&x.generation_job_id===null&&x.source_generation_job_id));
+ assert.equal((await db.query('select count(*)::int n from generation_jobs')).rows[0].n,55);
+ await db.query('select approve_scene_image_asset($1)',[a[0].id]);await db.exec('reset role');
+ const snap=(await db.query('select motion_snapshot_for_image($1) base',[a[0].id])).rows[0].base;
+ assert.equal(snap.visual_plan_id,fifth);assert.equal(snap.input_snapshot.scene.camera_direction,'Camera pans left.');
+});
+test('nearest compatible approved ancestor wins; unrelated root is never offered',async()=>{
+ await reuse([choices[0]]);const source=(await db.query('select id from scene_image_assets where visual_plan_id=$1',[ids.new])).rows[0];await db.query('select approve_scene_image_asset($1)',[source.id]);
+ const child=await descendant(ids.new);const context=(await db.query('select revision_media_context($1) context',[child])).rows[0].context;
+ assert.equal(context.candidates.find(x=>x.scene_number===1).source_asset_id,source.id);
+ const sibling=await descendant(null,4);const siblingContext=(await db.query('select revision_media_context($1) context',[sibling])).rows[0].context;
+ assert.equal(siblingContext.candidates.length,0);
+});
+test('appearance mismatch across multiple revisions is still excluded',async()=>{
+ const target=await descendant(ids.new);await db.exec('reset role;alter table visual_plan_scenes disable trigger visual_plan_scenes_immutable;');
+ await db.query("update visual_plan_scenes set continuity_notes='Different wardrobe' where visual_plan_id=$1 and scene_number=1",[target]);await db.exec('set local role authenticated');
+ const context=(await db.query('select revision_media_context($1) context',[target])).rows[0].context;assert.equal(context.candidates.length,54);
+});
+test('ancestor helper stays service-only and forged cross-project parent exposes no source',async()=>{
+ assert.equal((await db.query("select has_function_privilege('authenticated','image_reuse_ancestor_plans(uuid)','execute') allowed")).rows[0].allowed,false);
+ const target=await descendant(ids.new);await db.exec('reset role;alter table visual_plans disable trigger all;');
+ await db.query('update visual_plans set project_id=gen_random_uuid() where id=$1',[target]);
+ assert.equal((await db.query('select count(*)::int n from image_reuse_ancestor_plans($1)',[target])).rows[0].n,0);
 });

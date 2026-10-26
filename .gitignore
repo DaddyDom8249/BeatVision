@@ -5,10 +5,6 @@ node_modules/
 dist/
 *.tsbuildinfo
 
-# Lockfile is intentionally not committed yet (repo currently installs with
-# `npm install`, not `npm ci`); revisit if the project adopts `npm ci`.
-package-lock.json
-
 # Local environment files — never commit
 .env
 .env.local

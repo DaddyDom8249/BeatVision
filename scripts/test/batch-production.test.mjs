@@ -149,7 +149,7 @@ test('revision images are offered before duplicate generation and previous foota
  const candidates=Array.from({length:57},(_,i)=>({scene_id:'scene-'+i,source_asset_id:'old-'+i}));
  const f=fixture({count:57,reuseCandidates:candidates,history:[{id:'prior-plan',revision_number:2,images:57,clips:3}]});const v=await mount(f);try{
  assert.equal(v.button('Generate All Scene Images').disabled,true);
- assert.match(document.body.textContent,/57 approved images from the previous plan/);
+ assert.match(document.body.textContent,/57 approved images from earlier plan revisions/);
  assert.ok(document.querySelector('a[href="/projects/p/production?plan=prior-plan"]'));
  assert.equal(f.rpcCalls.filter(x=>x.name==='reuse_revision_images').length,0);
  await v.click('Reuse 57 existing images');assert.equal(f.rpcCalls.filter(x=>x.name==='reuse_revision_images').length,1);

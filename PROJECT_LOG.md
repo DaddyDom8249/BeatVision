@@ -2544,3 +2544,63 @@ confirms550tests550pass0fail0skip plus build/audit.29focused checks pass locally
 Review threads empty; main remains3e26d8556e62b40e9f20823cb253854ae5efcec6.
 Authenticated owner phone review/save remains UNVERIFIED. This checks clarity and
 safe persistence, not semantic/visual correctness of future generated footage.
+
+## 2026-10-26 America/Chicago — Security, release provenance, ancestor reuse
+
+Creator set explicit order: security → release history → image reuse → one
+professional motion proof → sponsor workflow. AGENTS priority list now records it.
+Live security audit reproduced100public legacy objects and client-controlled Arena
+counters. The live Arena bridge really calls the invoker counter RPC. Anonymous
+image-variant RPC was unnecessarily executable (its owner check already denied
+foreign access). All application tables have RLS; no public views found.
+
+Applied tested forward migration20261026180038. Both legacy buckets are private;
+removed public/cross-owner reads and preserved owner reads. Counter is fixed-purpose
+SECURITYDEFINER scoped to auth.uid with30/minute, no configurable limit; client
+insert/update/delete/truncate denied. Revoked anonymous variant RPC execution.
+6 isolated DB checks pass: owner/foreign/anonymous/service storage reads, exact
+quota enforcement, mutation/reset denial, user isolation and RPC ACLs. Live SQL
+confirms metadata/ACLs; anonymous HEAD for both actual legacy files returns400.
+All365objects have unchanged IDs, paths, owners and metadata digest
+48211a401c0e8c8061db0e06cd7ba34c. No media bytes, approvals or provider jobs touched.
+Advisors: anon-definer warning removed;19authenticated-definer warnings include
+intended ownerRPCs and boundedcounter,2policylessRLS service-only tables intentional.
+Leaked-password protection remains disabled; official docs require Pro+, no paid
+upgrade authorized. This is not a claim of a complete penetration test.
+
+Release reproducibility: pin exactly installed dependency versions and add clean
+registry-only lockfile. Initial lock captured old workspace symlinks; detected and
+replaced from a clean directory before publication. Fresh npmci installed131packages
+and full npm audit reports0known runtime/dev advisories. CI uses npmci, runtime
+snapshot hash verification and runtime audit. Preserve byte-exact deployed generation
+v72 files and bundle hash00b8bf05... in docs/releases/2026-10-26; repository candidate
+controller remains different and must not be deployed blindly. Production source
+502f04cd85af3bb887365663e6bbe5f54150380f and deployment dpl_GW7mDJwBJa3hZCi54KddHLvxZsSM
+were independently rechecked. Recovered two missing rate migrations from actual
+ledger versions20260928053717/20260928053824, preserving original bodies and historical
+names; do not re-apply them to production. Older name/version drift and bundled
+SongIntelligence release remain documented. Snapshot verifier covers10exact files.
+Full PostgreSQL replay now runs for stacked PRs too; main is not merged/re-written.
+
+Reuse investigation found creator now has approved revisions4/5 but no images in
+3/4/5. Immediate-parent-only lookup stranded all57old images. Applied tested forward
+migration20261026180757: follow same-project ancestor chain (cycle/depth guard),
+choose nearest compatible approved source for each shot, retain all appearance,
+time/world/style/VisionLock/continuity checks and current-direction motion snapshot.
+Helpers service-only, owner RPCs still deny anon/foreign owners. Read-only production
+check:57/57revision5scenes compatible;57/57sourceobjects exist.12reuseDB checks pass,
+including55images through empty revisions, nearest ancestor, unrelated root, changed
+wardrobe exclusion and new motion direction provenance. Initial unrelated-root
+fixture tried a forbidden sibling against one-child index; corrected fixture without
+relaxing product guards. UI wording updated; initial stale text assertion corrected.
+34focused DB/React/edge checks pass; build/audit pass. Full local command returned0
+with incomplete aggregate capture; exact-source hosted CI still required.
+
+Live cloud browser has no authenticated BragoraForge session. Owner reuse/reload
+therefore UNVERIFIED; no impersonation, alias creation or approval performed.
+Phone bridge reports offline, lastseen1792911821630; existing strict-worker update
+858cc857-9ab4-4d36-9be9-c77a656b98dc still queued, not duplicated. Professional clip
+and sponsor workflow remain BLOCKED on owner session, reviewed imagery, worker and
+usable-credit verification plus actual output quality. No new inference, batch
+resume, email, secret/config change, paid service or main merge. Current sponsor
+gate record and release procedure added; frontend publication/checks pending.

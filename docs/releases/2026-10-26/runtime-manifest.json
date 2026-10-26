@@ -1,0 +1,66 @@
+{
+  "record_kind": "verified_runtime_snapshot",
+  "frontend": {
+    "source_commit": "502f04cd85af3bb887365663e6bbe5f54150380f",
+    "deployment_id": "dpl_GW7mDJwBJa3hZCi54KddHLvxZsSM"
+  },
+  "generation": {
+    "version": 72,
+    "bundle_sha256": "00b8bf05ce195737281d0a8b6aee4b32692c364d0f12bfadf1d803b8128dcf87",
+    "repository_candidate_is_live": false
+  },
+  "security_migration": {
+    "version": "20261026180038",
+    "name": "secure_legacy_media_and_rate_limits"
+  },
+  "files": [
+    {
+      "path": "docs/releases/2026-10-26/runtime/beatvision-generation/final-media.ts",
+      "sha256": "884f373980942826951c08afd27cd669fca77d16113453c417e1992b0832ac3f"
+    },
+    {
+      "path": "docs/releases/2026-10-26/runtime/beatvision-generation/hf-motion.ts",
+      "sha256": "ffa76cae86330f10b935cf9b85629705693a5e3c5020a913159da9c54abba7fb"
+    },
+    {
+      "path": "docs/releases/2026-10-26/runtime/beatvision-generation/image-media.ts",
+      "sha256": "d9f451ac3669dfcb0082c014e7ca5a43646601024768e408cc42aebd48f1fed2"
+    },
+    {
+      "path": "docs/releases/2026-10-26/runtime/beatvision-generation/index.ts",
+      "sha256": "6152915b9c5a4901a5e43834c41341602ad0c2706fcdfc6dfce7d7ab94e05407"
+    },
+    {
+      "path": "docs/releases/2026-10-26/runtime/beatvision-generation/modal-motion.ts",
+      "sha256": "4447a6d3b89e2edfb9b8695ea81aaebb77983bec21108f9971e484bc9fca9aa2"
+    },
+    {
+      "path": "docs/releases/2026-10-26/runtime/beatvision-generation/shot-direction.ts",
+      "sha256": "1fe71df6a07bface60fd0c38b8b522a46120443a83a25e88489a393a35996c1e"
+    },
+    {
+      "path": "supabase/migrations/20261026180038_secure_legacy_media_and_rate_limits.sql",
+      "sha256": "b763c38dce05d9f17edd8bbb1e29431007f8297cdd7d0f106e2e4f120873e1fd"
+    },
+    {
+      "path": "supabase/migrations/20260928053717_20260928060000_add_arena_rate_limit.sql",
+      "sha256": "12fbf1f48feaf643da49cf1b4e6793a7f22b78a549c31d5f5a823f8e26dd6109"
+    },
+    {
+      "path": "supabase/migrations/20260928053824_20260928061000_harden_arena_rate_limit_security.sql",
+      "sha256": "b66e3ec742f434e1f89574d8a1ec366ec9975bdf3cfdb326612520f1600025a9"
+    },
+    {
+      "path": "supabase/migrations/20261026180757_reuse_images_across_ancestor_revisions.sql",
+      "sha256": "642d8d6808270df2cbd426a5092c79b7a047be36c1f78a2b96983b1b8e20bf83"
+    }
+  ],
+  "limits": [
+    "Owner image reuse and generated motion quality require separate verification.",
+    "Other older migrations have historical version/name differences and one bundled release; this record does not rewrite their ledger."
+  ],
+  "reuse_migration": {
+    "version": "20261026180757",
+    "name": "reuse_images_across_ancestor_revisions"
+  }
+}
