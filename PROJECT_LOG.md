@@ -2528,3 +2528,19 @@ intent remains unresolved, manual edits take precedence, and reviewed save is st
 required.29 focused checks/build pass after this addition. A missing closing brace
 in the local helper edit was caught by tests/typecheck and corrected before publish;
 no broken source deployed. Final source/CI/release verification follows separately.
+
+Scene-specific final release verified: source502f04cd85af3bb887365663e6bbe5f54150380f,
+exact local/remote tree0c7de340ff9f704a3b199a6fc17dc51cd161ea3f, draftPR152
+(base repair/revision-media-reuse-20261026). Vercel dpl_GW7mDJwBJa3hZCi54KddHLvxZsSM
+READY at that source; canonical alias independently verified. Public bundle
+/assets/index-CEUpeel5.js includes per-scene diagnosis/review, distinct bulk
+preparation, explicit reviewed save and existing image reuse/history; old blanket
+copy text absent. No production creative save, approval, inference or batch resumed.
+
+Exact-source CI40369979967 initially549/550pass: existing layout check failed
+because Chromium could not start within10seconds, before layout assertions. One
+failed-job rerun, with no code/test changes, succeeded; decoded audit121738587500
+confirms550tests550pass0fail0skip plus build/audit.29focused checks pass locally.
+Review threads empty; main remains3e26d8556e62b40e9f20823cb253854ae5efcec6.
+Authenticated owner phone review/save remains UNVERIFIED. This checks clarity and
+safe persistence, not semantic/visual correctness of future generated footage.
