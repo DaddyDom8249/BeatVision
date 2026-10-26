@@ -1,0 +1,42 @@
+--- a/index.ts
++++ b/index.ts
+@@ -3,0 +4 @@
++import { buildModalShotPrompt } from "./shot-direction.ts";
+@@ -656,28 +657 @@
+-  // World-backed scene fields may contain JSON serialized into text columns.
+-  // Send the approved text, not JSON punctuation, to LTX's small token budget.
+-  // Plain creator prose (including malformed JSON) remains literal.
+-  function directionText(value: unknown, depth = 0): string {
+-    if (depth > 6) return "";
+-    if (typeof value === "string") {
+-      const text = value.trim();
+-      if (/^[\[{]/.test(text)) {
+-        try { return directionText(JSON.parse(text), depth + 1); } catch { /* literal prose */ }
+-      }
+-      return text;
+-    }
+-    if (Array.isArray(value)) return value.map(x => directionText(x, depth + 1)).filter(Boolean).join("; ");
+-    if (value && typeof value === "object") return Object.entries(value)
+-      .map(([key, item]) => { const text = directionText(item, depth + 1); return text ? `${key}: ${text}` : ""; })
+-      .filter(Boolean).join("; ");
+-    return "";
+-  }
+-  // The worker already prepends mandatory source-preservation instructions.
+-  // Put approved action first; generated section numbers/times are optional.
+-  const directedParts: Array<[unknown, number]> = [
+-    [directionText(scene.movement_direction), 400],
+-    ["Preserve the approved characters, faces, wardrobe and setting.", 130],
+-    [directionText(scene.continuity_notes), 450], [directionText(scene.visual_direction), 340],
+-    [directionText(scene.location), 100], [directionText(scene.mood), 90], [scene.title, 140],
+-  ];
+-  const prompt = directedParts.filter(([x]) => typeof x === "string" && x.trim())
+-    .map(([x, limit]) => String(x).trim().slice(0, limit)).join(". ").slice(0,1600);
++  const prompt = buildModalShotPrompt(scene);
+@@ -689 +663,6 @@
+-  return {response:new Response(null,{status:200}),data};
++  return {response:new Response(null,{status:200}),data:{...data,request_validation:{
++    policy:"shot-direction-v1",prompt,prompt_stage:"application_request_before_worker_token_budget",source_image_id:frozen.source_image_id,
++    source_sha256:payload.image_sha256,frames:assertModalFrameCount(frozen.frames),
++    checks:{approved_source:"passed",direction:"passed",provider_contract:"passed"},
++    visual_quality:"unverified",continuity_quality:"unverified",
++  }}};

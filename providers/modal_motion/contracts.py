@@ -49,7 +49,7 @@ class MotionRequest:
 
 
 def budget_ltx_prompt(prompt: str, tokenizer, *, max_tokens: int = MAX_PROMPT_TOKENS,
-                      required_prefix: str = '') -> str:
+                      required_prefix: str = '', strict: bool = False) -> str:
     """Token-bound a mandatory preservation prefix before optional scene details.
 
     The exact loaded model tokenizer performs all counts. Never discard required
@@ -84,11 +84,15 @@ def budget_ltx_prompt(prompt: str, tokenizer, *, max_tokens: int = MAX_PROMPT_TO
         raise MotionContractError('PROMPT_REQUIRED_TEXT_TOO_LONG')
     full = ((mandatory + ' ' + prompt.strip()).strip() if mandatory else prompt.strip())
     if len(full) > MAX_PROMPT_CHARS:
+        if strict:
+            raise MotionContractError('PROMPT_TOKEN_BUDGET_EXCEEDED')
         # Overlength optional material cannot displace or truncate required text.
         full = full[:MAX_PROMPT_CHARS].rstrip()
     full_ids = ids(full)
     if len(full_ids) <= max_tokens:
         return full
+    if strict:
+        raise MotionContractError('PROMPT_TOKEN_BUDGET_EXCEEDED')
     # Tokenizer exact accounting after decode; special tokens may be inserted
     # or normalized on decode. Shrink until the final encoded prompt fits.
     if not mandatory:

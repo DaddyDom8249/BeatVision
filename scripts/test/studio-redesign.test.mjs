@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import * as shotDirection from "../../supabase/functions/beatvision-generation/shot-direction.ts";
 import React, { act } from "react";
 import * as jsx from "react/jsx-runtime";
 import { createRoot } from "react-dom/client";
@@ -18,6 +19,7 @@ function compile(path, dependencies, window) {
   runInNewContext(code, {
     module: mod, exports: mod.exports, window, URL, URLSearchParams,
     require(name) {
+      if (name === "../../supabase/functions/beatvision-generation/shot-direction") return shotDirection;
       if (name === "react") return React;
       if (name === "react/jsx-runtime") return jsx;
       if (Object.hasOwn(dependencies, name)) return dependencies[name];
@@ -137,6 +139,8 @@ for (const approved of [false, true]) {
       }) },
     });
     await f.render(Page, { projectId: "project-1" });
+    assert.match(f.document.body.textContent,/Motion request preview/);
+    assert.match(f.document.body.textContent,/Name one observable action/);
     const times = [...f.document.querySelectorAll('input[type="number"]')];
     assert.equal(times.length, 2);
     assert.deepEqual(times.map(input => input.value), ["0", "60"]);

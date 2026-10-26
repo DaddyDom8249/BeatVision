@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
+import {buildModalShotPrompt} from '../../supabase/functions/beatvision-generation/shot-direction.ts';
 import {MODAL_MOTION, ModalMotionError, sha256Hex, assertModalFrameCount} from '../../supabase/functions/beatvision-generation/modal-motion.ts';
 
 // Optional fixture checks the exact retrieved production controller offline.
@@ -40,8 +41,8 @@ function fixture(scene, approved = true, frames) {
     submissions.push({payload, bytes});
     return {status: 'processing', job_id: 'fc-offline-fixture'};
   };
-  const run = new Function('MODAL_MOTION', 'ModalMotionError', 'sha256Hex', 'submitModalMotion', 'assertModalFrameCount',
-    code + '\nreturn modalBridgeSubmit;')(MODAL_MOTION, ModalMotionError, sha256Hex, submit, assertModalFrameCount);
+  const run = new Function('buildModalShotPrompt', 'MODAL_MOTION', 'ModalMotionError', 'sha256Hex', 'submitModalMotion', 'assertModalFrameCount',
+    code + '\nreturn modalBridgeSubmit;')(buildModalShotPrompt, MODAL_MOTION, ModalMotionError, sha256Hex, submit, assertModalFrameCount);
   const job = Object.freeze({id: '00000004-0000-4000-8000-000000000004',
     project_id: project, visual_plan_id: 'plan-fixture', visual_plan_scene_id: 'scene-fixture',
     input_snapshot: Object.freeze({scene: Object.freeze(scene), modal_motion: Object.freeze({
@@ -57,12 +58,15 @@ test('long visual prose cannot displace approved movement from the Modal prompt'
   const f = fixture({title: 'Subject at the doorway', movement_direction: movement,
     continuity_notes: 'Retain the approved blue coat.',
     visual_direction: 'ATMOSPHERE_ONLY '.repeat(250), location: 'Approved doorway', mood: 'Reflective'});
-  await f.run();
+  const result = await f.run();
+  assert.equal(result.data.request_validation.prompt,f.submissions[0].payload.prompt);
+  assert.equal(result.data.request_validation.visual_quality,"unverified");
+  assert.equal(result.data.request_validation.continuity_quality,"unverified");
+  assert.deepEqual(result.data.request_validation.checks,{approved_source:"passed",direction:"passed",provider_contract:"passed"});
   assert.equal(f.submissions.length, 1);
   const {payload, bytes} = f.submissions[0];
   assert.ok(payload.prompt.includes(movement), 'do not cut the approved action behind atmosphere');
-  assert.ok(payload.prompt.indexOf(movement) < payload.prompt.indexOf('ATMOSPHERE_ONLY'),
-    'movement must precede optional visual prose before worker token budgeting');
+  assert.ok(!payload.prompt.includes('ATMOSPHERE_ONLY'), 'approved image carries appearance; omit competing prose');
   assert.ok(payload.prompt.includes('Preserve the approved characters'));
   assert.ok(payload.prompt.length <= 1600);
   assert.equal(payload.source_image_id, f.imageId);
@@ -81,34 +85,53 @@ test('minimal approved action is preserved without inventing a stronger action',
   assert.doesNotMatch(f.submissions[0].payload.prompt, /walk|run|jump|dance/i);
 });
 
-test('structured approved direction is readable and precedes generated timing metadata', async () => {
-  const f = fixture({title: 'Section 8 (262.19997916666665–264.95997916666664s)',
-    movement_direction: '{"actor": "subtle gestures, restrained, occasional frantic motion", "camera": "slow, deliberate, occasional jerky for tension"}',
-    continuity_notes: '["protagonist hair and clothing remain consistent", "lighting remains unchanged"]',
-    visual_direction: '{"lighting":"low-key","style":"realistic"}'});
-  await f.run();
-  const prompt = f.submissions[0].payload.prompt;
-  assert.ok(prompt.startsWith('actor: subtle gestures, restrained, occasional frantic motion; camera: slow, deliberate, occasional jerky for tension'),
-    'approved movement must reach the tokenizer before redundant preservation text or timing metadata');
-  assert.doesNotMatch(prompt, /[{}\[\]"]/);
-  assert.ok(prompt.indexOf('lighting remains unchanged') < prompt.indexOf('Section 8'));
-  assert.doesNotMatch(prompt, /walk|run|jump|dance/i);
+test('escaped production JSON becomes one restrained action and one camera instruction', async () => {
+  const direction = {actor:'Lift the left hand slowly, restrained, occasional frantic motion', camera:'slow, deliberate, occasional jerky for tension'};
+  for (const movement_direction of [direction,JSON.stringify(direction),JSON.stringify(direction).replaceAll('"','\\"')]) {
+    const f = fixture({movement_direction,
+      title:'Section 8 (262–264s)', location:'kitchen; bedroom; highway',
+      camera_direction:{camera_movement:['handheld','dolly','static','slow pan']},
+      visual_direction:'explosive chorus; dark ghosts; shaking', continuity_notes:'changing unrelated metadata'});
+    await f.run();
+    const prompt=f.submissions[0].payload.prompt;
+    assert.match(prompt,/Action: Lift the left hand slowly, restrained/);
+    assert.match(prompt,/Camera: slow, deliberate/);
+    assert.doesNotMatch(prompt,/frantic|jerky|kitchen|bedroom|highway|Section|chorus|ghosts|handheld|dolly|static|pan|[{}\[\]\\"]/);
+    assert.ok(prompt.length<=500);
+  }
 });
 
-test('plain creator directions and malformed JSON remain literal; objects keep only textual directions', async () => {
-  for (const movement of ['Hold position; do not move the left hand.', '{keep this creator text']) {
-    const f = fixture({movement_direction: movement});
-    await f.run();
-    assert.ok(f.submissions[0].payload.prompt.startsWith(movement));
-  }
-  const f = fixture({movement_direction: {actor: 'Keep the head still.', camera: ['Slow pan.', 'Hold framing.'], unused: null}});
+test('specific artist action and camera survive without replacement or mutation', async () => {
+  const movement=Object.freeze({actor:'Keep the head still; lift only the left hand slowly.',camera:'Locked camera. No zoom.'});
+  const f=fixture({movement_direction:movement});
   await f.run();
-  assert.ok(f.submissions[0].payload.prompt.startsWith('actor: Keep the head still.; camera: Slow pan.; Hold framing.'));
-  assert.doesNotMatch(f.submissions[0].payload.prompt, /null|undefined|\[object Object\]/);
+  assert.ok(f.submissions[0].payload.prompt.includes(movement.actor));
+  assert.ok(f.submissions[0].payload.prompt.includes(movement.camera));
+  assert.equal(movement.actor,'Keep the head still; lift only the left hand slowly.');
+  assert.doesNotMatch(f.submissions[0].payload.prompt,/turn their head|walk|run|jump|dance/i);
+});
+
+test('ambiguous or invalid directions fail before paid submission rather than being truncated', async () => {
+  for(const movement_direction of [null,'', '{keep this creator text',
+    {actor:['Walk','Dance']}, {actor:'Walk or dance.'}, {actor:'No hat. Walk or dance.'},
+    {actor:'Hold position.',camera:['Dolly in.','Pan left.']},
+    {actor:'Move '.repeat(100)}]) {
+    const f=fixture({movement_direction});
+    await assert.rejects(f.run(),/MODAL_SHOT_DIRECTION_(REQUIRED|AMBIGUOUS|INVALID|TOO_LONG)/);
+    assert.equal(f.submissions.length,0);
+  }
+});
+
+test('plain creator movement remains literal and explicit camera fallback is supported', async () => {
+  const movement='Hold position; do not move the left hand.';
+  const f=fixture({movement_direction:movement,camera_direction:JSON.stringify({camera_movement:'Slow pan left.'})});
+  await f.run();
+  assert.ok(f.submissions[0].payload.prompt.startsWith('Action: '+movement));
+  assert.match(f.submissions[0].payload.prompt,/Camera: Slow pan left/);
 });
 
 test('missing approved input still rejects before download or Modal submission', async () => {
-  const f = fixture({movement_direction: 'Move slowly.'}, false);
+  const f = fixture({movement_direction: 'Lift the left hand.'}, false);
   await assert.rejects(f.run(), /MODAL_APPROVED_IMAGE_REQUIRED/);
   assert.equal(f.downloads.length, 0);
   assert.equal(f.submissions.length, 0);
@@ -117,11 +140,23 @@ test('missing approved input still rejects before download or Modal submission',
 
 test('frozen long duration reaches the worker while legacy/default payloads stay compatible', async () => {
   for (const frames of [undefined, 49, 121, 161]) {
-    const f = fixture({movement_direction: 'Move slowly.'}, true, frames);
+    const f = fixture({movement_direction: 'Lift the left hand.'}, true, frames);
     await f.run();
     assert.equal(f.submissions[0].payload.frames, frames > 49 ? frames : undefined);
   }
-  const f = fixture({movement_direction: 'Move slowly.'}, true, 169);
+  const f = fixture({movement_direction: 'Lift the left hand.'}, true, 169);
   await assert.rejects(f.run(), /MODAL_FRAME_COUNT_INVALID/);
   assert.equal(f.submissions.length, 0);
+});
+
+test('broad global movements block before paid submission rather than becoming invented choreography', async () => {
+ const f=fixture({movement_direction:JSON.stringify({actor:'subtle gestures, restrained, occasional frantic motion',camera:'slow, deliberate, occasional jerky for tension'}).replaceAll('"','\\"')});
+ await assert.rejects(f.run(),/MODAL_SHOT_DIRECTION_TOO_GENERIC/);
+ assert.equal(f.submissions.length,0);
+});
+
+test('negative constraints are preserved without becoming new movement',async()=>{
+ const f=fixture({movement_direction:{actor:'Hold position; do not sway or jump.',camera:'Locked camera. No zoom.'}});
+ await f.run(); assert.match(f.submissions[0].payload.prompt,/do not sway or jump/);
+ assert.match(f.submissions[0].payload.prompt,/No zoom/);
 });

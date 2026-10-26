@@ -2244,3 +2244,107 @@ SUCCESS. Review threads empty at check; main independently unchanged at
 3e26d8556e62b40e9f20823cb253854ae5efcec6. No main merge, actual generation,
 creative approval or worker deployment. Real unattended GPU completion remains
 UNVERIFIED; existing approvals and costs were not changed.
+
+## 2026-10-25 America/Chicago — Uploaded motion quality investigation
+
+Creator reports repeated poor Modal output during active57-item motion batch.
+Inspected supplied1000089505.mp4 locally:704x480,H264,121frames24fps,
+5.041667s,108516bytes. Five sampled frames visibly show subject blurring,
+ghosting and changing silhouette. This is a visual quality failure despite valid
+MP4 framing; no claim that container completion proves acceptable motion.
+Production batch985cf5ed-424e-43f2-8848-0172b4b9c3b1 verified running;
+reversibly paused later scenes to avoid continued unwanted compute. No assets,
+creative approvals, worker configuration or queued job snapshots changed.
+Current production batch records pin LTX0.9.5 e58e28c...,121frames; repository
+worker uses20steps,guidance3,and omits explicit decode_timestep and
+image_cond_noise_scale. Official Diffusers0.35.1 documentation recommends
+0.05 decode timestep and0.025 image conditioning noise for0.9.1+; its examples
+use50steps. Configuration mismatch is a plausible contributor, NOT proof of sole
+cause or improved output. Changing steps can increase compute and is not done.
+Approved short-shot direction also contains broad multi-location/competing
+movement language; unsuitable prompt specificity is another hypothesis.
+Uploaded file has not been byte-matched to a particular saved generation job.
+No new GPU inference or paid model trial. Existing Jules session5991285972289398122
+received a read-only diagnostic followup; response{} provides no accepted findings.
+Next verification: compare exact deployed worker and source/prompt for this clip,
+then test one bounded candidate before resuming bulk rendering. Quality fix and
+real improved MP4 remain UNVERIFIED. Main readback remains3e26d8556e62b40e9f20823cb253854ae5efcec6.
+
+## 2026-10-25 America/Chicago — Tighten Modal shot requests
+
+Creator authorizes tightening what our worker requests. Confirmed two defects in
+actual frozen batch directions: escaped JSON object text was not decoded by the
+old direct JSON.parse path; global occasional frantic/jerky variations were sent
+alongside restrained movement and several unrelated song-stage/location fields.
+Small repair in modalBridgeSubmit decodes direct, nested and escaped JSON without
+altering frozen snapshots; selects actor and camera fields separately, omits global
+comma-delimited occasional variations, and excludes lyrics, title/timing, locations,
+style stages and redundant continuity prose. The source image remains the visual
+anchor. Explicit actor/camera prose is preserved. Multiple alternatives/arrays,
+malformed direction or overlong clauses fail before provider submission rather
+than silently choosing or truncating. No new action/head-turn/fixed-camera default.
+
+Actual queued direction dry-run (all55 non-skipped saved jobs;54stillqueued):
+Action: subtle gestures, restrained. Camera: slow, deliberate. Preserve the
+approved characters, faces, wardrobe and setting.
+All55 share the same saved global direction; this fix does not invent57 distinct
+choreographies or claim that broad inherited directions are detailed shot design.
+Source image bytes/hash, owner/approval checks, deterministic seed, model/revision,
+frame counts,20steps,resolution,worker prefix, spending gates and auth unchanged.
+Official0.35 docs checked; older isolated50steptrial already failed strict source
+continuity. More steps alone is not established as a quality fix; no cost increase
+or Modal worker deployment made here.
+
+Reproduction: new prompt regressions fail on previous code;8/8 pass after fix.
+Actual live-compatible controller prompt suite8/8; dispatch/media focused31/31.
+All55 actual frozen directions pass offline submission capture (9/9 fixture suite,
+zero network inference). Baseline514total513pass0fail1skip. Final repository suite
+516total515pass0fail1existing skip. Python worker tests22/22; build/audit pass,
+existing bundle-size advisory retained. Broad live/repository Arena mismatch from
+prior cycle remains unresolved, not retested or claimed fixed by this patch.
+
+Production beatvision-generation v70 ACTIVE, bundle
+203da68a11f7d22f9c60e2325f4ea9e502854c05fa33d0e7dce3e2a5b0f108f4.
+All five retrieved files byte-match tested live-compatible deployment. Authentication,
+Arena and durable scheduler behavior preserved. No schema, RLS or creative asset
+changes. Batch remains paused; no inference, automatic retry or resume initiated.
+Improved real MP4/anatomy/continuity remains UNVERIFIED and requires a bounded real
+quality check before bulk resume. Draft PR/source publication pending at this entry.
+
+## 2026-10-25 America/Chicago — Make motion checks part of the workflow
+
+Creator clarifies that honesty, continuity and professional internal checks must
+be systemic, not a manual repair ritual. Extended the current repair with one
+shared deterministic shot-direction compiler used by Visual Plan previews,
+production request review and server dispatch. Known generic inherited movement
+now fails rather than being treated as finished shot direction. Missing/ambiguous
+input fails before provider submission. Incomplete drafts remain saveable; the
+production UI blocks motion start/resume and links the editable-revision flow.
+No auto-approval or rewriting of locked state. Actual55 saved job requests now all
+correctly block as too generic in offline capture;zero provider submissions.
+This supersedes the intermediate v70 acceptance of those generic requests.
+
+New submission metadata records policy, application prompt stage, exact application
+prompt, source ID/hash,frames and application validation results. Visual/continuity
+quality remains explicitly unverified. Added strict actual-tokenizer budget mode
+in the Python worker so an over-budget direction rejects before pipeline inference
+instead of silently shortening it.20steps/model/runtime/resolution/budget unchanged.
+The strict Python change is TESTED, NOT YET DEPLOYED; pending phone deployment.
+Documented current motion gates and broader-stage limits in
+ docs/production/request-quality.md. This is not a platform-wide semantic truth
+certificate; World/Style/story proposal checks and visual identity remain separate.
+
+Verification: shared UI/controller focused23/23; actual frozen-batch11/11 (55blocked,
+0submissions); live-compatible prompt10/10 and dispatch/media31/31. Full repo520total,
+519pass,0fail,1existing layoutskip. Worker23/23. Build/production-audit pass.
+Initial expanded-suite4 failures were test harnesses missing the new shared module;
+fixed loaders to use actual helper, preserved authentication assertions, rerun green.
+No GPU inference, source/approval change or batch resume. Jules same existing task
+followup returned{}; activityread unreadableHTTP200, no findings accepted.
+
+Deployed controller v71 ACTIVE, bundle
+c063c1c9e4087af48c6241caa99f7e4bbab40b46a37d27cb74e654525e9418bc;
+all6 retrieved files byte-match tested candidate. Existing auth/Arena/scheduler
+preserved; no schema/RLS change. Broad live-vs-repo Arena contract mismatch from
+prior cycle remains outside this repair. UI deployment/source publication and
+strict physical Modal worker deployment pending. Real improved MP4 UNVERIFIED.

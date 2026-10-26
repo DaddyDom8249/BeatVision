@@ -97,7 +97,7 @@ def single_motion_proof(payload: dict, image_bytes: bytes, ack: str) -> dict:
     pipeline.enable_model_cpu_offload()
     pipeline.vae.enable_tiling()
     prompt = budget_ltx_prompt(
-        request.prompt, pipeline.tokenizer,
+        request.prompt, pipeline.tokenizer, strict=True,
         required_prefix=(
             'Preserve approved source-image identities, clothing, background, '
             'geometry and composition. Animate subjects naturally without '
