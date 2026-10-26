@@ -2394,3 +2394,16 @@ Current batch985cf5ed remains paused with0active; no new GPU inference, automati
 retry, approval or main merge. Main last independent readback3e26d8556e62b40e9f20823cb253854ae5efcec6.
 Current Beginner help source publication/frontend release pending. Authenticated
 physical-phone save workflow and improved real MP4 remain UNVERIFIED.
+
+Beginner help release verified: source dd250bb944b88285a36a96221217fcb48c71a624,
+exact local/remote tree1fc5da53777cda673fde8148dc04ab3e053fa74c, draftPR150
+(base repair/tight-modal-shot-request-20261026). Vercel
+dpl_DKTQ8PcaWAwPYPjQwLb87G8PB1dC READY at that source; independent alias lookup
+confirms beat-vision-theta.vercel.app points there. Retrieved public JS contains
+Beginner help, proposed-fix preview, custom action, editable-copy action, atomic-save
+RPC and no-render confirmation strings. HostedCI40280759579/audit121433300542
+completedSUCCESS including tests,audit,build. Review threads empty at check.
+Main independently unchanged3e26d8556e62b40e9f20823cb253854ae5efcec6.
+Production batch remains paused/0active. No production creative save, new approval,
+provider inference or main merge. Live authenticated phone save remains UNVERIFIED;
+local real React plus database tests cover it offline. Improved MP4 not verified.
