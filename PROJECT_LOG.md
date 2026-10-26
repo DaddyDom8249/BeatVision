@@ -2178,3 +2178,17 @@ not an actual billing measurement. Communicated provisional$5–$10 Modal comput
 first pass,$10–$20 allowing rerenders; excludes images and Shotstack and does not
 guarantee visual quality. Starter lists$30monthlycredits; remaining account balance
 not verified. No spending/budget change or provider inference performed.
+
+Batch release verified: source8dc670c5545b33fbcdabb493fc2b5690d5a70197,
+draftPR147 (base repair/motion-variant-approval-20261025). Exact remote/local
+source treee85e6fd5e3907178388abdc973119b00b1b2800e verified by fetch/diff exit0.
+Vercel dpl_2dFfjKZDvLkW32kPwM8jdwLedLEx READY at source8dc670c5; independent
+alias lookup confirms beat-vision-theta.vercel.app serves this deployment. Public
+HTML/JS retrieval verifies both Generate All buttons, both Review/Approve controls,
+approval confirmation action, progress bar labels, pause and stable request-ID
+namespace. Source hostedCI40249937749 audit job121339423557 completedSUCCESS,
+including npm test, production audit and build. PR review threads empty at check.
+Main remains3e26d8556e62b40e9f20823cb253854ae5efcec6. No main merge, schema/
+controller/worker change, actual generation or creative approval. This verifies
+released UI plus offline workflow contracts, not real authenticated57-shot GPU
+completion, quality, remaining credits or final four-minute playable output.
