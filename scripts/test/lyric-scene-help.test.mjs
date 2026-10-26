@@ -9,7 +9,7 @@ import {createRoot} from 'react-dom/client';
 import {JSDOM} from 'jsdom';
 import * as direction from '../../supabase/functions/beatvision-generation/shot-direction.ts';
 const scene={id:'scene',project_id:'project',visual_plan_id:'plan',scene_number:1,status:'draft',updated_at:'version1',start_time:0,end_time:5};
-const proposal={mode:'literal',lyric_excerpt:'The phone rings.',action:'The phone vibrates as the figure hesitates, shoulders tense with dread.',objects:['phone'],emotion:'dread',visual_direction:'Visible phone beside the approved figure, tense expression and cold lighting.',camera:'Camera holds still.',meaning:'Dread of answering.',uncertainty:'Proposed interpretation for review.'};
+const proposal={mode:'literal',lyric_excerpt:'The phone rings.',action:'The phone vibrates as the figure hesitates.',objects:['phone'],emotion:'dread',visual_direction:'Visible phone beside the approved figure, tense expression and cold lighting.',camera:'Camera holds still.',meaning:'Dread of answering.',uncertainty:'Proposed interpretation for review.'};
 async function fixture(t,{locked=false,defer=false,failure=false}={}){
  const dom=new JSDOM('<div id="root"></div>'),previous={window:globalThis.window,document:globalThis.document,IS_REACT_ACT_ENVIRONMENT:globalThis.IS_REACT_ACT_ENVIRONMENT};
  Object.assign(globalThis,{window:dom.window,document:dom.window.document,IS_REACT_ACT_ENVIRONMENT:true});

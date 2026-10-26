@@ -190,6 +190,7 @@ function validateSceneProposal(raw: string, context: any) {
   if (!value || typeof value !== "object" || Array.isArray(value) || value.mode !== context.mode ||
       sceneText(value.lyric_excerpt) !== context.excerpt ||
       required.some(key => !sceneText(value[key]) || value[key].length > (key === "action" ? 200 : key === "camera" ? 140 : 1200)) ||
+      `${sceneText(value.action)} Feeling: ${sceneText(value.emotion)}.`.length > 200 ||
       !Array.isArray(value.objects) || value.objects.length < 1 || value.objects.length > 8 ||
       value.objects.some((item: unknown) => !sceneText(item) || String(item).length > 120) ||
       /^(?:subtle gestures(?:, restrained)?|minimal movement|subtle|gentle|slow)[.!]?$/i.test(sceneText(value.action)))
@@ -287,7 +288,7 @@ Deno.serve(async (req) => {
         "Copy the supplied excerpt and selected mode exactly. Understand action, concrete objects, emotional subtext, negation, tense and figurative language in context. " +
         "Literal mode depicts described objects/events only when actually asserted: a phone ringing needs a visible phone and ringing/vibration cues. Never turn 'never rings' into a ringing phone. " +
         "Symbolic mode expresses the meaning without forcing a literal object. Mixed combines both. Explain ambiguities in uncertainty; do not claim your interpretation is fact. " +
-        "Action must be one observable short-shot action including the emotional performance and any moving object, at most 200 characters. Camera at most 140 characters, one direction. " +
+        "Action must be one observable short-shot action including any moving object. Action plus the suffix Feeling: emotion. must fit within 200 characters. Camera at most 140 characters, one direction. " +
         "No generic movement, alternatives or action sequences. Visual_direction describes concrete visible objects, expression and lighting for this lyric; objects lists what must appear. " +
         "Respect approved characters/wardrobe/location/continuity. If the lyric needs a prop missing from the existing image, propose it for artist review and a new image; never claim existing footage already contains it. " +
         "Do not invent timestamps, precise sync, identities, approvals or observed media quality. No lyrics as printed text or added sound effects. Specify uncertainty explicitly.";

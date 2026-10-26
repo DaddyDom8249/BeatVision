@@ -2689,3 +2689,15 @@ production creative save, asset replacement, approval, main merge or paid call.
 Real owner lyric proposal/save and generated visual adherence remain UNVERIFIED.
 A prompt/contract check cannot prove that a future generated phone rings visibly,
 that emotion is convincing, or that singing/word synchronization is exact.
+
+Final review followup: added a regression where model action omits its separate
+emotion. It failed before the followup. The UI now explicitly composes Feeling
+into the existing compact actor instruction; API validation enforces the combined
+200-character limit without truncation. Both appearance and motion therefore
+receive emotion even when the model separates its fields. Final full npm test
+exit0:573total,572pass,0fail,1existing unavailable-Chromium skip; build, audit,
+Edge TypeScript and diff checks exit0. No model/GPU request or customer mutation.
+Published draft PR154; concurrent security release receipt6c43450 preserved with
+both histories. Initial backendv4 deployed/readback source matches its exact
+candidate, anonymousPOST401 and tracedOPTIONS200. Final emotion validation adds
+one boundary check; final exact-source CI and frontend/backend release follow.

@@ -3,6 +3,8 @@ import { supabase } from "../../lib/supabase/client";
 import { inspectMotionDirection } from "../../../supabase/functions/beatvision-generation/shot-direction";
 import type { VisualPlanScene } from "../../types/visualPlan";
 
+const motionAction = (p: {action:string;emotion:string}) => `${p.action} Feeling: ${p.emotion}.`;
+
 type Proposal = {mode:string;lyric_excerpt:string;action:string;objects:string[];emotion:string;visual_direction:string;camera:string;meaning:string;uncertainty:string};
 export default function LyricSceneHelp({scene,lyrics,disabled,onApply}:{scene:VisualPlanScene;lyrics:string;disabled:boolean;onApply:(changes:Partial<VisualPlanScene>)=>void}) {
   const [open,setOpen]=useState(false),[mode,setMode]=useState("literal"),[excerpt,setExcerpt]=useState("");
@@ -28,7 +30,7 @@ export default function LyricSceneHelp({scene,lyrics,disabled,onApply}:{scene:Vi
         typeof p.action!=="string"||typeof p.camera!=="string"||!Array.isArray(p.objects)||
         !p.objects.every((item:unknown)=>typeof item==="string")||
         [p.emotion,p.visual_direction,p.lyric_excerpt,p.meaning,p.uncertainty].some(item=>typeof item!=="string"||!item.trim())||
-        inspectMotionDirection({movement_direction:{actor:p.action,camera:p.camera}}).issue)
+        inspectMotionDirection({movement_direction:{actor:motionAction(p),camera:p.camera}}).issue)
         throw new Error("The proposal is stale or unclear. Reload or choose a clearer scene action; nothing was saved.");
       setResult(data);
     }catch(reason){if(epoch.current===version)setError(reason instanceof Error?reason.message:"Unable to propose this scene.");}
@@ -57,7 +59,7 @@ export default function LyricSceneHelp({scene,lyrics,disabled,onApply}:{scene:Vi
         <button type="button" className="secondary-button" disabled={disabled||busy||scene.status!=="draft"} onClick={()=>{
           onApply({lyric_moment:p.lyric_excerpt,mood:p.emotion,
             visual_direction:`${p.visual_direction}\nMust show: ${p.objects.join(", ")}.\nEmotion: ${p.emotion}.\nTreatment: ${p.mode}. Meaning: ${p.meaning}\nLyric: ${p.lyric_excerpt}\nTiming: ${result.timing.source}; exact synchronization unverified.\nReview: ${p.uncertainty}`,
-            movement_direction:JSON.stringify({actor:p.action,camera:p.camera}),camera_direction:p.camera});
+            movement_direction:JSON.stringify({actor:motionAction(p),camera:p.camera}),camera_direction:p.camera});
           setResult(null);
         }}>Use proposal in editable fields</button>
         <p>Then review and Save Scene Direction. No render or approval starts here.</p>
