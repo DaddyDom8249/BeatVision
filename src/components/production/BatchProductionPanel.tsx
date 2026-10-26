@@ -1,3 +1,4 @@
+import { inspectMotionDirection } from "../../../supabase/functions/beatvision-generation/shot-direction";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase/client";
 import { approvalCandidates, approveBatch, type BatchKind, type BatchProgress } from "../../lib/batchProduction";
@@ -41,6 +42,8 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
     const timer = window.setInterval(() => { void refreshProgress().catch(() => undefined); }, 5000);
     return () => {mounted=false; window.clearInterval(timer); progressVersion.current++;};
   }, [projectId, refreshProgress]);
+  const requests = scenes.map(scene => ({scene, ...inspectMotionDirection({...scene})}));
+  const directionIssues = requests.filter(request => request.issue);
   const serverRunning = batches.some(batch => batch.status === "running");
   const shortShots = scenes.every(s => Number.isFinite(s.end_time-s.start_time) && s.end_time > s.start_time && s.end_time-s.start_time <= 5.000001);
 
@@ -78,6 +81,7 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
     void operation(async (stopped, update) => {
       update({done:0,total:scenes.length,message:"Saving the complete server batch…"});
       if (kind === "motion") {
+        if (directionIssues.length) throw new Error("Review the motion requests and give each shot a clear action before rendering.");
         if (!terms || !shortShots) throw new Error("Accept the LTX license and lock a 5-second shot revision first.");
         const probe = await supabase.functions.invoke("beatvision-generation", {body:{action:"modal_capability",projectId}});
         if (probe.error || !probe.data?.modal_available || !probe.data?.modal_supported)
@@ -141,10 +145,20 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
       <button className="secondary-button" disabled={blocked} onClick={() => loadReview("image")}>Review &amp; Approve All Images</button>
     </div>
     <label><input type="checkbox" checked={terms} disabled={blocked} onChange={e => setTerms(e.target.checked)} /> I agree to the <a href="https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt" target="_blank" rel="noreferrer">LTX license and use restrictions</a>, including AI disclosure.</label>
+    <details>
+      <summary>Review motion requests · {directionIssues.length ? `${directionIssues.length} need direction` : `${requests.length} direction checks passed`}</summary>
+      <p>These requests use your saved action and camera fields. The approved image carries appearance. Missing or ambiguous details are blocked; nothing is invented to fill them. Image approval and provider limits are checked separately at submission. Model output still needs your review.</p>
+      {requests.map(request => <article key={request.scene.id}>
+        <h3>Scene {request.scene.scene_number}: {request.scene.title}</h3>
+        {request.issue ? <p className="form-error">{request.issue}</p> : <p style={{whiteSpace:"pre-wrap"}}>{request.prompt}</p>}
+      </article>)}
+      <a href={`/projects/${projectId}/visual-plan?plan=${planId}`}>Edit shot direction in an editable plan revision</a>
+    </details>
+    {directionIssues.length > 0 && <p role="status">{directionIssues.length} shots need clear direction. Motion generation and batch resume are blocked until these are corrected in an editable revision.</p>}
     <p>Motion uses Modal and your configured GPU budget. Clips are up to 5 seconds, aligned to each shot. This does not approve media or assemble the final video.</p>
     {!shortShots && <p>Create and lock a <a href={`/projects/${projectId}/visual-plan?plan=${planId}`}>5-second shot revision</a> before generating all motion.</p>}
     <div className="production-actions">
-      <button className="primary-button" disabled={blocked || serverRunning || !terms || !shortShots} onClick={() => generate("motion")}>Generate All 5-Second Motion Clips</button>
+      <button className="primary-button" disabled={blocked || serverRunning || !terms || !shortShots || directionIssues.length > 0} onClick={() => generate("motion")}>Generate All 5-Second Motion Clips</button>
       <button className="secondary-button" disabled={blocked} onClick={() => loadReview("motion")}>Review &amp; Approve All Motion</button>
       {running && <button className="secondary-button" onClick={() => {stop.current = true;}}>Stop Review / Approval</button>}
     </div>
@@ -154,7 +168,7 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
         <progress aria-label={batch.kind === "image" ? "Scene image batch progress" : "Motion batch progress"} value={batch.done} max={Math.max(1,batch.total)} style={{width:"100%"}} />
       </label>
       {batch.current_scene && batch.status !== "completed" && <p>Current scene: {batch.current_scene}.{batch.failed > 0 ? " A saved job failed. Regenerate it individually, then resume this batch." : " Progress is saved on the server."}</p>}
-      {batch.status !== "completed" && <button className="secondary-button" disabled={blocked} onClick={() => setPaused(batch,batch.status === "running")}>
+      {batch.status !== "completed" && <button className="secondary-button" disabled={blocked || (batch.kind === "motion" && batch.status !== "running" && directionIssues.length > 0)} onClick={() => setPaused(batch,batch.status === "running")}>
         {batch.status === "running" ? "Pause" : "Resume"} {batch.kind === "image" ? "Image" : "Motion"} Batch
       </button>}
     </div>)}

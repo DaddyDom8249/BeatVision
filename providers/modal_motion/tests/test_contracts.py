@@ -220,6 +220,23 @@ class ContractTests(unittest.TestCase):
             budget_ltx_prompt('Additional information here.', tokenizer,
                               max_tokens=3, required_prefix=mandatory)
 
+    def test_strict_worker_budget_never_silently_truncates_directions(self):
+        class Tokenizer:
+            def __call__(self, prompt, **_options):
+                return {'input_ids': list(range(len(prompt.split()) + 2))}
+            def decode(self, *_args, **_options):
+                raise AssertionError('strict budget must never rewrite the prompt')
+        tokenizer = Tokenizer()
+        prefix = 'Preserve approved identity.'
+        action = 'Lift only the left hand slowly. No walking.'
+        self.assertEqual(budget_ltx_prompt(action, tokenizer, required_prefix=prefix,
+                                         max_tokens=30, strict=True), prefix + ' ' + action)
+        with self.assertRaisesRegex(MotionContractError, 'PROMPT_TOKEN_BUDGET_EXCEEDED'):
+            budget_ltx_prompt(action, tokenizer, required_prefix=prefix,
+                              max_tokens=8, strict=True)
+        with self.assertRaisesRegex(MotionContractError, 'PROMPT_TOKEN_BUDGET_EXCEEDED'):
+            budget_ltx_prompt('Lift hand. ' * 180, tokenizer, strict=True)
+
     def test_ltx_prompt_tokenizer_failure_is_fail_closed(self):
         class BrokenTokenizer:
             def __call__(self, *_args, **_kwargs):
@@ -235,7 +252,7 @@ class ContractTests(unittest.TestCase):
         source = (ROOT / 'worker.py').read_text()
         self.assertIn('prepare_source_image(opened, WIDTH, HEIGHT)', source)
         self.assertIn('budget_ltx_prompt(', source)
-        self.assertIn('request.prompt, pipeline.tokenizer,', source)
+        self.assertIn('request.prompt, pipeline.tokenizer, strict=True,', source)
         self.assertIn('required_prefix=', source)
         self.assertNotIn('source.thumbnail((WIDTH, HEIGHT))', source)
 

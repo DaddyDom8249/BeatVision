@@ -10,15 +10,15 @@ import {JSDOM} from 'jsdom';
 const rootDir=fileURLToPath(new URL('../../',import.meta.url));
 const dir=await mkdtemp(join(rootDir,'.batch-test-'));
 const compile=source=>ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX}}).outputText;
-for(const [source,dest] of [['src/lib/batchProduction.ts','engine.mjs'],['src/lib/formatCreativeText.ts','errors.mjs']])
+for(const [source,dest] of [['src/lib/batchProduction.ts','engine.mjs'],['src/lib/formatCreativeText.ts','errors.mjs'],['supabase/functions/beatvision-generation/shot-direction.ts','shot.mjs']])
   await writeFile(join(dir,dest),compile(await readFile(join(rootDir,source),'utf8')));
 await writeFile(join(dir,'stub.mjs'),'export const supabase = new Proxy({}, {get:(_,key)=>globalThis.__batchDb[key]});');
 await writeFile(join(dir,'panel.mjs'),compile((await readFile(join(rootDir,'src/components/production/BatchProductionPanel.tsx'),'utf8'))
-  .replace('"../../lib/supabase/client"','"./stub.mjs"').replace('"../../lib/batchProduction"','"./engine.mjs"').replace('"../../lib/formatCreativeText"','"./errors.mjs"')));
+  .replace('"../../../supabase/functions/beatvision-generation/shot-direction"','"./shot.mjs"').replace('"../../lib/supabase/client"','"./stub.mjs"').replace('"../../lib/batchProduction"','"./engine.mjs"').replace('"../../lib/formatCreativeText"','"./errors.mjs"')));
 const {approvalCandidates,approveBatch}=await import(pathToFileURL(join(dir,'engine.mjs')));
 const Panel=(await import(pathToFileURL(join(dir,'panel.mjs')))).default;
 after(()=>rm(dir,{recursive:true,force:true}));
-const scenes=n=>Array.from({length:n},(_,i)=>({id:'scene-'+i,scene_number:i+1,status:'approved',title:'Shot '+(i+1),start_time:i*5,end_time:(i+1)*5}));
+const scenes=n=>Array.from({length:n},(_,i)=>({id:'scene-'+i,scene_number:i+1,status:'approved',title:'Shot '+(i+1),movement_direction:'Lift the left hand slowly.',camera_direction:'Locked camera.',start_time:i*5,end_time:(i+1)*5}));
 function fixture({count=3,kind='image',failedAt=-1,transportFail=false,missingImage=-1,capability=true}={}) {
   const all=scenes(count), assets=[], jobs=[],calls=[],rpcCalls=[],events=[],batches=[];
   const image=(scene,approved=true)=>({id:'source-'+scene.id,scene_id:scene.id,project_id:'p',visual_plan_id:'v',storage_path:'p/scene-images/'+scene.id,image_url:'https://fixture.test/image.png',status:approved?'approved':'generated',approved});
@@ -121,4 +121,23 @@ test('Generate All saves one server batch, survives page unmount, and restores p
 test('Pause and Resume update the durable batch instead of cancelling a browser loop',async()=>{
  const f=fixture();f.batches.push({id:'batch-1',kind:'motion',status:'running',done:1,total:3,current_scene:2,failed:0});const v=await mount(f);
  try{await v.click('Pause Motion Batch');assert.equal(f.batches[0].status,'paused');await v.click('Resume Motion Batch');assert.equal(f.batches[0].status,'running');assert.equal(f.rpcCalls.filter(c=>c.name==='set_generation_batch_paused').length,2);assert.equal(f.calls.length,0);}finally{await v.cleanup();}
+});
+
+test('generic direction is visible and blocks motion submission and resume',async()=>{
+ const f=fixture({count:1,kind:'motion'}); f.all[0].movement_direction='subtle gestures, restrained';
+ f.batches.push({id:'batch-1',kind:'motion',status:'paused',done:0,total:1,current_scene:1,failed:0});
+ const v=await mount(f);try{
+   assert.match(document.body.textContent,/Name one observable action/);
+   assert.equal(v.button('Resume Motion Batch').disabled,true);
+   assert.equal(v.button('Generate All 5-Second Motion Clips').disabled,true);
+   assert.equal(f.calls.length,0); assert.equal(f.rpcCalls.filter(c=>c.name==='start_generation_batch').length,0);
+ }finally{await v.cleanup();}
+});
+test('production request review shows deterministic saved action without generated filler',async()=>{
+ const f=fixture({count:1}); const v=await mount(f);try{
+   assert.match(document.body.textContent,/Action: Lift the left hand slowly/);
+   assert.match(document.body.textContent,/Camera: Locked camera/);
+   assert.match(document.body.textContent,/Model output still needs your review/);
+   assert.equal(f.calls.length,0);
+ }finally{await v.cleanup();}
 });

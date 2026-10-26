@@ -1,3 +1,4 @@
+import { inspectMotionDirection } from "../../supabase/functions/beatvision-generation/shot-direction";
 import { useState } from "react";
 import { useVisualPlan } from "../hooks/useVisualPlan";
 import type { VisualPlanScene } from "../types/visualPlan";
@@ -16,6 +17,7 @@ function SceneEditor({ scene, working, onSave }: {
   onSave: (id: string, changes: Partial<Pick<VisualPlanScene, "start_time" | "end_time" | "title" | "visual_direction" | "camera_direction" | "movement_direction" | "location" | "mood" | "lyric_moment" | "transition_style" | "continuity_notes">>) => Promise<void>;
 }) {
   const [draft, setDraft] = useState(scene);
+  const request = inspectMotionDirection({...draft});
   const dirty = draft.start_time !== scene.start_time || draft.end_time !== scene.end_time || draft.title !== scene.title ||
     draft.visual_direction !== scene.visual_direction ||
     draft.camera_direction !== scene.camera_direction ||
@@ -52,6 +54,11 @@ function SceneEditor({ scene, working, onSave }: {
         <label>Transition<textarea rows={3} value={draft.transition_style} disabled={working} onChange={(e) => set("transition_style", e.target.value)} /></label>
         <label>Continuity notes<textarea rows={4} value={draft.continuity_notes} disabled={working} onChange={(e) => set("continuity_notes", e.target.value)} /></label>
       </div>
+      <aside aria-label={`Scene ${scene.scene_number} motion request preview`}>
+        <h3>Motion request preview</h3>
+        {request.issue ? <p className="form-error">{request.issue}</p> : <p style={{whiteSpace:"pre-wrap"}}>{request.prompt}</p>}
+        <p>Updates from your edits before saving. This checks direction only. Source approval and provider limits are checked before submission; generated video still needs review.</p>
+      </aside>
       {scene.status === "draft" && (
         <button className="secondary-button" disabled={working || !dirty} onClick={() => void onSave(scene.id, {
           start_time: draft.start_time, end_time: draft.end_time,

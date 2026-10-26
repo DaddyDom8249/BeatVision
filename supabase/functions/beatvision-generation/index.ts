@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { buildModalShotPrompt } from "./shot-direction.ts";
 import { validateImage, readImage } from "./image-media.ts";
 import { verifyFinalMedia } from "./final-media.ts";
 import { HF_MOTION, hfEligibility, hfSubmit, hfPoll, hfDownload, hfJobSeed, HfMotionError, validateMp4 } from "./hf-motion.ts";
@@ -714,40 +715,18 @@ async function modalBridgeSubmit(db: any,job: any) {
   const bytes=new Uint8Array(await downloaded.data.arrayBuffer());
   if (bytes.length<16 || bytes.length>MODAL_MOTION.maxBytes) throw new ModalMotionError("MODAL_IMAGE_SIZE_INVALID");
   const scene=job.input_snapshot?.scene || {};
-  // World-backed scene fields may contain JSON serialized into text columns.
-  // Send the approved text, not JSON punctuation, to LTX's small token budget.
-  // Plain creator prose (including malformed JSON) remains literal.
-  function directionText(value: unknown, depth = 0): string {
-    if (depth > 6) return "";
-    if (typeof value === "string") {
-      const text = value.trim();
-      if (/^[\[{]/.test(text)) {
-        try { return directionText(JSON.parse(text), depth + 1); } catch { /* literal prose */ }
-      }
-      return text;
-    }
-    if (Array.isArray(value)) return value.map(x => directionText(x, depth + 1)).filter(Boolean).join("; ");
-    if (value && typeof value === "object") return Object.entries(value)
-      .map(([key, item]) => { const text = directionText(item, depth + 1); return text ? `${key}: ${text}` : ""; })
-      .filter(Boolean).join("; ");
-    return "";
-  }
-  // The worker already prepends mandatory source-preservation instructions.
-  // Put approved action first; generated section numbers/times are optional.
-  const directedParts: Array<[unknown, number]> = [
-    [directionText(scene.movement_direction), 400],
-    ["Preserve the approved characters, faces, wardrobe and setting.", 130],
-    [directionText(scene.continuity_notes), 450], [directionText(scene.visual_direction), 340],
-    [directionText(scene.location), 100], [directionText(scene.mood), 90], [scene.title, 140],
-  ];
-  const prompt = directedParts.filter(([x]) => typeof x === "string" && x.trim())
-    .map(([x, limit]) => String(x).trim().slice(0, limit)).join(". ").slice(0,1600);
+  const prompt = buildModalShotPrompt(scene);
   const payload={project_id:job.project_id,scene_id:job.visual_plan_scene_id,
     source_image_id:frozen.source_image_id,generation_job_id:job.id,
     ...(assertModalFrameCount(frozen.frames) === MODAL_MOTION.frames ? {} : {frames: assertModalFrameCount(frozen.frames)}),
     image_sha256:await sha256Hex(bytes),prompt,seed:parseInt(job.id.replace(/-/g,"").slice(0,7),16)||42};
   const data=await submitModalMotion(payload,bytes);
-  return {response:new Response(null,{status:200}),data};
+  return {response:new Response(null,{status:200}),data:{...data,request_validation:{
+    policy:"shot-direction-v1",prompt,prompt_stage:"application_request_before_worker_token_budget",source_image_id:frozen.source_image_id,
+    source_sha256:payload.image_sha256,frames:assertModalFrameCount(frozen.frames),
+    checks:{approved_source:"passed",direction:"passed",provider_contract:"passed"},
+    visual_quality:"unverified",continuity_quality:"unverified",
+  }}};
 }
 async function modalBridgePoll(db: any,job: any) {
   const result=await pollModalMotion(String(job.output?.upstream_job_id||""));
