@@ -47,6 +47,8 @@ async function fixture(t, { url = "https://fixture.test/projects/project-1/visua
   const BeginnerHelp = compile("src/components/plan/BeginnerShotHelp.tsx", {
     "../../lib/supabase/client": {supabase:{}}, "../../lib/guidedShotRepair": engine,
   }, dom.window);
+  const AutoEngine = compile("src/lib/automaticPlanDirection.ts", {}, dom.window, true);
+  const AutoHelp = compile("src/components/plan/AutomaticPlanHelp.tsx", {"../../lib/supabase/client":{supabase:{}},"../../lib/automaticPlanDirection":AutoEngine}, dom.window);
   const LyricHelp = compile("src/components/plan/LyricSceneHelp.tsx", {
     "../../lib/supabase/client": {supabase:{}},
   }, dom.window);
@@ -60,6 +62,7 @@ async function fixture(t, { url = "https://fixture.test/projects/project-1/visua
     document: dom.window.document, window: dom.window, Header,
     compile: (path, dependencies) => compile(path, {
       "../components/navigation/StudioHeader": { default: Header },
+      "../components/plan/AutomaticPlanHelp": {default:AutoHelp},
       "../components/plan/LyricSceneHelp": {default: LyricHelp},
       "../components/plan/BeginnerShotHelp": {default: BeginnerHelp}, ...dependencies,
     }, dom.window),

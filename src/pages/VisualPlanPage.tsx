@@ -1,3 +1,4 @@
+import AutomaticPlanHelp from "../components/plan/AutomaticPlanHelp";
 import LyricSceneHelp from "../components/plan/LyricSceneHelp";
 import { inspectMotionDirection } from "../../supabase/functions/beatvision-generation/shot-direction";
 import BeginnerShotHelp from "../components/plan/BeginnerShotHelp";
@@ -119,8 +120,8 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
       <header className="style-header">
         <div>
         <span className="eyebrow">PHASE 4 / VISUAL PLAN</span>
-        <h1>Direct the Visual Plan</h1>
-        <p>Translate the locked World and Style Bible into a scene-by-scene production plan.</p>
+        <h1>Plan your video</h1>
+        <p>Let BeatVision turn your song into a visual story. Review the plan before producing images and motion.</p>
         </div>
       </header>
 
@@ -141,7 +142,7 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
             <div>
               <span className="eyebrow">PLAN STATUS</span>
               <h2>{plan.title} · Revision {plan.revision_number ?? 1}</h2>
-              <p>{plan.status === "approved" ? "Visual Plan locked. Production must follow this approved direction." : "Draft. Edit the scene directions, then lock the plan."}</p>
+              <p>{plan.status === "approved" ? "Visual Plan locked. Production must follow this approved direction." : "Draft. Prepare your video below, review the story, then lock the plan."}</p>
             </div>
             {plan.status === "approved" && plan.id === planHistory[0]?.id && <button className="secondary-button" disabled={working} onClick={() => void revisePlan().catch(() => undefined)}>Create Editable Revision</button>}
             {plan.status === "draft" && (
@@ -164,14 +165,17 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
             </section>
           )}
 
+          <AutomaticPlanHelp key={`auto:${plan.id}`} planId={plan.id} locked={plan.status === "approved"} scenes={scenes} working={working} onCreateRevision={()=>revisePlan()} onSaved={reload} />
+          <details><summary>Optional: repair individual scene instructions</summary>
           <BeginnerShotHelp key={plan.id} planId={plan.id} locked={plan.status === "approved"} scenes={scenes} working={working}
             onCreateRevision={()=>revisePlan()} onSaved={reload} />
-          <section>
+          </details>
+          <details><summary>Optional: edit individual scenes</summary><section>
             <h2>Timeline</h2>
             {scenes.map((scene) => (
               <SceneEditor key={`${scene.id}:${scene.updated_at}`} scene={scene} lyrics={song?.lyrics || song?.analysis?.transcript || ""} working={working || plan.status === "approved"} onSave={saveScene} />
             ))}
-          </section>
+          </section></details>
 
           {plan.status === "approved" && (
             <section>

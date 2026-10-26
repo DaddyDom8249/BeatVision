@@ -83,7 +83,7 @@ async function boot({ confirmed = true, providerVerified = false, authUserId = U
   globalThis.fetch = async (input, options) => {
     if (String(input).endsWith("/auth/v1/user")) return new Response(JSON.stringify({ id: authUserId }), { status: 200 });
     providerCalls.push({ input: String(input), options });
-    return new Response(JSON.stringify({ choices: [{ message: { content: proposal ? JSON.stringify(proposal) : "Use the confirmed return arc as a gradual visual opening." } }] }), { status: 200 });
+    return new Response(JSON.stringify({ choices: [{ message: { content: proposal ? JSON.stringify(typeof proposal === "function" ? proposal(JSON.parse(options.body)) : proposal) : "Use the confirmed return arc as a gradual visual opening." } }] }), { status: 200 });
   };
   await import(pathToFileURL(join(dir, "function.ts")).href);
   return { handler, db, providerCalls, quotaCalls };
@@ -161,7 +161,7 @@ test("untimed lyrics require explicit artist assignment and never invent timesta
  const body=await response.json();assert.equal(body.timing.source,"artist_assigned");assert.deepEqual(body.timing.segments,[]);
 });
 test("reject invented quotes, wrong mode, generic action and incomplete model output; release quota",async()=>{
- for(const patch of [{lyric_excerpt:"A spaceship lands"},{mode:"symbolic"},{action:"subtle gestures, restrained"},{objects:[]},{emotion:""}]){
+ for(const patch of [{lyric_excerpt:"A spaceship lands"},{mode:"symbolic"},{action:"subtle gestures, restrained"},{objects:[]},{emotion:""},{uncertainty:"x".repeat(601)}]){
  const f=await boot({providerVerified:true,proposal:{...phoneProposal,...patch}});const response=await request(f.handler,sceneRequest);assert.equal(response.status,502);assert.equal(f.providerCalls.length,1);assert.equal(f.quotaCalls.at(-1),"release_bragora_ai_request");
  }
 });
@@ -186,4 +186,37 @@ test("scene proposal keeps owner/free/quota guards and rejects missing mode or a
  r=await request(f.handler,sceneRequest,null);assert.equal(r.status,401);
  r=await request(f.handler,{...sceneRequest,lyric_excerpt:"Invented phone lyrics",confirm_assignment:true});assert.equal(r.status,422);
  assert.equal(f.providerCalls.length,0);
+});
+
+const bulkRequest={projectId:PROJECT_ID,action:"propose_plan_scenes",plan_id:"plan",scene_ids:["scene","scene2"],mode:"literal"};
+function planReply(request){const data=JSON.parse(request.messages[1].content.split("\n").slice(1).join("\n"));return {scenes:data.scenes.map((s,index)=>({...phoneProposal,scene_id:s.scene_id,lyric_excerpt:s.lyric_excerpt,action:index===0?"The phone vibrates beside the hesitant figure.":"The figure waits at the doorway, shoulders lowered.",uncertainty:s.timing.source==="estimated_lyric_distribution"?"Estimated lyric placement; review this proposed story.":"Machine timing is approximate."}))};}
+function twoScenes(db){db.visual_plan_scenes.push({...db.visual_plan_scenes[0],id:"scene2",scene_number:2,start_time:5,end_time:10,updated_at:"version2"});db.visual_plan_scenes[0].scene_number=1;}
+test("whole-plan proposal fills distinct scene actions from interpretation and lyrics with one request and no artist scene instructions",async()=>{
+ const f=await boot({providerVerified:true,proposal:planReply});twoScenes(f.db);const before=structuredClone(f.db);
+ const r=await request(f.handler,bulkRequest);assert.equal(r.status,200);const body=await r.json();assert.equal(body.scene_proposals.length,2);
+ assert.notEqual(body.scene_proposals[0].scene_proposal.action,body.scene_proposals[1].scene_proposal.action);assert.equal(f.providerCalls.length,1);assert.deepEqual(f.db,before);
+ assert.equal(f.quotaCalls.filter(x=>x==="reserve_bragora_ai_request").length,1);
+});
+test("automatic direction proposes estimated lyric placement when alignment is missing rather than asking for every scene",async()=>{
+ const f=await boot({providerVerified:true,proposal:planReply});twoScenes(f.db);f.db.songs[0].analysis.transcript_segments=[];
+ const r=await request(f.handler,bulkRequest);assert.equal(r.status,200);const body=await r.json();
+ assert.ok(body.scene_proposals.every(p=>p.timing.source==="estimated_lyric_distribution"&&p.timing.segments.length===0));
+});
+test("whole-plan bounds, mixed-plan scenes and incomplete model coverage fail without creative writes",async()=>{
+ const f=await boot({providerVerified:true,proposal:{scenes:[]}});twoScenes(f.db);
+ for(const body of [{...bulkRequest,scene_ids:Array(9).fill("scene")},{...bulkRequest,scene_ids:["scene","scene"]},{...bulkRequest,plan_id:"other"}]){
+ const r=await request(f.handler,body);assert.ok(r.status>=400);assert.equal(f.providerCalls.length,0);
+ }
+ const r=await request(f.handler,bulkRequest);assert.equal(r.status,502);assert.equal(f.providerCalls.length,1);
+});
+
+test("automatic lyric matching preserves timestamp evidence across case and punctuation differences",async()=>{
+ const f=await boot({providerVerified:true,proposal:planReply});twoScenes(f.db);
+ f.db.songs[0].analysis.transcript_segments[0].text="the phone rings and i dread answering";
+ const r=await request(f.handler,bulkRequest);assert.equal(r.status,200);const body=await r.json();
+ assert.equal(body.scene_proposals[0].timing.source,"transcript_segments");
+});
+test("instrumental or missing lyrics still gets a proposed visual story without inventing sung words",async()=>{
+ const f=await boot({providerVerified:true,proposal:planReply});twoScenes(f.db);f.db.songs[0].lyrics="";f.db.vision_locks[0].snapshot.song.lyrics="";f.db.songs[0].analysis.transcript_segments=[];
+ const r=await request(f.handler,bulkRequest);assert.equal(r.status,200);const body=await r.json();assert.ok(body.scene_proposals.every(p=>p.scene_proposal.lyric_excerpt===""&&p.timing.source==="no_lyrics_available"));
 });

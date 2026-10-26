@@ -138,6 +138,14 @@ function providerContent(value: any) {
 // Scene proposals are read-only. Only the existing artist-reviewed draft save
 // can persist them; locked plans and existing media never change here.
 const sceneText = (value: unknown) => typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
+function matchingLyricWords(lyrics: string, quote: string): string {
+  const tokens = [...lyrics.matchAll(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu)];
+  const wanted = [...quote.matchAll(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu)].map(m=>m[0].toLowerCase().replace(/['’]/g,""));
+  if (!wanted.length) return "";
+  const at=tokens.findIndex((_,i)=>wanted.every((word,j)=>tokens[i+j]?.[0].toLowerCase().replace(/['’]/g,"")===word));
+  if (at<0) return "";
+  const last=tokens[at+wanted.length-1];return lyrics.slice(tokens[at].index,(last.index || 0)+last[0].length);
+}
 async function sceneSource(admin: any, projectId: string, song: any, body: any) {
   const mode = body.mode;
   if (!["literal", "symbolic", "mixed"].includes(mode)) throw new HttpError("SCENE_MODE_REQUIRED", 400, "Choose literal, symbolic, or mixed treatment.");
@@ -146,6 +154,7 @@ async function sceneSource(admin: any, projectId: string, song: any, body: any) 
   if (error || !scene) throw new HttpError("SCENE_NOT_FOUND", 404, "Scene not found.");
   const {data: plan, error: planError} = await admin.from("visual_plans").select("*")
     .eq("id", scene.visual_plan_id).eq("project_id", projectId).eq("song_id", song.id).maybeSingle();
+  if (body.plan_id && plan?.id !== body.plan_id) throw new HttpError("SCENE_PLAN_MISMATCH",404,"Scene does not belong to this plan.");
   if (planError || !plan || plan.status !== "draft" || scene.status !== "draft")
     throw new HttpError("SCENE_DRAFT_REQUIRED", 409, "Create an editable revision first. Approved plans and footage are preserved.");
   const {data: lock, error: lockError} = await admin.from("vision_locks").select("id,snapshot")
@@ -176,11 +185,31 @@ async function sceneSource(admin: any, projectId: string, song: any, body: any) 
     excerpt = segments.map(s => s.text).join(" ");
     // Machine alignment is an estimate. Never substitute conflicting words for
     // artist lyrics or guess placement by distributing lines across the song.
-    if (!excerpt || excerpt.length > 1200 || segments.some(s => !s.text || (artistLyrics && !artistLyrics.includes(s.text))))
+    if (body.auto_assign === true && artistLyrics && excerpt && !artistLyrics.includes(excerpt)) excerpt=matchingLyricWords(artistLyrics,excerpt)||excerpt;
+    if (body.auto_assign === true && artistLyrics && excerpt && !artistLyrics.includes(excerpt)) {
+      const words = [...artistLyrics.matchAll(/\S+/g)];
+      const total = Number(song.analysis?.duration_seconds);
+      const left = Math.min(words.length-1, Math.floor(start / total * words.length));
+      const right = Math.min(words.length, Math.max(left+1, Math.ceil(end / total * words.length)));
+      excerpt = words.length && total > 0 ? artistLyrics.slice(words[left].index, (words[right-1].index || 0)+words[right-1][0].length) : "";
+      segments = []; source = "estimated_lyric_distribution";
+    }
+    if (body.auto_assign === true && !excerpt && authoritativeLyrics) {
+      const words = [...authoritativeLyrics.matchAll(/\S+/g)], total = Number(song.analysis?.duration_seconds);
+      const left = Math.min(words.length-1, Math.floor(start / total * words.length));
+      const right = Math.min(words.length, Math.max(left+1, Math.ceil(end / total * words.length)));
+      excerpt = words.length && total > 0 ? authoritativeLyrics.slice(words[left].index, (words[right-1].index || 0)+words[right-1][0].length) : "";
+      segments=[];source="estimated_lyric_distribution";
+    }
+    if (body.auto_assign === true && !excerpt && !authoritativeLyrics) source = "no_lyrics_available";
+    if ((!excerpt && source !== "no_lyrics_available") || excerpt.length > 1200 || segments.some(s => !s.text || (artistLyrics && !artistLyrics.includes(s.text) && !(body.auto_assign === true && matchingLyricWords(artistLyrics,s.text)))))
       throw new HttpError("SCENE_LYRICS_REQUIRED", 422, "No reliable lyric excerpt is available here. Assign exact saved lyrics to this scene for review.");
-    source = useWords ? "word_timestamps" : "transcript_segments";
+    if (!["estimated_lyric_distribution","no_lyrics_available"].includes(source)) source = useWords ? "word_timestamps" : "transcript_segments";
   }
-  const timing = {source, scene_start:start, scene_end:end, segments, precision:"Artist placement or machine segment estimate; exact word synchronization is unverified."};
+  const precision = source === "estimated_lyric_distribution" ? "Proposed lyric placement estimated from song progress, not measured alignment." :
+    source === "no_lyrics_available" ? "No saved lyrics; direction comes from the confirmed interpretation and style." :
+    "Artist placement or machine timing estimate; exact word synchronization is unverified.";
+  const timing = {source, scene_start:start, scene_end:end, segments, precision};
   return {scene, mode, excerpt, timing, locked_context:Object.fromEntries(Object.entries(lock.snapshot).filter(([key]) => key !== "song"))};
 }
 function validateSceneProposal(raw: string, context: any) {
@@ -189,7 +218,7 @@ function validateSceneProposal(raw: string, context: any) {
   const required = ["action","emotion","visual_direction","camera","meaning","uncertainty"];
   if (!value || typeof value !== "object" || Array.isArray(value) || value.mode !== context.mode ||
       sceneText(value.lyric_excerpt) !== context.excerpt ||
-      required.some(key => !sceneText(value[key]) || value[key].length > (key === "action" ? 200 : key === "camera" ? 140 : 1200)) ||
+      required.some(key => !sceneText(value[key]) || value[key].length > (key === "action" ? 200 : key === "camera" ? 140 : key === "emotion" ? 120 : ["meaning","uncertainty"].includes(key) ? 600 : 1200)) ||
       `${sceneText(value.action)} Feeling: ${sceneText(value.emotion)}.`.length > 200 ||
       !Array.isArray(value.objects) || value.objects.length < 1 || value.objects.length > 8 ||
       value.objects.some((item: unknown) => !sceneText(item) || String(item).length > 120) ||
@@ -199,7 +228,7 @@ function validateSceneProposal(raw: string, context: any) {
   // project IDs, approvals or arbitrary database columns.
   return {mode:context.mode,lyric_excerpt:context.excerpt,action:sceneText(value.action),
     objects:value.objects.map(sceneText),emotion:sceneText(value.emotion),visual_direction:sceneText(value.visual_direction),
-    camera:sceneText(value.camera),meaning:sceneText(value.meaning),uncertainty:sceneText(value.uncertainty)};
+    camera:sceneText(value.camera),meaning:sceneText(value.meaning),uncertainty:(context.timing.source === "estimated_lyric_distribution" ? "Estimated lyric placement; exact alignment unverified. " : context.timing.source === "no_lyrics_available" ? "No saved lyrics; proposed from interpretation and style. " : "") + sceneText(value.uncertainty)};
 }
 
 Deno.serve(async (req) => {
@@ -209,7 +238,8 @@ Deno.serve(async (req) => {
     const userId = await getUser(req);
     const body = await readJsonBody(req);
     const projectId = clean(body.projectId || body.project_id, 120);
-    const sceneMode = body.action === "propose_scene";
+    const planMode = body.action === "propose_plan_scenes";
+    const sceneMode = body.action === "propose_scene" || planMode;
     const question = sceneMode ? "Propose this scene from its local lyrics." : clean(body.question, MAX_QUESTION_CHARS).trim();
     if (!projectId || !question) throw new HttpError("DIRECTOR_INPUT_REQUIRED", 400, "Ask a question about the confirmed song direction.");
 
@@ -250,7 +280,12 @@ Deno.serve(async (req) => {
       throw new HttpError("DIRECTOR_INTERPRETATION_STALE", 409, "The song interpretation is out of date. Reconfirm before opening Director chat.");
     }
 
-    const sceneContext = sceneMode ? await sceneSource(admin, projectId, song, body) : null;
+    if (planMode && (!body.plan_id || !Array.isArray(body.scene_ids) || body.scene_ids.length < 1 || body.scene_ids.length > 8 ||
+      body.scene_ids.some((id: unknown) => typeof id !== "string" || !id) || new Set(body.scene_ids).size !== body.scene_ids.length))
+      throw new HttpError("PLAN_SCENES_INVALID",400,"Choose up to eight distinct scenes from the editable plan.");
+    const sceneContexts = planMode ? await Promise.all(body.scene_ids.map((id: string) => sceneSource(admin,projectId,song,
+      {...body,scene_id:id,lyric_excerpt:"",auto_assign:true}))) : null;
+    const sceneContext = sceneContexts ? sceneContexts[0] : sceneMode ? await sceneSource(admin, projectId, song, {...body,auto_assign:false}) : null;
     const verified = env("BRAGORA_GROQ_FREE_VERIFIED") === "true";
     const providerKey = env("GROQ_FREE_API_KEY");
     const providerUrl = "https://api.groq.com/openai/v1/chat/completions";
@@ -288,7 +323,7 @@ Deno.serve(async (req) => {
         "Copy the supplied excerpt and selected mode exactly. Understand action, concrete objects, emotional subtext, negation, tense and figurative language in context. " +
         "Literal mode depicts described objects/events only when actually asserted: a phone ringing needs a visible phone and ringing/vibration cues. Never turn 'never rings' into a ringing phone. " +
         "Symbolic mode expresses the meaning without forcing a literal object. Mixed combines both. Explain ambiguities in uncertainty; do not claim your interpretation is fact. " +
-        "Action must be one observable short-shot action including any moving object. Action plus the suffix Feeling: emotion. must fit within 200 characters. Camera at most 140 characters, one direction. " +
+        "Action must be one observable short-shot action including any moving object. Action plus the suffix Feeling: emotion. must fit within 200 characters. Camera at most 140 characters, one direction. Emotion at most 120 characters; meaning and uncertainty at most 600 each. " +
         "No generic movement, alternatives or action sequences. Visual_direction describes concrete visible objects, expression and lighting for this lyric; objects lists what must appear. " +
         "Respect approved characters/wardrobe/location/continuity. If the lyric needs a prop missing from the existing image, propose it for artist review and a new image; never claim existing footage already contains it. " +
         "Do not invent timestamps, precise sync, identities, approvals or observed media quality. No lyrics as printed text or added sound effects. Specify uncertainty explicitly.";
@@ -297,6 +332,19 @@ Deno.serve(async (req) => {
         confirmed_meaning:interpretation.interpretation,artist_direction:clean(song.creative_direction,800)};
       // Do not send the whole song/transcript again: local words and the locked
       // creative context define this shot, not neighbouring lyric events.
+    }
+    if (sceneContexts) {
+      system += " For this request, direct ALL supplied scenes as one coherent music-video story. Return {scenes:[{scene_id,lyric_excerpt,mode,action,objects,emotion,visual_direction,camera,meaning,uncertainty}]}. " +
+        "When no lyrics are available, leave lyric_excerpt empty and direct the shot from confirmed mood/style/story; state that lyrics are unavailable. " +
+        "Every requested scene_id must appear exactly once. Fill every field yourself using the confirmed interpretation, full lyrics, desired mood and locked visual style. " +
+        "Give each shot its own appropriate concrete action and emotional performance; do not copy a generic action across shots. Maintain cast, wardrobe, location and narrative continuity. " +
+        "Treat context_before/context_after as continuity context, not actions to repeat in every shot. Progress the story through this song moment. " +
+        "If timing.source is estimated_lyric_distribution, the assigned words are only a proposed placement: say this in uncertainty. Do not pretend the word timing was measured. " +
+        "Use each provided lyric_excerpt exactly even when brief; draw meaning from the whole-song context. Ask the artist only for genuine uncertainty, not routine direction.";
+      source = {mode:sceneContext.mode,confirmed_interpretation:interpretation.interpretation,
+        artist_direction:clean(song.creative_direction,1200),full_lyrics:clean(song.lyrics || song.analysis?.transcript,16000),
+        locked_context:sceneContext.locked_context,previous_scene_proposal:clean(JSON.stringify(body.previous_scene ?? null),2400),
+        scenes:sceneContexts.map((c: any)=>({scene_id:c.scene.id,scene:c.scene,lyric_excerpt:c.excerpt,timing:c.timing}))};
     }
     const ticket = await reserveRequest(admin, projectId, userId, "director");
     try {
@@ -307,7 +355,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model,
         temperature: 0.25,
-        max_tokens: sceneContext ? 1200 : 700,
+        max_tokens: sceneContexts ? 6000 : sceneContext ? 1200 : 700,
         ...(sceneContext ? {response_format:{type:"json_object"}} : {}),
         messages: [{ role: "system", content: system }, { role: "user", content: "Use this source and answer the artist question:\n" + JSON.stringify(source) }],
       }),
@@ -316,8 +364,26 @@ Deno.serve(async (req) => {
     let result: any = null;
     try { result = raw ? JSON.parse(raw) : null; } catch { result = null; }
     if (!response.ok) throw new HttpError("DIRECTOR_PROVIDER_FAILED", 503, "The verified AI Director provider is unavailable. Manual direction remains available.");
-    const answer = providerContent(result);
+    const content = result?.choices?.[0]?.message?.content ?? result?.output_text ?? result?.response;
+    const answer = sceneContexts && typeof content === "string" && content.length <= 36000 ? content.trim() : providerContent(result);
     if (!answer) throw new HttpError("DIRECTOR_PROVIDER_INVALID", 502, "The AI Director provider returned no answer.");
+    if (sceneContexts) {
+      let proposals: any;
+      try {proposals=JSON.parse(answer)?.scenes;}catch{/* rejected below */}
+      if (!Array.isArray(proposals) || proposals.length !== sceneContexts.length || new Set(proposals.map(p=>p?.scene_id)).size !== sceneContexts.length)
+        throw new HttpError("PLAN_PROPOSAL_INVALID",502,"The provider did not return every requested scene. Nothing was saved.");
+      const scene_proposals = sceneContexts.map((context: any) => {
+        const proposal=proposals.find((p: any)=>p?.scene_id===context.scene.id);
+        if (!proposal) throw new HttpError("PLAN_PROPOSAL_INVALID",502,"A scene was missing from the proposed plan. Nothing was saved.");
+        return {scene_id:context.scene.id,scene_number:context.scene.scene_number,expected_updated_at:context.scene.updated_at,
+          scene_proposal:validateSceneProposal(JSON.stringify(proposal),context),timing:context.timing};
+      });
+      const duplicated = scene_proposals.some((item: any,index: number) => scene_proposals.slice(0,index).some((old: any) =>
+        old.scene_proposal.lyric_excerpt !== item.scene_proposal.lyric_excerpt && old.scene_proposal.action === item.scene_proposal.action &&
+        old.scene_proposal.visual_direction === item.scene_proposal.visual_direction));
+      if (duplicated) throw new HttpError("PLAN_PROPOSAL_REPEATED",502,"The provider repeated the same direction for different lyrics. Nothing was saved.");
+      return json(req,{scene_proposals,plan_id:body.plan_id,interpretation_id:interpretation.id,provider:"verified-director",model});
+    }
     if (sceneContext) return json(req, {
       scene_proposal:validateSceneProposal(answer,sceneContext),timing:sceneContext.timing,
       scene_id:sceneContext.scene.id,expected_updated_at:sceneContext.scene.updated_at,

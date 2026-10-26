@@ -2724,3 +2724,81 @@ User entry: Visual Plan -> Match this scene to its lyrics -> review proposal ->
 Use proposal in editable fields -> Save Scene Direction; locked plans first use
 Create Editable Revision. Owner-authenticated real model proposal/save and rendered
 lyric/action/emotion fidelity remain UNVERIFIED, not inferred from CI/asset strings.
+
+## 2026-10-26 America/Chicago — Automatic beginner video direction
+
+Creator corrected the previous implementation: Beginner Help must fill every
+scene from the confirmed interpretation, lyrics, desired mood and visual style;
+requiring the artist to enter50actions was the wrong workflow. No app rebuild.
+New AutomaticPlanHelp prepares the whole plan, shows one proposed story and saves
+all reviewed directions together. Individual repair/editor tools remain optional
+collapsed controls. A locked plan uses the existing safe editable-revision gate.
+No per-scene action text or camera selection is required from the artist.
+
+Existing owner-authenticated AI Director gains bounded propose_plan_scenes using
+up to8scenes per verified-free/quota reservation, full song/confirmed meaning,
+locked style/cast/continuity and preceding draft context. Each shot gets its own
+objects, observable action, emotion, camera and image direction. Different lyrics
+with identical action+visual text reject. Word/segment timing guides placement;
+case/punctuation normalization preserves real alignment. Missing/conflicting
+alignment proposes explicitly ESTIMATED lyric placement rather than asking the
+artist to place each line. No lyrics uses confirmed interpretation/style and no
+invented sung words. Estimates/uncertainty remain visible. Partial validated drafts
+stay for explicit continuation if provider quota/transport fails; no automatic
+retry, paid fallback or provider switch. Preparing never saves or renders media.
+
+Owner-checked save_automatic_scene_directions RPC atomically saves the whole reviewed
+draft's existing direction/mood/lyric fields. It verifies owner, draft plan/scenes,
+current confirmed interpretation, complete unique scene set and exact saved versions;
+one stale/invalid scene rolls back all updates. It never changes scene timing,
+location, locked continuity, approvals or existing images/motion. New visual details
+may require new imagery; old approved work is retained in its original revision.
+Applied additive migration as actual ledger20261026215045; function-body MD5
+1f9a25b2cce57fa7cf511299d8a2aef0 matches source, public/pg_temp search_path fixed,
+anon EXECUTE false, authenticated true. No production creative save performed.
+
+Verification: real React/engine tests prepare50distinct scenes through7mocked calls
+without any individual input, require one review before one save, preserve partial
+progress, reject stale/locked input and do not auto-enqueue/approve. Five PGlite
+checks save50directions atomically, reject late staleness/foreign/anon/locked/current-
+interpretation mismatch and incomplete payloads; original timing/continuity retained,
+zero jobs. Focused34/34 plus final API16/16 pass. Full local588total587pass0fail1
+existing unavailable-Chromium skip; build/audit/snapshot/diff and Edge TypeScript
+checks pass. Following boundary refinement caps meanings/uncertainty so a valid
+proposal cannot overflow the bulk-save visual-text limit; focused API rechecked.
+Exact-head hosted checks and application release follow separately. No live model
+or GPU inference, paid call, automatic approval, batch resume or main merge.
+
+Related screenshot blocker repaired separately in Arena PR49: valid transcription-
+only analysis was rejected for missing browser DSP label.67/67Worker tests and
+hosted Audit40406014626 pass. Actual compatible main patched without changing other
+runtime modules/bindings, deployed ddbc386c-5540-483b-b80f-6cb8b0538d41 at100%; source
+readback SHA2560609c53c33a6e267e2226e69f642d947198ebf63877288cd2a6e783641926323.
+Existing failed jobs remain historical; no image generated or batch resumed by agent.
+Actual generated scene quality and authenticated whole-plan model/save remain
+UNVERIFIED. Unit tests and deployment do not demonstrate visual lyric accuracy.
+
+Automatic direction release verified: source290e30c6c6250c59c0c1ee84126be68fd8974263,
+exact treecf603c234071bcfed782301be81dd4b1f0e0e79d, draftPR155. Hosted
+ProductionCI40408228396 initially587/588 because existing Chromium failed startup
+before layout assertions; one failed-job rerun without source changes succeeded.
+Final audit121872135512 confirms588/588,0fail/skip, dependency/snapshot/audit/build
+PASS. Full isolated PostgreSQL replay40408228425 SUCCESS. Initial publication used
+an incorrect expanded short parent SHA and was rejected422; corrected using actual
+remote ref819a431eab63984d9b9de6ad0520c75a8b57fde7 and verified tree before publish.
+No main merge or force push.
+Directorv6 ACTIVE, bundle361c85973453113aaf8f5de9567dc939f5d0f7e8d6e0dd96b754890927e777a6;
+retrieved index matches exact tested source; anonymousPOST401/tracedOPTIONS200.
+New owner RPC source/ACL verified, existing advisory categories unchanged. No
+production creative save, model/GPU call, paid fallback or automatic batch resume.
+Read-only latest Bragora forge revision5 is already draft, confirmed interpretation
+present, frozen/current audio revision/fingerprint/lyrics match. It can use the new
+whole-plan preparation without creating another copy; actual owner click not tested.
+Vercel productiondpl_GkNnxxqEmD5SNjSQsR3bRpHqGLVo READY at exact source; canonical
+beat-vision-theta.vercel.app independently resolves to it. Public HTML/JS200,
+/assets/index-bM1Mlkya.js SHA2563e1af798e4369376a7401f2962777255f5aeaedcc6c7fc237f242de697e31c02,
+contains new automatic beginner/prepare-all/save-all controls, optional individual
+editors and exact new API/RPC names. This proves shipped code, not real AI direction
+quality or creator acceptance. Refresh -> Visual Plan -> Beginner help prepare my
+video -> Prepare all50scenes -> review one story -> Save all scene directions.
+Actual owner-authenticated model/save and rendered video fidelity remain UNVERIFIED.
