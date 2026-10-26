@@ -2777,3 +2777,28 @@ readback SHA2560609c53c33a6e267e2226e69f642d947198ebf63877288cd2a6e783641926323.
 Existing failed jobs remain historical; no image generated or batch resumed by agent.
 Actual generated scene quality and authenticated whole-plan model/save remain
 UNVERIFIED. Unit tests and deployment do not demonstrate visual lyric accuracy.
+
+Automatic direction release verified: source290e30c6c6250c59c0c1ee84126be68fd8974263,
+exact treecf603c234071bcfed782301be81dd4b1f0e0e79d, draftPR155. Hosted
+ProductionCI40408228396 initially587/588 because existing Chromium failed startup
+before layout assertions; one failed-job rerun without source changes succeeded.
+Final audit121872135512 confirms588/588,0fail/skip, dependency/snapshot/audit/build
+PASS. Full isolated PostgreSQL replay40408228425 SUCCESS. Initial publication used
+an incorrect expanded short parent SHA and was rejected422; corrected using actual
+remote ref819a431eab63984d9b9de6ad0520c75a8b57fde7 and verified tree before publish.
+No main merge or force push.
+Directorv6 ACTIVE, bundle361c85973453113aaf8f5de9567dc939f5d0f7e8d6e0dd96b754890927e777a6;
+retrieved index matches exact tested source; anonymousPOST401/tracedOPTIONS200.
+New owner RPC source/ACL verified, existing advisory categories unchanged. No
+production creative save, model/GPU call, paid fallback or automatic batch resume.
+Read-only latest Bragora forge revision5 is already draft, confirmed interpretation
+present, frozen/current audio revision/fingerprint/lyrics match. It can use the new
+whole-plan preparation without creating another copy; actual owner click not tested.
+Vercel productiondpl_GkNnxxqEmD5SNjSQsR3bRpHqGLVo READY at exact source; canonical
+beat-vision-theta.vercel.app independently resolves to it. Public HTML/JS200,
+/assets/index-bM1Mlkya.js SHA2563e1af798e4369376a7401f2962777255f5aeaedcc6c7fc237f242de697e31c02,
+contains new automatic beginner/prepare-all/save-all controls, optional individual
+editors and exact new API/RPC names. This proves shipped code, not real AI direction
+quality or creator acceptance. Refresh -> Visual Plan -> Beginner help prepare my
+video -> Prepare all50scenes -> review one story -> Save all scene directions.
+Actual owner-authenticated model/save and rendered video fidelity remain UNVERIFIED.
