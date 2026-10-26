@@ -14,7 +14,7 @@ await writeFile(join(dir,'shot.mjs'),compile(await read('supabase/functions/beat
 await writeFile(join(dir,'engine.mjs'),compile((await read('src/lib/guidedShotRepair.ts')).replace('"../../supabase/functions/beatvision-generation/shot-direction"','"./shot.mjs"')));
 await writeFile(join(dir,'stub.mjs'),'export const supabase={rpc:(...args)=>globalThis.__guidedDb.rpc(...args)};');
 await writeFile(join(dir,'help.mjs'),compile((await read('src/components/plan/BeginnerShotHelp.tsx')).replace('"../../lib/supabase/client"','"./stub.mjs"').replace('"../../../supabase/functions/beatvision-generation/shot-direction"','"./shot.mjs"').replace('"../../lib/guidedShotRepair"','"./engine.mjs"')));
-const {diagnoseShot,readSceneDirections,proposeSceneRepairs,saveShotRepairs}=await import(pathToFileURL(join(dir,'engine.mjs'))),Help=(await import(pathToFileURL(join(dir,'help.mjs')))).default;
+const {diagnoseShot,readSceneDirections,proposeSceneRepairs,saveShotRepairs,suggestSceneRepairs}=await import(pathToFileURL(join(dir,'engine.mjs'))),Help=(await import(pathToFileURL(join(dir,'help.mjs')))).default;
 after(()=>rm(dir,{recursive:true,force:true}));
 const scenes=()=>[
  {id:'shot-1',scene_number:1,title:'Kitchen',movement_direction:'subtle gestures, restrained',camera_direction:'Slow camera push-in.',visual_direction:JSON.stringify({action:'She lifts the saved coffee cup.'}),status:'draft',start_time:0,end_time:5,location:'Kitchen',continuity_notes:'Keep wardrobe'},
@@ -98,4 +98,20 @@ test('explicit per-shot action and camera arrays offer the saved choices without
  const shot={...scenes()[0],visual_direction:'Saved subject in the room.',movement_direction:JSON.stringify({actor:['Raise the left hand.','Lower the right hand.'],camera:['Camera pans left.','Camera pans right.']})};
  const d=diagnoseShot(shot);assert.equal(d.needsAttention,true);assert.equal(d.directions.actor,'');assert.equal(d.directions.camera,'');
  assert.deepEqual(d.actionOptions,['Raise the left hand.','Lower the right hand.']);assert.deepEqual(d.cameraOptions,['Camera pans left.','Camera pans right.']);
+});
+
+test('bulk preparation uses each own unique saved fix, preserves valid fields and leaves ambiguity unresolved',()=>{
+ const source=[...scenes(),{...scenes()[0],id:'other',scene_number:5,visual_direction:JSON.stringify({action:'He opens the approved door.'})},
+ {...scenes()[0],id:'ambiguous',scene_number:6,movement_direction:'Raise the left hand or lower the right hand.',visual_direction:'Saved subject.'}];
+ const before=structuredClone(source),edits=suggestSceneRepairs(source);
+ assert.deepEqual(Object.keys(edits),['shot-1','other']);assert.notEqual(edits['shot-1'].actor,edits.other.actor);
+ assert.equal(edits.other.camera,source[4].camera_direction);assert.deepEqual(source,before);
+});
+test('bulk preparation is explicit, previews scoped drafts, and requires review before writing',async()=>{
+ const f=await mount();try{
+ assert.equal(f.calls.length,0);await f.click(f.button('Prepare fixes from each scene’s saved text'));
+ assert.equal(document.querySelector('textarea').value,'She lifts the saved coffee cup.');assert.equal(f.calls.length,0);
+ await f.click(f.button('Preview scene-specific fixes'));assert.ok(f.button('Save fixes to 1 draft shots'));assert.equal(f.calls.length,0);
+ assert.equal(f.button('Prepare fixes from each scene’s saved text').disabled,true);
+ }finally{await f.cleanup();}
 });

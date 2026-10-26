@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase/client";
-import { CAMERA_OPTIONS, diagnoseShot, directionIssues, proposeSceneRepairs, readSceneDirections, saveShotRepairs, type SceneDirections, type ShotRepair } from "../../lib/guidedShotRepair";
+import { CAMERA_OPTIONS, diagnoseShot, directionIssues, proposeSceneRepairs, readSceneDirections, saveShotRepairs, suggestSceneRepairs, type SceneDirections, type ShotRepair } from "../../lib/guidedShotRepair";
 import type { VisualPlanScene } from "../../types/visualPlan";
 
 export default function BeginnerShotHelp({planId,locked,scenes,working,onCreateRevision,onSaved}:
@@ -26,6 +26,8 @@ export default function BeginnerShotHelp({planId,locked,scenes,working,onCreateR
   const changed=scenes.filter(item=>edits[item.id] && JSON.stringify(edits[item.id])!==JSON.stringify(readSceneDirections(item)));
   const ready=changed.filter(item=>{const issue=directionIssues(edits[item.id]);return !issue.actor&&!issue.camera;});
   const repeated=scene?scenes.filter(item=>{const value=readSceneDirections(item);return value.actor===diagnosis!.directions.actor&&value.camera===diagnosis!.directions.camera;}).length:0;
+  const suggestions=suggestSceneRepairs(scenes);
+  const availableSuggestions=Object.keys(suggestions).filter(id=>!Object.hasOwn(edits,id));
   const blocked=working||busy;
   function choose(field:keyof SceneDirections,value:string) {
     if(!scene||!values)return;
@@ -51,6 +53,8 @@ export default function BeginnerShotHelp({planId,locked,scenes,working,onCreateR
         <p>This plan is locked. Make an editable copy to fix directions while preserving your approved plan and footage. Compatible images can be reused after review; earlier motion remains in its original revision.</p>
         <button className="primary-button" type="button" disabled={blocked} onClick={()=>void onCreateRevision().catch(()=>undefined)}>Make an editable copy for these fixes</button>
       </div> : <>
+        <p>{availableSuggestions.length} shots have a single clear fix available in their own saved instructions. Preparing these makes draft proposals for review. Missing or ambiguous choices still need your input.</p>
+        <button className="secondary-button" type="button" disabled={blocked||!availableSuggestions.length} onClick={()=>{setEdits(old=>({...suggestions,...old}));setProposal(null);setReviewed(false);setSaved(null);setError("");}}>Prepare fixes from each scene’s saved text</button>
         {affected.length>0 && <label><input type="checkbox" checked={showAll} disabled={blocked} onChange={event=>setShowAll(event.target.checked)} /> Include shots that already pass, for individual changes</label>}
         {scene && diagnosis && values && <div className="beginner-scene-card">
           <label>Choose a scene<select disabled={blocked} value={scene.id} onChange={event=>setSelected(event.target.value)}>{visible.map(item=><option key={item.id} value={item.id}>Scene {item.scene_number} · {item.title}</option>)}</select></label>

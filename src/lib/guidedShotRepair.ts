@@ -59,6 +59,18 @@ export function diagnoseShot(scene:VisualPlanScene) {
     .filter((text,index,all)=>text && all.indexOf(text)===index && !directionIssues({actor:"Hold the approved pose.",camera:text}).camera);
   return {directions,issues,actionOptions,cameraOptions,needsAttention:!!(issues.actor||issues.camera)};
 }
+// Prepare independent drafts only when a broken field has exactly one explicit
+// saved choice. Ambiguous or absent intent stays unresolved for the artist.
+export function suggestSceneRepairs(scenes:VisualPlanScene[]):Record<string,SceneDirections> {
+  return Object.fromEntries(scenes.flatMap(scene=>{
+    const d=diagnoseShot(scene);
+    if(!d.needsAttention)return [];
+    const actor=d.issues.actor?(d.actionOptions.length===1?d.actionOptions[0]:""):d.directions.actor;
+    const camera=d.issues.camera?(d.cameraOptions.length===1?d.cameraOptions[0]:""):d.directions.camera;
+    const issues=directionIssues({actor,camera});
+    return issues.actor||issues.camera?[]:[[scene.id,{actor,camera}]];
+  }));
+}
 export function proposeSceneRepairs(scenes:VisualPlanScene[],edits:Record<string,SceneDirections>):ShotRepair[] {
   const unknown=Object.keys(edits).filter(id=>!scenes.some(scene=>scene.id===id));
   if(unknown.length) throw new Error("The selected shot list changed. Reopen Beginner help.");

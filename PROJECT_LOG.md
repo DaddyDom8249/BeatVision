@@ -2518,3 +2518,13 @@ relaxed. Pre-final broad suite547/546pass/0fail/1skip before added array coverag
 Final broad command returned0 but captured log lacks aggregate footer, so no final
 aggregate count claimed pending hosted CI. Authenticated phone workflow UNVERIFIED.
 Publication/deployment pending at this entry. Main remains unchanged.
+
+Scene-specific source8ba3a7fb62f16931c7bdb116961f7a24b008671a hosted CI40369536451
+SUCCESS; decoded audit121736230436 confirms548tests548pass0fail0skip. Initial
+Vercel dpl_7UnV9segeawMWo32wVJk7kezATR5 READY. Followup adds explicit bulk preparation:
+prepare an independent proposal only when each broken field has exactly one valid
+choice in that scene's own saved text. No invented common movement; missing/ambiguous
+intent remains unresolved, manual edits take precedence, and reviewed save is still
+required.29 focused checks/build pass after this addition. A missing closing brace
+in the local helper edit was caught by tests/typecheck and corrected before publish;
+no broken source deployed. Final source/CI/release verification follows separately.
