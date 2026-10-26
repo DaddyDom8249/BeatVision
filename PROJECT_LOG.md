@@ -2118,3 +2118,77 @@ guard and earlier-render notice. Post-ledger rename safety suite9/9 exit0.
 No automatic creative decision or GPU call. Actual owner replacement click on
 the supplied production take remains unverified; creator now has the explicit
 control. Generationv68/Modal worker unchanged. Full-song coverage remains gated.
+
+## 2026-10-25 — Batch scene production, explicit bulk approval and progress
+
+Creator requests Generate All Scene Images, Generate All five-second motion,
+retain individual regeneration, Approve All, and progress bars. Existing single
+scene operations require repeated clicks for a 57-shot full-song revision.
+
+Added BatchProductionPanel and batchProduction runner using existing owner-checked
+RPCs and authenticated generation controller. No schema, worker, scheduler, media,
+approval or RLS mutation is needed for this release. Locked scenes only; batch
+motion requires <=5s scenes, exactly one approved stored source image, explicit
+LTX terms and Modal capability. Existing assets are kept, including pending review
+candidates. Failed/rejected old attempts require deliberate individual regeneration.
+Stable SHA-256-derived UUIDs bind initial requests to plan/scene/stage/source across
+tabs/reloads; existing jobs are resumed instead of duplicated. One scene is run
+and polled at a time, with bounded polling, pause/unmount guards and no paid fallback.
+Page must remain open for later scenes; already saved jobs remain recoverable via
+the existing scheduler. This is explicitly not a durable unattended whole-batch job.
+
+Bulk approval is a separate explicit action after preview review and acknowledgement.
+Review snapshots the latest generated candidate per scene, skips already approved
+scenes, excludes known procedural image-motion, and deselects failed previews.
+Each selected ID is rechecked before the existing approval RPC. Concurrent changed
+approval/selection fails closed; bulk action never transfers an existing approval.
+Partial approval remains saved and is idempotently recognized on a later attempt.
+Individual generation, rejection and explicit take replacement remain available.
+Progress advances only for persisted media or confirmed saved approvals, never fake
+per-clip percentages. Current scene/status and paused/error states remain visible.
+
+Tests: 19 new runner/real React panel regressions, including all57 images, source/
+terms/capability/duration guards, Modal-only generation, pause/resume, transport and
+provider failures, no automatic retry, stable IDs, exact reviewed approval IDs,
+stale/rejected choices, approval resume, preview failure and no auto approval.
+Existing production real-component 47 checks retained. Two transpilation harnesses
+updated for the new child component; child is separately rendered/tested with its
+real runner. First full run correctly failed old two-second copy expectation and
+missing nested harness module; fixed harnesses and current-duration expectation.
+Final full recursive64files:506tests,505pass,0fail,1existing browser-layout skip,
+exit0. Full TypeScript/Vite build exit0 with existing bundle-size advisory; audit
+and git diff --check exit0. No live GPU/image/assembly request or creative approval.
+
+Reused exactly Jules5991285972289398122 with evidence-required followup; activities
+still unreadableHTTP200/INVALID_ARGUMENT, so no Jules findings accepted. Prior main
+readback3e26d8556e62b40e9f20823cb253854ae5efcec6 unchanged. Base remote take-choice
+branch1bc3f27cbd67f133b43f6e96b08d600688b21205 has exact local base treef15f3963.
+12ui image workflow not invoked because provider cost is unknown/unauthorized;
+existing component styles reused for controls, not a redesign.
+
+Live read-only project still has approved264.96s plan/eight scenes,16.3417s motion,
+and unapproved Scene1 Modal5.04s candidate. Planning feature would create57shots;
+none was created/approved automatically. New frontend release pending at this log
+entry. Authenticated real57-shot generation, quality and end-to-end final output
+remain UNVERIFIED.
+
+Creator asks cost estimate: saved5.04s job wall interval192.165830s; official Modal
+L4 list rate0.000222/GPU-second.57 similar wall intervals imply about$2.43 GPU-only,
+not an actual billing measurement. Communicated provisional$5–$10 Modal compute
+first pass,$10–$20 allowing rerenders; excludes images and Shotstack and does not
+guarantee visual quality. Starter lists$30monthlycredits; remaining account balance
+not verified. No spending/budget change or provider inference performed.
+
+Batch release verified: source8dc670c5545b33fbcdabb493fc2b5690d5a70197,
+draftPR147 (base repair/motion-variant-approval-20261025). Exact remote/local
+source treee85e6fd5e3907178388abdc973119b00b1b2800e verified by fetch/diff exit0.
+Vercel dpl_2dFfjKZDvLkW32kPwM8jdwLedLEx READY at source8dc670c5; independent
+alias lookup confirms beat-vision-theta.vercel.app serves this deployment. Public
+HTML/JS retrieval verifies both Generate All buttons, both Review/Approve controls,
+approval confirmation action, progress bar labels, pause and stable request-ID
+namespace. Source hostedCI40249937749 audit job121339423557 completedSUCCESS,
+including npm test, production audit and build. PR review threads empty at check.
+Main remains3e26d8556e62b40e9f20823cb253854ae5efcec6. No main merge, schema/
+controller/worker change, actual generation or creative approval. This verifies
+released UI plus offline workflow contracts, not real authenticated57-shot GPU
+completion, quality, remaining credits or final four-minute playable output.
