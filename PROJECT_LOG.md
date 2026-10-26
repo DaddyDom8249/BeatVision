@@ -2604,3 +2604,14 @@ and sponsor workflow remain BLOCKED on owner session, reviewed imagery, worker a
 usable-credit verification plus actual output quality. No new inference, batch
 resume, email, secret/config change, paid service or main merge. Current sponsor
 gate record and release procedure added; frontend publication/checks pending.
+
+Exact-source4cdcdefa722eab684e9879522352c09c8d693c5e ProductionCI40375953014
+SUCCESS, audit121758942194 confirms560tests560pass0fail0skip, npmci/snapshot/audit/build
+all pass. Replay40375952966 applied every migration successfully, then stale fresh
+fixture failed VISION_LOCK_INTERPRETATION_REQUIRED. Fixture now fingerprints its
+synthetic source, saves/confirms manual interpretation through actual RPCs, and
+binds the World to it before locking. Production guard is unchanged; no production
+creative data or migration change. Rechecking the exact updated head is required.
+Secure browser-auth request timed out and its session handle was lost; authentication
+state remains UNKNOWN, no owner reuse verified. Phone still offline and old worker
+update queued. No duplicate auth request, new job, inference or approval attempted.
