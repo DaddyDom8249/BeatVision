@@ -2724,3 +2724,56 @@ User entry: Visual Plan -> Match this scene to its lyrics -> review proposal ->
 Use proposal in editable fields -> Save Scene Direction; locked plans first use
 Create Editable Revision. Owner-authenticated real model proposal/save and rendered
 lyric/action/emotion fidelity remain UNVERIFIED, not inferred from CI/asset strings.
+
+## 2026-10-26 America/Chicago — Automatic beginner video direction
+
+Creator corrected the previous implementation: Beginner Help must fill every
+scene from the confirmed interpretation, lyrics, desired mood and visual style;
+requiring the artist to enter50actions was the wrong workflow. No app rebuild.
+New AutomaticPlanHelp prepares the whole plan, shows one proposed story and saves
+all reviewed directions together. Individual repair/editor tools remain optional
+collapsed controls. A locked plan uses the existing safe editable-revision gate.
+No per-scene action text or camera selection is required from the artist.
+
+Existing owner-authenticated AI Director gains bounded propose_plan_scenes using
+up to8scenes per verified-free/quota reservation, full song/confirmed meaning,
+locked style/cast/continuity and preceding draft context. Each shot gets its own
+objects, observable action, emotion, camera and image direction. Different lyrics
+with identical action+visual text reject. Word/segment timing guides placement;
+case/punctuation normalization preserves real alignment. Missing/conflicting
+alignment proposes explicitly ESTIMATED lyric placement rather than asking the
+artist to place each line. No lyrics uses confirmed interpretation/style and no
+invented sung words. Estimates/uncertainty remain visible. Partial validated drafts
+stay for explicit continuation if provider quota/transport fails; no automatic
+retry, paid fallback or provider switch. Preparing never saves or renders media.
+
+Owner-checked save_automatic_scene_directions RPC atomically saves the whole reviewed
+draft's existing direction/mood/lyric fields. It verifies owner, draft plan/scenes,
+current confirmed interpretation, complete unique scene set and exact saved versions;
+one stale/invalid scene rolls back all updates. It never changes scene timing,
+location, locked continuity, approvals or existing images/motion. New visual details
+may require new imagery; old approved work is retained in its original revision.
+Applied additive migration as actual ledger20261026215045; function-body MD5
+1f9a25b2cce57fa7cf511299d8a2aef0 matches source, public/pg_temp search_path fixed,
+anon EXECUTE false, authenticated true. No production creative save performed.
+
+Verification: real React/engine tests prepare50distinct scenes through7mocked calls
+without any individual input, require one review before one save, preserve partial
+progress, reject stale/locked input and do not auto-enqueue/approve. Five PGlite
+checks save50directions atomically, reject late staleness/foreign/anon/locked/current-
+interpretation mismatch and incomplete payloads; original timing/continuity retained,
+zero jobs. Focused34/34 plus final API16/16 pass. Full local588total587pass0fail1
+existing unavailable-Chromium skip; build/audit/snapshot/diff and Edge TypeScript
+checks pass. Following boundary refinement caps meanings/uncertainty so a valid
+proposal cannot overflow the bulk-save visual-text limit; focused API rechecked.
+Exact-head hosted checks and application release follow separately. No live model
+or GPU inference, paid call, automatic approval, batch resume or main merge.
+
+Related screenshot blocker repaired separately in Arena PR49: valid transcription-
+only analysis was rejected for missing browser DSP label.67/67Worker tests and
+hosted Audit40406014626 pass. Actual compatible main patched without changing other
+runtime modules/bindings, deployed ddbc386c-5540-483b-b80f-6cb8b0538d41 at100%; source
+readback SHA2560609c53c33a6e267e2226e69f642d947198ebf63877288cd2a6e783641926323.
+Existing failed jobs remain historical; no image generated or batch resumed by agent.
+Actual generated scene quality and authenticated whole-plan model/save remain
+UNVERIFIED. Unit tests and deployment do not demonstrate visual lyric accuracy.
