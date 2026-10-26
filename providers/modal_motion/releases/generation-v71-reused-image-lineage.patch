@@ -1,0 +1,17 @@
+--- a/index.ts
++++ b/index.ts
+@@ -558 +558 @@
+-  let imageQuery = db.from("scene_image_assets").select("id,storage_path,image_url,generation_job_id", {count:"exact"}).eq("project_id", projectId).eq("visual_plan_id", scene.data.visual_plan_id).eq("scene_id", sceneId).eq("status", "approved").eq("approved", true);
++  let imageQuery = db.from("scene_image_assets").select("id,storage_path,image_url,generation_job_id,reused_from_image_id", {count:"exact"}).eq("project_id", projectId).eq("visual_plan_id", scene.data.visual_plan_id).eq("scene_id", sceneId).eq("status", "approved").eq("approved", true);
+@@ -562,0 +563,7 @@
++  let base: any;
++  if(image.data.reused_from_image_id) {
++    const restored=await db.rpc("motion_snapshot_for_image",{p_asset_id:image.data.id});
++    if(restored.error || restored.data?.visual_plan_id!==plan.data.id || restored.data?.vision_lock_id!==plan.data.vision_lock_id || restored.data?.input_snapshot?.scene?.id!==sceneId)
++      throw new HttpError(409,"FROZEN_LINEAGE_REQUIRED","Reused image lineage is no longer compatible with this shot.");
++    base=restored.data;
++  } else {
+@@ -565 +572,2 @@
+-  const base = template.data;
++  base = template.data;
++  }

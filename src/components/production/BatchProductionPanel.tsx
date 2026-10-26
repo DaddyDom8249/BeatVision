@@ -1,3 +1,4 @@
+import RevisionMediaPanel from "./RevisionMediaPanel";
 import { inspectMotionDirection } from "../../../supabase/functions/beatvision-generation/shot-direction";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase/client";
@@ -10,6 +11,7 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
   { projectId: string; planId: string; scenes: VisualPlanScene[]; disabled: boolean;
     onBusy: (busy: boolean) => void; onRefresh: () => Promise<void> }) {
   const [running, setRunning] = useState(false);
+  const [reuseBlocked,setReuseBlocked] = useState(true);
   const [progress, setProgress] = useState<BatchProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [terms, setTerms] = useState(false);
@@ -137,11 +139,12 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
       ? {...c, previewError: true, selected: false} : c) } : current);
   }
   return <section className="style-section" aria-label="Batch scene production">
+    <RevisionMediaPanel key={planId} projectId={projectId} planId={planId} disabled={disabled||running} onCheck={setReuseBlocked} onRefresh={async()=>{await refreshProgress();await onRefresh();}} />
     <h2>Produce all scenes</h2>
     <p>Generate missing media one scene at a time. Existing images and clips are kept. Review and approve images before generating motion. Individual regeneration remains available below.</p>
     <p>Batches run on the server, even after you leave this page or close the browser. Return here to see saved progress. The scheduler checks about once a minute. Pause stops later scenes; an already submitted job may finish. Failures pause the batch; retry that scene individually, then Resume.</p>
     <div className="production-actions">
-      <button className="primary-button" disabled={blocked || serverRunning} onClick={() => generate("image")}>Generate All Scene Images</button>
+      <button className="primary-button" disabled={blocked || serverRunning || reuseBlocked} onClick={() => generate("image")}>Generate All Scene Images</button>
       <button className="secondary-button" disabled={blocked} onClick={() => loadReview("image")}>Review &amp; Approve All Images</button>
     </div>
     <label><input type="checkbox" checked={terms} disabled={blocked} onChange={e => setTerms(e.target.checked)} /> I agree to the <a href="https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt" target="_blank" rel="noreferrer">LTX license and use restrictions</a>, including AI disclosure.</label>
@@ -168,7 +171,7 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
         <progress aria-label={batch.kind === "image" ? "Scene image batch progress" : "Motion batch progress"} value={batch.done} max={Math.max(1,batch.total)} style={{width:"100%"}} />
       </label>
       {batch.current_scene && batch.status !== "completed" && <p>Current scene: {batch.current_scene}.{batch.failed > 0 ? " A saved job failed. Regenerate it individually, then resume this batch." : " Progress is saved on the server."}</p>}
-      {batch.status !== "completed" && <button className="secondary-button" disabled={blocked || (batch.kind === "motion" && batch.status !== "running" && directionIssues.length > 0)} onClick={() => setPaused(batch,batch.status === "running")}>
+      {batch.status !== "completed" && <button className="secondary-button" disabled={blocked || (batch.kind === "image" && reuseBlocked) || (batch.kind === "motion" && batch.status !== "running" && directionIssues.length > 0)} onClick={() => setPaused(batch,batch.status === "running")}>
         {batch.status === "running" ? "Pause" : "Resume"} {batch.kind === "image" ? "Image" : "Motion"} Batch
       </button>}
     </div>)}

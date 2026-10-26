@@ -616,14 +616,22 @@ async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acce
   if (scene.error || !scene.data) throw new HttpError(409, "APPROVED_SCENE_REQUIRED", "Motion requires an approved scene.");
   const plan = await db.from("visual_plans").select("id,vision_lock_id,status").eq("id", scene.data.visual_plan_id).eq("project_id", projectId).eq("status", "approved").maybeSingle();
   if (plan.error || !plan.data?.vision_lock_id) throw new HttpError(409, "APPROVED_PLAN_REQUIRED", "Motion requires an approved locked Visual Plan.");
-  let imageQuery = db.from("scene_image_assets").select("id,storage_path,image_url,generation_job_id", {count:"exact"}).eq("project_id", projectId).eq("visual_plan_id", scene.data.visual_plan_id).eq("scene_id", sceneId).eq("status", "approved").eq("approved", true);
+  let imageQuery = db.from("scene_image_assets").select("id,storage_path,image_url,generation_job_id,reused_from_image_id", {count:"exact"}).eq("project_id", projectId).eq("visual_plan_id", scene.data.visual_plan_id).eq("scene_id", sceneId).eq("status", "approved").eq("approved", true);
   if (sourceImageId) imageQuery = imageQuery.eq("id", sourceImageId);
   const image = await imageQuery.order("created_at", {ascending:false}).limit(1).maybeSingle();
   if (!sourceImageId && image.count > 1) throw new HttpError(409,"SOURCE_IMAGE_CHOICE_REQUIRED","Choose the approved source image explicitly.");
   if (image.error || !image.data?.storage_path) throw new HttpError(409, "APPROVED_IMAGE_REQUIRED", "Motion requires an approved privately stored source image.");
+  let base: any;
+  if(image.data.reused_from_image_id) {
+    const restored=await db.rpc("motion_snapshot_for_image",{p_asset_id:image.data.id});
+    if(restored.error || restored.data?.visual_plan_id!==plan.data.id || restored.data?.vision_lock_id!==plan.data.vision_lock_id || restored.data?.input_snapshot?.scene?.id!==sceneId)
+      throw new HttpError(409,"FROZEN_LINEAGE_REQUIRED","Reused image lineage is no longer compatible with this shot.");
+    base=restored.data;
+  } else {
   const template = await db.from("generation_jobs").select("*").eq("project_id", projectId).eq("visual_plan_id", scene.data.visual_plan_id).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_image").eq("id", image.data.generation_job_id).single();
   if (template.error || template.data?.status !== "completed" || template.data?.input_snapshot?.scene?.id !== sceneId || template.data.vision_lock_id !== plan.data.vision_lock_id) throw new HttpError(409, "FROZEN_LINEAGE_REQUIRED", "Approved image must have its original generation snapshot.");
-  const base = template.data;
+  base = template.data;
+  }
   const modalFrames = provider === "modal" ? modalFramesForScene(base.input_snapshot.scene) : MODAL_MOTION.frames;
   if (requestId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) throw new HttpError(400,"GENERATION_REQUEST_ID_INVALID","Invalid request ID.");
   const key = (provider === "modal" ? "modal-motion:" : "hf-motion:") + sceneId + ":" + image.data.id + ":" +
