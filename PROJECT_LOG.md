@@ -2484,3 +2484,63 @@ empty; main independently unchanged3e26d8556e62b40e9f20823cb253854ae5efcec6.
 No production image reference creation/approval/inference initiated by this repair.
 Owner must choose reuse and review in app. Original media/approvals remain intact;
 real authenticated phone reuse and improved motion output remain UNVERIFIED.
+
+## 2026-10-26 America/Chicago — Scene-specific Beginner help
+
+Creator requested actual problem-specific fixes instead of applying the same action
+and camera to every shot. Root cause: proposeShotRepairs accepted one global pair,
+then mapped it to every failing scene. Replaced that path with per-scene diagnosis,
+independent action/camera choices, and a scene-indexed edit map. Clear saved fields
+remain literal, and untouched scenes never enter the repair payload. Suggestions
+come only from the current scene's explicit saved action/camera fields (including
+structured arrays/alternatives); negatives are not split into contradictory options.
+No subject, action or story is inferred from lyrics, moods, locations or neighbouring
+shots. Missing intent requires creator input; clarity checks are not visual QA.
+
+Beginner menu now shows each scene's title, time, location and saved visual/continuity
+context; explains the individual field problem; offers authored alternatives and
+explicit camera choices; permits custom edits and per-scene discard. Navigation
+retains independent edits. Repeated passing directions are flagged for review, not
+automatically declared invalid or replaced. Individual before/after fields and exact
+renderer requests are shown before one reviewed atomic save. Incomplete edited
+scenes block preview; unedited scenes can be addressed later. Editing invalidates
+previous review. Locked plans still require editable revision, with existing media
+reuse/history preserved. No production creative edits, approvals, generation or
+batch resumption initiated. No migration or provider/controller change required.
+
+Files: guidedShotRepair.ts, BeginnerShotHelp.tsx, existing styles.css, focused tests.
+Validation: 27 focused real React/engine/DB/layout checks pass, including 55 distinct
+edits in one RPC, action-only/camera-only preservation, unknown scene rejection,
+negatives, arrays, navigation and explicit review. Build and production audit pass;
+existing bundle size warning remains. Initial array fixture assertion incorrectly
+omitted the fixture's separate saved visual action; corrected fixture, no guard
+relaxed. Pre-final broad suite547/546pass/0fail/1skip before added array coverage.
+Final broad command returned0 but captured log lacks aggregate footer, so no final
+aggregate count claimed pending hosted CI. Authenticated phone workflow UNVERIFIED.
+Publication/deployment pending at this entry. Main remains unchanged.
+
+Scene-specific source8ba3a7fb62f16931c7bdb116961f7a24b008671a hosted CI40369536451
+SUCCESS; decoded audit121736230436 confirms548tests548pass0fail0skip. Initial
+Vercel dpl_7UnV9segeawMWo32wVJk7kezATR5 READY. Followup adds explicit bulk preparation:
+prepare an independent proposal only when each broken field has exactly one valid
+choice in that scene's own saved text. No invented common movement; missing/ambiguous
+intent remains unresolved, manual edits take precedence, and reviewed save is still
+required.29 focused checks/build pass after this addition. A missing closing brace
+in the local helper edit was caught by tests/typecheck and corrected before publish;
+no broken source deployed. Final source/CI/release verification follows separately.
+
+Scene-specific final release verified: source502f04cd85af3bb887365663e6bbe5f54150380f,
+exact local/remote tree0c7de340ff9f704a3b199a6fc17dc51cd161ea3f, draftPR152
+(base repair/revision-media-reuse-20261026). Vercel dpl_GW7mDJwBJa3hZCi54KddHLvxZsSM
+READY at that source; canonical alias independently verified. Public bundle
+/assets/index-CEUpeel5.js includes per-scene diagnosis/review, distinct bulk
+preparation, explicit reviewed save and existing image reuse/history; old blanket
+copy text absent. No production creative save, approval, inference or batch resumed.
+
+Exact-source CI40369979967 initially549/550pass: existing layout check failed
+because Chromium could not start within10seconds, before layout assertions. One
+failed-job rerun, with no code/test changes, succeeded; decoded audit121738587500
+confirms550tests550pass0fail0skip plus build/audit.29focused checks pass locally.
+Review threads empty; main remains3e26d8556e62b40e9f20823cb253854ae5efcec6.
+Authenticated owner phone review/save remains UNVERIFIED. This checks clarity and
+safe persistence, not semantic/visual correctness of future generated footage.

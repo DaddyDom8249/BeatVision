@@ -1422,3 +1422,8 @@ button { cursor: pointer; border: none; background: none; }
 .beginner-shot-help input[type="radio"], .beginner-shot-help input[type="checkbox"] { flex: none; width: 20px; height: 20px; margin-top: 2px; }
 .beginner-shot-help textarea { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
 .beginner-shot-help button { margin: 6px 0; max-width: 100%; white-space: normal; }
+.beginner-scene-card { border: 1px solid var(--border-medium); border-radius: 12px; padding: 16px; margin: 16px 0; }
+.beginner-scene-card label:has(select) { flex-direction: column; }
+.beginner-scene-card select { width: 100%; max-width: 100%; min-height: 44px; }
+.beginner-shot-help details { overflow-wrap: anywhere; margin: 12px 0; }
+.beginner-shot-help summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
