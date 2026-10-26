@@ -1,3 +1,4 @@
+import LyricSceneHelp from "../components/plan/LyricSceneHelp";
 import { inspectMotionDirection } from "../../supabase/functions/beatvision-generation/shot-direction";
 import BeginnerShotHelp from "../components/plan/BeginnerShotHelp";
 import { useState } from "react";
@@ -12,9 +13,10 @@ function formatTime(seconds: number) {
   return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 }
 
-function SceneEditor({ scene, working, onSave }: {
+function SceneEditor({ scene, working, lyrics, onSave }: {
   scene: VisualPlanScene;
   working: boolean;
+  lyrics: string;
   onSave: (id: string, changes: Partial<Pick<VisualPlanScene, "start_time" | "end_time" | "title" | "visual_direction" | "camera_direction" | "movement_direction" | "location" | "mood" | "lyric_moment" | "transition_style" | "continuity_notes">>) => Promise<void>;
 }) {
   const [draft, setDraft] = useState(scene);
@@ -55,6 +57,7 @@ function SceneEditor({ scene, working, onSave }: {
         <label>Transition<textarea rows={3} value={draft.transition_style} disabled={working} onChange={(e) => set("transition_style", e.target.value)} /></label>
         <label>Continuity notes<textarea rows={4} value={draft.continuity_notes} disabled={working} onChange={(e) => set("continuity_notes", e.target.value)} /></label>
       </div>
+      <LyricSceneHelp scene={scene} lyrics={lyrics} disabled={working || dirty} onApply={changes=>setDraft(current=>({...current,...changes}))} />
       <aside aria-label={`Scene ${scene.scene_number} motion request preview`}>
         <h3>Motion request preview</h3>
         {request.issue ? <p className="form-error">{request.issue}</p> : <p style={{whiteSpace:"pre-wrap"}}>{request.prompt}</p>}
@@ -166,7 +169,7 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
           <section>
             <h2>Timeline</h2>
             {scenes.map((scene) => (
-              <SceneEditor key={scene.id} scene={scene} working={working || plan.status === "approved"} onSave={saveScene} />
+              <SceneEditor key={`${scene.id}:${scene.updated_at}`} scene={scene} lyrics={song?.lyrics || song?.analysis?.transcript || ""} working={working || plan.status === "approved"} onSave={saveScene} />
             ))}
           </section>
 

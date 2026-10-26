@@ -40,8 +40,13 @@ function makeDb({ confirmed = true, ownerId = USER_ID } = {}) {
   };
 }
 
-async function boot({ confirmed = true, providerVerified = false, authUserId = USER_ID } = {}) {
+async function boot({ confirmed = true, providerVerified = false, authUserId = USER_ID, proposal = null } = {}) {
   const db = makeDb({ confirmed, ownerId: USER_ID });
+  db.songs[0].lyrics = "The phone rings and I dread answering. You never answer my call.";
+  db.songs[0].analysis.transcript_segments = [{start:0,end:5,text:"The phone rings and I dread answering."},{start:5,end:10,text:"You never answer my call."}];
+  db.visual_plans = [{id:"plan",project_id:PROJECT_ID,song_id:SONG_ID,vision_lock_id:"lock",status:"draft"}];
+  db.visual_plan_scenes = [{id:"scene",project_id:PROJECT_ID,song_id:SONG_ID,visual_plan_id:"plan",status:"draft",start_time:0,end_time:5,updated_at:"version1",lyric_moment:"",visual_direction:"Approved figure beside a phone.",movement_direction:"subtle",camera_direction:"Camera holds still.",mood:"dread",continuity_notes:"Keep approved wardrobe."}];
+  db.vision_locks = [{id:"lock",project_id:PROJECT_ID,song_id:SONG_ID,snapshot:{song:structuredClone(db.songs[0]),characters:[{name:"Approved figure"}],world:{mood:"dread"}}}];
   const source = await readFile(FUNCTION_PATH, "utf8");
   assert.ok(source.includes(REMOTE_IMPORT));
   const dir = await mkdtemp(join(tmpdir(), "ai-director-"));
@@ -50,7 +55,7 @@ async function boot({ confirmed = true, providerVerified = false, authUserId = U
   await writeFile(join(dir, "function.ts"), source.replace(REMOTE_IMPORT, 'from "./supabase_stub.mjs"'));
 
   let handler;
-  const providerCalls = [];
+  const providerCalls = [], quotaCalls = [];
   globalThis.Deno = {
     env: { get: (key) => ({
       SUPABASE_URL, SUPABASE_ANON_KEY: "stub-anon", SUPABASE_SERVICE_ROLE_KEY: "stub-service",
@@ -65,6 +70,7 @@ async function boot({ confirmed = true, providerVerified = false, authUserId = U
   globalThis.__directorFactory = () => ({
     ...createStubClientFactory(db)(),
     rpc: async (name, args) => {
+      quotaCalls.push(name);
       if (name === "song_creative_fingerprint") return { data: "e".repeat(64), error: null };
       if (name === "reserve_bragora_ai_request") {
         assert.equal(args.p_limit, 2);
@@ -77,10 +83,10 @@ async function boot({ confirmed = true, providerVerified = false, authUserId = U
   globalThis.fetch = async (input, options) => {
     if (String(input).endsWith("/auth/v1/user")) return new Response(JSON.stringify({ id: authUserId }), { status: 200 });
     providerCalls.push({ input: String(input), options });
-    return new Response(JSON.stringify({ choices: [{ message: { content: "Use the confirmed return arc as a gradual visual opening." } }] }), { status: 200 });
+    return new Response(JSON.stringify({ choices: [{ message: { content: proposal ? JSON.stringify(proposal) : "Use the confirmed return arc as a gradual visual opening." } }] }), { status: 200 });
   };
   await import(pathToFileURL(join(dir, "function.ts")).href);
-  return { handler, db, providerCalls };
+  return { handler, db, providerCalls, quotaCalls };
 }
 
 function request(handler, body, token = "valid-token") {
@@ -131,4 +137,53 @@ after(async () => {
   delete globalThis.Deno;
   delete globalThis.__directorFactory;
   for (const dir of CREATED_DIRS.splice(0)) await rm(dir, { recursive: true, force: true });
+});
+
+const phoneProposal = {lyric_excerpt:"The phone rings and I dread answering.",mode:"literal",action:"The phone vibrates as the figure hesitates, shoulders tense with dread.",objects:["phone"],emotion:"dread",visual_direction:"A visible phone on the table beside the approved figure, tense expression and cool lighting.",camera:"Camera holds still.",meaning:"Dread of answering the ringing phone.",uncertainty:"AI interpretation; artist review required."};
+const sceneRequest = {projectId:PROJECT_ID,action:"propose_scene",scene_id:"scene",mode:"literal"};
+test("lyric proposal uses only this scene's timestamped words, concrete objects and emotional action without writing", async()=>{
+ const f=await boot({providerVerified:true,proposal:phoneProposal}); const before=structuredClone(f.db);
+ const response=await request(f.handler,sceneRequest);assert.equal(response.status,200);
+ const body=await response.json();assert.equal(body.scene_proposal.action,phoneProposal.action);assert.equal(body.timing.source,"transcript_segments");
+ assert.deepEqual(body.timing.segments,[{start:0,end:5,text:phoneProposal.lyric_excerpt}]);assert.deepEqual(f.db,before);
+ const source=JSON.parse(f.providerCalls[0].options.body);assert.match(source.messages[0].content,/negat|figurative/i);
+ assert.match(source.messages[1].content,/phone rings/); assert.doesNotMatch(source.messages[1].content,/You never answer my call/);
+});
+test("lyric proposal denies foreign, locked and stale song/scene lineage before inference",async()=>{
+ for(const mutation of [db=>db.visual_plans[0].status="approved",db=>db.visual_plan_scenes[0].project_id="foreign",db=>db.vision_locks[0].snapshot.song.audio_revision="old"]){
+ const f=await boot({providerVerified:true,proposal:phoneProposal});mutation(f.db);const response=await request(f.handler,sceneRequest);assert.ok(response.status>=400);assert.equal(f.providerCalls.length,0);
+ }
+});
+test("untimed lyrics require explicit artist assignment and never invent timestamps",async()=>{
+ let f=await boot({providerVerified:true,proposal:phoneProposal});f.db.songs[0].analysis.transcript_segments=[];
+ let response=await request(f.handler,sceneRequest);assert.equal(response.status,422);assert.equal(f.providerCalls.length,0);
+ response=await request(f.handler,{...sceneRequest,lyric_excerpt:phoneProposal.lyric_excerpt,confirm_assignment:true});assert.equal(response.status,200);
+ const body=await response.json();assert.equal(body.timing.source,"artist_assigned");assert.deepEqual(body.timing.segments,[]);
+});
+test("reject invented quotes, wrong mode, generic action and incomplete model output; release quota",async()=>{
+ for(const patch of [{lyric_excerpt:"A spaceship lands"},{mode:"symbolic"},{action:"subtle gestures, restrained"},{objects:[]},{emotion:""}]){
+ const f=await boot({providerVerified:true,proposal:{...phoneProposal,...patch}});const response=await request(f.handler,sceneRequest);assert.equal(response.status,502);assert.equal(f.providerCalls.length,1);assert.equal(f.quotaCalls.at(-1),"release_bragora_ai_request");
+ }
+});
+test("artist lyrics override conflicting machine transcript; symbolism is an explicit choice",async()=>{
+ const symbolic={...phoneProposal,lyric_excerpt:"You never answer my call.",mode:"symbolic",objects:["closed doorway"],action:"The approved figure waits at a closed doorway, shoulders lowered in rejection."};
+ const f=await boot({providerVerified:true,proposal:symbolic});f.db.songs[0].analysis.transcript_segments[1].text="Incorrect machine words";f.db.visual_plan_scenes[0].start_time=5;f.db.visual_plan_scenes[0].end_time=10;
+ let response=await request(f.handler,{...sceneRequest,mode:"symbolic"});assert.equal(response.status,422);assert.equal(f.providerCalls.length,0);
+ response=await request(f.handler,{...sceneRequest,mode:"symbolic",lyric_excerpt:symbolic.lyric_excerpt,confirm_assignment:true});assert.equal(response.status,200);
+ assert.equal((await response.json()).timing.source,"artist_assigned");
+});
+
+test("word timestamps narrow the scene to its own words rather than copying a long segment",async()=>{
+ const p={...phoneProposal,lyric_excerpt:"The phone rings"};const f=await boot({providerVerified:true,proposal:p});
+ f.db.songs[0].analysis.word_timestamps=[{start:0,end:0.4,word:"The"},{start:0.4,end:0.9,word:"phone"},{start:0.9,end:1.4,word:"rings"},{start:5,end:6,word:"elsewhere"}];
+ const response=await request(f.handler,sceneRequest);assert.equal(response.status,200);const body=await response.json();
+ assert.equal(body.timing.source,"word_timestamps");assert.equal(body.scene_proposal.lyric_excerpt,"The phone rings");
+ assert.equal(body.timing.segments.length,3);
+});
+test("scene proposal keeps owner/free/quota guards and rejects missing mode or altered saved lyric claims",async()=>{
+ const f=await boot({providerVerified:false,proposal:phoneProposal});let r=await request(f.handler,sceneRequest);assert.equal(r.status,503);assert.equal(f.providerCalls.length,0);
+ r=await request(f.handler,{...sceneRequest,mode:""});assert.equal(r.status,400);
+ r=await request(f.handler,sceneRequest,null);assert.equal(r.status,401);
+ r=await request(f.handler,{...sceneRequest,lyric_excerpt:"Invented phone lyrics",confirm_assignment:true});assert.equal(r.status,422);
+ assert.equal(f.providerCalls.length,0);
 });

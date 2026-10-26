@@ -2633,3 +2633,94 @@ stilloffline, worker update queued. Professional clip and sponsor completion rem
 BLOCKED, no new inference/charge/email/merge. Next required: usable owner session
 and reviewed reuse, reconnect Termux, verify existing worker update/credits, then
 one bounded real clip and complete visual review before sponsor assembly/download.
+
+## 2026-10-26 America/Chicago — Lyric-specific scene proposals
+
+User authorized accurate lyric actions/objects/emotion and requested tight scope
+and triple checks. Main is 3e26d8556e62b40e9f20823cb253854ae5efcec6; work starts
+from actual serving frontend 26e69d48aade6a98ca1861dd79541f38fb95f312 on
+feature/lyric-scene-accuracy-20261026. Current AGENTS, project history, request
+quality rules and release baseline reviewed. Existing Jules session
+8349488310053633241 reused with evidence requirements, no new task. Followup
+accepted but task remains FAILED and activity transport closed; no worker output
+accepted as implementation/test proof. Implementation is local and independent.
+
+Root cause: plan creation copies global World/Style movement into sections;
+short-shot revisions copy the parent's entire lyric moment. Existing beginner
+repair intentionally cannot infer meaning. Add a read-only propose_scene action
+to existing AI Director with unchanged owner, confirmed/current interpretation,
+verified-free provider, quota, model and approval gates. Server resolves the
+actual draft scene/plan and locked song lineage, selects overlapping word
+timestamps before transcript segments, or requires explicit exact-lyric assignment.
+Manual lyrics take precedence over conflicting transcription. No timing is
+invented; machine alignment remains an estimate. Literal/symbolic/mixed selection
+is explicit; prompt handles negation, figurative language, concrete visible
+objects, observable emotional performance and continuity. Typed validated output
+cannot supply status, timestamps, IDs or arbitrary database fields.
+
+Visual Plan scene editor now offers Match this scene to its lyrics. Proposals
+show meaning, required objects, action, emotion, image/camera direction and timing
+uncertainty. Artist explicitly applies to editable fields, then uses existing
+Save Scene Direction and plan approval. Existing image/motion fields carry the
+specific direction; no generation-controller/worker change. Appearance changes
+continue to invalidate image-reuse compatibility through existing server rules.
+Saved-scene version comparison rejects concurrent edits; stale proposal responses
+are discarded. Locked plans/media are unchanged. No schema/RLS, costs, model,
+provider fallback, creative approval, batch resume or automatic render changes.
+
+Verification: npm ci --ignore-scripts --no-audit --no-fund exit0. Baseline npm test
+exit0:560 total,559pass,0fail,1 existing unavailable local-Chromium skip. Five new
+API behavior tests failed against baseline (4 existing tests pass). Focused final
+API/React/save tests pass; actual versioned deployed-generation source exercised
+offline to confirm exact lyric visuals/mood reach image bridge and the shared
+motion compiler retains phone vibration/dread. Full npm test exit0:572total,
+571pass,0fail,1same browser skip before the final additional bridge regression;
+that added test passes in focused rerun. Build, production-audit, release snapshot
+10-file verification, Edge TypeScript check with environmental declarations and
+git diff --check all exit0. Existing bundle-size advisory remains. One test caught
+an in-memory snapshot reference mutation; replaced with a filtered copy before
+release. One UI harness imported the new component as a module object; corrected
+its fixture, not application behavior.
+
+Live Director v3 one-file source matches the serving Git baseline byte-for-byte;
+JWT gateway false and explicit in-function owner authentication preserved.
+Source publication/deployment pending at this entry. No model or GPU inference,
+production creative save, asset replacement, approval, main merge or paid call.
+Real owner lyric proposal/save and generated visual adherence remain UNVERIFIED.
+A prompt/contract check cannot prove that a future generated phone rings visibly,
+that emotion is convincing, or that singing/word synchronization is exact.
+
+Final review followup: added a regression where model action omits its separate
+emotion. It failed before the followup. The UI now explicitly composes Feeling
+into the existing compact actor instruction; API validation enforces the combined
+200-character limit without truncation. Both appearance and motion therefore
+receive emotion even when the model separates its fields. Final full npm test
+exit0:573total,572pass,0fail,1existing unavailable-Chromium skip; build, audit,
+Edge TypeScript and diff checks exit0. No model/GPU request or customer mutation.
+Published draft PR154; concurrent security release receipt6c43450 preserved with
+both histories. Initial backendv4 deployed/readback source matches its exact
+candidate, anonymousPOST401 and tracedOPTIONS200. Final emotion validation adds
+one boundary check; final exact-source CI and frontend/backend release follow.
+
+Release verified: application source050acf56370df5e43fa2f698d9785070e03e77f3,
+exact local/remote tree4d246183da6d37cce70432afcf338627fa8053d3, draftPR154.
+Hosted ProductionCI40385420314/audit121792283246 SUCCESS:573/573tests,
+0fail/0skip, dependency audit, snapshot, production audit and build pass.
+Isolated PostgreSQL replay40385420514/job121792283802 SUCCESS, including all
+migrations and fresh project/song owner isolation. No production SQL applied.
+Directorv5 ACTIVE bundlea36bc46d7ba3aaf8df23db6674f03266543bf8bd6ff068e0bceed5d6203782f1;
+retrieved index.ts exactly matches tested final source; explicit auth preserved.
+Vercel productiondpl_21XTNQAS4fng6uxT4CvnmULLeULQ READY at exact application
+source; independent canonical alias lookup confirms beat-vision-theta.vercel.app.
+Public HTML/asset200, /assets/index-CYPbMeJ-.js hash
+bf74e264a2efa220d3b1688ac02b10cf7d51a9e76e8accde5afd378a61419163 includes
+all three lyric-proposal/review/apply controls, timing provenance and emotion
+composition. Live final anonymousPOST401; traced preflight200 previously verified.
+Preview target literal was rejected400, then omitted-target preview built READY;
+its promotion rejected422, so a pinned production build succeeded. Neither failed
+request is reported as release success. No main merge, media generation, creative
+approval, customer edit or provider spend. Existing images/motion unchanged.
+User entry: Visual Plan -> Match this scene to its lyrics -> review proposal ->
+Use proposal in editable fields -> Save Scene Direction; locked plans first use
+Create Editable Revision. Owner-authenticated real model proposal/save and rendered
+lyric/action/emotion fidelity remain UNVERIFIED, not inferred from CI/asset strings.
