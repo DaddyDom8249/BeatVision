@@ -2192,3 +2192,55 @@ Main remains3e26d8556e62b40e9f20823cb253854ae5efcec6. No main merge, schema/
 controller/worker change, actual generation or creative approval. This verifies
 released UI plus offline workflow contracts, not real authenticated57-shot GPU
 completion, quality, remaining credits or final four-minute playable output.
+
+## 2026-10-26 — Durable scene generation batches
+
+Creator requires rendering to continue after leaving the page. Replaced the
+foreground generation loop with owner-scoped persistent batch/item records and
+atomic batch enqueue, saved progress and Pause/Resume RPCs. The existing minute
+scheduler dispatches only the first unfinished item per running batch. Browser
+closure does not cancel saved work. Existing usable assets are skipped; approvals
+remain explicit and individual regeneration stays available. Failed jobs pause
+later scenes; no automatic paid retry. Motion still requires approved stored
+images, accepted LTX terms and a locked <=5-second shot plan.
+
+Additive migration durable_generation_batches applied as actual ledger
+20261026010325; repository SQL matches all five retrieved function bodies.
+Owner SELECT RLS and owner checks protect both tables; direct client writes and
+anonymous RPC execution revoked. Dispatch/queue functions are service-only.
+Advisor comparison: existing findings unchanged except the three intentional
+owner-checked authenticated SECURITY DEFINER RPCs (12 -> 15); no new anonymous
+execution or policyless table finding. Existing security findings remain outside
+this scoped change.
+
+Live controller v69 ACTIVE, bundle
+b89f6168dd299677e54f730a60206333716af058e698d4c9920bc6144e451ef9.
+Retrieved all five deployed files byte-match the tested live-compatible candidate.
+Only two controller changes: batch dispatch guard and scheduler queue RPC. Preserve
+live Arena behavior rather than deploying the divergent repository baseline.
+Live-compatible focused runtime suite:31/31 pass. The broad live-candidate suite
+has the same31 Arena/capability contract failures as original v68 (no new failure
+names); repository full suite:514 total,513 pass,0 fail,1 existing layout skip.
+This distinction remains unresolved and is not reported as full live-suite green.
+Fresh build and production audit pass; build retains existing bundle-size warning.
+An earlier build process ended before output completion; the fresh rerun passed.
+DB tests simulate all57 images/motion preparation, dispatch ordering, page closure,
+remount progress, idempotency, ownership, pause/failure/resume and atomic rollback.
+Last five scheduler HTTP responses200; unauthenticated controller POST401.
+Production generation_batches count0: no paid inference, new creative approval or
+real batch initiated by this work. Real57-shot unattended GPU completion and final
+four-minute playback remain UNVERIFIED. Do not roll back to v68 while queued batch
+jobs exist: rollback must retain the batch dispatch guard to avoid parallel release.
+Frontend publication/hosted CI pending at this entry. Main remains unchanged.
+
+Durable batch release verified: source fc218bea0f167f6cb262aa632a5243c12b692913,
+exact local/remote tree b66836427f75c79c45faa6b5a3141218fc5913e4, draftPR148
+(base feat/batch-scene-generation-20261026). Vercel
+dpl_D67MCLSqE2QEBbot1XZf7gW9dSmY READY at that source; independent alias readback
+confirms beat-vision-theta.vercel.app points to it. Public HTML/JS includes server
+batch messaging and start/progress/pause RPC names; foreground keep-page-open
+message absent. Hosted production CI40252758080 and Modal checks40252758127 both
+SUCCESS. Review threads empty at check; main independently unchanged at
+3e26d8556e62b40e9f20823cb253854ae5efcec6. No main merge, actual generation,
+creative approval or worker deployment. Real unattended GPU completion remains
+UNVERIFIED; existing approvals and costs were not changed.
