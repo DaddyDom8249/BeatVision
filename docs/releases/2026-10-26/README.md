@@ -1,6 +1,10 @@
 # BragoraForge release baseline — 26 October 2026
 
 Production is identified by exact source/deployment IDs, not a moving branch name.
+The latest verified release is [release-receipt.json](release-receipt.json), source
+26e69d48aade6a98ca1861dd79541f38fb95f312. Its560tests and complete fresh PostgreSQL
+replay/owner-isolation contract pass. The earlier runtime manifest is retained as
+the original baseline receipt.
 The runtime manifest records the last verified frontend deployment and a byte-exact
 snapshot of generation v72. The candidate controller in supabase/functions differs
 from that deployed controller; do not deploy it wholesale. Runtime copies here are
