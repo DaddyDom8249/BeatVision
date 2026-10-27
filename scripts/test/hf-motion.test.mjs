@@ -222,7 +222,7 @@ for (const approvedPlan of [true,false]) test('HF enqueue '+(approvedPlan?'reuse
   const client={from(table){const where={};filters.push({table,where});return{
     select(){return this},eq(k,v){where[k]=v;return this},order(){return this},limit(){return this},insert(){writes++;throw Error('must not insert')},
     async maybeSingle(){return{data:table==='visual_plan_scenes'?{id:'scene-1',visual_plan_id:'plan-1'}:table==='visual_plans'?(approvedPlan?{vision_lock_id:'lock-1'}:null):table==='scene_image_assets'?{id:'image-1',storage_path:'project-1/image.jpg',generation_job_id:'image-job'}:existing}},
-    async single(){return{data:{id:'image-job',project_id:'project-1',status:'completed',vision_lock_id:'lock-1',visual_plan_id:'plan-1',input_snapshot:{scene:{id:'scene-1'}}}}},
+    async single(){return{data:{id:'image-job',project_id:'project-1',status:'completed',vision_lock_id:'lock-1',visual_plan_id:'plan-1',input_snapshot:{scene:{id:'scene-1',movement_direction:{actor:'The approved figure lifts one hand into view.',camera:'Camera remains still.'}}}}}},
   }}};
   const runtime=await loadGeneration(client);globalThis.Deno.env.get=()=> 'test-secret';
   try {
