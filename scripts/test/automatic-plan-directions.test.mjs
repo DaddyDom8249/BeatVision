@@ -43,16 +43,17 @@ test('stale proposal and locked drafts reject before saving or calling a model',
  let f=fixture({corrupt:true});await assert.rejects(preparePlanDirections(f.client,'plan',f.source,'literal',[],()=>{}),/stale/);assert.equal(f.saves.length,0);
  f=fixture();f.source[0].status='approved';await assert.rejects(preparePlanDirections(f.client,'plan',f.source,'literal',[],()=>{}),/editable/);assert.equal(f.calls.length,0);
 });
-async function mount(t,{locked=false}={}){
- const f=fixture(),dom=new JSDOM('<div id="root"></div>',{url:'https://fixture.test/visual-plan?help=directions'});
+async function mount(t,{locked=false,longShots=false}={}){
+ const f=fixture();if(longShots){f.source[0].start_time=0;f.source[0].end_time=25;}
+ const dom=new JSDOM('<div id="root"></div>',{url:'https://fixture.test/visual-plan?help=directions'});
  const previous={window:globalThis.window,document:globalThis.document,IS_REACT_ACT_ENVIRONMENT:globalThis.IS_REACT_ACT_ENVIRONMENT};
  Object.assign(globalThis,{window:dom.window,document:dom.window.document,IS_REACT_ACT_ENVIRONMENT:true});globalThis.__autoPlan=f.client;
- const root=createRoot(document.getElementById('root'));let saved=0,revised=0;
- await act(async()=>root.render(React.createElement(Help,{planId:'plan',locked,scenes:f.source,working:false,onSaved:async()=>saved++,onCreateRevision:async()=>revised++})));
+ const root=createRoot(document.getElementById('root'));let saved=0,revised=0,shortened=0;
+ await act(async()=>root.render(React.createElement(Help,{planId:'plan',locked,scenes:f.source,working:false,onSaved:async()=>saved++,onCreateRevision:async()=>revised++,onPrepareShortShots:async()=>shortened++})));
  const button=text=>[...document.querySelectorAll('button')].find(x=>x.textContent===text);
  const click=async el=>{assert.ok(el);await act(async()=>el.dispatchEvent(new window.MouseEvent('click',{bubbles:true})));};
  t.after(async()=>{await act(async()=>root.unmount());dom.window.close();Object.assign(globalThis,previous);delete globalThis.__autoPlan;});
- return {...f,button,click,saved:()=>saved,revised:()=>revised};
+ return {...f,button,click,saved:()=>saved,revised:()=>revised,shortened:()=>shortened};
 }
 test('beginner menu prepares whole story with one click and saves all directions only after one review',async t=>{
  const f=await mount(t);assert.equal(document.querySelectorAll('textarea').length,0);assert.equal(f.calls.length,0);
@@ -63,4 +64,15 @@ test('beginner menu prepares whole story with one click and saves all directions
 });
 test('locked plan offers existing safe revision action without generation or overwrite',async t=>{
  const f=await mount(t,{locked:true});assert.equal(f.button('Prepare all 50 scenes for me'),undefined);await f.click(f.button('Make an editable copy'));assert.equal(f.revised(),1);assert.equal(f.calls.length,0);assert.equal(f.saves.length,0);
+});
+
+test('beginner must prepare renderable short shots before requesting whole-song AI directions',async t=>{
+ const f=await mount(t,{longShots:true});
+ assert.match(document.body.textContent,/Make short shots first/);
+ assert.equal(f.button('Prepare all 50 scenes for me').disabled,true);
+ assert.equal(f.calls.length,0);
+ await f.click(f.button('Make 5-second shots first'));
+ assert.equal(f.shortened(),1);
+ assert.equal(f.calls.length,0);
+ assert.equal(f.saves.length,0);
 });

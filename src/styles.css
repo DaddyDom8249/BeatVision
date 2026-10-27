@@ -1427,3 +1427,96 @@ button { cursor: pointer; border: none; background: none; }
 .beginner-scene-card select { width: 100%; max-width: 100%; min-height: 44px; }
 .beginner-shot-help details { overflow-wrap: anywhere; margin: 12px 0; }
 .beginner-shot-help summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
+
+/* Beginner-first Director's Desk: preserve the existing cinematic design system. */
+.director-storyboard {
+  border: 1px solid var(--border-accent);
+  border-radius: 16px;
+  background: linear-gradient(155deg, var(--bg-surface-2), var(--bg-surface-1));
+  padding: clamp(16px, 3vw, 28px);
+  margin: 22px 0;
+  display: grid;
+  gap: 18px;
+}
+.director-storyboard-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+.director-storyboard-heading h2 { margin: 6px 0 10px; font-size: clamp(22px, 3vw, 30px); }
+.director-storyboard-heading p { color: var(--text-muted); line-height: 1.55; }
+.director-storyboard-progress {
+  flex: 0 0 190px;
+  border: 1px solid var(--border-accent);
+  border-radius: 10px;
+  padding: 14px;
+  color: var(--accent-gold) !important;
+  font-size: 13px;
+}
+.director-storyboard-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 2fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 10px;
+}
+.director-storyboard-nav button { min-height: 44px; }
+.director-storyboard-nav label, .director-shot-editor label {
+  display: grid;
+  gap: 7px;
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: 14px;
+}
+.director-storyboard-nav select { width: 100%; min-height: 44px; }
+.director-storyboard-counter, .director-shot-disclaimer {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.director-shot-card {
+  border-radius: 14px;
+  background: var(--bg-surface-0);
+  padding: clamp(16px, 3vw, 26px);
+  border: 1px solid var(--border-medium);
+  display: grid;
+  gap: 14px;
+}
+.director-shot-topline {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.director-shot-card h3 { margin: 0; font-size: clamp(20px, 2.5vw, 26px); }
+.director-shot-description { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.director-shot-description > div {
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  padding: 13px;
+}
+.director-shot-description dt { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--accent-gold); margin-bottom: 6px; }
+.director-shot-description dd { line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.director-shot-warning {
+  border-left: 3px solid var(--color-warning);
+  padding: 8px 12px;
+  color: var(--color-warning);
+  background: var(--bg-warning-subtle);
+}
+.director-shot-editor {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 18px;
+}
+.director-shot-editor p { color: var(--text-muted); line-height: 1.5; }
+.director-shot-editor textarea, .director-shot-editor input { width: 100%; }
+@media (max-width: 600px) {
+  .director-storyboard-heading { display: grid; }
+  .director-storyboard-progress { width: 100%; }
+  .director-storyboard-nav { grid-template-columns: 1fr 1fr; }
+  .director-storyboard-nav label { grid-column: 1 / -1; grid-row: 1; }
+  .director-shot-description { grid-template-columns: 1fr; }
+}

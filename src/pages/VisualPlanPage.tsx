@@ -1,4 +1,5 @@
 import AutomaticPlanHelp from "../components/plan/AutomaticPlanHelp";
+import DirectorStoryboard from "../components/plan/DirectorStoryboard";
 import LyricSceneHelp from "../components/plan/LyricSceneHelp";
 import { inspectMotionDirection } from "../../supabase/functions/beatvision-generation/shot-direction";
 import BeginnerShotHelp from "../components/plan/BeginnerShotHelp";
@@ -121,7 +122,7 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
         <div>
         <span className="eyebrow">PHASE 4 / VISUAL PLAN</span>
         <h1>Plan your video</h1>
-        <p>Let BeatVision turn your song into a visual story. Review the plan before producing images and motion.</p>
+        <p>BeatVision prepares the story; you direct the film. Review each proposed scene, keep what fits, and change anything that doesn’t before production.</p>
         </div>
       </header>
 
@@ -165,7 +166,8 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
             </section>
           )}
 
-          <AutomaticPlanHelp key={`auto:${plan.id}`} planId={plan.id} locked={plan.status === "approved"} scenes={scenes} working={working} onCreateRevision={()=>revisePlan()} onSaved={reload} />
+          <AutomaticPlanHelp key={`auto:${plan.id}`} planId={plan.id} locked={plan.status === "approved"} scenes={scenes} working={working} onCreateRevision={()=>revisePlan()} onPrepareShortShots={()=>revisePlan(5)} onSaved={reload} />
+          <DirectorStoryboard scenes={scenes} locked={plan.status === "approved"} working={working} onSave={saveScene} />
           <details><summary>Optional: repair individual scene instructions</summary>
           <BeginnerShotHelp key={plan.id} planId={plan.id} locked={plan.status === "approved"} scenes={scenes} working={working}
             onCreateRevision={()=>revisePlan()} onSaved={reload} />
