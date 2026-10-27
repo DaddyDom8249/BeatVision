@@ -3,7 +3,6 @@ import { supabase } from "../lib/supabase/client";
 import { formatCreativeText, getCreativeErrorMessage } from "../lib/formatCreativeText";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 import StudioHeader from "../components/navigation/StudioHeader";
-import { inspectMotionDirection } from "../../supabase/functions/beatvision-generation/shot-direction";
 import BatchProductionPanel from "../components/production/BatchProductionPanel";
 import { inspectMotionDirection } from "../../supabase/functions/beatvision-generation/shot-direction";
 
@@ -436,10 +435,6 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
           if (direction.issue) throw new Error(`Scene ${scene.scene_number}: ${direction.issue} No generation was submitted.`);
         }
         if (type === "scene_motion" && !motionTermsAccepted) throw new Error("Accept the LTX model use restrictions before AI motion.");
-        if (type === "scene_motion") {
-          const direction = inspectMotionDirection(scene);
-          if (direction.issue) throw new Error(direction.issue);
-        }
         if (type === "scene_motion" && motionProvider === "modal") {
           // A preview UI can temporarily be newer than the deployed Edge controller.
           // Fail closed: old controllers ignore provider and would silently use HF.
