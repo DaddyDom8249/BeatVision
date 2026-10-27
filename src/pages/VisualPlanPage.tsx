@@ -166,7 +166,7 @@ export default function VisualPlanPage({ projectId }: { projectId: string }) {
             </section>
           )}
 
-          <AutomaticPlanHelp key={`auto:${plan.id}`} planId={plan.id} locked={plan.status === "approved"} scenes={scenes} working={working} onCreateRevision={()=>revisePlan()} onSaved={reload} />
+          <AutomaticPlanHelp key={`auto:${plan.id}`} planId={plan.id} locked={plan.status === "approved"} scenes={scenes} working={working} onCreateRevision={()=>revisePlan()} onPrepareShortShots={()=>revisePlan(5)} onSaved={reload} />
           <DirectorStoryboard scenes={scenes} locked={plan.status === "approved"} working={working} onSave={saveScene} />
           <details><summary>Optional: repair individual scene instructions</summary>
           <BeginnerShotHelp key={plan.id} planId={plan.id} locked={plan.status === "approved"} scenes={scenes} working={working}
