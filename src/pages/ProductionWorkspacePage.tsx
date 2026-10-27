@@ -4,6 +4,7 @@ import { formatCreativeText, getCreativeErrorMessage } from "../lib/formatCreati
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 import StudioHeader from "../components/navigation/StudioHeader";
 import BatchProductionPanel from "../components/production/BatchProductionPanel";
+import { inspectMotionDirection } from "../../supabase/functions/beatvision-generation/shot-direction";
 
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
@@ -427,6 +428,12 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         if (!check.ready) throw new Error(check.message);
       }
       if (!job) {
+        if (type === "scene_motion") {
+          // Browser guidance is not the security gate: the controller must also
+          // validate its frozen image-generation snapshot before inserting.
+          const direction = inspectMotionDirection(scene);
+          if (direction.issue) throw new Error(`Scene ${scene.scene_number}: ${direction.issue} No generation was submitted.`);
+        }
         if (type === "scene_motion" && !motionTermsAccepted) throw new Error("Accept the LTX model use restrictions before AI motion.");
         if (type === "scene_motion" && motionProvider === "modal") {
           // A preview UI can temporarily be newer than the deployed Edge controller.
