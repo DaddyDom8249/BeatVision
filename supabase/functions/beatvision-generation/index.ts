@@ -34,6 +34,7 @@ import { HF_MOTION, hfEligibility, hfSubmit, hfPoll, hfDownload, hfJobSeed, HfMo
 import { MODAL_MOTION, assertModalFrameCount, modalFramesForScene, assertModalSubmissionEnabled, submitModalMotion, pollModalMotion, sha256Hex, ModalMotionError } from "./modal-motion.ts";
 
 const ALLOWED_ORIGINS = new Set([
+  "https://beat-vision-kfk4sh067-beat-vision.vercel.app",
   "https://beat-vision-f8nn.vercel.app",
   "https://beat-vision-theta.vercel.app",
   "https://beat-vision-beat-vision.vercel.app",

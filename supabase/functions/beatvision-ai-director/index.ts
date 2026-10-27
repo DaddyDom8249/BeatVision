@@ -27,6 +27,7 @@ function trustedStudioOrigin(
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ALLOWED_ORIGINS = new Set([
+  "https://beat-vision-kfk4sh067-beat-vision.vercel.app",
   "https://beat-vision-beat-vision.vercel.app",
   "https://beat-vision-theta.vercel.app",
   "https://beat-vision-git-main-beat-vision.vercel.app",
