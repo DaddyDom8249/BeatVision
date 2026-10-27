@@ -22,7 +22,7 @@ export function directorDirectionPatch(scene: VisualPlanScene, draft: DirectorDr
     const issue = directionIssues({ actor, camera });
     if (issue.actor || issue.camera) throw new Error(issue.actor || issue.camera);
     patch.movement_direction = JSON.stringify({ actor, camera });
-    patch.camera_direction = camera;
+    if (camera !== before.camera.trim()) patch.camera_direction = camera;
   }
   return patch;
 }
@@ -41,7 +41,8 @@ function StoryShot({ scene, locked, working, onSave }: {
   const saved = draftFromScene(scene);
   const direction = readSceneDirections(scene);
   const issue = directionIssues(direction);
-  const changed = Object.keys(directorDirectionPatchSafe(scene, draft)).length > 0;
+  const changed = draft.visual.trim() !== saved.visual.trim() || draft.actor.trim() !== saved.actor.trim() ||
+    draft.camera.trim() !== saved.camera.trim() || draft.mood.trim() !== saved.mood.trim();
   const currentIssue = directionIssues({ actor: draft.actor.trim(), camera: draft.camera.trim() });
 
   function change(field: keyof DirectorDraft, value: string) {
@@ -109,10 +110,6 @@ function StoryShot({ scene, locked, working, onSave }: {
     </>}
     {locked && <p>The artist locked this plan. Create an editable revision to change a scene.</p>}
   </article>;
-}
-function directorDirectionPatchSafe(scene: VisualPlanScene, draft: DirectorDraft): Partial<EditableDirection> {
-  try { return directorDirectionPatch(scene, draft); }
-  catch { return { movement_direction: draft.actor }; }
 }
 export default function DirectorStoryboard({ scenes, locked, working, onSave }: {
   scenes: VisualPlanScene[];
