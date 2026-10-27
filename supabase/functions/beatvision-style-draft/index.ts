@@ -1,6 +1,33 @@
+function trustedStudioOrigin(
+  origin: string | null,
+  productionOrigins: ReadonlySet<string>,
+  previewConfig: string | null = null,
+): string | null {
+  if (!origin) return null;
+  if (productionOrigins.has(origin)) return origin;
+  const config = previewConfig || "";
+  if (!config || config.length > 2048) return null;
+  const candidates = config.split(",").map((value) => value.trim()).filter(Boolean);
+  if (candidates.length > 8 || candidates.length === 0) return null;
+  for (const candidate of candidates) {
+    // Explicit exact preview hostname, belonging to the verified BeatVision
+    // Vercel deployment namespace; no generic *.vercel.app trust.
+    if (!/^https:\/\/beat-vision-[a-z0-9-]{6,140}-beat-vision\.vercel\.app$/.test(candidate))
+      return null;
+    try {
+      const parsed = new URL(candidate);
+      if (parsed.origin !== candidate || parsed.pathname !== "/" || parsed.search ||
+          parsed.hash || parsed.username || parsed.password || parsed.port) return null;
+    } catch { return null; }
+  }
+  return candidates.includes(origin) ? origin : null;
+}
+
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ALLOWED_ORIGINS = new Set([
+  "https://beat-vision-kfk4sh067-beat-vision.vercel.app",
   "https://beat-vision-beat-vision.vercel.app",
   "https://beat-vision-git-main-beat-vision.vercel.app",
   "https://beat-vision-theta.vercel.app",
@@ -71,9 +98,9 @@ const env = (name: string) => String(Deno.env.get(name) || "").trim();
 
 function corsHeaders(req: Request) {
   const origin = req.headers.get("Origin") || "";
-  const allowedOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://beat-vision-beat-vision.vercel.app";
+  const allowedOrigin = trustedStudioOrigin(origin, ALLOWED_ORIGINS, Deno.env.get("BEATVISION_ALLOWED_PREVIEW_ORIGINS"));
   return {
-    "Access-Control-Allow-Origin": allowedOrigin,
+    ...(allowedOrigin ? { "Access-Control-Allow-Origin": allowedOrigin } : {}),
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",

@@ -1,0 +1,67 @@
+{
+  "kind": "exact-deployed-source-cors-release",
+  "parent_commit": "f67e3435e7c400cf1979daf4842cbf04498d6df7",
+  "preview_origin": "https://beat-vision-kfk4sh067-beat-vision.vercel.app",
+  "functions": [
+    {
+      "name": "beatvision-generation",
+      "live_version": 72,
+      "live_bundle_sha256": "00b8bf05ce195737281d0a8b6aee4b32692c364d0f12bfadf1d803b8128dcf87",
+      "verify_jwt": false,
+      "baseline_path": "docs/releases/2026-10-27/preview-cors-exact-live/beatvision-generation/baseline/index.ts",
+      "release_path": "docs/releases/2026-10-27/preview-cors-exact-live/beatvision-generation/release/index.ts",
+      "relative_files": [
+        "shot-direction.ts",
+        "image-media.ts",
+        "final-media.ts",
+        "hf-motion.ts",
+        "modal-motion.ts"
+      ]
+    },
+    {
+      "name": "beatvision-ai-director",
+      "live_version": 6,
+      "live_bundle_sha256": "361c85973453113aaf8f5de9567dc939f5d0f7e8d6e0dd96b754890927e777a6",
+      "verify_jwt": false,
+      "baseline_path": "docs/releases/2026-10-27/preview-cors-exact-live/beatvision-ai-director/baseline/index.ts",
+      "release_path": "docs/releases/2026-10-27/preview-cors-exact-live/beatvision-ai-director/release/index.ts",
+      "relative_files": []
+    },
+    {
+      "name": "beatvision-song-interpretation",
+      "live_version": 6,
+      "live_bundle_sha256": "35409fc23e8ba2cddc8beb3f6c2c6c9143581f61857ef6720c1ddb3eccc0dab0",
+      "verify_jwt": false,
+      "baseline_path": "docs/releases/2026-10-27/preview-cors-exact-live/beatvision-song-interpretation/baseline/index.ts",
+      "release_path": "docs/releases/2026-10-27/preview-cors-exact-live/beatvision-song-interpretation/release/index.ts",
+      "relative_files": []
+    },
+    {
+      "name": "beatvision-world",
+      "live_version": 62,
+      "live_bundle_sha256": "9ae0a5afd7a3dbc9235f41aaa9e29b0e7881e53c4ed4cc23acb9eea2e0a835b0",
+      "verify_jwt": false,
+      "baseline_path": "docs/releases/2026-10-27/preview-cors-exact-live/beatvision-world/baseline/index.ts",
+      "release_path": "docs/releases/2026-10-27/preview-cors-exact-live/beatvision-world/release/index.ts",
+      "relative_files": []
+    },
+    {
+      "name": "beatvision-analyze-song",
+      "live_version": 44,
+      "live_bundle_sha256": "9c9d325451ba62a3d1e2c53df85733515a3a31e9251cb5e2724404d955011db1",
+      "verify_jwt": false,
+      "baseline_path": "docs/releases/2026-10-27/preview-cors-exact-live/beatvision-analyze-song/baseline/index.ts",
+      "release_path": "docs/releases/2026-10-27/preview-cors-exact-live/beatvision-analyze-song/release/index.ts",
+      "relative_files": []
+    },
+    {
+      "name": "beatvision-style-draft",
+      "live_version": 30,
+      "live_bundle_sha256": "dd5e42a77921edf64fc94f109619a1671b4f73bc1fda328d7d5b6d872bbbdb05",
+      "verify_jwt": true,
+      "baseline_path": "docs/releases/2026-10-27/preview-cors-exact-live/beatvision-style-draft/baseline/index.ts",
+      "release_path": "docs/releases/2026-10-27/preview-cors-exact-live/beatvision-style-draft/release/index.ts",
+      "relative_files": []
+    }
+  ]
+}

@@ -1,8 +1,35 @@
+function trustedStudioOrigin(
+  origin: string | null,
+  productionOrigins: ReadonlySet<string>,
+  previewConfig: string | null = null,
+): string | null {
+  if (!origin) return null;
+  if (productionOrigins.has(origin)) return origin;
+  const config = previewConfig || "";
+  if (!config || config.length > 2048) return null;
+  const candidates = config.split(",").map((value) => value.trim()).filter(Boolean);
+  if (candidates.length > 8 || candidates.length === 0) return null;
+  for (const candidate of candidates) {
+    // Explicit exact preview hostname, belonging to the verified BeatVision
+    // Vercel deployment namespace; no generic *.vercel.app trust.
+    if (!/^https:\/\/beat-vision-[a-z0-9-]{6,140}-beat-vision\.vercel\.app$/.test(candidate))
+      return null;
+    try {
+      const parsed = new URL(candidate);
+      if (parsed.origin !== candidate || parsed.pathname !== "/" || parsed.search ||
+          parsed.hash || parsed.username || parsed.password || parsed.port) return null;
+    } catch { return null; }
+  }
+  return candidates.includes(origin) ? origin : null;
+}
+
+
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Keep browser origins aligned with the existing generation Edge allowlist.
 const ALLOWED_ORIGINS = new Set([
+  "https://beat-vision-kfk4sh067-beat-vision.vercel.app",
   "https://beat-vision-theta.vercel.app",
   "https://beat-vision-beat-vision.vercel.app",
   "https://beat-vision-git-main-beat-vision.vercel.app",
@@ -19,7 +46,8 @@ function corsHeaders(req: Request): Record<string, string> {
     "Cache-Control": "no-store",
     "Vary": "Origin",
   };
-  if (ALLOWED_ORIGINS.has(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  const permitted = trustedStudioOrigin(origin, ALLOWED_ORIGINS, Deno.env.get("BEATVISION_ALLOWED_PREVIEW_ORIGINS"));
+  if (permitted) headers["Access-Control-Allow-Origin"] = permitted;
   return headers;
 }
 
