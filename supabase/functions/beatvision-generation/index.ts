@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-import { buildModalShotPrompt } from "./shot-direction.ts";
+import { buildModalShotPrompt, MotionDirectionError } from "./shot-direction.ts";
 import { validateImage, readImage } from "./image-media.ts";
 import { verifyFinalMedia } from "./final-media.ts";
 import { HF_MOTION, hfEligibility, hfSubmit, hfPoll, hfDownload, hfJobSeed, HfMotionError, validateMp4 } from "./hf-motion.ts";
@@ -631,6 +631,16 @@ async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acce
   const template = await db.from("generation_jobs").select("*").eq("project_id", projectId).eq("visual_plan_id", scene.data.visual_plan_id).eq("visual_plan_scene_id", sceneId).eq("job_type", "scene_image").eq("id", image.data.generation_job_id).single();
   if (template.error || template.data?.status !== "completed" || template.data?.input_snapshot?.scene?.id !== sceneId || template.data.vision_lock_id !== plan.data.vision_lock_id) throw new HttpError(409, "FROZEN_LINEAGE_REQUIRED", "Approved image must have its original generation snapshot.");
   base = template.data;
+  }
+  // Enqueue uses the immutable image-generation snapshot, not mutable client text.
+  // Validate before idempotency lookup or INSERT: invalid shots must create zero jobs.
+  try {
+    buildModalShotPrompt(base.input_snapshot?.scene ?? {});
+  } catch (error) {
+    if (error instanceof MotionDirectionError) {
+      throw new HttpError(409, error.code, "Review the locked scene and specify one clear observable action before generating motion.");
+    }
+    throw error;
   }
   const modalFrames = provider === "modal" ? modalFramesForScene(base.input_snapshot.scene) : MODAL_MOTION.frames;
   if (requestId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) throw new HttpError(400,"GENERATION_REQUEST_ID_INVALID","Invalid request ID.");
