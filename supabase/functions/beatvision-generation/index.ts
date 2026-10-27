@@ -1,3 +1,4 @@
+import { trustedStudioOrigin } from "../_shared/studio-cors.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -23,7 +24,8 @@ function corsHeaders(req: Request) {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
   };
-  if (ALLOWED_ORIGINS.has(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  const permitted = trustedStudioOrigin(origin, ALLOWED_ORIGINS, Deno.env.get("BEATVISION_ALLOWED_PREVIEW_ORIGINS"));
+  if (permitted) headers["Access-Control-Allow-Origin"] = permitted;
   return headers;
 }
 

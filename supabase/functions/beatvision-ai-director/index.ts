@@ -1,3 +1,4 @@
+import { trustedStudioOrigin } from "../_shared/studio-cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ALLOWED_ORIGINS = new Set([
@@ -11,8 +12,9 @@ const MAX_RESPONSE_CHARS = 6000;
 
 function corsHeaders(req: Request) {
   const origin = req.headers.get("Origin") || "";
+  const permitted = trustedStudioOrigin(origin, ALLOWED_ORIGINS, Deno.env.get("BEATVISION_ALLOWED_PREVIEW_ORIGINS"));
   return {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.has(origin) ? origin : "https://beat-vision-beat-vision.vercel.app",
+    ...(permitted ? { "Access-Control-Allow-Origin": permitted } : {}),
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
