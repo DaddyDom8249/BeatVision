@@ -2,17 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase/client";
 import { preparePlanDirections, savePlanDirections, type PlanProposal } from "../../lib/automaticPlanDirection";
 import type { VisualPlanScene } from "../../types/visualPlan";
-export default function AutomaticPlanHelp({planId,locked,scenes,working,onCreateRevision,onSaved}:
-  {planId:string;locked:boolean;scenes:VisualPlanScene[];working:boolean;onCreateRevision:()=>Promise<void>;onSaved:()=>Promise<void>}) {
+export default function AutomaticPlanHelp({planId,locked,scenes,working,onCreateRevision,onPrepareShortShots,onSaved}:
+  {planId:string;locked:boolean;scenes:VisualPlanScene[];working:boolean;onCreateRevision:()=>Promise<void>;onPrepareShortShots?:()=>Promise<void>;onSaved:()=>Promise<void>}) {
   const [open,setOpen]=useState(()=>new URLSearchParams(window.location.search).get("help")==="directions" || (!locked && scenes.length>0));
   const [mode,setMode]=useState("literal"),[proposals,setProposals]=useState<PlanProposal[]>([]),[busy,setBusy]=useState(false);
   const [reviewed,setReviewed]=useState(false),[error,setError]=useState(""),[saved,setSaved]=useState(0);
   const life=useRef(0),active=useRef(false);
+  const needsShortShots=scenes.some(s=>Number.isFinite(s.end_time-s.start_time)&&s.end_time-s.start_time>5);
   const signature=scenes.map(s=>`${s.id}:${s.updated_at}`).join("|");
   useEffect(()=>{life.current++;setProposals([]);setReviewed(false);setError("");return()=>{life.current++;};},[planId,signature]);
   useEffect(()=>setSaved(0),[planId]);
   async function prepare(){
-    if(active.current||working||locked)return;const epoch=life.current;active.current=true;setBusy(true);setError("");setReviewed(false);setSaved(0);
+    if(active.current||working||locked||needsShortShots)return;const epoch=life.current;active.current=true;setBusy(true);setError("");setReviewed(false);setSaved(0);
     try{await preparePlanDirections(supabase,planId,scenes,mode,proposals,next=>{if(epoch===life.current)setProposals(next);},()=>epoch!==life.current);}
     catch(reason){if(epoch===life.current)setError(reason instanceof Error?reason.message:"Unable to prepare this plan.");}
     finally{active.current=false;setBusy(false);}
@@ -34,10 +35,13 @@ export default function AutomaticPlanHelp({planId,locked,scenes,working,onCreate
       <p>Your confirmed song interpretation, lyrics, mood and visual style guide the full video. BeatVision proposes every scene’s action, emotion, image details and camera; you keep or revise the choices. This uses an AI interpretation request and may be subject to provider allowances or costs. Nothing runs until you choose Prepare.</p>
       {locked?<><p>Your current plan and footage stay saved. Make an editable copy to prepare new directions.</p>
         <button type="button" className="secondary-button" disabled={working||busy} onClick={()=>void onCreateRevision().catch(()=>undefined)}>Make an editable copy</button></>:<>
+        {needsShortShots && <div role="status"><p>This plan still contains long song sections. Make short shots first so BeatVision can propose a different action for each renderable moment, rather than spend AI requests on scenes you must split later.</p>
+          {onPrepareShortShots && <button type="button" className="secondary-button" disabled={working||busy} onClick={()=>void onPrepareShortShots().catch(()=>undefined)}>Make 5-second shots first</button>}
+        </div>}
         <label>How should the video tell the song?<select disabled={working||busy} value={mode} onChange={e=>{setMode(e.target.value);setProposals([]);setReviewed(false);setError("");}}>
           <option value="literal">Show what the lyrics describe</option><option value="mixed">Blend the story with symbolism</option><option value="symbolic">Express the meaning through symbolism</option>
         </select></label>
-        <button type="button" className="primary-button" disabled={working||busy||complete||!scenes.length} onClick={()=>void prepare()}>
+        <button type="button" className="primary-button" disabled={working||busy||locked||needsShortShots||complete||!scenes.length} onClick={()=>void prepare()}>
           {busy?`Preparing your video… ${proposals.length}/${scenes.length}`:proposals.length?"Continue preparing remaining scenes":`Prepare all ${scenes.length} scenes for me`}
         </button>
         {busy&&<p role="status">Keep this page open while BeatVision prepares the story. No images, motion or video are being generated.</p>}
