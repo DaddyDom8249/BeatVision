@@ -16,9 +16,14 @@ const transformed = ts.transpileModule(
     .replace('"../lib/supabase/client"', '"./stub.mjs"')
     .replace('"../lib/formatCreativeText"', '"./formatCreativeText.mjs"')
     .replace('"../components/navigation/StudioHeader"', '"./header.mjs"')
-    .replace('"../components/production/BatchProductionPanel"', '"./batch.mjs"'),
+    .replace('"../components/production/BatchProductionPanel"', '"./batch.mjs"')
+    .replace('"../../supabase/functions/beatvision-generation/shot-direction"', '"./shot-direction.mjs"'),
   { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }
 ).outputText;
+await writeFile(join(dir, 'shot-direction.mjs'), ts.transpileModule(
+  await readFile(new URL('../../supabase/functions/beatvision-generation/shot-direction.ts', import.meta.url), 'utf8'),
+  {compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}
+).outputText);
 await writeFile(join(dir, 'page.mjs'), transformed);
 const errorHelper = await readFile(new URL('../../src/lib/formatCreativeText.ts', import.meta.url), 'utf8');
 await writeFile(join(dir, 'formatCreativeText.mjs'), ts.transpileModule(errorHelper, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText);
@@ -45,7 +50,8 @@ async function mount({ imageAssets = null, motionAssets = null, motionJob = null
         single() { return this; }, maybeSingle() { return this; },
         then(resolve) {
           const data = table === 'visual_plans' ? { id: 'plan-1', status: 'approved', title: 'Locked plan' }
-            : table === 'visual_plan_scenes' ? [sceneRecord ?? { id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved' }]
+            : table === 'visual_plan_scenes' ? [sceneRecord ?? { id: 'scene-1', scene_number: 1, start_time: 0, end_time: 10, title: 'First scene', status: 'approved',
+              movement_direction: { actor: 'The approved figure slowly raises one hand toward the camera.', camera: 'Camera holds still.' } }]
             : table === 'scene_image_assets' ? imageAssets ?? image
             : table === 'motion_clip_assets' ? (filters.approved === true ? approvedMotionSceneIds.map((scene_id,i)=>({id:'approved-'+i,scene_id,generation_job_id:'approved-job-'+i,status:'approved',approved:true,video_url:'https://fixture.test/'+i+'.mp4'})) : motionAssets ?? motionAsset)
             : table === 'generation_jobs' && Array.isArray(filters.id) ? coverageJobs ?? approvedMotionSceneIds.map((scene_id,i)=>({id:'approved-job-'+i,visual_plan_scene_id:scene_id,status:'completed',output:{arena_status_response:{result:{verification:{container_verified:true,video_duration_seconds:approvedSeconds}}}}}))
@@ -133,6 +139,26 @@ test('an earlier completed video does not hide assembly after the approved clip 
     assert.equal(view.button('Assemble Final Video').disabled,false);
     assert.equal(view.calls.filter(call=>call.action==='run').length,0);
   }finally{await view.cleanup();}
+});
+
+for (const provider of ['modal', 'huggingface']) test('individual '+provider+' motion refuses a vague direction before enqueue or provider capability', async () => {
+  const view = await mount({sceneRecord:{ id:'scene-1', scene_number:1, start_time:0, end_time:5,
+    title:'First scene', status:'approved', movement_direction:'minimal movement'}});
+  try {
+    if (provider === 'huggingface') {
+      const select = document.querySelector('[aria-label="Motion generator"]');
+      await act(async () => {
+        select.value = 'huggingface';
+        select.dispatchEvent(new window.Event('change',{bubbles:true}));
+      });
+    }
+    await view.click('Generate Motion');
+    assert.match(document.body.textContent,/Name one observable action for this shot/);
+    assert.match(document.body.textContent,/No generation was submitted/);
+    assert.equal(view.calls.filter(call=>call.action==='modal_capability').length,0);
+    assert.equal(view.calls.filter(call=>call.action==='enqueue_ai_motion').length,0);
+    assert.equal(view.calls.filter(call=>call.action==='run').length,0);
+  } finally {await view.cleanup();}
 });
 
 test('Modal is the primary default and a generation click submits only Modal', async () => {
