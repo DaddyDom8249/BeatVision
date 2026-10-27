@@ -44,6 +44,9 @@ async function fixture(t, { url = "https://fixture.test/projects/project-1/visua
     "../../lib/supabase/client": { supabase },
   }, dom.window);
   const engine = compile("src/lib/guidedShotRepair.ts", {}, dom.window, true);
+  const DirectorReview = compile("src/components/plan/DirectorStoryboard.tsx", {
+    "../../lib/guidedShotRepair": engine,
+  }, dom.window);
   const BeginnerHelp = compile("src/components/plan/BeginnerShotHelp.tsx", {
     "../../lib/supabase/client": {supabase:{}}, "../../lib/guidedShotRepair": engine,
   }, dom.window);
@@ -64,7 +67,8 @@ async function fixture(t, { url = "https://fixture.test/projects/project-1/visua
       "../components/navigation/StudioHeader": { default: Header },
       "../components/plan/AutomaticPlanHelp": {default:AutoHelp},
       "../components/plan/LyricSceneHelp": {default: LyricHelp},
-      "../components/plan/BeginnerShotHelp": {default: BeginnerHelp}, ...dependencies,
+      "../components/plan/BeginnerShotHelp": {default: BeginnerHelp},
+      "../components/plan/DirectorStoryboard": {default: DirectorReview}, ...dependencies,
     }, dom.window),
     render: async (Component, props) => {
       await act(async () => root.render(React.createElement(Component, props)));
