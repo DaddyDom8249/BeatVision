@@ -2777,3 +2777,24 @@ readback SHA2560609c53c33a6e267e2226e69f642d947198ebf63877288cd2a6e783641926323.
 Existing failed jobs remain historical; no image generated or batch resumed by agent.
 Actual generated scene quality and authenticated whole-plan model/save remain
 UNVERIFIED. Unit tests and deployment do not demonstrate visual lyric accuracy.
+
+
+## 2026-10-27 — Founder audit: individual Generate Motion direction enqueue
+
+**Authority (read-only):** Vercel canonical production deployment `dpl_GkNnxxqEmD5SNjSQsR3bRpHqGLVo` serves `290e30c6c6250c59c0c1ee84126be68fd8974263`, while `main` remains `3e26d8556e62b40e9f20823cb253854ae5efcec6` (production source 128 commits ahead). Created immutable-by-policy review baseline branch `baseline/production-290e30c6-20261027` and repair branch `repair/founder-motion-preflight-20261027`. No main merge.
+
+**Confirmed code defect:** Bulk motion generation calls `inspectMotionDirection` before requesting work, but individual `src/pages/ProductionWorkspacePage.tsx` previously lacked that check. The `supabase/functions/beatvision-generation/index.ts` `enqueueHfMotion` path could also insert a fresh motion job based on a frozen image-generation scene snapshot before checking whether direction would later pass `buildModalShotPrompt`. A submitted invalid queued job is not a successful provider output and must not occur.
+
+**Scoped patch (repair branch only, NOT deployed):** UI checks direction before provider capability/enqueue; controller validates `base.input_snapshot.scene` before idempotency lookup/INSERT and returns explicit 409 for invalid or ambiguous direction; frozen media and provider/job records untouched. New `scripts/test/motion-enqueue-preflight.test.mjs` tests invalid frozen directions cause zero job INSERTs and no provider submissions, and a valid shot creates one queued job without inference. `scripts/test/production-workspace.test.mjs` tests invalid single-shot direction for Modal and explicit Hugging Face paths causes zero enqueue, zero capability checks and zero run calls. The revised frozen snapshot is authoritative; browser checks are guidance, not authorization.
+
+**Deployment constraint:** Live Supabase `beatvision-generation` v72 bundle SHA256 `00b8bf05ce195737281d0a8b6aee4b32692c364d0f12bfadf1d803b8128dcf87` matches all six archived runtime files under `docs/releases/2026-10-26/runtime/beatvision-generation/`, but the source candidate `supabase/functions/beatvision-generation/index.ts` contains additional not-yet-deployed Arena gateway allowlist/path/redirect/response-size hardening. Do NOT deploy the entire candidate controller without reconciling this difference and verifying required environment configuration. Archived snapshot must remain unchanged.
+
+**Glass Love no-write baseline:** 57 reused approved image records have existing originals, matching storage paths, matching original generation provenance via `source_generation_job_id`, and existing storage objects; 65 original approved images across all revisions, 54 queued motion jobs, 56 queued image jobs and two paused generation batches. All remained untouched. Current image-asset metadata digest `6341cdd18847cd47e28ae88f7809e102` is a read-only checkpoint, not a byte-level file checksum.
+
+**Security review:** Supabase 46 public tables have RLS enabled. Security advisor identifies 20 authenticated-callable SECURITY DEFINER RPCs requiring per-function owner/privilege review, not proven vulnerabilities. All four buckets are private. No new migrations, policy edits, provider calls, creative approvals, storage modifications or jobs were performed by this repair branch.
+
+**Baseline tests (historical exact production commit, NOT new fix):** GitHub Actions production CI run `40408228396` had `npm ci`, audit, 588/588 tests, production audit and build PASS. Database replay run `40408228425` PASS. Exact-source new PR #157 on production baseline: [https://github.com/DaddyDom8249/BeatVision/pull/157](https://github.com/DaddyDom8249/BeatVision/pull/157). New PR CI runs `40480798292` and `40480798323` were IN PROGRESS when these notes were written; no acceptance inferred yet.
+
+**Verification labels:** Code IMPLEMENTED on repair branch. Focused repair tests and exact-branch CI: NOT VERIFIED as of this note. Deployment: NOT DEPLOYED. Authenticated owner browser journey: BLOCKED (cloud browser credits/session inaccessible; no Android or phone-control calls). Real generated MP4 quality and end-to-end sponsor pipeline: NOT VERIFIED. No GPU inference or paid service initiated.
+
+**Next safe gate:** Verify PR source diff, exact-head tests and all workflow exit codes. If green, reconcile live v72 runtime and newer hardened controller candidate before any authenticated, zero-inference production deployment. Verify invalid request creates zero job rows without spending GPU credits. Preserve paused batches and approved assets throughout.
