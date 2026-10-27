@@ -49,7 +49,7 @@ test('operator cap gates extended GPU submission and can stop queued long runs',
 // Exercise the actual queue controller with an in-memory DB; no provider calls.
 import {loadGeneration} from './generation-runtime.mjs';
 test('duration is frozen with a distinct idempotency key; existing source snapshots are unchanged', async () => {
-  const scene={id:'scene-1',start_time:2,end_time:7};
+  const scene={id:'scene-1',start_time:2,end_time:7,movement_direction:{actor:'The approved figure lifts a lantern toward the light.',camera:'Camera remains still.'}};
   const template={status:'completed',vision_lock_id:'lock-1',visual_plan_id:'plan-1',
     input_snapshot:{scene:{...scene},approved_marker:'unchanged'}};
   const before=JSON.stringify(template);
