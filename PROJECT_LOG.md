@@ -2633,3 +2633,69 @@ stilloffline, worker update queued. Professional clip and sponsor completion rem
 BLOCKED, no new inference/charge/email/merge. Next required: usable owner session
 and reviewed reuse, reconnect Termux, verify existing worker update/credits, then
 one bounded real clip and complete visual review before sponsor assembly/download.
+
+
+## 2026-10-26 — Cloud-only strict Modal worker release
+
+Objective: finish the reviewed strict-request worker deployment without depending
+on the creator's phone or unreliable mobile data. Main independently remains
+3e26d8556e62b40e9f20823cb253854ae5efcec6.
+
+Phone evidence: original checkout timed out (858cc857..., exit124), leaving an
+index lock and no worker file. First recovery child did not survive Debian proot
+--kill-on-exit; corrected outer launcher ran but Git partial-clone blob retrieval
+failed with curl56/earlyEOF, exit2. No phone deployment or tests confirmed. A
+bundled-transfer attempt was rejected by the bridge's8000character limit before
+queueing. User then requested no Termux because mobile data is unreliable. No
+additional phone commands were queued after that request; no running recovery is
+claimed.
+
+Cloud inspection found the existing manual workflow pinned an older worker and
+branch. Added .github/workflows/modal-strict-cloud-release.yml on isolated branch
+repair/modal-strict-cloud-20261027. Only a push changing that workflow on that exact
+branch can trigger it. Permissions contents:read, serialized release concurrency,
+15minute timeout, existing credentials required before installation, immutable
+source checkout and worker/contracts SHA256 verification, offline tests before
+deployment, existing Modal app identity check. No inference command, creative
+approval, batch resume, production DB change, or main merge.
+
+IMPLEMENTED: cloud workflow commit61164cba6aabf6c9b47504d4584756055291d7be.
+TESTED: local23tests pass and workflow YAML/source identity checks pass. Hosted
+run40443615100/job121989515658 SUCCESS; credential-presence check passed; both
+file hashes OK;23tests pass in0.262s; existing app verified; deploy returned0 and
+STRICT_WORKER_DEPLOY_COMPLETED receipt recorded.
+DEPLOYED source:f82c5ae60e28d374082c6545528b8fe7cd0aa05b.
+worker SHA256:027b64c94ebcd507365c6c99ef86763aa81358eef201095630211a65e59ebfa3.
+contracts SHA256:3959a781fc5aad4e692c30e208b0b20ff29cdf0cb87eed6e45736625fd65c6f9.
+Existing app:ap-CopCZqKwTuk11VLpDSU0fH/bragoraforge-modal-motion-proof.
+Evidence:https://github.com/DaddyDom8249/BeatVision/actions/runs/40443615100.
+
+UNVERIFIED: runtime GPU behavior, strict rejection through an authenticated real
+request, professional motion quality and full sponsor flow. No new inference was
+requested. Worker deployment is not proof of a professional clip. Existing Jules
+session5991285972289398122 was reused for bounded read-only cloud-route capability
+investigation; state IN_PROGRESS observed, no findings accepted without evidence.
+Next: authenticated owner image-reuse review, current usable-credit/spend controls,
+then one bounded creator-approved source clip and full visual review.
+
+
+### 2026-10-26 — Actual Modal CPU-image startup verified
+
+Added a four-minute bounded CPU-only runtime check to the cloud release workflow.
+Exact source remains f82c5ae60e28d374082c6545528b8fe7cd0aa05b; cloud workflow commit
+cc7dd4693016cdc02733b05028187b41af2b525b. Hosted run40444020723,
+job121990851315 SUCCESS: both source hashes match,23offline tests pass in0.166s,
+existing app redeploy succeeds, MODAL_CPU_RUNTIME_STARTUP_PASS_NO_GPU observed.
+The real web_image was exercised in Modal with a60second CPU function, no retries,
+no GPU configuration. ASGI startup passes and malformed /submit and /poll requests
+both return400. This verifies the CPU API image/handler startup, not an authenticated
+production render or GPU quality. No media inference, batch resume or approval.
+
+Read-only live project evidence: original revision2 retains57approved images and
+3clips; latest revision5 still0images/0clips.56queued image jobs belong to paused
+revision3 image batch;54queued motion jobs belong to paused revision2 motion batch.
+No submitted/processing jobs. Queued does not mean running. Both batches unchanged.
+Sponsor gate documentation now reflects cloud deployment and startup proof.
+Next human-required step: owner-authenticated reuse of compatible images and
+explicit review/approval of the source image. Current usable GPU budget remains
+unverified; no real clip may be claimed before full output visual review.
