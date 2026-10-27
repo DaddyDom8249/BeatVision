@@ -18,9 +18,14 @@ const pwpTranspiled = ts.transpileModule(
     .replace('"../lib/supabase/client"', '"./stub.mjs"')
     .replace('"../lib/formatCreativeText"', '"./formatCreativeText.mjs"')
     .replace('"../components/navigation/StudioHeader"', '"./header.mjs"')
-    .replace('"../components/production/BatchProductionPanel"', '"./batch.mjs"'),
+    .replace('"../components/production/BatchProductionPanel"', '"./batch.mjs"')
+    .replace('"../../supabase/functions/beatvision-generation/shot-direction"', '"./shot-direction.mjs"'),
   { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }
 ).outputText;
+await writeFile(join(dir, 'shot-direction.mjs'), ts.transpileModule(
+  await readFile(join(rootDir, 'supabase/functions/beatvision-generation/shot-direction.ts'), 'utf8'),
+  { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }
+).outputText);
 await writeFile(join(dir, 'ProductionWorkspacePage.mjs'), pwpTranspiled);
 
 // Load and transform helpers
@@ -47,6 +52,7 @@ async function mountWorkspace({ motionJob = null, runError = null, stored = fals
   const scenes = Array.from({ length: sceneCount }, (_, index) => ({
     id: `scene-${index + 1}`, scene_number: index + 1, start_time: index * 10,
     end_time: (index + 1) * 10, title: `Scene ${index + 1}`, status: 'approved',
+    movement_direction: {actor:'The approved figure raises a lantern.',camera:'Camera holds still.'},
   }));
   const approvedMotionAssets = () => approvedMotionSceneIds.map((id, index) => ({
     id: `motion-${index + 1}`, scene_id: id, status: 'approved',
