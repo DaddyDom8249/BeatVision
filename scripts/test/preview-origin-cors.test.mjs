@@ -44,7 +44,10 @@ test("CORS admission rejects hostile/malformed origins and unsafe preview config
 test("All six end-to-end generation phases import the same strict CORS rule", async()=>{
   for(const name of names){
     const source=await readFile(join(root,"supabase/functions",name,"index.ts"),"utf8");
-    assert.match(source,/import \{ trustedStudioOrigin \} from "\.\.\/_shared\/studio-cors\.ts";/,name);
+    const shared = await readFile(join(root,"supabase/functions/_shared/studio-cors.ts"),"utf8");
+    const canonical = shared.slice(shared.indexOf("export function trustedStudioOrigin("))
+      .replace(/^export function/,"function");
+    assert.ok(source.includes(canonical),name+" must keep the exact inline CORS helper");
     assert.match(source,/trustedStudioOrigin\(origin, ALLOWED_ORIGINS, Deno\.env\.get\("BEATVISION_ALLOWED_PREVIEW_ORIGINS"\)\)/,name);
     assert.doesNotMatch(source,/ALLOWED_ORIGINS\.has\(origin\)\s*\?\s*origin\s*:\s*"https:/,name);
   }

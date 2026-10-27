@@ -18,7 +18,7 @@ Scope: source snapshot **8cc87e1** from PR #158, read-only Supabase production E
 
 The deployed **beatvision-generation v72** code and source for beatvision-ai-director, world, analyze-song, song-interpretation and style-draft do not allow the temporary PR #158 preview origin. Some send a fixed production allow-origin header to other callers; browsers still reject them. Scene edits save through owner-scoped Supabase RPC and do not prove the AI function calls work.
 
-This branch adds `trustedStudioOrigin`, a shared fail-closed exact-origin check. After release parity review, operators may explicitly admit `https://beat-vision-kfk4sh067-beat-vision.vercel.app` using the server-only Edge variable `BEATVISION_ALLOWED_PREVIEW_ORIGINS`. Alias `https://beat-vision-git-feat-director-storyboard-rev-8fbf97-beat-vision.vercel.app` is also eligible if separately listed. This must NOT be a client variable. Never authorize arbitrary `*.vercel.app`.
+This branch adds `trustedStudioOrigin`, a fail-closed exact-origin check with a canonical implementation in `_shared` and **identical inline copies** in the six Edge entrypoints. Existing isolated Edge tests copy their entrypoints into temporary directories and cannot resolve relative shared imports; a new regression test enforces the exact copies. After release parity review, operators may explicitly admit `https://beat-vision-kfk4sh067-beat-vision.vercel.app` using the server-only Edge variable `BEATVISION_ALLOWED_PREVIEW_ORIGINS`. Alias `https://beat-vision-git-feat-director-storyboard-rev-8fbf97-beat-vision.vercel.app` is also eligible if separately listed. This must NOT be a client variable. Never authorize arbitrary `*.vercel.app`.
 
 ## Release block — production Edge drift
 
