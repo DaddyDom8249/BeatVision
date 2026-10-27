@@ -431,7 +431,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         if (type === "scene_motion") {
           // Browser guidance is not the security gate: the controller must also
           // validate its frozen image-generation snapshot before inserting.
-          const direction = inspectMotionDirection(scene);
+          const direction = inspectMotionDirection({...scene});
           if (direction.issue) throw new Error(`Scene ${scene.scene_number}: ${direction.issue} No generation was submitted.`);
         }
         if (type === "scene_motion" && !motionTermsAccepted) throw new Error("Accept the LTX model use restrictions before AI motion.");
