@@ -61,3 +61,13 @@ jobs:
           PYTHON
           modal deploy -m providers.modal_motion.worker
           echo 'STRICT_WORKER_DEPLOY_COMPLETED source=f82c5ae60e28d374082c6545528b8fe7cd0aa05b; no inference invoked; batch not resumed' | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Verify the real CPU API image without GPU inference
+        timeout-minutes: 4
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          MODAL_ENVIRONMENT: main
+        run: |
+          set -euo pipefail
+          modal run -m providers.modal_motion.api_runtime_check
+          echo 'MODAL_CPU_RUNTIME_STARTUP_PASS_NO_GPU; malformed submit/poll validation checked; no media generated' >> "$GITHUB_STEP_SUMMARY"
