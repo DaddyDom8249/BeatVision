@@ -7,7 +7,17 @@ import React, { act } from "react";
 import * as jsx from "react/jsx-runtime";
 import { createRoot } from "react-dom/client";
 import { JSDOM } from "jsdom";
-import * as direction from "../../src/lib/guidedShotRepair.ts";
+import * as shotDirection from "../../supabase/functions/beatvision-generation/shot-direction.ts";
+const guidedSource = readFileSync(new URL("../../src/lib/guidedShotRepair.ts", import.meta.url), "utf8");
+const guidedCode = ts.transpileModule(guidedSource, { compilerOptions: {
+  target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
+}}).outputText;
+const guidedModule = { exports: {} };
+runInNewContext(guidedCode, { module: guidedModule, exports: guidedModule.exports, require(name) {
+  if (name === "../../supabase/functions/beatvision-generation/shot-direction") return shotDirection;
+  throw new Error("Unexpected direction dependency: " + name);
+} });
+const direction = guidedModule.exports;
 
 const source = readFileSync(new URL("../../src/components/plan/DirectorStoryboard.tsx", import.meta.url), "utf8");
 const code = ts.transpileModule(source, { compilerOptions: {
