@@ -2677,3 +2677,25 @@ session5991285972289398122 was reused for bounded read-only cloud-route capabili
 investigation; state IN_PROGRESS observed, no findings accepted without evidence.
 Next: authenticated owner image-reuse review, current usable-credit/spend controls,
 then one bounded creator-approved source clip and full visual review.
+
+
+### 2026-10-26 — Actual Modal CPU-image startup verified
+
+Added a four-minute bounded CPU-only runtime check to the cloud release workflow.
+Exact source remains f82c5ae60e28d374082c6545528b8fe7cd0aa05b; cloud workflow commit
+cc7dd4693016cdc02733b05028187b41af2b525b. Hosted run40444020723,
+job121990851315 SUCCESS: both source hashes match,23offline tests pass in0.166s,
+existing app redeploy succeeds, MODAL_CPU_RUNTIME_STARTUP_PASS_NO_GPU observed.
+The real web_image was exercised in Modal with a60second CPU function, no retries,
+no GPU configuration. ASGI startup passes and malformed /submit and /poll requests
+both return400. This verifies the CPU API image/handler startup, not an authenticated
+production render or GPU quality. No media inference, batch resume or approval.
+
+Read-only live project evidence: original revision2 retains57approved images and
+3clips; latest revision5 still0images/0clips.56queued image jobs belong to paused
+revision3 image batch;54queued motion jobs belong to paused revision2 motion batch.
+No submitted/processing jobs. Queued does not mean running. Both batches unchanged.
+Sponsor gate documentation now reflects cloud deployment and startup proof.
+Next human-required step: owner-authenticated reuse of compatible images and
+explicit review/approval of the source image. Current usable GPU budget remains
+unverified; no real clip may be claimed before full output visual review.
