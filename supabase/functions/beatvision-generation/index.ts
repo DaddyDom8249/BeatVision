@@ -585,7 +585,7 @@ async function run(db: any, job: any) {
       status: "submitted",
       provider: job.input_snapshot?.hf_motion ? "huggingface-zerogpu" : "arena",
       provider_job_id: requestId,
-      output: {...job.output, dispatch_started_at: new Date().toISOString()},
+      output: {...job.output, dispatch_started_at: new Date().toISOString(), dispatch_intent: { request_id: requestId, provider: job.input_snapshot?.hf_motion ? "huggingface-zerogpu" : "arena", state: "submission_pending" } },
       attempts: Number(job.attempts || 0) + 1,
     })
     .eq("id", job.id)
@@ -644,13 +644,20 @@ async function run(db: any, job: any) {
         : String(result.data?.job_id || result.data?.provider_job_id || result.data?.id || "").trim();
 
       if (!upstreamJobId) {
-        await setFailed(db, job.id, "Arena reported processing without a provider job id.", compactArenaResponse(result.data, job.job_type));
+        const unresolved = await db.from("generation_jobs").update({ output: {
+          ...job.output, reconciliation_required: true,
+          reconciliation_reason: "PROVIDER_ACCEPTANCE_UNKNOWN",
+          automatic_resubmission_disabled: true,
+          reconciliation_recorded_at: new Date().toISOString(),
+        } }).eq("id", job.id).eq("status", "processing").select("id");
+        if (unresolved.error || !unresolved.data?.length) throw new Error("PROVIDER_RECEIPT_UNCERTAIN_PERSIST_FAILED");
       } else {
         const updateRes = await db.from("generation_jobs").update({
           output: {
             ...job.output,
             arena_request_id: requestId,
             upstream_job_id: upstreamJobId,
+            provider_receipt: { provider: job.provider, upstream_job_id: upstreamJobId, recorded_at: new Date().toISOString() },
             arena_response: compactArenaResponse(result.data, job.job_type),
             bridge_contract: "2.0",
           },
