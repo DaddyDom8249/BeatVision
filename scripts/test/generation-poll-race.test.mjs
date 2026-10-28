@@ -21,7 +21,7 @@ for (const terminalStatus of ['completed', 'failed']) test('stale pending poll r
   };
   const runtime = await loadGeneration();
   const originalFetch = globalThis.fetch;
-  globalThis.Deno.env.get = key => ({ ARENA_GATEWAY_URL: 'https://provider.fixture.workers.dev', ARENA_GATEWAY_ALLOWED_HOSTS: 'provider.fixture.workers.dev', ARENA_GATEWAY_TOKEN: 'test-token' })[key] || '';
+  globalThis.Deno.env.get = key => ({ ARENA_GATEWAY_URL: 'https://provider.fixture.workers.dev', ARENA_GATEWAY_ALLOWED_HOSTS: 'provider.fixture.workers.dev', ARENA_GATEWAY_TOKEN: 'test-token', BRAGORAFORGE_CLOUDFLARE_IMAGE_BUDGET_APPROVED: 'true' })[key] || '';
   globalThis.fetch = async () => new Response(JSON.stringify({ status: 'processing' }), { status: 200 });
   try {
     const result = await runtime.poll(client, { id: terminal.id, status: 'processing', job_type: 'scene_motion', output: { upstream_job_id: 'provider-id' } });
@@ -42,7 +42,7 @@ test('stale terminal failure poll returns concurrent completion instead of casca
   }; } };
   const runtime = await loadGeneration();
   const originalFetch = globalThis.fetch;
-  globalThis.Deno.env.get = key => ({ ARENA_GATEWAY_URL: 'https://provider.fixture.workers.dev', ARENA_GATEWAY_ALLOWED_HOSTS: 'provider.fixture.workers.dev', ARENA_GATEWAY_TOKEN: 'test-token' })[key] || '';
+  globalThis.Deno.env.get = key => ({ ARENA_GATEWAY_URL: 'https://provider.fixture.workers.dev', ARENA_GATEWAY_ALLOWED_HOSTS: 'provider.fixture.workers.dev', ARENA_GATEWAY_TOKEN: 'test-token', BRAGORAFORGE_CLOUDFLARE_IMAGE_BUDGET_APPROVED: 'true' })[key] || '';
   globalThis.fetch = async () => new Response(JSON.stringify({ status: 'failed', error: 'late provider error' }), { status: 200 });
   try {
     assert.deepEqual(await runtime.poll(client, { id: terminal.id, status: 'processing', job_type: 'scene_motion', output: { upstream_job_id: 'provider-id' } }), terminal);
@@ -67,7 +67,7 @@ test('cost refusal losing failure write returns winning persisted job', async ()
   } };
   const runtime = await loadGeneration();
   const originalFetch = globalThis.fetch;
-  globalThis.Deno.env.get = key => ({ ARENA_GATEWAY_URL: 'https://provider.fixture.workers.dev', ARENA_GATEWAY_ALLOWED_HOSTS: 'provider.fixture.workers.dev', ARENA_GATEWAY_TOKEN: 'test-token' })[key] || '';
+  globalThis.Deno.env.get = key => ({ ARENA_GATEWAY_URL: 'https://provider.fixture.workers.dev', ARENA_GATEWAY_ALLOWED_HOSTS: 'provider.fixture.workers.dev', ARENA_GATEWAY_TOKEN: 'test-token', BRAGORAFORGE_CLOUDFLARE_IMAGE_BUDGET_APPROVED: 'true' })[key] || '';
   globalThis.fetch = async () => new Response(JSON.stringify({ image_url: 'https://example.test/image.jpg' }), { status: 200 });
   try {
     assert.deepEqual(await runtime.run(client, base), winner);
