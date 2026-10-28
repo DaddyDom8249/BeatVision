@@ -44,14 +44,15 @@ for (const status of ['submitted', 'processing']) test('fresh ' + status + ' dis
   } finally { await runtime.cleanup(); }
 });
 
-for (const status of ['submitted', 'processing']) test('interrupted ' + status + ' dispatch fails explicitly after grace without resubmission', async () => {
+for (const status of ['submitted', 'processing']) test('interrupted ' + status + ' dispatch remains nonterminal and flagged for reconciliation', async () => {
   const f = fixture({ status, age: 6 * 60 * 1000 });
   const runtime = await loadGeneration();
   try {
     const result = await runtime.poll(f.client, f.original);
-    assert.equal(result.status, 'failed');
-    assert.match(result.error.message, /without a provider job id/);
-    assert.match(result.error.message, /automatic resubmission is disabled/);
+    assert.equal(result.status, status);
+    assert.equal(result.output.reconciliation_required, true);
+    assert.equal(result.output.reconciliation_reason, 'PROVIDER_ACCEPTANCE_UNKNOWN');
+    assert.equal(result.output.automatic_resubmission_disabled, true);
     assert.equal(f.state().writes, 1);
   } finally { await runtime.cleanup(); }
 });
@@ -104,7 +105,8 @@ test('scheduler scans and recovers submitted jobs', async () => {
     assert.equal(response.status, 200);
     const result = await response.json();
     assert.equal(result.results[0].action, 'poll');
-    assert.equal(result.results[0].status, 'failed');
+    assert.equal(result.results[0].status, 'submitted');
+    assert.equal(f.state().row.output.reconciliation_required, true);
     assert.ok(f.state().selectedStatuses.includes('submitted'));
   } finally { await runtime.cleanup(); }
 });
@@ -124,4 +126,15 @@ test('scheduler reserves dispatch capacity when eight older provider jobs are st
     assert.ok(result.results.some(item => item.id === queued.id));
     assert.deepEqual(selected, [['queued'], ['submitted', 'processing']]);
   } finally { globalThis.fetch = originalRun; await runtime.cleanup(); }
+});
+
+for (const status of ['submitted', 'processing']) test('already flagged unknown dispatch does not mutate again', async () => {
+  const f = fixture({ status, age: 10 * 60 * 1000 });
+  f.original.output = { reconciliation_required: true, reconciliation_reason: 'PROVIDER_ACCEPTANCE_UNKNOWN' };
+  const runtime = await loadGeneration();
+  try {
+    const result = await runtime.poll(f.client, f.original);
+    assert.equal(result.status, status);
+    assert.equal(f.state().writes, 0);
+  } finally { await runtime.cleanup(); }
 });
