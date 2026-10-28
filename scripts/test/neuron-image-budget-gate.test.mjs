@@ -1,0 +1,30 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+import {fileURLToPath} from "node:url";
+import {join} from "node:path";
+const root=fileURLToPath(new URL("../../",import.meta.url));
+const baseline=await readFile(join(root,"docs/releases/2026-10-27/preview-cors-exact-live/beatvision-generation/release/index.ts"),"utf8");
+const release=await readFile(join(root,"docs/releases/2026-10-27/neurons/beatvision-generation/live-v73-budget-guard.ts"),"utf8");
+const feature=await readFile(join(root,"supabase/functions/beatvision-generation/index.ts"),"utf8");
+const anchor='  if (job.status !== "queued") return job;\\n'.replace('\\n','\n');
+const end='  if (job.input_snapshot?.generation_batch_id) {';
+const start=release.indexOf(anchor);
+const stop=release.indexOf(end,start);
+const insertion=release.slice(start+anchor.length,stop);
+test("deployed image budget patch differs from verified v73 by only its early guard",()=>{
+  assert.ok(start>0 && stop>start);
+  assert.equal(release,baseline.replace(anchor,anchor+insertion));
+  assert.ok(feature.includes(insertion));
+  assert.match(insertion,/job\\.job_type === "scene_image"/);
+  assert.match(insertion,/Deno\\.env\\.get\\("BRAGORAFORGE_CLOUDFLARE_IMAGE_BUDGET_APPROVED"\\) !== "true"/);
+  assert.match(insertion,/new HttpError\\(503, "IMAGE_PROVIDER_BUDGET_DISABLED"/);
+  assert.ok(release.indexOf("IMAGE_PROVIDER_BUDGET_DISABLED")<release.indexOf('const claim = await db.from("generation_jobs")'));
+  assert.ok(release.indexOf("IMAGE_PROVIDER_BUDGET_DISABLED")<release.indexOf('await arena(path, "POST"'));
+});
+test("motion and assembly branches are unaffected by budget gate",()=>{
+ assert.equal(insertion.includes('job.job_type === "scene_motion"'),false);
+ assert.equal(insertion.includes('job.job_type === "assembly"'),false);
+ assert.ok(release.includes('job.input_snapshot?.modal_motion ? await modalBridgeSubmit(db,job)'));
+ assert.ok(release.includes('const path = job.job_type === "scene_image"'));
+});
