@@ -8,7 +8,9 @@ export async function loadGeneration(client = {}, envVars = {}, sourceOverride) 
   const original = globalThis.Deno;
   let handler;
   globalThis.__generationTestClient = client;
-  globalThis.Deno = { env: { get: key => envVars[key] ?? '' }, serve: fn => { handler = fn; } };
+  // Most legacy image fixtures deliberately simulate an explicitly budget-approved test account.
+  // Override the budget variable with an empty string when testing production's fail-closed default.
+  globalThis.Deno = { env: { get: key => key === 'BRAGORAFORGE_CLOUDFLARE_IMAGE_BUDGET_APPROVED' ? (envVars[key] ?? 'true') : (envVars[key] ?? '') }, serve: fn => { handler = fn; } };
   try {
     await writeFile(join(dir, 'stub.mjs'), 'const client = globalThis.__generationTestClient; export const createClient = () => client;');
     await writeFile(join(dir, 'shot-direction.ts'), await readFile(new URL('../../supabase/functions/beatvision-generation/shot-direction.ts', import.meta.url), 'utf8'));
