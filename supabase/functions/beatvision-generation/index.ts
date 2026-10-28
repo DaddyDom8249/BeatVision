@@ -692,14 +692,20 @@ async function recoverDispatch(db: any, job: any) {
   const started = Date.parse(String(timestamp || ""));
   if (!upstream && Number.isFinite(started) && Date.now() - started < DISPATCH_GRACE_MS) return job;
 
+  // Unknown provider acceptance is NOT provider failure. Keep the canonical
+  // submitted/processing state, preserve its frozen snapshot, and record an
+  // operator-visible reconciliation marker without ever resubmitting.
+  // This marker is intentionally stored in mutable execution output, not input_snapshot.
+  if (!upstream && job.output?.reconciliation_required === true) return job;
   const changes = upstream
     ? { status: "processing" }
-    : { status: "failed", error: {
-      code: "ARENA_GENERATION_FAILED",
-      message: job.status === "submitted"
-        ? "Generation submission was interrupted without a provider job id. Provider acceptance is unknown; automatic resubmission is disabled."
-        : "Arena reported processing without a provider job id after the dispatch grace period. Provider acceptance is unknown; automatic resubmission is disabled.",
-    } };
+    : { output: {
+        ...(job.output || {}),
+        reconciliation_required: true,
+        reconciliation_reason: "PROVIDER_ACCEPTANCE_UNKNOWN",
+        reconciliation_recorded_at: new Date().toISOString(),
+        automatic_resubmission_disabled: true,
+      } };
   let query = db.from("generation_jobs").update(changes).eq("id", job.id).eq("status", job.status);
   // A concurrent dispatch may have persisted an upstream ID since this read.
   // Its new row version must win over this stale recovery attempt.
