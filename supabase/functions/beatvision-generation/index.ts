@@ -723,7 +723,21 @@ async function poll(db: any, job: any) {
   if (job.status !== "processing") return job;
   const accepted = Date.parse(job.output?.dispatch_started_at || job.created_at || "");
   if (Number.isFinite(accepted) && Date.now() - accepted > 30 * 60 * 1000) {
-    await setFailed(db,job.id,"PROVIDER_TIMEOUT: Maximum generation age exceeded; no new provider request was made.",job.output);
+    // Deadline exceeded does not prove that the external provider failed.
+    // Stop automatic polling, preserve the provider receipt and frozen input,
+    // and require reconciliation before any new provider execution.
+    if (job.output?.reconciliation_required === true) return job;
+    const update = await db.from("generation_jobs").update({
+      output: {
+        ...(job.output || {}),
+        reconciliation_required: true,
+        reconciliation_reason: "PROVIDER_DEADLINE_EXCEEDED",
+        reconciliation_recorded_at: new Date().toISOString(),
+        automatic_resubmission_disabled: true,
+      },
+    }).eq("id", job.id).eq("status", "processing").eq("updated_at", job.updated_at).select("*").maybeSingle();
+    if (update.error) throw new Error("PROVIDER_TIMEOUT_RECONCILIATION_PERSIST_FAILED: " + update.error.message);
+    if (update.data) return update.data;
     const latest = await db.from("generation_jobs").select("*").eq("id",job.id).single();
     if(latest.error) throw new Error(latest.error.message);
     return latest.data;
