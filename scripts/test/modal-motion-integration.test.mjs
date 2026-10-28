@@ -136,7 +136,7 @@ test('App defaults to Modal and retains HF as an explicit fallback',()=>{
   assert.match(ui,/modal_supported !== true \|\| probe\.data\?\.modal_available !== true/);
   assert.match(ui,/!job\?\.input_snapshot\?\.modal_motion/);
   assert.match(edge,/modal_supported: true, modal_available: available/);
-  assert.match(edge,/\["image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility", "modal_capability"\]/);
+  assert.match(edge,/\["image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility", "modal_capability"(?:, "image_capability")?\]/);
 
   assert.match(ui,/Modal LTX 0\.9\.5 \(account-gated\)/);
   assert.match(edge,/if \(provider === "modal"\)/);

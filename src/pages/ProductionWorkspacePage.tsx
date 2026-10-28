@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase/client";
 import { formatCreativeText, getCreativeErrorMessage } from "../lib/formatCreativeText";
+
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 import StudioHeader from "../components/navigation/StudioHeader";
 import BatchProductionPanel from "../components/production/BatchProductionPanel";
@@ -8,6 +9,17 @@ import { inspectMotionDirection } from "../../supabase/functions/beatvision-gene
 
 const planFields = "id,project_id,world_report_id,style_bible_id,song_id,status,title,duration_seconds,creative_thesis,global_direction,locked_at,created_at,updated_at";
 const sceneFields = "id,visual_plan_id,project_id,world_report_id,style_bible_id,song_id,scene_number,section_index,start_time,end_time,title,visual_direction,camera_direction,movement_direction,location,mood,lyric_moment,transition_style,continuity_notes,status,created_at,updated_at";
+const IMAGE_BUDGET_MESSAGE = "Scene image rendering is paused to protect Cloudflare neurons. Your saved images and motion remain available. No image generation was submitted.";
+
+async function requireImageBudget(projectId: string): Promise<void> {
+  const response = await supabase.functions.invoke("beatvision-generation", {
+    body: { action: "image_capability", projectId },
+  });
+  if (response.error || response.data?.image_generation_authorized !== true) {
+    throw new Error(IMAGE_BUDGET_MESSAGE);
+  }
+}
+
 const imageFields = "id,project_id,visual_plan_id,scene_id,generation_job_id,reused_from_image_id,source_generation_job_id,provider,model,image_url,storage_path,status,approved,created_at,updated_at";
 const SIGNED_MEDIA_REUSE_MS = 50 * 60 * 1000; // Supabase signs clips and images for 60 minutes.
 
@@ -423,6 +435,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     setBusy(true); setError(null);
     try {
       let job = existing;
+      if (type === "scene_image" && (!job || job.status === "queued")) await requireImageBudget(projectId);
       if (!job && type === "assembly") {
         const check = await refreshAssemblyReadiness(plan.id);
         if (!check.ready) throw new Error(check.message);

@@ -4,7 +4,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase/client";
 import { approvalCandidates, approveBatch, type BatchKind, type BatchProgress } from "../../lib/batchProduction";
 import { getCreativeErrorMessage } from "../../lib/formatCreativeText";
+
 import type { VisualPlanScene } from "../../types/visualPlan";
+
+const IMAGE_BUDGET_MESSAGE = "Scene image rendering is paused to protect Cloudflare neurons. Your saved images and motion remain available. No image generation was submitted.";
+
+async function requireImageBudget(projectId: string): Promise<void> {
+  const response = await supabase.functions.invoke("beatvision-generation", {
+    body: { action: "image_capability", projectId },
+  });
+  if (response.error || response.data?.image_generation_authorized !== true) {
+    throw new Error(IMAGE_BUDGET_MESSAGE);
+  }
+}
 
 type Candidate = { scene: VisualPlanScene; asset: any; url: string; selected: boolean; previewError: boolean };
 export default function BatchProductionPanel({ projectId, planId, scenes, disabled, onBusy, onRefresh }:
@@ -89,6 +101,7 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
         if (probe.error || !probe.data?.modal_available || !probe.data?.modal_supported)
           throw new Error("Modal GPU is unavailable. No batch motion was submitted.");
       }
+      if (kind === "image") await requireImageBudget(projectId);
       if (stopped()) return;
       const response = await supabase.rpc("start_generation_batch", {p_plan_id:planId,p_kind:kind,p_accepted_terms:kind === "motion" && terms});
       if (response.error) throw response.error;
@@ -98,6 +111,7 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
   }
   function setPaused(batch: any, paused: boolean) {
     void operation(async () => {
+      if (batch.kind === "image" && !paused) await requireImageBudget(projectId);
       const response = await supabase.rpc("set_generation_batch_paused",{p_batch_id:batch.id,p_paused:paused});
       if (response.error) throw response.error;
       await refreshProgress();
@@ -142,6 +156,7 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
     <RevisionMediaPanel key={planId} projectId={projectId} planId={planId} disabled={disabled||running} onCheck={setReuseBlocked} onRefresh={async()=>{await refreshProgress();await onRefresh();}} />
     <h2>Produce all scenes</h2>
     <p>Generate missing media one scene at a time. Existing images and clips are kept. Review and approve images before generating motion. Individual regeneration remains available below.</p>
+    <p role="status">New scene images require an approved AI budget. If unavailable, requests stop before any job or provider call. Saved images and motion remain usable.</p>
     <p>Batches run on the server, even after you leave this page or close the browser. Return here to see saved progress. The scheduler checks about once a minute. Pause stops later scenes; an already submitted job may finish. Failures pause the batch; retry that scene individually, then Resume.</p>
     <div className="production-actions">
       <button className="primary-button" disabled={blocked || serverRunning || reuseBlocked} onClick={() => generate("image")}>Generate All Scene Images</button>

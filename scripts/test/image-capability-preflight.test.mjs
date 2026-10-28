@@ -1,0 +1,32 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+const base = new URL("../../", import.meta.url);
+const read = path => readFile(new URL(path, base), "utf8");
+const baseline = await read("docs/releases/2026-10-27/neurons/beatvision-generation/live-v73-budget-guard.ts");
+const latest = await read("docs/releases/2026-10-27/neurons/beatvision-generation/live-v74-image-capability.ts");
+const feature = await read("supabase/functions/beatvision-generation/index.ts");
+const batch = await read("src/components/production/BatchProductionPanel.tsx");
+const page = await read("src/pages/ProductionWorkspacePage.tsx");
+test("capability action is owner scoped and does not call provider",()=>{
+  assert.equal(latest.includes('action === "image_capability"'),true);
+  const permission=latest.indexOf('project.data.owner_id !== uid.userId');
+  const capability=latest.indexOf('if (action === "image_capability") return json');
+  assert.ok(permission>0 && capability>permission);
+  assert.ok(latest.slice(capability,capability+340).includes('BRAGORAFORGE_CLOUDFLARE_IMAGE_BUDGET_APPROVED'));
+  assert.ok(latest.slice(capability,capability+340).includes('authorization_type'));
+  assert.ok(latest.includes('if (job.job_type === "scene_image"'));
+  assert.ok(feature.includes('if (action === "image_capability") return json'));
+  const normalize = s=>s.replace('    if (action === "image_capability") return json(req, {\n      image_generation_authorized: Deno.env.get("BRAGORAFORGE_CLOUDFLARE_IMAGE_BUDGET_APPROVED") === "true",\n      authorization_type: "explicit_server_budget_approval",\n      reason: "IMAGE_PROVIDER_BUDGET_DISABLED",\n      // This authorization does not imply live Cloudflare neurons remain.\n    });\n','').replace('["image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility", "modal_capability", "image_capability"]','["image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility", "modal_capability"]').replace('["run", "poll", "image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility", "modal_capability", "image_capability"]','["run", "poll", "image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility", "modal_capability"]');
+  assert.equal(normalize(latest),baseline);
+});
+test("both individual and batch image paths perform preflight before writes",()=>{
+  assert.ok(batch.includes('image_generation_authorized !== true'));
+  assert.ok(page.includes('throw new Error(IMAGE_BUDGET_MESSAGE)'));
+  assert.ok(batch.indexOf('if (kind === "image") await requireImageBudget(projectId)') < batch.indexOf('supabase.rpc("start_generation_batch"'));
+  assert.ok(batch.includes('if (batch.kind === "image" && !paused) await requireImageBudget(projectId)'));
+  assert.ok(batch.includes('if (kind === "image") await requireImageBudget(projectId)'));
+  assert.ok(!batch.includes('setImageAuthorized('));
+  assert.ok(page.indexOf('await requireImageBudget(projectId)') < page.indexOf('supabase.rpc("enqueue_scene_image_variant"'));
+});
