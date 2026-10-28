@@ -266,7 +266,9 @@ test('scene image dispatch uses authenticated Arena bridge, never Pixazo directl
     assert.equal(payload.generation.model,'flux-schnell');
     assert.equal(payload.generation.cost_class,'free');
     assert.equal(result.status,'failed','an unavailable free provider must never fabricate an image');
-    assert.match(result.error.message,/Workers Free entitlement/);
+    assert.equal(result.error.code,'PROVIDER_COST_UNVERIFIED');
+    assert.equal(result.error.message,'PROVIDER_COST_UNVERIFIED');
+    assert.equal(result.error.detail.http_status,503);
   } finally {globalThis.fetch=originalFetch;await runtime.cleanup()}
 });
 

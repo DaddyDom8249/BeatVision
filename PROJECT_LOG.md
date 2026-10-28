@@ -2819,3 +2819,40 @@ UNVERIFIED. Unit tests and deployment do not demonstrate visual lyric accuracy.
 **Other verification boundary:** Public schema has RLS enabled on all 46 inspected tables; 20 exposed authenticated SECURITY DEFINER RPCs require function-by-function safety analysis; 70 tracked SQL migrations versus 92 production migration-ledger entries with historical identity drift. Legacy `beatvision-pipeline` remains deployed with an older provider path, which is an investigation lead, not a proven exploit. Cloudflare Arena deployed version `ddbc386c-5540-483b-b80f-6cb8b0538d41`. Skyvern cloud-browser access was blocked by account 402 credits exhausted. The existing Jules read-only session was reused and completed; no new Jules session. Comprehensive every-file/line coverage and live authenticated owner journey remain NOT VERIFIED.
 
 **Release state:** IMPLEMENTED and TESTED on draft PR #157, NOT DEPLOYED. No production database changes, inference or media writes. Prior to any deployment, reconcile candidate vs currently deployed generation v72, verify Arena DNS allowlist settings, re-check exact-head CI and replay, and preserve all approved media. Do not merge main. Real improved AI-generated MP4 quality and complete song-to-final sponsor flow remain NOT VERIFIED.
+
+## 2026-10-27 America/Chicago — Image-provider failure categories (Issue #160 follow-up)
+
+Independently verified main3e26d85, PR161 draft/open at4aeae58, Issue160 open,
+production frontend290e30c6/READY dpl_GkNnxxqEmD5SNjSQsR3bRpHqGLVo, generationv74
+bundle971fdf51 with early budget guard. Actual six-file source readback checked;
+entrypoint matches prior release archive and all five helper files match feature.
+Live Arena189777-character response still routes BeatVision directly to WorkersAI
+FLUX Schnell/four steps. Four Workers have AI bindings; actual consumption unknown.
+Both Glass Love batches remain paused. Latest approved revision6 has57compatible
+unfilled image scenes; existing reuse requires artist review/approval and no media
+was reused or approved by this work. HF account is non-Pro; gated Apache2 FLUX model
+metadata verified, dedicated GPU/credits/access/current neuron budget NOT VERIFIED.
+No phone/ScreenBridge, GPU, image inference, paid fallback or batch resume.
+
+Root cause: Arena catches AI exceptions and wraps them as502/raw error. Controller
+then stores raw text and generic ARENA_GENERATION_FAILED. New real-dispatch
+regressions reproduce lost quota/capacity categories. Scoped repair maps known
+3036 to quota exhaustion,3040 to temporary capacity, unidentified429 to rate limit,
+and other failures to sanitized generic image failure; fixed allowlist details only.
+No private upstream error text is persisted. UI explains saved progress and deliberate
+recovery. Existing queue already pauses failed batches and prevents automatic job
+retry; no duplicate queue mechanism or provider fallback added.
+
+Tests first failed8/8 against old dispatch, then8/8 pass on both repository source
+and exact-v74 release candidate with one mocked provider call/no resubmission.
+Initial fixture used forbidden .test gateway, corrected to allowed mock DNS before
+accepting red evidence. First UI checks caught ambiguous assertions/copy; corrected
+without weakening category distinctions. Broad suite found one legacy expectation
+for raw entitlement text; replaced with strict safe-code/HTTP-status expectations.
+Baseline610total608pass0fail2local browser skips. Final results and publication/
+deployment receipts follow. Build/production audit/snapshot checks pass; existing
+bundle-size advisory retained. Code and release procedure documented in
+ docs/releases/2026-10-27/image-failures/README.md, deterministic generator added.
+No SQL/schema/settings changes. Atomic capacity reservations, explicit provider
+selection, account-wide breaker and verified no-charge image worker remain NEXT;
+this patch does not solve 60-image capacity or prove a live owner-to-MP4 workflow.

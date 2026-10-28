@@ -52,6 +52,21 @@ function productionErrorMessage(error: unknown) {
   }
   if (message.includes("MOTION_APPROVAL_CHANGED")) return "The approved motion changed in another session. Reload the scene before selecting a replacement.";
   if (message.includes("MOTION_APPROVAL_ASSEMBLY_IN_PROGRESS")) return "Wait for the current final assembly to finish before replacing its approved footage.";
+  if (/\bIMAGE_PROVIDER_BUDGET_DISABLED\b/.test(message)) {
+    return "New image generation is paused until a verified image budget is approved. Review compatible saved images first. Existing progress is saved.";
+  }
+  if (/\bIMAGE_PROVIDER_QUOTA_EXHAUSTED\b/.test(message)) {
+    return "Cloudflare's free image allowance is exhausted. Saved images and progress are preserved. Review compatible images first; resume only after capacity and budget are verified. No automatic retry or paid fallback was used.";
+  }
+  if (/\bIMAGE_PROVIDER_CAPACITY_UNAVAILABLE\b/.test(message)) {
+    return "The image provider is temporarily out of capacity. Remaining daily allowance is unknown. Saved progress is preserved; no automatic retry or paid fallback was used.";
+  }
+  if (/\bIMAGE_PROVIDER_RATE_LIMITED\b/.test(message)) {
+    return "The image provider limited this request. Remaining image allowance is unknown. Saved progress is preserved; verify capacity before trying a new variant.";
+  }
+  if (/\bIMAGE_PROVIDER_FAILED\b/.test(message)) {
+    return "The image provider did not produce a saved image. Existing images and progress are preserved. Review saved images before deliberately trying another variant.";
+  }
   if (/\bHF_QUOTA_EXHAUSTED\b/.test(message)) {
     return "Hugging Face free GPU quota is exhausted. Try after the free allowance resets. No paid provider or automatic retry was used.";
   }

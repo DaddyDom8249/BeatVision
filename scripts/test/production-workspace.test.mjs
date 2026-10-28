@@ -684,3 +684,19 @@ test('newer unrelated motion job cannot supply coverage for the approved asset',
   try {assert.equal(view.button('Assemble Final Video').disabled,true);assert.equal(view.rpcCalls.length,0);}
   finally {await view.cleanup();}
 });
+
+for (const [code, expected, absent] of [
+  ['IMAGE_PROVIDER_QUOTA_EXHAUSTED', /free image allowance is exhausted/, /temporarily out of capacity/],
+  ['IMAGE_PROVIDER_CAPACITY_UNAVAILABLE', /temporarily out of capacity/, /allowance is exhausted/],
+  ['IMAGE_PROVIDER_RATE_LIMITED', /Remaining image allowance is unknown/, /allowance is exhausted/],
+  ['IMAGE_PROVIDER_BUDGET_DISABLED', /verified image budget/, /allowance is exhausted/],
+  ['IMAGE_PROVIDER_FAILED', /did not produce a saved image/, /allowance is exhausted/],
+]) test(code+' explains image failure without submitting generation', async()=>{
+  const view=await mount({imageJob:{id:'failed-image',status:'failed',error:{code,message:code}}});
+  try {
+    assert.match(document.body.textContent,expected);
+    assert.doesNotMatch(document.body.textContent,absent);
+    assert.match(document.body.textContent,/progress (?:is (?:saved|preserved)|are preserved)/);
+    assert.equal(view.calls.length,0);
+  } finally {await view.cleanup();}
+});
