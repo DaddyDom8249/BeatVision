@@ -16,9 +16,9 @@ test("deployed image budget patch differs from verified v73 by only its early gu
   assert.ok(start>0 && stop>start);
   assert.equal(release,baseline.replace(anchor,anchor+insertion));
   assert.ok(feature.includes(insertion));
-  assert.match(insertion,/job\\.job_type === "scene_image"/);
-  assert.match(insertion,/Deno\\.env\\.get\\("BRAGORAFORGE_CLOUDFLARE_IMAGE_BUDGET_APPROVED"\\) !== "true"/);
-  assert.match(insertion,/new HttpError\\(503, "IMAGE_PROVIDER_BUDGET_DISABLED"/);
+  assert.ok(insertion.includes('job.job_type === "scene_image"'));
+  assert.ok(insertion.includes('Deno.env.get("BRAGORAFORGE_CLOUDFLARE_IMAGE_BUDGET_APPROVED") !== "true"'));
+  assert.ok(insertion.includes('new HttpError(503, "IMAGE_PROVIDER_BUDGET_DISABLED"'));
   assert.ok(release.indexOf("IMAGE_PROVIDER_BUDGET_DISABLED")<release.indexOf('const claim = await db.from("generation_jobs")'));
   assert.ok(release.indexOf("IMAGE_PROVIDER_BUDGET_DISABLED")<release.indexOf('await arena(path, "POST"'));
 });
