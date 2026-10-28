@@ -674,6 +674,25 @@ async function run(db: any, job: any) {
       if (latest.error) throw new Error(latest.error.message);
       return latest.data;
     }
+    // The provider may have accepted work before its HTTP reply was lost.
+    // These adapter failures cannot safely be interpreted as rejection.
+    const errorCode = error instanceof Error ? error.message : String(error);
+    const acceptanceUnknown = error instanceof TypeError ||
+      /^(HF_SUBMISSION_ACCEPTANCE_UNKNOWN|MODAL_HTTP_TIMEOUT|MODAL_HTTP_UNAVAILABLE|MODAL_HTTP_RESPONSE_INVALID|MODAL_JOB_RECEIPT_INVALID)(:|$)/.test(errorCode);
+    if (acceptanceUnknown && !job.output?.upstream_job_id) {
+      const marked = await db.from("generation_jobs").update({ output: {
+        ...(job.output || {}),
+        reconciliation_required: true,
+        reconciliation_reason: "PROVIDER_ACCEPTANCE_UNKNOWN",
+        reconciliation_recorded_at: new Date().toISOString(),
+        automatic_resubmission_disabled: true,
+      } }).eq("id", job.id).eq("status", "processing").select("*").maybeSingle();
+      if (marked.error) throw new Error("PROVIDER_UNCERTAIN_SUBMISSION_PERSIST_FAILED: " + marked.error.message);
+      if (marked.data) return marked.data;
+      const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+      if (latest.error) throw new Error(latest.error.message);
+      return latest.data;
+    }
     try { await setFailed(db, job.id, error instanceof Error ? error.message : String(error)); }
     catch (failure) {
       if (!(failure instanceof Error) || !failure.message.startsWith("SET_FAILED_ZERO_ROWS_AFFECTED")) throw failure;
