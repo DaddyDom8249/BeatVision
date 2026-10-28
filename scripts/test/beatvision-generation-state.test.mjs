@@ -114,7 +114,7 @@ test('poll flags unknown processing job for reconciliation without terminal fail
     update(data) { failedState = data; return this; },
     eq() { return this; },
     select() { return this; },
-    async maybeSingle() { return { data: { id: 'job-1', ...failedState } }; },
+    async maybeSingle() { return { data: { id: 'job-1', status: 'processing', output: {}, ...failedState } }; },
   }; } };
   const runtime = await loadGeneration();
   try {
