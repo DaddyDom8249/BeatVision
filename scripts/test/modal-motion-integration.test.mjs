@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {MODAL_MOTION, assertModalSubmissionEnabled, sha256Hex, submitModalMotion,
-  pollModalMotion} from '../../supabase/functions/beatvision-generation/modal-motion.ts';
+  pollModalMotion, lookupModalReceipt} from '../../supabase/functions/beatvision-generation/modal-motion.ts';
 import {loadGeneration} from './generation-runtime.mjs';
 
 const edge=readFileSync(new URL('../../supabase/functions/beatvision-generation/index.ts',import.meta.url),'utf8');
@@ -138,4 +138,24 @@ test('lost submit reply never retries and must remain reconciliation-required at
   assert.match(edge,/MODAL_HTTP_UNAVAILABLE/);
   assert.match(edge,/reconciliation_required: true/);
   assert.match(edge,/automatic_resubmission_disabled: true/);
+});
+
+test('Modal receipt lookup never invokes submit and distinguishes known from uncertain',async()=>{
+  const id=uuids[3];const calls=[];
+  const requester=async(url,opts)=>{
+    calls.push({url,method:opts.method});
+    return new Response(JSON.stringify(calls.length===1?{status:'processing',job_id:'fc-original01'}:{status:'reconciliation_required'}),{status:calls.length===1?200:202});
+  };
+  assert.deepEqual(await lookupModalReceipt(id,noSpendEnv,requester),{status:'known',job_id:'fc-original01'});
+  assert.deepEqual(await lookupModalReceipt(id,noSpendEnv,requester),{status:'reconciliation_required'});
+  assert.equal(calls.length,2);
+  assert.ok(calls.every(x=>x.method==='GET'&&x.url.endsWith('/receipt/'+id)));
+});
+test('Modal worker reserves request atomically before spawn and refuses duplicate unknown submissions',()=>{
+  const worker=readFileSync(new URL('../../providers/modal_motion/worker.py',import.meta.url),'utf8');
+  const reservation=worker.indexOf('receipts.put(key, reservation, skip_if_exists=True)');
+  const spawn=worker.indexOf('single_motion_proof.spawn(payload, source, ack)');
+  assert.ok(reservation>0 && spawn>reservation);
+  assert.match(worker,/return JSONResponse\(\{'status': 'reconciliation_required', 'receipt_known': False\}, status_code=202\)/);
+  assert.match(worker,/@web.get\('\/receipt\/\{generation_job_id\}'\)/);
 });
