@@ -51,7 +51,7 @@ test('Modal dispatch intent survives PostgreSQL database restart and controller 
         eq(key,value) {filters.push([key,value]);return this;},
         async maybeSingle() {
           const current=await loadRow();
-          if(filters.some(([k,v])=>current[k]!==v))return {data:null,error:null};
+          if(filters.some(([k,v])=>String(current[k] instanceof Date ? current[k].toISOString() : current[k]) !== String(v instanceof Date ? v.toISOString() : v)))return {data:null,error:null};
           if(patch) {
             const change=await db.query(`update generation_jobs
               set output=$1::jsonb where id=$2 returning *`,
