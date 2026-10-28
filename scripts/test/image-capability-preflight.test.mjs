@@ -26,6 +26,7 @@ test("both individual and batch image paths perform preflight before writes",()=
   assert.ok(page.includes('throw new Error(IMAGE_BUDGET_MESSAGE)'));
   assert.ok(batch.indexOf('if (kind === "image") await requireImageBudget(projectId)') < batch.indexOf('supabase.rpc("start_generation_batch"'));
   assert.ok(batch.includes('if (batch.kind === "image" && !paused) await requireImageBudget(projectId)'));
-  assert.ok(batch.includes('!imageAuthorized'));
+  assert.ok(batch.includes('if (kind === "image") await requireImageBudget(projectId)'));
+  assert.ok(!batch.includes('setImageAuthorized('));
   assert.ok(page.indexOf('await requireImageBudget(projectId)') < page.indexOf('supabase.rpc("enqueue_scene_image_variant"'));
 });

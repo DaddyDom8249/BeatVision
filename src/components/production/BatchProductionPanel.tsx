@@ -31,7 +31,6 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
   const [review, setReview] = useState<{ kind: BatchKind; candidates: Candidate[] } | null>(null);
   const [batches, setBatches] = useState<any[]>([]);
   const [progressError, setProgressError] = useState<string | null>(null);
-  const [imageAuthorized, setImageAuthorized] = useState(false);
   const progressVersion = useRef(0);
   const life = useRef(0);
   const stop = useRef(true);
@@ -57,16 +56,6 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
     const timer = window.setInterval(() => { void refreshProgress().catch(() => undefined); }, 5000);
     return () => {mounted=false; window.clearInterval(timer); progressVersion.current++;};
   }, [projectId, refreshProgress]);
-  useEffect(() => {
-    let valid = true;
-    setImageAuthorized(false);
-    void supabase.functions.invoke("beatvision-generation", {
-      body: { action: "image_capability", projectId },
-    }).then(response => {
-      if (valid) setImageAuthorized(!response.error && response.data?.image_generation_authorized === true);
-    }).catch(() => { if (valid) setImageAuthorized(false); });
-    return () => { valid = false; };
-  }, [projectId]);
   const requests = scenes.map(scene => ({scene, ...inspectMotionDirection({...scene})}));
   const directionIssues = requests.filter(request => request.issue);
   const serverRunning = batches.some(batch => batch.status === "running");
@@ -167,10 +156,10 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
     <RevisionMediaPanel key={planId} projectId={projectId} planId={planId} disabled={disabled||running} onCheck={setReuseBlocked} onRefresh={async()=>{await refreshProgress();await onRefresh();}} />
     <h2>Produce all scenes</h2>
     <p>Generate missing media one scene at a time. Existing images and clips are kept. Review and approve images before generating motion. Individual regeneration remains available below.</p>
-    {!imageAuthorized && <p role="status">{IMAGE_BUDGET_MESSAGE}</p>}
+    <p role="status">New scene images require an approved AI budget. If unavailable, requests stop before any job or provider call. Saved images and motion remain usable.</p>
     <p>Batches run on the server, even after you leave this page or close the browser. Return here to see saved progress. The scheduler checks about once a minute. Pause stops later scenes; an already submitted job may finish. Failures pause the batch; retry that scene individually, then Resume.</p>
     <div className="production-actions">
-      <button className="primary-button" disabled={blocked || serverRunning || reuseBlocked || !imageAuthorized} onClick={() => generate("image")}>Generate All Scene Images</button>
+      <button className="primary-button" disabled={blocked || serverRunning || reuseBlocked} onClick={() => generate("image")}>Generate All Scene Images</button>
       <button className="secondary-button" disabled={blocked} onClick={() => loadReview("image")}>Review &amp; Approve All Images</button>
     </div>
     <label><input type="checkbox" checked={terms} disabled={blocked} onChange={e => setTerms(e.target.checked)} /> I agree to the <a href="https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt" target="_blank" rel="noreferrer">LTX license and use restrictions</a>, including AI disclosure.</label>
@@ -197,7 +186,7 @@ export default function BatchProductionPanel({ projectId, planId, scenes, disabl
         <progress aria-label={batch.kind === "image" ? "Scene image batch progress" : "Motion batch progress"} value={batch.done} max={Math.max(1,batch.total)} style={{width:"100%"}} />
       </label>
       {batch.current_scene && batch.status !== "completed" && <p>Current scene: {batch.current_scene}.{batch.failed > 0 ? " A saved job failed. Regenerate it individually, then resume this batch." : " Progress is saved on the server."}</p>}
-      {batch.status !== "completed" && <button className="secondary-button" disabled={blocked || (batch.kind === "image" && (reuseBlocked || (!imageAuthorized && batch.status !== "running"))) || (batch.kind === "motion" && batch.status !== "running" && directionIssues.length > 0)} onClick={() => setPaused(batch,batch.status === "running")}>
+      {batch.status !== "completed" && <button className="secondary-button" disabled={blocked || (batch.kind === "image" && reuseBlocked) || (batch.kind === "motion" && batch.status !== "running" && directionIssues.length > 0)} onClick={() => setPaused(batch,batch.status === "running")}>
         {batch.status === "running" ? "Pause" : "Resume"} {batch.kind === "image" ? "Image" : "Motion"} Batch
       </button>}
     </div>)}
