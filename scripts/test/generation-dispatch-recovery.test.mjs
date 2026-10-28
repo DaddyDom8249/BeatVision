@@ -171,3 +171,50 @@ test('unknown provider HTTP acceptance is nonterminal and cannot trigger duplica
   assert.match(handler, /automatic_resubmission_disabled: true/);
   assert.match(handler, /return marked.data/);
 });
+
+test('fresh controller instance reconciles durable Modal intent without a second provider submission', async () => {
+  // This fixture represents a committed generation_jobs row after Modal accepted
+  // work but the submit HTTP response was lost. The database object survives
+  // between independently loaded controller modules.
+  const persisted = {
+    id: 'modal-crash-job', job_type: 'scene_motion', status: 'processing',
+    provider: 'modal', created_at: new Date(Date.now()-7*60_000).toISOString(),
+    updated_at: new Date(Date.now()-7*60_000).toISOString(),
+    input_snapshot: { modal_motion: { source_image_id: 'approved-image' } },
+    output: { dispatch_started_at: new Date(Date.now()-7*60_000).toISOString(),
+      dispatch_intent: { request_id: 'beatvision:modal-crash-job', provider: 'modal', state: 'submission_pending' } },
+  };
+  let writes=0, providerRequests=0;
+  const db = { from(table) {
+    assert.equal(table,'generation_jobs');
+    let changes, filters={};
+    return {
+      update(row) { changes=row; return this; },
+      select() { return this; },
+      eq(k,v) { filters[k]=v; return this; },
+      async maybeSingle() {
+        if (Object.entries(filters).some(([k,v])=>persisted[k]!==v)) return {data:null,error:null};
+        if (changes) { writes++; Object.assign(persisted,structuredClone(changes)); }
+        return {data:structuredClone(persisted),error:null};
+      },
+      async single() { return {data:structuredClone(persisted),error:null}; },
+    };
+  } };
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async()=>{providerRequests++;throw new Error('DUPLICATE_GPU_DISPATCH');};
+  try {
+    // A new runtime is loaded after the original dispatch process disappeared.
+    for(let restart=0;restart<2;restart++) {
+      const runtime=await loadGeneration();
+      try {
+        const result=await runtime.poll(db,structuredClone(persisted));
+        assert.equal(result.status,'processing');
+        assert.equal(result.output.dispatch_intent.request_id,'beatvision:modal-crash-job');
+        assert.equal(result.output.reconciliation_required,true);
+        assert.equal(result.output.automatic_resubmission_disabled,true);
+      } finally { await runtime.cleanup(); }
+    }
+    assert.equal(writes,1,'only the first restart records the reconciliation marker');
+    assert.equal(providerRequests,0,'neither fresh process may contact the provider');
+  } finally {globalThis.fetch=originalFetch;}
+});
