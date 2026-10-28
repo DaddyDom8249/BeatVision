@@ -133,6 +133,11 @@ def motion_api():
     import base64
     import binascii
     import re
+    import json
+
+    # The durable reservation is created BEFORE .spawn(). No second request
+    # may spawn if this record exists, even if its receipt is still unknown.
+    receipts = modal.Dict.from_name('bragoraforge-modal-submissions-v1', create_if_missing=True)
 
     # FastAPI resolves postponed annotations against module globals. Keep the
     # runtime-only import visible so `request: fastapi.Request` is not a query field.
@@ -162,12 +167,38 @@ def motion_api():
             require_execution_authorization(ack, 'true')
             validated = MotionRequest(**payload)
             validate_request(validated, source)
+            key = validated.generation_job_id
+            fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+            reservation = {'fingerprint': fingerprint, 'state': 'receipt_unknown'}
+            if not receipts.put(key, reservation, skip_if_exists=True):
+                existing = receipts.get(key)
+                if not isinstance(existing, dict) or existing.get('fingerprint') != fingerprint:
+                    return JSONResponse({'error': 'MODAL_REQUEST_FINGERPRINT_CONFLICT'}, status_code=409)
+                receipt = existing.get('job_id')
+                if isinstance(receipt, str) and re.fullmatch(r'fc-[A-Za-z0-9_-]+', receipt):
+                    return {'status': 'processing', 'job_id': receipt}
+                return JSONResponse({'status': 'reconciliation_required', 'receipt_known': False}, status_code=202)
+            # Ambiguous failures leave the reservation in place permanently
+            # until expiration/explicit operator disposition. NEVER spawn again.
             call = single_motion_proof.spawn(payload, source, ack)
             if not re.fullmatch(r'fc-[A-Za-z0-9_-]+', call.object_id):
                 raise MotionContractError('MODAL_JOB_RECEIPT_INVALID')
+            receipts.put(key, {'fingerprint': fingerprint, 'state': 'accepted', 'job_id': call.object_id})
             return {'status': 'processing', 'job_id': call.object_id}
         except (MotionContractError, TypeError, ValueError) as exc:
             return JSONResponse({'error': str(exc)}, status_code=400)
+
+    @web.get('/receipt/{generation_job_id}')
+    async def receipt(generation_job_id: str):
+        if not re.fullmatch(r'[0-9a-fA-F-]{36}', generation_job_id):
+            return JSONResponse({'error': 'MODAL_REQUEST_ID_INVALID'}, status_code=400)
+        existing = receipts.get(generation_job_id)
+        if not isinstance(existing, dict):
+            return JSONResponse({'status': 'not_found', 'receipt_known': False}, status_code=404)
+        call_id = existing.get('job_id')
+        if isinstance(call_id, str) and re.fullmatch(r'fc-[A-Za-z0-9_-]+', call_id):
+            return {'status': 'processing', 'job_id': call_id}
+        return JSONResponse({'status': 'reconciliation_required', 'receipt_known': False}, status_code=202)
 
     @web.get('/poll/{call_id}')
     async def poll(call_id: str):
