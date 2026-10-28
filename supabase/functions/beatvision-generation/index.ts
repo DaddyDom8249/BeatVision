@@ -603,14 +603,35 @@ function terminalState(response: Response, data: any, jobType?: string) {
   return "processing";
 }
 
+// Arena currently wraps Workers AI errors in HTTP 502. Preserve only known
+// categories; never store its raw exception, which can contain private inputs.
+function sceneImageFailure(response: Response, data: any) {
+  const structured = data?.error && typeof data.error === "object" ? data.error : {};
+  const text = typeof data?.error === "string" ? data.error :
+    typeof structured.message === "string" ? structured.message : "";
+  const code = String(structured.code ?? data?.code ?? "");
+  // A bare scene number or an arbitrary 429 does not prove neuron exhaustion.
+  const wrapped = /\b(?:AI_ERROR|AiError)\s*:\s*(3036|3040)\b/i.exec(text)?.[1];
+  const providerCode = code === "3036" || code === "3040" ? code : wrapped;
+  const message = providerCode === "3036" ? "IMAGE_PROVIDER_QUOTA_EXHAUSTED"
+    : providerCode === "3040" ? "IMAGE_PROVIDER_CAPACITY_UNAVAILABLE"
+    : code === "PROVIDER_COST_UNVERIFIED" ? "PROVIDER_COST_UNVERIFIED"
+    : response.status === 429 ? "IMAGE_PROVIDER_RATE_LIMITED"
+    : "IMAGE_PROVIDER_FAILED";
+  return { message, detail: { provider: "cloudflare-workers-ai", model: "flux-schnell",
+    http_status: response.status, ...(providerCode ? { provider_code: providerCode } : {}) } };
+}
+
 async function setFailed(db: any, id: string, message: string, detail?: unknown) {
   const res = await db.from("generation_jobs").update({
     status: "failed",
     // Preserve known, sanitized HF adapter codes for creator-readable failures,
     // without promoting arbitrary upstream text into error.code.
-    error: { code: message.startsWith("PROVIDER_COST_UNVERIFIED:") ? "PROVIDER_COST_UNVERIFIED"
+    error: { code: (message === "PROVIDER_COST_UNVERIFIED" || message.startsWith("PROVIDER_COST_UNVERIFIED:")) ? "PROVIDER_COST_UNVERIFIED"
       : message.startsWith("PROVIDER_TIMEOUT:") ? "PROVIDER_TIMEOUT"
-      : ["HF_GENERATION_FAILED", "HF_CAPACITY_UNAVAILABLE", "HF_QUOTA_EXHAUSTED"].includes(message) ? message
+      : ["HF_GENERATION_FAILED", "HF_CAPACITY_UNAVAILABLE", "HF_QUOTA_EXHAUSTED",
+        "IMAGE_PROVIDER_QUOTA_EXHAUSTED", "IMAGE_PROVIDER_CAPACITY_UNAVAILABLE",
+        "IMAGE_PROVIDER_RATE_LIMITED", "IMAGE_PROVIDER_FAILED"].includes(message) ? message
       : "ARENA_GENERATION_FAILED", message: message.slice(0, 1200), detail },
   }).eq("id", id).in("status", ["queued", "submitted", "processing"]).select("id");
   if (res.error) throw new Error("SET_FAILED_PERSIST_FAILED: " + res.error.message);
@@ -880,7 +901,12 @@ async function run(db: any, job: any) {
     const state = terminalState(result.response, result.data, job.job_type);
 
     if (state === "failed") {
-      await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena rejected generation."), compactArenaResponse(result.data, job.job_type));
+      if (job.job_type === "scene_image") {
+        const failure = sceneImageFailure(result.response, result.data);
+        await setFailed(db, job.id, failure.message, failure.detail);
+      } else {
+        await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena rejected generation."), compactArenaResponse(result.data, job.job_type));
+      }
     } else if (state === "completed") {
       if (job.job_type === "assembly") {
         const finalVideo = await persistFinalVideo(db, job, result.data);

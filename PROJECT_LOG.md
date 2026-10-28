@@ -2819,3 +2819,70 @@ UNVERIFIED. Unit tests and deployment do not demonstrate visual lyric accuracy.
 **Other verification boundary:** Public schema has RLS enabled on all 46 inspected tables; 20 exposed authenticated SECURITY DEFINER RPCs require function-by-function safety analysis; 70 tracked SQL migrations versus 92 production migration-ledger entries with historical identity drift. Legacy `beatvision-pipeline` remains deployed with an older provider path, which is an investigation lead, not a proven exploit. Cloudflare Arena deployed version `ddbc386c-5540-483b-b80f-6cb8b0538d41`. Skyvern cloud-browser access was blocked by account 402 credits exhausted. The existing Jules read-only session was reused and completed; no new Jules session. Comprehensive every-file/line coverage and live authenticated owner journey remain NOT VERIFIED.
 
 **Release state:** IMPLEMENTED and TESTED on draft PR #157, NOT DEPLOYED. No production database changes, inference or media writes. Prior to any deployment, reconcile candidate vs currently deployed generation v72, verify Arena DNS allowlist settings, re-check exact-head CI and replay, and preserve all approved media. Do not merge main. Real improved AI-generated MP4 quality and complete song-to-final sponsor flow remain NOT VERIFIED.
+
+## 2026-10-27 America/Chicago — Image-provider failure categories (Issue #160 follow-up)
+
+Independently verified main3e26d85, PR161 draft/open at4aeae58, Issue160 open,
+production frontend290e30c6/READY dpl_GkNnxxqEmD5SNjSQsR3bRpHqGLVo, generationv74
+bundle971fdf51 with early budget guard. Actual six-file source readback checked;
+entrypoint matches prior release archive and all five helper files match feature.
+Live Arena189777-character response still routes BeatVision directly to WorkersAI
+FLUX Schnell/four steps. Four Workers have AI bindings; actual consumption unknown.
+Both Glass Love batches remain paused. Latest approved revision6 has57compatible
+unfilled image scenes; existing reuse requires artist review/approval and no media
+was reused or approved by this work. HF account is non-Pro; gated Apache2 FLUX model
+metadata verified, dedicated GPU/credits/access/current neuron budget NOT VERIFIED.
+No phone/ScreenBridge, GPU, image inference, paid fallback or batch resume.
+
+Root cause: Arena catches AI exceptions and wraps them as502/raw error. Controller
+then stores raw text and generic ARENA_GENERATION_FAILED. New real-dispatch
+regressions reproduce lost quota/capacity categories. Scoped repair maps known
+3036 to quota exhaustion,3040 to temporary capacity, unidentified429 to rate limit,
+and other failures to sanitized generic image failure; fixed allowlist details only.
+No private upstream error text is persisted. UI explains saved progress and deliberate
+recovery. Existing queue already pauses failed batches and prevents automatic job
+retry; no duplicate queue mechanism or provider fallback added.
+
+Tests first failed8/8 against old dispatch, then8/8 pass on both repository source
+and exact-v74 release candidate with one mocked provider call/no resubmission.
+Initial fixture used forbidden .test gateway, corrected to allowed mock DNS before
+accepting red evidence. First UI checks caught ambiguous assertions/copy; corrected
+without weakening category distinctions. Broad suite found one legacy expectation
+for raw entitlement text; replaced with strict safe-code/HTTP-status expectations.
+Baseline610total608pass0fail2local browser skips. Final results and publication/
+deployment receipts follow. Build/production audit/snapshot checks pass; existing
+bundle-size advisory retained. Code and release procedure documented in
+ docs/releases/2026-10-27/image-failures/README.md, deterministic generator added.
+No SQL/schema/settings changes. Atomic capacity reservations, explicit provider
+selection, account-wide breaker and verified no-charge image worker remain NEXT;
+this patch does not solve 60-image capacity or prove a live owner-to-MP4 workflow.
+
+**Release verification:** Published identical tested tree15b5120fbaf1108ac0b877d7c227b1ed420ec87a
+as source9155e7a64bf3ff2c5a44d5903d033edfd12bc985, draftPR163 stacked on161.
+Local623total621pass0fail2browser-skips; hostedCI40626782799 final623/623pass,
+0fail0skip, dependency audit/snapshot/build/production-audit PASS. First hosted
+attempt failed Chrome startup before assertions; one unchanged-source failed-job
+rerun passed, no tests disabled. Isolated PostgreSQL replay40626782850 SUCCESS.
+Exact-live release suite17/17, including budget fail-closed and batch guards.
+Git push lacked HTTPS credentials; published through connected GitHub blobs/tree/
+commit APIs, then fetched and confirmed remote/local tree equality. No main merge.
+
+Fresh predeploy get_edge_function confirmed all6files/hash/JWT identical to v74.
+Released ONLY narrow failure classifier/allowlist/dispatch block as generationv75
+ACTIVE bundle8023df3e0ea2fa5742a82d54a99a38fd32e0bb99fece3ffeee81a96a3addc8e4.
+Readback matches all6submitted files byte-for-byte, JWT gateway false unchanged;
+explicit auth remains. Live production and exact preview OPTIONS204/allowed,
+untrusted204/no CORS allowance; anonymousPOST401 UNAUTHENTICATED. Both Glass Love
+batches rechecked paused. Existing budget flag value UNKNOWN/unchanged; no inference,
+paid fallback, phone workload, creative data mutation, approvals or worker deployment.
+New frontend recovery copy SOURCE ONLY; canonical frontend290e30c6 unchanged.
+
+Discovered separate draftPR162 preflight candidatee03c8c9 (not deployed), also based
+onv74. Did not edit its branch or import it; regenerate its exact-live candidate
+againstv75 before release to preserve this repair. HF job-list tool returned
+UNAVAILABLE, so credits/dedicated GPU remain unverified. Owner-authenticated new
+image failure/recovery and final MP4 workflow remain NOT VERIFIED. Rollback and
+source receipts in image-failures/README.md. Next single objective: atomic server
+capacity reservations and explicit approved provider selection, keeping inference
+disabled until actual budget/access verification. No full image-capacity solution
+or sustainable60-image free allowance claimed.
