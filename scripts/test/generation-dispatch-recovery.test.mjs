@@ -218,3 +218,54 @@ test('fresh controller instance reconciles durable Modal intent without a second
     assert.equal(providerRequests,0,'neither fresh process may contact the provider');
   } finally {globalThis.fetch=originalFetch;}
 });
+
+test('fresh controller adopts Modal receipt and never submits a duplicate', async () => {
+  const jobId='00000004-0000-4000-8000-000000000004';
+  const f=fixture({status:'submitted',age:6*60*1000});
+  f.original.id=jobId;
+  f.original.input_snapshot={modal_motion:{source_image_id:'approved-source'}};
+  f.original.output={dispatch_intent:{request_id:'beatvision:'+jobId,provider:'modal',state:'submission_pending'}};
+  // fixture captures a clone of the original; use a separate row-backed
+  // client to ensure the persisted state, not the caller's object, is updated.
+  let row=structuredClone(f.original), writes=0, requests=0;
+  const client={from(table){
+    assert.equal(table,'generation_jobs');
+    let patch=null;const filters={};
+    return {
+      update(value){patch=value;return this;},
+      select(){return this;},
+      eq(k,v){filters[k]=v;return this;},
+      async maybeSingle(){
+        if(Object.entries(filters).some(([k,v])=>row[k]!==v))return {data:null,error:null};
+        if(patch){Object.assign(row,structuredClone(patch));writes++;}
+        return {data:structuredClone(row),error:null};
+      },
+      async single(){return {data:structuredClone(row),error:null};},
+    };
+  }};
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async (url,options)=>{
+    requests++;assert.equal(options.method,'GET');
+    assert.ok(String(url).endsWith('/receipt/'+jobId));
+    return new Response(JSON.stringify({status:'processing',job_id:'fc-existing001'}),{status:200});
+  };
+  try{
+    const env={MODAL_TOKEN_ID:'mock',MODAL_TOKEN_SECRET:'mock'};
+    const first=await loadGeneration({},env);
+    try {
+      const result=await first.poll(client,structuredClone(row));
+      assert.equal(result.output.upstream_job_id,'fc-existing001');
+      assert.equal(result.output.provider_receipt.recovered,true);
+      assert.equal(result.status,'processing');
+      assert.equal(result.output.automatic_resubmission_disabled,true);
+    } finally {await first.cleanup();}
+    const second=await loadGeneration({},env);
+    try {
+      // A fresh process sees the already adopted receipt. No new submit.
+      assert.equal(row.output.upstream_job_id,'fc-existing001');
+      assert.equal(row.output.dispatch_intent.request_id,'beatvision:'+jobId);
+    } finally {await second.cleanup();}
+    assert.equal(requests,1);
+    assert.equal(writes,1);
+  } finally {globalThis.fetch=originalFetch;}
+});
