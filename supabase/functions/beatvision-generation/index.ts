@@ -1093,12 +1093,18 @@ Deno.serve(async (req) => {
       return json(req, { ok: true, scanned: pending.length, results });
     }
 
-    if (!projectId || (!["image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility", "modal_capability"].includes(action) && !jobId)) return json(req, { error: { code: "JOB_REQUIRED", message: "projectId and jobId are required." } }, 400);
-    if (!["run", "poll", "image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility", "modal_capability"].includes(action)) return json(req, { error: { code: "INVALID_ACTION", message: "action must be run, poll, image_url, or drain." } }, 400);
+    if (!projectId || (!["image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility", "modal_capability", "image_capability"].includes(action) && !jobId)) return json(req, { error: { code: "JOB_REQUIRED", message: "projectId and jobId are required." } }, 400);
+    if (!["run", "poll", "image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility", "modal_capability", "image_capability"].includes(action)) return json(req, { error: { code: "INVALID_ACTION", message: "action must be run, poll, image_url, or drain." } }, 400);
     const project = await db.from("projects").select("id,owner_id").eq("id", projectId).maybeSingle();
     if (project.error) throw new Error(project.error.message);
     if (!project.data || (uid.kind !== "system" && project.data.owner_id !== uid.userId)) return json(req, { error: { code: "NOT_FOUND", message: "Project not found." } }, 404);
 
+    if (action === "image_capability") return json(req, {
+      image_generation_authorized: Deno.env.get("BRAGORAFORGE_CLOUDFLARE_IMAGE_BUDGET_APPROVED") === "true",
+      authorization_type: "explicit_server_budget_approval",
+      reason: "IMAGE_PROVIDER_BUDGET_DISABLED",
+      // This authorization does not imply live Cloudflare neurons remain.
+    });
     if (action === "modal_capability") {
       let available = false;
       try { assertModalSubmissionEnabled(); available = true; } catch { /* no secrets sent to client */ }

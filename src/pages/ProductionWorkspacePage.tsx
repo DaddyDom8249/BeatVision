@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase/client";
 import { formatCreativeText, getCreativeErrorMessage } from "../lib/formatCreativeText";
+import { requireImageBudget } from "../lib/sceneImageBudget";
 import type { VisualPlan, VisualPlanScene } from "../types/visualPlan";
 import StudioHeader from "../components/navigation/StudioHeader";
 import BatchProductionPanel from "../components/production/BatchProductionPanel";
@@ -423,6 +424,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
     setBusy(true); setError(null);
     try {
       let job = existing;
+      if (type === "scene_image" && (!job || job.status === "queued")) await requireImageBudget(projectId);
       if (!job && type === "assembly") {
         const check = await refreshAssemblyReadiness(plan.id);
         if (!check.ready) throw new Error(check.message);
