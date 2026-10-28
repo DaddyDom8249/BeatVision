@@ -132,3 +132,31 @@ export async function pollModalMotion(
     throw new ModalMotionError("MODAL_MANIFEST_MISSING");
   return { status: "completed", video, manifest: data.manifest };
 }
+
+/** Read-only receipt lookup. A 202 means execution acceptance is unknown:
+ * never reinterpret it as proof that a repeat submission is safe. */
+export async function lookupModalReceipt(
+  generationJobId: string, env: EnvReader = readEnv, requester: Fetcher = fetch,
+): Promise<{status:"known";job_id:string}|{status:"reconciliation_required"}|{status:"not_found"}> {
+  assertModalPollEnabled(env);
+  if (!uuid(generationJobId)) throw new ModalMotionError("MODAL_REQUEST_ID_INVALID");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20_000);
+  try {
+    const response = await requester(MODAL_MOTION.apiBase + "/receipt/" + encodeURIComponent(generationJobId), {
+      method:"GET", headers:{"Modal-Key":env("MODAL_TOKEN_ID"),"Modal-Secret":env("MODAL_TOKEN_SECRET")},
+      signal:controller.signal,
+    });
+    if (response.status === 404) return {status:"not_found"};
+    if (!response.ok && response.status !== 202) throw new ModalMotionError("MODAL_LOOKUP_HTTP_"+response.status);
+    const data = await response.json();
+    if (response.status === 202 || data?.status === "reconciliation_required")
+      return {status:"reconciliation_required"};
+    if (!/^fc-[a-zA-Z0-9_-]+$/.test(String(data?.job_id || "")))
+      throw new ModalMotionError("MODAL_JOB_RECEIPT_INVALID");
+    return {status:"known",job_id:data.job_id};
+  } catch(error) {
+    if(error instanceof ModalMotionError) throw error;
+    throw new ModalMotionError("MODAL_LOOKUP_UNAVAILABLE");
+  } finally {clearTimeout(timer);}
+}
