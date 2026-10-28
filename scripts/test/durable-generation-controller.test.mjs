@@ -18,3 +18,13 @@ test('scheduler uses the durable runnable queue while still polling active provi
  const calls=[];const db={rpc:async(name,args)=>{calls.push({name,args});return {data:name==='get_generation_scheduler_secret'?'fixture-secret':[],error:null};},from(table){assert.equal(table,'generation_jobs');const q={select(){return q;},in(k,v){assert.deepEqual(v,['submitted','processing']);return q;},order(){return q;},limit:async()=>({data:[],error:null})};return q;}};
  const runtime=await loadGeneration(db);try{const response=await runtime.handler(new Request('https://fixture.test/function',{method:'POST',headers:{'X-BeatVision-Queue-Secret':'fixture-secret','Content-Type':'application/json'},body:JSON.stringify({action:'drain'})}));assert.equal(response.status,200);assert.deepEqual((await response.json()).results,[]);assert.ok(calls.some(c=>c.name==='get_generation_dispatch_queue'&&c.args.p_limit===8));}finally{await runtime.cleanup();}
 });
+
+test('without budget approval queued images cause no DB claims or provider requests',async()=>{
+ let calls=0;
+ const db={rpc(){calls++;throw Error('unexpected rpc');},from(){calls++;throw Error('unexpected db');}};
+ const rt=await loadGeneration(db,{BRAGORAFORGE_CLOUDFLARE_IMAGE_BUDGET_APPROVED:''});
+ try {
+   await assert.rejects(rt.run(db,job),e=>e.status===503&&e.code==='IMAGE_PROVIDER_BUDGET_DISABLED');
+   assert.equal(calls,0);
+ } finally {await rt.cleanup();}
+});
