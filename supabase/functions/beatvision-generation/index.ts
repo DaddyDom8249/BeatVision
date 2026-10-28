@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validateImage, readImage } from "./image-media.ts";
 import { verifyFinalMedia } from "./final-media.ts";
 import { HF_MOTION, hfEligibility, hfSubmit, hfPoll, hfDownload, hfJobSeed, HfMotionError, validateMp4 } from "./hf-motion.ts";
-import { MODAL_MOTION, assertModalSubmissionEnabled, submitModalMotion, pollModalMotion, sha256Hex, ModalMotionError } from "./modal-motion.ts";
+import { MODAL_MOTION, assertModalSubmissionEnabled, submitModalMotion, pollModalMotion, sha256Hex, ModalMotionError, lookupModalReceipt } from "./modal-motion.ts";
 
 const ALLOWED_ORIGINS = new Set([
   "https://beat-vision-f8nn.vercel.app",
@@ -786,6 +786,32 @@ async function recoverDispatch(db: any, job: any) {
   const timestamp = job.updated_at || job.created_at;
   const started = Date.parse(String(timestamp || ""));
   if (!upstream && Number.isFinite(started) && Date.now() - started < DISPATCH_GRACE_MS) return job;
+
+  // Adopt only a provider-verified receipt, never a guessed call ID.
+  // A missing or unavailable provider reservation is NOT permission to resubmit.
+  if (!upstream && job.input_snapshot?.modal_motion && job.output?.dispatch_intent?.request_id === "beatvision:" + job.id) {
+    let recovered: Awaited<ReturnType<typeof lookupModalReceipt>> | null = null;
+    try { recovered = await lookupModalReceipt(job.id); }
+    catch { /* Lookup failure preserves the nonterminal reconciliation hold. */ }
+    if (recovered?.status === "known") {
+      const changes = { status: "processing", output: {
+        ...(job.output || {}),
+        upstream_job_id: recovered.job_id,
+        provider_receipt: {provider:"modal",upstream_job_id:recovered.job_id,recorded_at:new Date().toISOString(),recovered:true},
+        reconciliation_required: false,
+        reconciliation_reason: null,
+        automatic_resubmission_disabled: true,
+      } };
+      let query = db.from("generation_jobs").update(changes).eq("id",job.id).eq("status",job.status);
+      if(job.updated_at) query=query.eq("updated_at",job.updated_at);
+      const adopted=await query.select("*").maybeSingle();
+      if(adopted.error) throw new Error("MODAL_RECEIPT_ADOPTION_PERSIST_FAILED: "+adopted.error.message);
+      if(adopted.data) return adopted.data;
+      const winner=await db.from("generation_jobs").select("*").eq("id",job.id).single();
+      if(winner.error) throw new Error("MODAL_RECEIPT_ADOPTION_READ_FAILED");
+      return winner.data;
+    }
+  }
 
   // Unknown provider acceptance is NOT provider failure. Keep the canonical
   // submitted/processing state, preserve its frozen snapshot, and record an
