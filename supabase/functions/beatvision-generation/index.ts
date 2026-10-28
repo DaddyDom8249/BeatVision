@@ -825,6 +825,12 @@ async function run(db: any, job: any) {
     throw new Error("GENERATION_JOB_TYPE_NOT_SUPPORTED: only scene_image, scene_motion, and assembly are controller-backed.");
   }
   if (job.status !== "queued") return job;
+  // Prevent unbudgeted Cloudflare inference before claiming any image job.
+  if (job.job_type === "scene_image" &&
+      Deno.env.get("BRAGORAFORGE_CLOUDFLARE_IMAGE_BUDGET_APPROVED") !== "true") {
+    throw new HttpError(503, "IMAGE_PROVIDER_BUDGET_DISABLED",
+      "Scene image rendering is paused to protect Cloudflare neurons. No provider was called.");
+  }
   if (job.input_snapshot?.generation_batch_id) {
     const permission = await db.rpc("generation_batch_dispatch_allowed", {p_job_id: job.id});
     if (permission.error) throw new Error("BATCH_DISPATCH_CHECK_FAILED");
