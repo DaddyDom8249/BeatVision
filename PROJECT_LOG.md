@@ -2856,3 +2856,33 @@ bundle-size advisory retained. Code and release procedure documented in
 No SQL/schema/settings changes. Atomic capacity reservations, explicit provider
 selection, account-wide breaker and verified no-charge image worker remain NEXT;
 this patch does not solve 60-image capacity or prove a live owner-to-MP4 workflow.
+
+**Release verification:** Published identical tested tree15b5120fbaf1108ac0b877d7c227b1ed420ec87a
+as source9155e7a64bf3ff2c5a44d5903d033edfd12bc985, draftPR163 stacked on161.
+Local623total621pass0fail2browser-skips; hostedCI40626782799 final623/623pass,
+0fail0skip, dependency audit/snapshot/build/production-audit PASS. First hosted
+attempt failed Chrome startup before assertions; one unchanged-source failed-job
+rerun passed, no tests disabled. Isolated PostgreSQL replay40626782850 SUCCESS.
+Exact-live release suite17/17, including budget fail-closed and batch guards.
+Git push lacked HTTPS credentials; published through connected GitHub blobs/tree/
+commit APIs, then fetched and confirmed remote/local tree equality. No main merge.
+
+Fresh predeploy get_edge_function confirmed all6files/hash/JWT identical to v74.
+Released ONLY narrow failure classifier/allowlist/dispatch block as generationv75
+ACTIVE bundle8023df3e0ea2fa5742a82d54a99a38fd32e0bb99fece3ffeee81a96a3addc8e4.
+Readback matches all6submitted files byte-for-byte, JWT gateway false unchanged;
+explicit auth remains. Live production and exact preview OPTIONS204/allowed,
+untrusted204/no CORS allowance; anonymousPOST401 UNAUTHENTICATED. Both Glass Love
+batches rechecked paused. Existing budget flag value UNKNOWN/unchanged; no inference,
+paid fallback, phone workload, creative data mutation, approvals or worker deployment.
+New frontend recovery copy SOURCE ONLY; canonical frontend290e30c6 unchanged.
+
+Discovered separate draftPR162 preflight candidatee03c8c9 (not deployed), also based
+onv74. Did not edit its branch or import it; regenerate its exact-live candidate
+againstv75 before release to preserve this repair. HF job-list tool returned
+UNAVAILABLE, so credits/dedicated GPU remain unverified. Owner-authenticated new
+image failure/recovery and final MP4 workflow remain NOT VERIFIED. Rollback and
+source receipts in image-failures/README.md. Next single objective: atomic server
+capacity reservations and explicit approved provider selection, keeping inference
+disabled until actual budget/access verification. No full image-capacity solution
+or sustainable60-image free allowance claimed.

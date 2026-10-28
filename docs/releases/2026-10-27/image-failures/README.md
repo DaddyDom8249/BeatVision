@@ -71,3 +71,34 @@ unverified. Do not enable the budget flag based on these tests.
 References: [Cloudflare errors](https://developers.cloudflare.com/workers-ai/platform/errors/),
 [pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/),
 [model metadata](https://huggingface.co/black-forest-labs/FLUX.1-schnell).
+
+## Released backend receipt
+
+Source `9155e7a64bf3ff2c5a44d5903d033edfd12bc985`, draft [PR #163](https://github.com/DaddyDom8249/BeatVision/pull/163),
+exact tree `15b5120fbaf1108ac0b877d7c227b1ed420ec87a` matched the tested local tree.
+[Production CI](https://github.com/DaddyDom8249/BeatVision/actions/runs/40626782799)
+passes 623/623, zero failures/skips, dependency audit, snapshot verification,
+production audit and build. First attempt failed only Chrome startup before UI
+assertions; one unchanged-source failed-job rerun passed. No test was disabled.
+[Isolated PostgreSQL replay](https://github.com/DaddyDom8249/BeatVision/actions/runs/40626782850)
+passed separately. Exact-live offline release suite: 17/17.
+
+Immediately before release all six v74 files and JWT setting were rechecked.
+Released generation **v75 ACTIVE**, bundle
+`8023df3e0ea2fa5742a82d54a99a38fd32e0bb99fece3ffeee81a96a3addc8e4`.
+All six retrieved files equal the submitted candidate/helpers byte-for-byte;
+`verify_jwt=false` preserved with existing explicit authentication.
+Live OPTIONS: production origin 204/allowed, exact Director preview 204/allowed,
+untrusted origin 204/no allowance. Anonymous POST returned 401/UNAUTHENTICATED.
+Glass Love image and motion batches remain paused. No inference or creative writes.
+
+The canonical frontend remains at `290e30c6`; the new friendly UI messages are
+**not deployed**. Real owner-authenticated image failure/recovery remains unverified.
+The budget flag value was not inspected or changed.
+
+Separate draft PR #162 contains image-budget preflight work and an undeployed v74
+candidate. That candidate now requires regeneration against v75 before deployment,
+so it cannot overwrite this repair. PR #162 and its branch were not modified.
+HF job-list lookup returned tool UNAVAILABLE; no credit/GPU evidence was obtained.
+No alternative image provider is enabled. Next objective: atomic capacity
+reservations plus explicit approved provider selection before image dispatch.
