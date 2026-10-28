@@ -156,3 +156,18 @@ test('missing returned provider ID is reconciliation-required, not a terminal fa
   assert.match(path, /reconciliation_required: true/);
   assert.doesNotMatch(path, /setFailed\(/);
 });
+
+test('unknown provider HTTP acceptance is nonterminal and cannot trigger duplicate dispatch', async () => {
+  const { readFileSync } = await import('node:fs');
+  const source = readFileSync(new URL('../../supabase/functions/beatvision-generation/index.ts', import.meta.url), 'utf8');
+  const start = source.indexOf('const acceptanceUnknown =');
+  const end = source.indexOf('try { await setFailed(db, job.id', start);
+  assert.ok(start > 0 && end > start, 'uncertain submission handler must precede terminal failure');
+  const handler = source.slice(start, end);
+  assert.match(handler, /HF_SUBMISSION_ACCEPTANCE_UNKNOWN/);
+  assert.match(handler, /MODAL_HTTP_TIMEOUT/);
+  assert.match(handler, /MODAL_HTTP_UNAVAILABLE/);
+  assert.match(handler, /reconciliation_required: true/);
+  assert.match(handler, /automatic_resubmission_disabled: true/);
+  assert.match(handler, /return marked.data/);
+});
