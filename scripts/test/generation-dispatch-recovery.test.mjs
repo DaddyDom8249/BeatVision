@@ -138,3 +138,21 @@ for (const status of ['submitted', 'processing']) test('already flagged unknown 
     assert.equal(f.state().writes, 0);
   } finally { await runtime.cleanup(); }
 });
+
+test('dispatch intent and actual provider receipt remain separate from immutable input', async () => {
+  const { readFileSync } = await import('node:fs');
+  const controller = readFileSync(new URL('../../supabase/functions/beatvision-generation/index.ts', import.meta.url), 'utf8');
+  assert.match(controller, /dispatch_intent: \{ request_id: requestId/);
+  assert.match(controller, /provider_receipt: \{ provider: job.provider, upstream_job_id: upstreamJobId/);
+  assert.doesNotMatch(controller, /input_snapshot\s*=\s*jsonb_set/);
+});
+test('missing returned provider ID is reconciliation-required, not a terminal failure', async () => {
+  const { readFileSync } = await import('node:fs');
+  const controller = readFileSync(new URL('../../supabase/functions/beatvision-generation/index.ts', import.meta.url), 'utf8');
+  const start = controller.indexOf('if (!upstreamJobId) {');
+  const end = controller.indexOf('} else {', start);
+  assert.ok(start > 0 && end > start);
+  const path = controller.slice(start, end);
+  assert.match(path, /reconciliation_required: true/);
+  assert.doesNotMatch(path, /setFailed\(/);
+});
