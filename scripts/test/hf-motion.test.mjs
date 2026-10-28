@@ -277,7 +277,7 @@ test('image completion rejects any provider outside pinned Cloudflare Free FLUX 
 
 test('stale provider work requires nonterminal reconciliation despite recent poll timestamp',async()=>{
  let job={id:'stale-job',job_type:'assembly',status:'processing',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),output:{upstream_job_id:'existing',dispatch_started_at:new Date(Date.now()-31*60*1000).toISOString()}};let calls=0;
- const db={from(){return {select(){return this},eq(){return this},in(){return this},update(row){job={...job,...row};return this},async single(){return{data:job}},then(resolve){return Promise.resolve({data:[{id:job.id}]}).then(resolve)}}}};
+ const db={from(){return {select(){return this},eq(){return this},in(){return this},update(row){job={...job,...row};return this},async maybeSingle(){return{data:job}},async single(){return{data:job}},then(resolve){return Promise.resolve({data:[{id:job.id}]}).then(resolve)}}}};
  const original=globalThis.fetch;const runtime=await loadGeneration(db);globalThis.fetch=async()=>{calls++;throw Error('unexpected network')};
  try{const result=await runtime.poll(db,job);assert.equal(result.status,'processing');assert.equal(result.output.reconciliation_required,true);assert.equal(result.output.reconciliation_reason,'PROVIDER_DEADLINE_EXCEEDED');assert.equal(result.output.upstream_job_id,'existing');assert.equal(calls,0)}finally{globalThis.fetch=original;await runtime.cleanup()}
 });
