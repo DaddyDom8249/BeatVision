@@ -4,8 +4,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase/client";
 import { approvalCandidates, approveBatch, type BatchKind, type BatchProgress } from "../../lib/batchProduction";
 import { getCreativeErrorMessage } from "../../lib/formatCreativeText";
-import { requireImageBudget, IMAGE_BUDGET_MESSAGE } from "../../lib/sceneImageBudget";
+
 import type { VisualPlanScene } from "../../types/visualPlan";
+
+const IMAGE_BUDGET_MESSAGE = "Scene image rendering is paused to protect Cloudflare neurons. Your saved images and motion remain available. No image generation was submitted.";
+
+async function requireImageBudget(projectId: string): Promise<void> {
+  const response = await supabase.functions.invoke("beatvision-generation", {
+    body: { action: "image_capability", projectId },
+  });
+  if (response.error || response.data?.image_generation_authorized !== true) {
+    throw new Error(IMAGE_BUDGET_MESSAGE);
+  }
+}
 
 type Candidate = { scene: VisualPlanScene; asset: any; url: string; selected: boolean; previewError: boolean };
 export default function BatchProductionPanel({ projectId, planId, scenes, disabled, onBusy, onRefresh }:

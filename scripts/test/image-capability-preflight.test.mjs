@@ -7,7 +7,6 @@ const read = path => readFile(new URL(path, base), "utf8");
 const baseline = await read("docs/releases/2026-10-27/neurons/beatvision-generation/live-v73-budget-guard.ts");
 const latest = await read("docs/releases/2026-10-27/neurons/beatvision-generation/live-v74-image-capability.ts");
 const feature = await read("supabase/functions/beatvision-generation/index.ts");
-const helper = await read("src/lib/sceneImageBudget.ts");
 const batch = await read("src/components/production/BatchProductionPanel.tsx");
 const page = await read("src/pages/ProductionWorkspacePage.tsx");
 test("capability action is owner scoped and does not call provider",()=>{
@@ -23,8 +22,8 @@ test("capability action is owner scoped and does not call provider",()=>{
   assert.equal(normalize(latest),baseline);
 });
 test("both individual and batch image paths perform preflight before writes",()=>{
-  assert.ok(helper.includes('image_generation_authorized !== true'));
-  assert.ok(helper.includes('throw new Error(IMAGE_BUDGET_MESSAGE)'));
+  assert.ok(batch.includes('image_generation_authorized !== true'));
+  assert.ok(page.includes('throw new Error(IMAGE_BUDGET_MESSAGE)'));
   assert.ok(batch.indexOf('if (kind === "image") await requireImageBudget(projectId)') < batch.indexOf('supabase.rpc("start_generation_batch"'));
   assert.ok(batch.includes('if (batch.kind === "image" && !paused) await requireImageBudget(projectId)'));
   assert.ok(batch.includes('!imageAuthorized'));
