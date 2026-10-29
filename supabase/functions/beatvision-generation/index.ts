@@ -594,6 +594,14 @@ async function modalBridgeSubmit(db: any,job: any) {
   const payload={project_id:job.project_id,scene_id:job.visual_plan_scene_id,
     source_image_id:frozen.source_image_id,generation_job_id:job.id,
     image_sha256:await sha256Hex(bytes),prompt,seed:parseInt(job.id.replace(/-/g,"").slice(0,7),16)||42};
+  // Persist source provenance before the external submission: the provider may
+  // accept the job even if the HTTP reply is lost before receipt persistence.
+  const recorded = await db.from("generation_jobs").update({output: {
+    ...(job.output || {}),
+    modal_source_sha256: payload.image_sha256,
+  }}).eq("id",job.id).eq("status","processing").select("id").maybeSingle();
+  if(recorded.error || !recorded.data) throw new ModalMotionError("MODAL_SOURCE_PROVENANCE_PERSIST_FAILED");
+  job.output = {...(job.output || {}), modal_source_sha256: payload.image_sha256};
   const data=await submitModalMotion(payload,bytes);
   return {response:new Response(null,{status:200}),data};
 }
@@ -604,7 +612,7 @@ async function modalBridgePoll(db: any,job: any) {
   if(manifest.project_id!==job.project_id || manifest.scene_id!==job.visual_plan_scene_id ||
       manifest.generation_job_id!==job.id ||
       manifest.source_image_id!==job.input_snapshot?.modal_motion?.source_image_id ||
-      manifest.source_sha256!==job.output?.arena_response?.source_sha256 ||
+      manifest.source_sha256!==(job.output?.modal_source_sha256 || job.output?.arena_response?.source_sha256) ||
       manifest.video_sha256!==await sha256Hex(result.video) ||
       manifest.model!==MODAL_MOTION.model || manifest.revision!==MODAL_MOTION.revision ||
       manifest.creator_approved!==false)
