@@ -43,8 +43,12 @@ def verify(base):
     receipt_ids = {body.get("job_id") for status, body in results if status == 200}
     if not all(status in (200, 202) for status in statuses):
         raise AssertionError(f"Unacceptable statuses: {statuses}")
-    if len(receipt_ids) != 1 or statuses.count(200) != 1:
-        raise AssertionError(f"Expected one successful reservation and one receipt; statuses={statuses}, receipts={receipt_ids}")
+    # Duplicate submissions may return the already-persisted receipt with 200.
+    # Execution uniqueness is proved by the event count below, not HTTP counts.
+    if (len(receipt_ids) != 1 or
+            any(not isinstance(receipt, str) or not receipt.startswith("fc-staging-")
+                for receipt in receipt_ids)):
+        raise AssertionError(f"Expected one shared staging receipt; statuses={statuses}, receipts={receipt_ids}")
     container_ids = [body.get("container_id") for status, body in results if status in (200,202,409)]
     if not container_ids or any(not isinstance(cid,str) or not cid.startswith("ta-") for cid in container_ids):
         raise AssertionError("Missing or invalid Modal container identity in staging responses")
