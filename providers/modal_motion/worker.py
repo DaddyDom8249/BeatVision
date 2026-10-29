@@ -169,6 +169,7 @@ def motion_api():
             validated = MotionRequest(**payload)
             validate_request(validated, source)
             key = str(uuid.UUID(validated.generation_job_id))
+            payload = {**payload, 'generation_job_id': key}
             fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
             reservation = {'fingerprint': fingerprint, 'state': 'receipt_unknown'}
             if not receipts.put(key, reservation, skip_if_exists=True):
