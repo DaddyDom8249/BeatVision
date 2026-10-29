@@ -20,11 +20,16 @@ class ContentionProbeTests(unittest.TestCase):
         response = MagicMock()
         response.__enter__.return_value.read.return_value = json.dumps(
             {'reserved': True, 'fake_spawn_events': spawn_events}).encode()
-        with patch.dict(probe.os.environ, {'MODAL_TOKEN_ID': 'fixture', 'MODAL_TOKEN_SECRET': 'fixture'}), \
+        with patch.dict(probe.os.environ, {'MODAL_TOKEN_ID': 'fixture', 'MODAL_TOKEN_SECRET': 'fixture', 'MODAL_STAGING_ORIGIN': 'https://fixture-staging.modal.run'}), \
                 patch.object(probe.concurrent.futures, 'ProcessPoolExecutor', return_value=pool), \
-                patch.object(probe.urllib.request, 'urlopen', return_value=response), \
+                patch.object(probe.OPENER, 'open', return_value=response), \
                 contextlib.redirect_stdout(io.StringIO()):
             probe.verify('https://fixture-staging.modal.run')
+
+    def test_rejects_unapproved_staging_url_before_network(self):
+        with patch.dict(probe.os.environ, {'MODAL_STAGING_ORIGIN': 'https://fixture-staging.modal.run'}):
+            with self.assertRaises(SystemExit):
+                probe.verify('https://fixture-staging.modal.run.attacker.example')
 
     def results(self):
         return [(200, {'job_id': 'fc-staging-same', 'container_id': f'ta-{i % 2}'}) for i in range(20)]
