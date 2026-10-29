@@ -5,6 +5,7 @@ Requires a dedicated Modal environment; does not use production Dict names.
 """
 import hashlib
 import json
+import os
 import re
 import uuid
 
@@ -27,6 +28,7 @@ def staging_api():
     reservations = modal.Dict.from_name(RESERVATIONS, create_if_missing=True)
     events = modal.Dict.from_name(SPAWN_EVENTS, create_if_missing=True)
     web = fastapi.FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+    container_id = os.environ.get("MODAL_TASK_ID")
 
     @web.post("/submit")
     async def submit(request: fastapi.Request):
@@ -48,10 +50,10 @@ def staging_api():
         if not acquired:
             existing = reservations.get(job_id)
             if not isinstance(existing, dict) or existing.get("fingerprint") != fingerprint:
-                return JSONResponse({"error": "FINGERPRINT_CONFLICT"}, status_code=409)
+                return JSONResponse({"error": "FINGERPRINT_CONFLICT", "container_id": container_id}, status_code=409)
             if existing.get("job_id"):
-                return {"status": "processing", "job_id": existing["job_id"]}
-            return JSONResponse({"status": "reconciliation_required"}, status_code=202)
+                return {"status": "processing", "job_id": existing["job_id"], "container_id": container_id}
+            return JSONResponse({"status": "reconciliation_required", "container_id": container_id}, status_code=202)
 
         # No Modal GPU worker is imported or invoked here.
         # Unique event keys avoid lossy read-modify-write counters.
@@ -59,7 +61,7 @@ def staging_api():
         events.put(job_id + ":" + event_id, {"job_id": job_id}, skip_if_exists=True)
         receipt = "fc-staging-" + uuid.uuid4().hex
         reservations.put(job_id, {"fingerprint": fingerprint, "state": "accepted", "job_id": receipt})
-        return {"status": "processing", "job_id": receipt}
+        return {"status": "processing", "job_id": receipt, "container_id": container_id}
 
     @web.get("/verify/{job_id}")
     async def verify(job_id: str):
