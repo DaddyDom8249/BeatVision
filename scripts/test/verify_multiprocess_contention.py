@@ -10,14 +10,23 @@ import json
 import os
 import sys
 import urllib.request
+import urllib.parse
 import uuid
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+OPENER = urllib.request.build_opener(NoRedirect)
 
 
 def request_one(args):
     url, body, headers = args
     req = urllib.request.Request(url, data=body, headers=headers, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=45) as response:
+        with OPENER.open(req, timeout=45) as response:
             return response.status, json.loads(response.read())
     except urllib.error.HTTPError as exc:
         try: return exc.code, json.loads(exc.read())
@@ -27,8 +36,10 @@ def request_one(args):
 
 
 def verify(base):
-    if not base.startswith("https://") or "staging" not in base:
-        raise SystemExit("Refusing non-HTTPS or non-staging target")
+    expected = os.environ.get("MODAL_STAGING_ORIGIN", "").rstrip("/")
+    parsed = urllib.parse.urlsplit(base.rstrip("/"))
+    if not expected or parsed.scheme != "https" or not parsed.netloc or parsed.path or parsed.query or parsed.fragment or base.rstrip("/") != expected:
+        raise SystemExit("Refusing URL other than exact configured MODAL_STAGING_ORIGIN")
     token_id = os.environ.get("MODAL_TOKEN_ID")
     token_secret = os.environ.get("MODAL_TOKEN_SECRET")
     if not token_id or not token_secret:
@@ -59,7 +70,7 @@ def verify(base):
         base.rstrip("/") + "/verify/" + job_id,
         headers={"Modal-Key": token_id, "Modal-Secret": token_secret},
     )
-    with urllib.request.urlopen(verify_req, timeout=30) as response:
+    with OPENER.open(verify_req, timeout=30) as response:
         summary = json.loads(response.read())
     assert summary["reserved"] is True, summary
     assert summary["fake_spawn_events"] == 1, summary
