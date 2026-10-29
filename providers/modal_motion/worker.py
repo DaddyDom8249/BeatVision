@@ -167,7 +167,7 @@ def motion_api():
             require_execution_authorization(ack, 'true')
             validated = MotionRequest(**payload)
             validate_request(validated, source)
-            key = validated.generation_job_id
+            key = str(uuid.UUID(validated.generation_job_id))
             fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
             reservation = {'fingerprint': fingerprint, 'state': 'receipt_unknown'}
             if not receipts.put(key, reservation, skip_if_exists=True):
@@ -192,7 +192,7 @@ def motion_api():
     async def receipt(generation_job_id: str):
         if not re.fullmatch(r'[0-9a-fA-F-]{36}', generation_job_id):
             return JSONResponse({'error': 'MODAL_REQUEST_ID_INVALID'}, status_code=400)
-        existing = receipts.get(generation_job_id)
+        existing = receipts.get(str(uuid.UUID(generation_job_id)))
         if not isinstance(existing, dict):
             return JSONResponse({'status': 'not_found', 'receipt_known': False}, status_code=404)
         call_id = existing.get('job_id')
