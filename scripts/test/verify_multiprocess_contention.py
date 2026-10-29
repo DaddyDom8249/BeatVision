@@ -43,8 +43,14 @@ def verify(base):
     receipt_ids = {body.get("job_id") for status, body in results if status == 200}
     if not all(status in (200, 202) for status in statuses):
         raise AssertionError(f"Unacceptable statuses: {statuses}")
-    if len(receipt_ids) != 1:
-        raise AssertionError(f"Expected one receipt, found {receipt_ids}")
+    if len(receipt_ids) != 1 or statuses.count(200) != 1:
+        raise AssertionError(f"Expected one successful reservation and one receipt; statuses={statuses}, receipts={receipt_ids}")
+    container_ids = [body.get("container_id") for status, body in results if status in (200,202,409)]
+    if not container_ids or any(not isinstance(cid,str) or not cid.startswith("ta-") for cid in container_ids):
+        raise AssertionError("Missing or invalid Modal container identity in staging responses")
+    unique_containers = set(container_ids)
+    if len(unique_containers) < 2:
+        raise AssertionError("Only one Modal container handled the burst; cross-container isolation unverified")
     verify_req = urllib.request.Request(
         base.rstrip("/") + "/verify/" + job_id,
         headers={"Modal-Key": token_id, "Modal-Secret": token_secret},
@@ -55,7 +61,7 @@ def verify(base):
     assert summary["fake_spawn_events"] == 1, summary
     print(json.dumps({"status": "PASS", "requests": len(results),
                       "fake_spawn_events": summary["fake_spawn_events"],
-                      "receipt_count": len(receipt_ids), "http_statuses": statuses}))
+                      "receipt_count": len(receipt_ids), "unique_containers": len(unique_containers), "http_statuses": statuses}))
 
 
 if __name__ == "__main__":
