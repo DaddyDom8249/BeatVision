@@ -101,6 +101,20 @@ class SubmissionConcurrencyTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(all(r.json().get('job_id') == 'fc-existing123'
                             or r.json().get('status') == 'reconciliation_required' for r in responses))
 
+    async def test_equivalent_uuid_text_reserves_one_job(self):
+        canonical = str(uuid.UUID(int=4))
+        upper = canonical.upper()
+        compact = canonical.replace('-', '')
+        responses = [await self.request(body(generation_job_id=value))
+                     for value in (canonical, upper, compact)]
+        # The contract only permits UUID text with hyphens; uppercase and
+        # lowercase representations share one atomic reservation.
+        self.assertEqual(responses[0].status_code, 200)
+        self.assertEqual(responses[1].status_code, 200)
+        self.assertEqual(responses[2].status_code, 400)
+        self.assertEqual(self.spawn.call_count, 1)
+        self.assertEqual(len(self.store.store), 1)
+
     async def test_conflicting_fingerprint_is_409(self):
         first = await self.request(body())
         second = await self.request(body(prompt='A different approved creative direction here.'))
