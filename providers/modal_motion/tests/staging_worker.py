@@ -20,6 +20,7 @@ UUID_RE = re.compile(r"^[0-9a-fA-F-]{36}$")
 @app.function(image=web_image, max_containers=20, timeout=60, min_containers=0)
 @modal.asgi_app(requires_proxy_auth=True)
 def staging_api():
+    global fastapi
     import fastapi
     from fastapi.responses import JSONResponse
 
