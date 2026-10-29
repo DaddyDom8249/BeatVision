@@ -130,6 +130,21 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [motionAssetJob, setMotionAssetJob] = useState<any>(null);
   const [assetLoading, setAssetLoading] = useState(false);
   const [motionTermsAccepted, setMotionTermsAccepted] = useState(false);
+  const [motionProvider, setMotionProvider] = useState<"huggingface" | "modal">("huggingface");
+  const [modalAvailable, setModalAvailable] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    setModalAvailable(false);
+    setMotionProvider("huggingface");
+    if (!projectId) return;
+    void supabase.functions.invoke("beatvision-generation", {
+      body: { action: "modal_capability", projectId },
+    }).then(({ data, error }) => {
+      if (!cancelled && !error) setModalAvailable(data?.modal_supported === true && data?.modal_available === true);
+    }).catch(() => { /* Fail closed: HF stays selected; Modal remains unavailable. */ });
+    return () => { cancelled = true; };
+  }, [projectId]);
+
   const scene = scenes[selectedIndex] ?? null;
   const selectedSceneId = useRef<string | undefined>(scene?.id);
   selectedSceneId.current = scene?.id;
@@ -373,7 +388,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
         const queued = type === "assembly"
           ? await supabase.rpc("enqueue_assembly_generation", { p_project_id: projectId, p_visual_plan_id: plan.id })
           : type === "scene_motion"
-            ? await supabase.functions.invoke("beatvision-generation", { body: { action: "enqueue_ai_motion", projectId, sceneId, sourceImageId: image?.id, requestId: attemptId.current, acceptedTerms: motionTermsAccepted } })
+            ? await supabase.functions.invoke("beatvision-generation", { body: { action: "enqueue_ai_motion", projectId, sceneId, sourceImageId: image?.id, requestId: attemptId.current, acceptedTerms: motionTermsAccepted, provider: motionProvider } })
             : await supabase.rpc("enqueue_scene_image_variant", { p_project_id: projectId, p_scene_id: sceneId, p_request_id: attemptId.current });
         if (queued.error) throw queued.error;
         job = type === "scene_motion" ? queued.data?.job : queued.data;
@@ -678,7 +693,13 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             </p>}
             <div className="production-actions">
               {!pending(motionJob) && <label><input type="checkbox" checked={motionTermsAccepted} onChange={event => setMotionTermsAccepted(event.target.checked)} /> I agree to the <a href="https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt" target="_blank" rel="noreferrer">LTX model license and use restrictions</a>, including AI disclosure.</label>}
-              {!pending(motionJob) && <p>Generate a 2-second AI motion preview. Existing approved clips remain saved; this preview is not full-scene coverage.</p>}
+              {!pending(motionJob) && <label>Motion provider
+                <select aria-label="Motion provider" value={motionProvider} onChange={event => { setMotionProvider(event.target.value === "modal" && modalAvailable ? "modal" : "huggingface"); setMotionTermsAccepted(false); }}>
+                  <option value="huggingface">Hugging Face — free LTX preview</option>
+                  {modalAvailable && <option value="modal">Modal GPU — LTX motion proof (budget-verified)</option>}
+                </select>
+              </label>}
+              {!pending(motionJob) && <p>{motionProvider === "modal" ? "Modal motion proof: explicit creator initiation only. Server-side GPU and budget gates remain mandatory." : "Generate a 2-second AI motion preview. Existing approved clips remain saved; this preview is not full-scene coverage."}</p>}
               {!pending(motionJob) && <button className="primary-button" disabled={busy || image?.status !== "approved" || !motionTermsAccepted} onClick={() => void generateMotion()}>{motionGenerating ? "Starting Motion…" : "Generate Motion"}</button>}
               {pending(motionJob) && <button className="secondary-button" disabled={busy} onClick={() => void checkMotionStatus()}>{motionGenerating ? "Checking…" : "Check Motion Status"}</button>}
               {motion?.status === "generated" && <button className="secondary-button" onClick={() => void approveMotion()}>Approve Motion</button>}
