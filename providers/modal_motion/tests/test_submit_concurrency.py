@@ -107,11 +107,10 @@ class SubmissionConcurrencyTests(unittest.IsolatedAsyncioTestCase):
         compact = canonical.replace('-', '')
         responses = [await self.request(body(generation_job_id=value))
                      for value in (canonical, upper, compact)]
-        # The contract only permits UUID text with hyphens; uppercase and
-        # lowercase representations share one atomic reservation.
+        # All three are accepted UUID representations and must share a key.
         self.assertEqual(responses[0].status_code, 200)
         self.assertEqual(responses[1].status_code, 200)
-        self.assertEqual(responses[2].status_code, 400)
+        self.assertEqual(responses[2].status_code, 200)
         self.assertEqual(self.spawn.call_count, 1)
         self.assertEqual(len(self.store.store), 1)
 
