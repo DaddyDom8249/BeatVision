@@ -12,6 +12,7 @@ is made during import, code inspection, compile, tests, or dry-run.
 from __future__ import annotations
 
 import hashlib
+import uuid
 import io
 import os
 from pathlib import Path
