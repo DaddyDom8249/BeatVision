@@ -132,18 +132,18 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
   const [motionTermsAccepted, setMotionTermsAccepted] = useState(false);
   const [motionProvider, setMotionProvider] = useState<"huggingface" | "modal">("huggingface");
   const [modalAvailable, setModalAvailable] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
+  async function checkModalAvailability() {
     setModalAvailable(false);
     setMotionProvider("huggingface");
-    if (!projectId) return;
-    void supabase.functions.invoke("beatvision-generation", {
-      body: { action: "modal_capability", projectId },
-    }).then(({ data, error }) => {
-      if (!cancelled && !error) setModalAvailable(data?.modal_supported === true && data?.modal_available === true);
-    }).catch(() => { /* Fail closed: HF stays selected; Modal remains unavailable. */ });
-    return () => { cancelled = true; };
-  }, [projectId]);
+    try {
+      const { data, error } = await supabase.functions.invoke("beatvision-generation", {
+        body: { action: "modal_capability", projectId },
+      });
+      if (error || data?.modal_available !== true || data?.modal_supported !== true)
+        throw new Error("Modal is not available or GPU budget verification is incomplete.");
+      setModalAvailable(true);
+    } catch (reason) { setError(productionErrorMessage(reason)); }
+  }
 
   const scene = scenes[selectedIndex] ?? null;
   const selectedSceneId = useRef<string | undefined>(scene?.id);
@@ -693,6 +693,7 @@ export default function ProductionWorkspacePage({ projectId }: { projectId: stri
             </p>}
             <div className="production-actions">
               {!pending(motionJob) && <label><input type="checkbox" checked={motionTermsAccepted} onChange={event => setMotionTermsAccepted(event.target.checked)} /> I agree to the <a href="https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt" target="_blank" rel="noreferrer">LTX model license and use restrictions</a>, including AI disclosure.</label>}
+              {!pending(motionJob) && !modalAvailable && <button className="secondary-button" disabled={busy} onClick={() => void checkModalAvailability()}>Check Modal availability</button>}
               {!pending(motionJob) && <label>Motion provider
                 <select aria-label="Motion provider" value={motionProvider} onChange={event => { setMotionProvider(event.target.value === "modal" && modalAvailable ? "modal" : "huggingface"); setMotionTermsAccepted(false); }}>
                   <option value="huggingface">Hugging Face — free LTX preview</option>
