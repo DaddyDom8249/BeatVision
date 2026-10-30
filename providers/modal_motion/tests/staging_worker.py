@@ -1,4 +1,7 @@
-"""CPU-only Modal contention staging app. Never import production GPU worker.
+"""LEGACY DICT-ONLY CPU contention app. Never protocol-2 verification.
+
+Use providers.modal_motion.staging for the shared PostgreSQL protocol probe.
+Never import production GPU worker.
 
 Deployment is an explicit, separate operator action and can incur CPU costs.
 Requires a dedicated Modal environment; does not use production Dict names.

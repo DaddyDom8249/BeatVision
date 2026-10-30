@@ -156,3 +156,64 @@ Current GitHub head at preparation: `fe2036ca50e150b7ffe8b4aab6706202f2979c1f`, 
 7. Keep the PR draft and block GPU inference until the actual staging protocol-2 checks pass, old worker shutdown is independently confirmed and a separate spend-limited GPU test is authorized.
 
 **Readiness classification:** CI VERIFIED; protocol-2 staging NOT BUILT/NOT EXECUTED; production migration ABSENT; old workers NOT INSPECTED; GPU/Android output NOT VERIFIED.
+
+## Protocol-2 CPU runner — implemented and locally tested 2026-10-30
+
+Continued from confirmed remote43ab6eb5e096da2fde02ca7adb2dc766a930bae0; its only
+change since fe2036c was the19-line checklist above. Main remains3e26d855. No
+production service or database was queried or changed in this implementation.
+
+The shared dependency-free `protocol.py` now contains the existing worker's
+reserve/receipt/begin/lookup functions. Production wrappers inject the same
+store, spawn callable and actual Modal identity. An executed AST comparison
+against43ab6eb confirmed all four function bodies are identical after the
+dependency/name substitutions. Existing runtime concurrency/crash tests remain
+enabled. Source-location guards were updated to follow the extracted module;
+new behavioral wrapper tests verify dependency wiring.
+
+`providers/modal_motion/staging.py` provides an authenticated CPU-only ASGI app
+using those exact functions and `PostgresReceiptStore`. It imports no Modal SDK,
+GPU worker or model code. Its inline synthetic call is explicitly labeled and
+never produces media or completes generation jobs. Separate staging settings,
+canonical origin allowlisting/production denial, a fixture-only database marker
+and prepared-job allowlist fail closed before admission. There is no production
+credential fallback, HTTP fault control or ledger reset.
+
+The staging database/event RPC lives in `scripts/test/sql/protocol2-staging-fixture.sql`,
+outside production migrations. Append-only per-attempt UUID events count every
+synthetic spawn/model start. A deliberate duplicate-event counterexample proves
+counting cannot mask duplicate work. Legacy Dict app/probe remain clearly labeled;
+legacy PASS now includes `protocol2_verified:false` (red regression reproduced
+the previously missing label, exit1, then passed).
+
+Verification, exact commands and changed files are in PROJECT_LOG.md:
+
+- **421/421 Node and 78/78 Python**, zero skipped, exit0. Audit, TypeScript/Vite build,
+  Python compilation and diff checks exit0; existing bundle warning remains.
+- 20 independent CPU ASGI worker/client processes against actual PostgreSQL16
+  produced one synthetic spawn and one fake model start. Six crash/lost-reply
+  boundaries,100-year retention, conflicting fingerprints, forged ownership,
+  unprepared jobs and role denial passed. Application jobs remain processing.
+- Actual database outage failed closed before reservation. Stop/start and a full
+  `pg_dump`/`pg_restore` into a second isolated database retained all eight fixture
+  jobs and added zero attempts/starts on retry. One job deliberately retains a
+  second model-start event as the negative oracle; it is not a healthy execution.
+- Independent review found a raw-string production-origin denial bypass through
+  uppercase hostnames/explicit443. The executed red test failed3variants; strict
+  validated canonical-origin comparison fixed it and the regression passed.
+
+The psql opener exercises real production JSON/auth headers, response validation
+and service-role RPCs, not actual HTTPS/PostgREST. Local process IDs do not prove
+Modal container identity. `after_receipt` interrupts the execution-side convenience
+receipt write before fake model start; inline fake execution cannot prove
+asynchronous provider/caller scheduling. Lost history and provider-boundary
+atomicity remain unresolved; no exactly-once or completion claim is made.
+
+Current classification: runner **IMPLEMENTED / LOCAL CPU TESTED**; deployment,
+live PostgREST, real Modal two-container recovery, old-worker shutdown and staging
+cost approval **NOT VERIFIED**. The earlier production-migration absence is a
+historical read-only finding, not rechecked here. GPU/Android and production
+remain NOT VERIFIED. See [runner guide](../../providers/modal_motion/STAGING_PROTOCOL2.md)
+for setup and evidence limits. Next: review cost and isolated platform packaging,
+then obtain authorization for actual authenticated staging transport/container
+verification. Keep draft; no merge, deployment, real provider call or spending.

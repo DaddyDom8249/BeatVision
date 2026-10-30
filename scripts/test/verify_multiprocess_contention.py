@@ -1,4 +1,6 @@
-"""Operator-only CPU staging contention probe. NEVER run against production.
+"""LEGACY DICT-ONLY contention probe; does not verify PostgreSQL protocol2.
+
+Operator-only CPU staging probe. NEVER run against production.
 
 Usage:
   MODAL_TOKEN_ID=... MODAL_TOKEN_SECRET=... python scripts/test/verify_multiprocess_contention.py https://staging-host.modal.run
@@ -74,7 +76,7 @@ def verify(base):
         summary = json.loads(response.read())
     assert summary["reserved"] is True, summary
     assert summary["fake_spawn_events"] == 1, summary
-    print(json.dumps({"status": "PASS", "requests": len(results),
+    print(json.dumps({"status": "PASS", "protocol":"legacy_dict", "protocol2_verified":False, "requests": len(results),
                       "fake_spawn_events": summary["fake_spawn_events"],
                       "receipt_count": len(receipt_ids), "unique_containers": len(unique_containers), "http_statuses": statuses}))
 

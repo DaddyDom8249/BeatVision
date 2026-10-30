@@ -23,8 +23,9 @@ class ContentionProbeTests(unittest.TestCase):
         with patch.dict(probe.os.environ, {'MODAL_TOKEN_ID': 'fixture', 'MODAL_TOKEN_SECRET': 'fixture', 'MODAL_STAGING_ORIGIN': 'https://fixture-staging.modal.run'}), \
                 patch.object(probe.concurrent.futures, 'ProcessPoolExecutor', return_value=pool), \
                 patch.object(probe.OPENER, 'open', return_value=response), \
-                contextlib.redirect_stdout(io.StringIO()):
+                contextlib.redirect_stdout(io.StringIO()) as captured:
             probe.verify('https://fixture-staging.modal.run')
+        return json.loads(captured.getvalue())
 
     def test_rejects_unapproved_staging_url_before_network(self):
         with patch.dict(probe.os.environ, {'MODAL_STAGING_ORIGIN': 'https://fixture-staging.modal.run'}):
@@ -65,3 +66,8 @@ class ContentionProbeTests(unittest.TestCase):
             body['container_id'] = 'ta-same'
         with self.assertRaises(AssertionError):
             self.run_probe(results)
+
+    def test_legacy_pass_cannot_be_mistaken_for_protocol2_verification(self):
+        result=self.run_probe(self.results())
+        self.assertEqual(result.get('protocol'),'legacy_dict')
+        self.assertIs(result.get('protocol2_verified'),False)

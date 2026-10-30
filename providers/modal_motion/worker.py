@@ -25,6 +25,7 @@ from providers.modal_motion.contracts import (
     manifest_json, require_execution_authorization, validate_request,
 )
 from providers.modal_motion.admission import PostgresReceiptStore
+from providers.modal_motion import protocol as admission_protocol
 
 # Modal SDK is only needed when running "modal run" or deploying this file.
 import modal
@@ -135,112 +136,21 @@ def _submission_receipts():
 
 
 def _request_fingerprint(payload: dict):
-    normalized = {**payload, 'generation_job_id': str(uuid.UUID(payload['generation_job_id']))}
-    normalized.pop('admission_token', None)
-    return hashlib.sha256(json.dumps(normalized, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+    return admission_protocol.request_fingerprint(payload)
 
 
 def _publish_execution_receipt(payload: dict):
-    """Recover a lost caller reply once the reserved execution actually starts.
-
-    PostgreSQL admission never expires or re-grants an existing claim. This
-    still does not make the database/provider boundary atomic or reclaimable.
-    """
-    key = str(uuid.UUID(payload['generation_job_id']))
-    fingerprint = _request_fingerprint(payload)
-    call_id = modal.current_function_call_id()
-    if not isinstance(call_id, str) or not re.fullmatch(r'fc-[A-Za-z0-9_-]+', call_id):
-        raise MotionContractError('MODAL_JOB_RECEIPT_INVALID')
-    receipts = _submission_receipts()
-    existing = receipts.get(key)
-    if existing and existing.get('legacy_hold'):
-        raise MotionContractError('MODAL_LEGACY_EXECUTION_UNCERTAIN')
-    if not isinstance(existing, dict) or existing.get('fingerprint') != fingerprint:
-        raise MotionContractError('MODAL_REQUEST_FINGERPRINT_CONFLICT')
-    if existing.get('job_id') not in (None, call_id):
-        raise MotionContractError('MODAL_EXECUTION_RECEIPT_CONFLICT')
-    token = payload.get('admission_token')
-    if not isinstance(token, str) or existing.get('admission_token') != token:
-        raise MotionContractError('MODAL_ADMISSION_TOKEN_INVALID')
-    execution = {'fingerprint': fingerprint, 'state': 'accepted', 'job_id': call_id, 'admission_token': token}
-    # Fence competing executions and same-call re-entry before model loading.
-    # The immutable claim itself contains the receipt, so interruption of the
-    # following convenience update cannot hide an already admitted call.
-    if not receipts.put('execution:' + key, execution, skip_if_exists=True):
-        raise MotionContractError('MODAL_EXECUTION_ALREADY_ADMITTED')
-    receipts.put(key, execution)
+    return admission_protocol.publish_execution_receipt(
+        payload, _submission_receipts, modal.current_function_call_id)
 
 
 def _submission_receipt(receipts, generation_job_id: str, fingerprint=None):
-    key = str(uuid.UUID(generation_job_id))
-    existing = receipts.get(key)
-    execution = receipts.get('execution:' + key)
-    if not isinstance(existing, dict) and isinstance(execution, dict):
-        existing = {'fingerprint': execution.get('fingerprint')}
-    if isinstance(existing, dict) and existing.get('legacy_hold'):
-        receipt = existing.get('job_id')
-        if isinstance(receipt, str) and re.fullmatch(r'fc-[A-Za-z0-9_-]+', receipt):
-            return {'status': 'processing', 'job_id': receipt}
-        return {'status': 'reconciliation_required', 'receipt_known': False}
-    if fingerprint is not None and (
-        not isinstance(existing, dict) or existing.get('fingerprint') != fingerprint
-    ):
-        raise MotionContractError('MODAL_REQUEST_FINGERPRINT_CONFLICT')
-    if not isinstance(existing, dict):
-        return {'status': 'not_found', 'receipt_known': False}
-    if not isinstance(existing.get('fingerprint'), str) or not re.fullmatch(r'[0-9a-f]{64}', existing['fingerprint']):
-        raise MotionContractError('MODAL_REQUEST_FINGERPRINT_CONFLICT')
-    receipt = existing.get('job_id')
-    if execution is not None:
-        if not isinstance(execution, dict) or execution.get('fingerprint') != existing.get('fingerprint'):
-            raise MotionContractError('MODAL_REQUEST_FINGERPRINT_CONFLICT')
-        execution_id = execution.get('job_id')
-        if not isinstance(execution_id, str) or not re.fullmatch(r'fc-[A-Za-z0-9_-]+', execution_id):
-            raise MotionContractError('MODAL_EXECUTION_RECEIPT_CONFLICT')
-        if receipt is not None and receipt != execution_id:
-            raise MotionContractError('MODAL_EXECUTION_RECEIPT_CONFLICT')
-        receipt = execution_id
-    if isinstance(receipt, str) and re.fullmatch(r'fc-[A-Za-z0-9_-]+', receipt):
-        return {'status': 'processing', 'job_id': receipt}
-    return {'status': 'reconciliation_required', 'receipt_known': False}
+    return admission_protocol.submission_receipt(receipts, generation_job_id, fingerprint)
 
 
 def _reserve_motion(payload: dict, source: bytes, ack: str):
-    """Shared CLI/HTTP admission. An uncertain reservation is never reclaimed.
-
-    This contains duplicates while the durable reservation exists; reservation,
-    provider acceptance and receipt persistence are still separate operations.
-    """
-    require_execution_authorization(ack, 'true')
-    if payload.get('admission_protocol') != 2:
-        raise MotionContractError('MODAL_ADMISSION_PROTOCOL_REQUIRED')
-    validated = MotionRequest(**payload)
-    validate_request(validated, source)
-    key = str(uuid.UUID(validated.generation_job_id))
-    payload = {**payload, 'generation_job_id': key}
-    payload.pop('admission_token', None)
-    fingerprint = _request_fingerprint(payload)
-    receipts = _submission_receipts()
-    token = str(uuid.uuid4())
-    reservation = {'fingerprint': fingerprint, 'state': 'receipt_unknown', 'admission_token': token, 'request': payload}
-    if not receipts.put(key, reservation, skip_if_exists=True):
-        return _submission_receipt(receipts, key, fingerprint)
-    # Consult the independent execution receipt before spawning. Neither
-    # PostgreSQL claim expires; a known execution must always win over submit.
-    retained = _submission_receipt(receipts, key, fingerprint)
-    if retained.get('job_id'):
-        return retained
-    # A crash before/after spawn or during receipt persistence leaves the hold
-    # intact. Neither entry point may infer that another execution is safe.
-    payload = {**payload, 'admission_token': token}
-    call = single_motion_proof.spawn(payload, source, ack)
-    if not re.fullmatch(r'fc-[A-Za-z0-9_-]+', call.object_id):
-        raise MotionContractError('MODAL_JOB_RECEIPT_INVALID')
-    observed = _submission_receipt(receipts, key, fingerprint)
-    if observed.get('job_id') not in (None, call.object_id):
-        raise MotionContractError('MODAL_EXECUTION_RECEIPT_CONFLICT')
-    receipts.put(key, {'fingerprint': fingerprint, 'state': 'accepted', 'job_id': call.object_id, 'admission_token': token})
-    return {'status': 'processing', 'job_id': call.object_id}
+    return admission_protocol.reserve_motion(
+        payload, source, ack, _submission_receipts, single_motion_proof.spawn)
 
 
 @app.function(

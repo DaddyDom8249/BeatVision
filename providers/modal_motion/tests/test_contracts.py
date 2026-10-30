@@ -89,7 +89,8 @@ class ContractTests(unittest.TestCase):
         source = (ROOT/'worker.py').read_text()
         self.assertIn("@web.post('/submit')", source)
         self.assertIn("@web.get('/poll/{call_id}')", source)
-        self.assertIn('single_motion_proof.spawn(payload, source, ack)', source)
+        self.assertIn('payload, source, ack, _submission_receipts, single_motion_proof.spawn', source)
+        self.assertIn('call = spawn(payload, source, ack)', (ROOT/'protocol.py').read_text())
         self.assertIn('call.get(timeout=0)', source)
 
 

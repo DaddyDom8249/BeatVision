@@ -1,5 +1,8 @@
 # Permanent admission protocol 2
 
+For the shared CPU-only probe and its explicit local/staging evidence limits,
+see [STAGING_PROTOCOL2.md](STAGING_PROTOCOL2.md). The old Dict harness is legacy-only.
+
 This worker remains gated research, not a production deployment. Import, compile,
 unit tests and CLI dry-run do not invoke inference. Do not run a real provider
 call, deploy, or assume free GPU/container compute from this guide.

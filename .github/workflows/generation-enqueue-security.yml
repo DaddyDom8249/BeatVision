@@ -68,3 +68,14 @@ jobs:
           python -m pip install 'fastapi>=0.115,<1' 'httpx>=0.27,<1'
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261030204115_durable_modal_admission.sql
           python scripts/test/verify_modal_admission.py
+      - name: Verify CPU-only protocol2 staging runner against isolated PostgreSQL
+        env:
+          BEATVISION_PROTOCOL2_TEST_ISOLATED: '1'
+        run: |
+          psql -v ON_ERROR_STOP=1 -f scripts/test/sql/protocol2-staging-fixture.sql
+          psql -v ON_ERROR_STOP=1 -c "insert into private.protocol2_staging_environment values(gen_random_uuid())"
+          python scripts/test/verify_protocol2_staging.py --psql '["psql"]'
+          pg_dump -Fc -f "$RUNNER_TEMP/protocol2-staging-fixture.dump"
+          createdb protocol2_staging_restored
+          pg_restore --exit-on-error --clean --if-exists -d protocol2_staging_restored "$RUNNER_TEMP/protocol2-staging-fixture.dump"
+          PGDATABASE=protocol2_staging_restored python scripts/test/verify_protocol2_staging.py --psql '["psql"]' --verify-existing

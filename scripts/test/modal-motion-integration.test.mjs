@@ -161,9 +161,11 @@ test('Modal receipt lookup never invokes submit and distinguishes known from unc
 });
 test('Modal worker reserves request atomically before spawn and refuses duplicate unknown submissions',()=>{
   const worker=readFileSync(new URL('../../providers/modal_motion/worker.py',import.meta.url),'utf8');
-  const reservation=worker.indexOf('receipts.put(key, reservation, skip_if_exists=True)');
-  const spawn=worker.indexOf('single_motion_proof.spawn(payload, source, ack)');
+  const protocol=readFileSync(new URL('../../providers/modal_motion/protocol.py',import.meta.url),'utf8');
+  const reservation=protocol.indexOf('receipts.put(key, reservation, skip_if_exists=True)');
+  const spawn=protocol.indexOf('call = spawn(payload, source, ack)');
   assert.ok(reservation>0 && spawn>reservation);
+  assert.match(worker,/admission_protocol\.reserve_motion\(\s*payload, source, ack, _submission_receipts, single_motion_proof\.spawn\)/);
   assert.match(worker,/return JSONResponse\(\{'status': 'reconciliation_required', 'receipt_known': False\}, status_code=202\)/);
   assert.match(worker,/@web.get\('\/receipt\/\{generation_job_id\}'\)/);
 });
