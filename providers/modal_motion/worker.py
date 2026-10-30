@@ -14,7 +14,9 @@ from __future__ import annotations
 import hashlib
 import uuid
 import io
+import json
 import os
+import re
 from pathlib import Path
 
 from providers.modal_motion.contracts import (
@@ -119,6 +121,49 @@ def single_motion_proof(payload: dict, image_bytes: bytes, ack: str) -> dict:
     return {'manifest': record, 'video': video_bytes}
 
 
+def _submission_receipts():
+    return modal.Dict.from_name('bragoraforge-modal-submissions-v1', create_if_missing=True)
+
+
+def _submission_receipt(receipts, generation_job_id: str, fingerprint=None):
+    existing = receipts.get(str(uuid.UUID(generation_job_id)))
+    if fingerprint is not None and (
+        not isinstance(existing, dict) or existing.get('fingerprint') != fingerprint
+    ):
+        raise MotionContractError('MODAL_REQUEST_FINGERPRINT_CONFLICT')
+    if not isinstance(existing, dict):
+        return {'status': 'not_found', 'receipt_known': False}
+    receipt = existing.get('job_id')
+    if isinstance(receipt, str) and re.fullmatch(r'fc-[A-Za-z0-9_-]+', receipt):
+        return {'status': 'processing', 'job_id': receipt}
+    return {'status': 'reconciliation_required', 'receipt_known': False}
+
+
+def _reserve_motion(payload: dict, source: bytes, ack: str):
+    """Shared CLI/HTTP admission. An uncertain reservation is never reclaimed.
+
+    This contains duplicates while the durable reservation exists; reservation,
+    provider acceptance and receipt persistence are still separate operations.
+    """
+    require_execution_authorization(ack, 'true')
+    validated = MotionRequest(**payload)
+    validate_request(validated, source)
+    key = str(uuid.UUID(validated.generation_job_id))
+    payload = {**payload, 'generation_job_id': key}
+    fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+    receipts = _submission_receipts()
+    reservation = {'fingerprint': fingerprint, 'state': 'receipt_unknown'}
+    if not receipts.put(key, reservation, skip_if_exists=True):
+        return _submission_receipt(receipts, key, fingerprint)
+    # A crash before/after spawn or during receipt persistence leaves the hold
+    # intact. Neither entry point may infer that another execution is safe.
+    call = single_motion_proof.spawn(payload, source, ack)
+    if not re.fullmatch(r'fc-[A-Za-z0-9_-]+', call.object_id):
+        raise MotionContractError('MODAL_JOB_RECEIPT_INVALID')
+    receipts.put(key, {'fingerprint': fingerprint, 'state': 'accepted', 'job_id': call.object_id})
+    return {'status': 'processing', 'job_id': call.object_id}
+
+
 @app.function(
     image=web_image,
     min_containers=0,
@@ -134,11 +179,6 @@ def motion_api():
     import base64
     import binascii
     import re
-    import json
-
-    # The durable reservation is created BEFORE .spawn(). No second request
-    # may spawn if this record exists, even if its receipt is still unknown.
-    receipts = modal.Dict.from_name('bragoraforge-modal-submissions-v1', create_if_missing=True)
 
     # FastAPI resolves postponed annotations against module globals. Keep the
     # runtime-only import visible so `request: fastapi.Request` is not a query field.
@@ -165,41 +205,25 @@ def motion_api():
                 source = base64.b64decode(encoded, validate=True)
             except (ValueError, binascii.Error) as exc:
                 raise MotionContractError('IMAGE_BASE64_INVALID') from exc
-            require_execution_authorization(ack, 'true')
-            validated = MotionRequest(**payload)
-            validate_request(validated, source)
-            key = str(uuid.UUID(validated.generation_job_id))
-            payload = {**payload, 'generation_job_id': key}
-            fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
-            reservation = {'fingerprint': fingerprint, 'state': 'receipt_unknown'}
-            if not receipts.put(key, reservation, skip_if_exists=True):
-                existing = receipts.get(key)
-                if not isinstance(existing, dict) or existing.get('fingerprint') != fingerprint:
-                    return JSONResponse({'error': 'MODAL_REQUEST_FINGERPRINT_CONFLICT'}, status_code=409)
-                receipt = existing.get('job_id')
-                if isinstance(receipt, str) and re.fullmatch(r'fc-[A-Za-z0-9_-]+', receipt):
-                    return {'status': 'processing', 'job_id': receipt}
+            submission = _reserve_motion(payload, source, ack)
+            if submission['status'] == 'reconciliation_required':
                 return JSONResponse({'status': 'reconciliation_required', 'receipt_known': False}, status_code=202)
-            # Ambiguous failures leave the reservation in place permanently
-            # until expiration/explicit operator disposition. NEVER spawn again.
-            call = single_motion_proof.spawn(payload, source, ack)
-            if not re.fullmatch(r'fc-[A-Za-z0-9_-]+', call.object_id):
-                raise MotionContractError('MODAL_JOB_RECEIPT_INVALID')
-            receipts.put(key, {'fingerprint': fingerprint, 'state': 'accepted', 'job_id': call.object_id})
-            return {'status': 'processing', 'job_id': call.object_id}
-        except (MotionContractError, TypeError, ValueError) as exc:
+            return submission
+        except MotionContractError as exc:
+            status = 409 if str(exc) == 'MODAL_REQUEST_FINGERPRINT_CONFLICT' else 400
+            return JSONResponse({'error': str(exc)}, status_code=status)
+        except (TypeError, ValueError) as exc:
             return JSONResponse({'error': str(exc)}, status_code=400)
 
     @web.get('/receipt/{generation_job_id}')
     async def receipt(generation_job_id: str):
         if not re.fullmatch(r'[0-9a-fA-F-]{36}', generation_job_id):
             return JSONResponse({'error': 'MODAL_REQUEST_ID_INVALID'}, status_code=400)
-        existing = receipts.get(str(uuid.UUID(generation_job_id)))
-        if not isinstance(existing, dict):
+        submission = _submission_receipt(_submission_receipts(), generation_job_id)
+        if submission['status'] == 'not_found':
             return JSONResponse({'status': 'not_found', 'receipt_known': False}, status_code=404)
-        call_id = existing.get('job_id')
-        if isinstance(call_id, str) and re.fullmatch(r'fc-[A-Za-z0-9_-]+', call_id):
-            return {'status': 'processing', 'job_id': call_id}
+        if submission['status'] == 'processing':
+            return submission
         return JSONResponse({'status': 'reconciliation_required', 'receipt_known': False}, status_code=202)
 
     @web.get('/poll/{call_id}')
@@ -263,11 +287,16 @@ def main(
     dest = Path(output_dir).resolve()
     if dest.exists() and any(dest.glob(f'{request.generation_job_id}.*')):
         raise MotionContractError('JOB_ALREADY_HAS_LOCAL_OUTPUT')
-    result = single_motion_proof.remote(vars(request), image_bytes, acknowledgment)
+    submission = _reserve_motion(vars(request), image_bytes, acknowledgment)
+    if submission['status'] != 'processing':
+        raise MotionContractError('MODAL_SUBMISSION_RECONCILIATION_REQUIRED')
+    result = modal.FunctionCall.from_id(submission['job_id']).get(timeout=300)
     video = result['video']
     record = manifest(request, video, model=MODEL, revision=MODEL_REVISION)
     if record['video_sha256'] != result['manifest']['video_sha256']:
         raise MotionContractError('VIDEO_HASH_MISMATCH')
+    if any(result['manifest'].get(key) != value for key, value in record.items()):
+        raise MotionContractError('MODAL_RESULT_PROVENANCE_INVALID')
     dest.mkdir(parents=True, exist_ok=True)
     base = dest / request.generation_job_id
     # Never overwrite an existing clip on repeated runs.
