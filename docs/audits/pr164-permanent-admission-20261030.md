@@ -137,3 +137,22 @@ PostgREST/Modal authentication and recovery test plan, with explicit cost proof
 before any provider invocation. Verify old-worker shutdown and retained-ledger
 restoration behavior before considering controlled inference. Keep PR #164 draft.
 No merge, deploy, production mutation, actual GPU or paid service was performed.
+
+
+## Staging cutover gate — prepared 2026-10-30 (read-only verification)
+
+Current GitHub head at preparation: `fe2036ca50e150b7ffe8b4aab6706202f2979c1f`, four PR checks successful. Connected production Supabase migration history was inspected read-only: `20261030204115_durable_modal_admission` is **not applied**. No migration, service deployment, paid capacity, or GPU inference was initiated.
+
+**Important test-harness limit:** `providers/modal_motion/tests/staging_worker.py` currently uses isolated Modal Dicts and synthetic fake receipts, not `PostgresReceiptStore`. Its 20-request result can validate the *old contention protocol only*. Do not count it as a protocol-2 staging acceptance or recovered-job proof.
+
+### Requirements before an isolated protocol-2 staging test
+
+1. Use a dedicated, non-production Supabase database/project with verified cost and migration version `20261030204115`. Back up and retain its admission ledger. Never run the new migration on production as a test.
+2. Build a CPU-only staging runner for the **actual** protocol-2 reserve/receipt/begin/lookup entry points and the exact `PostgresReceiptStore` RPC transport, replacing the current Dict-only test app or clearly labeling that app as legacy-only.
+3. Configure narrowly scoped staging proxy credentials and exact HTTPS staging origin. Credentials stay server-side; block redirects; never write tokens to test logs. Use fake model execution to avoid real GPU calls.
+4. Explicitly inventory all old deployed controller, HTTP worker, GPU function and CLI binaries. Freeze admissions and verify old versions are shut down or access-revoked before enabling protocol 2. A newly deployed worker does not by itself disable an old one.
+5. Verify 20+ independent clients and at least two containers converge on one ledger row, one accepted admission and at most one fake model start; verify fingerprint conflict, unknown acceptance, ledger outage, DB restart, receipt mismatch, worker restart, old-protocol hold and retained-history restoration.
+6. Confirm Modal CPU and Supabase staging costs **before** creating/deploying any resources; require explicit founder approval for known costs. Store executed commands, exit codes, redacted provider receipts and observed containers in PROJECT_LOG.md.
+7. Keep the PR draft and block GPU inference until the actual staging protocol-2 checks pass, old worker shutdown is independently confirmed and a separate spend-limited GPU test is authorized.
+
+**Readiness classification:** CI VERIFIED; protocol-2 staging NOT BUILT/NOT EXECUTED; production migration ABSENT; old workers NOT INSPECTED; GPU/Android output NOT VERIFIED.
