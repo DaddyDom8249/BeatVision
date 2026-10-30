@@ -61,6 +61,7 @@ function fixture({ failure = 'none', concurrent = null, recoveryRace = false } =
     },
     storage: { from(bucket) { assert.equal(bucket, 'visual-assets'); return {
       download: async path => {
+        if (path.endsWith('.proof.json')) return { data: null, error: { message: 'fixture checkpoint not yet stored' } };
         assert.equal(path, image.storage_path);
         return { data: new Blob([source]), error: null };
       },
@@ -80,7 +81,7 @@ function fixture({ failure = 'none', concurrent = null, recoveryRace = false } =
   return { db, original, fetcher, row: () => structuredClone(row),
     stats: () => ({ receiptFailures, failedWrites, submits, lookups }),
     restoreDatabase() { outage = false; },
-    age() { row.updated_at = new Date(Date.now() - 6 * 60_000).toISOString(); },
+    age() { row.updated_at = row.output.dispatch_started_at = new Date(Date.now() - 6 * 60_000).toISOString(); },
   };
 }
 

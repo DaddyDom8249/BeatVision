@@ -51,3 +51,10 @@ jobs:
           fi
       - name: Verify actual approved motion provenance and immutable assembly snapshots
         run: psql -v ON_ERROR_STOP=1 -f scripts/test/sql/assembly-motion-provenance.sql
+      - name: Verify durable fair polling with independent PostgreSQL sessions
+        env:
+          BEATVISION_POLL_TEST_ISOLATED: '1'
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "alter table generation_jobs add column created_at timestamptz default now(), add column updated_at timestamptz default now()"
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261030010000_generation_poll_leases.sql
+          python3 scripts/test/verify_poll_leases.py

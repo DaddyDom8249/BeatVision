@@ -40,7 +40,7 @@ function uuid(value: unknown): boolean {
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)))
+  return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new Uint8Array(bytes))))
     .map(x => x.toString(16).padStart(2, "0")).join("");
 }
 export function checkedBytes(raw: unknown): Uint8Array {
@@ -68,30 +68,37 @@ async function modalFetch(
 ): Promise<{response: Response; data: any}> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 20_000);
-  let response: Response;
   try {
-    response = await requester(MODAL_MOTION.apiBase + path, {
-      ...init,
+    const response = await requester(MODAL_MOTION.apiBase + path, {
+      ...init, redirect: "error",
       headers: {
-        "Modal-Key": env("MODAL_TOKEN_ID"),
-        "Modal-Secret": env("MODAL_TOKEN_SECRET"),
+        "Modal-Key": env("MODAL_TOKEN_ID"), "Modal-Secret": env("MODAL_TOKEN_SECRET"),
         ...(init.headers || {}),
-      },
-      signal: controller.signal,
+      }, signal: controller.signal,
     });
+    const reader = response.body?.getReader();
+    let raw = "", size = 0; const decoder = new TextDecoder();
+    try {
+      if (reader) while (true) {
+        const item = await reader.read(); if (item.done) break;
+        size += item.value.byteLength;
+        if (size > Math.ceil(MODAL_MOTION.maxBytes * 4 / 3) + 32768)
+          throw new ModalMotionError("MODAL_HTTP_RESPONSE_INVALID");
+        raw += decoder.decode(item.value, { stream: true });
+      }
+      raw += decoder.decode();
+    } finally { await reader?.cancel().catch(() => {}); }
+    let data: any;
+    try { data = raw ? JSON.parse(raw) : {}; }
+    catch { throw new ModalMotionError("MODAL_HTTP_RESPONSE_INVALID"); }
+    if (!response.ok && response.status !== 202 && !(response.status === 404 && path.startsWith("/receipt/")))
+      throw new ModalMotionError("MODAL_HTTP_" + response.status);
+    return { response, data };
   } catch (error) {
+    if (error instanceof ModalMotionError) throw error;
     const name = error && typeof error === "object" ? String((error as Error).name || "") : "";
     throw new ModalMotionError(name === "AbortError" ? "MODAL_HTTP_TIMEOUT" : "MODAL_HTTP_UNAVAILABLE");
-  } finally {
-    clearTimeout(timer);
-  }
-  const raw = await response.text();
-  let data: any = {};
-  try { data = raw ? JSON.parse(raw) : {}; }
-  catch { throw new ModalMotionError("MODAL_HTTP_RESPONSE_INVALID"); }
-  if (!response.ok && response.status !== 202)
-    throw new ModalMotionError("MODAL_HTTP_" + response.status + ":" + String(data?.error || "REQUEST_FAILED"));
-  return { response, data };
+  } finally { clearTimeout(timer); }
 }
 export async function submitModalMotion(
   payload: Record<string, unknown>, source: Uint8Array, env: EnvReader = readEnv,
@@ -140,23 +147,9 @@ export async function lookupModalReceipt(
 ): Promise<{status:"known";job_id:string}|{status:"reconciliation_required"}|{status:"not_found"}> {
   assertModalPollEnabled(env);
   if (!uuid(generationJobId)) throw new ModalMotionError("MODAL_REQUEST_ID_INVALID");
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20_000);
-  try {
-    const response = await requester(MODAL_MOTION.apiBase + "/receipt/" + encodeURIComponent(generationJobId), {
-      method:"GET", headers:{"Modal-Key":env("MODAL_TOKEN_ID"),"Modal-Secret":env("MODAL_TOKEN_SECRET")},
-      signal:controller.signal,
-    });
-    if (response.status === 404) return {status:"not_found"};
-    if (!response.ok && response.status !== 202) throw new ModalMotionError("MODAL_LOOKUP_HTTP_"+response.status);
-    const data = await response.json();
-    if (response.status === 202 || data?.status === "reconciliation_required")
-      return {status:"reconciliation_required"};
-    if (!/^fc-[a-zA-Z0-9_-]+$/.test(String(data?.job_id || "")))
-      throw new ModalMotionError("MODAL_JOB_RECEIPT_INVALID");
-    return {status:"known",job_id:data.job_id};
-  } catch(error) {
-    if(error instanceof ModalMotionError) throw error;
-    throw new ModalMotionError("MODAL_LOOKUP_UNAVAILABLE");
-  } finally {clearTimeout(timer);}
+  const {response, data} = await modalFetch("/receipt/" + encodeURIComponent(generationJobId), env, requester, {method:"GET"});
+  if (response.status === 404) return {status:"not_found"};
+  if (response.status === 202 || data?.status === "reconciliation_required") return {status:"reconciliation_required"};
+  if (!/^fc-[a-zA-Z0-9_-]+$/.test(String(data?.job_id || ""))) throw new ModalMotionError("MODAL_JOB_RECEIPT_INVALID");
+  return {status:"known",job_id:data.job_id};
 }

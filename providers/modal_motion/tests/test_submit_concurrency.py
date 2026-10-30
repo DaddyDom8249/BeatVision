@@ -47,7 +47,7 @@ class MockModalDict:
             return self.store.get(key)
 
 
-def worker_runtime(store, spawn, get_result=None, legacy_remote=None):
+def worker_runtime(store, spawn, get_result=None, legacy_remote=None, execution_call_id='fc-existing123'):
     class FakeImage:
         @staticmethod
         def debian_slim(**kw): return FakeImage()
@@ -66,6 +66,7 @@ def worker_runtime(store, spawn, get_result=None, legacy_remote=None):
 
     fake_modal = SimpleNamespace(
         App=FakeApp, Image=FakeImage,
+        current_function_call_id=lambda: execution_call_id,
         Dict=SimpleNamespace(from_name=lambda *args, **kwargs: store),
         FunctionCall=SimpleNamespace(from_id=lambda call_id: SimpleNamespace(
             get=lambda **kwargs: get_result(call_id))),
@@ -161,6 +162,12 @@ class SubmissionConcurrencyTests(unittest.IsolatedAsyncioTestCase):
         ).hexdigest(), 'state': 'receipt_unknown'}, skip_if_exists=True)
         response = await self.request(body())
         self.assertEqual(response.status_code, 202)
+        self.assertEqual(self.spawn.call_count, 0)
+
+    async def test_invalid_receipt_uuid_is_rejected_without_provider_access(self):
+        async with AsyncClient(transport=ASGITransport(app=self.app), base_url='http://test') as client:
+            response = await client.get('/receipt/' + '-' * 36)
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(self.spawn.call_count, 0)
 
 
@@ -380,6 +387,105 @@ class CliReservationTests(unittest.TestCase):
         self.assertEqual(self.http().status_code, 200)
         self.cli(self.restart(), generation_job_id=self.payload['generation_job_id'].replace('-', ''))
         self.assertEqual(len(self.store.store), 1)
+        self.assert_no_bypass()
+
+    def test_execution_self_publishes_after_spawn_reply_is_lost(self):
+        self.spawn.side_effect = TimeoutError('MOCK_SPAWN_REPLY_LOST')
+        with self.assertRaises(TimeoutError):
+            self.cli()
+        self.assertEqual(self.http().status_code, 202)
+        # Simulate the already accepted remote container starting later. The
+        # real function calls this before importing torch or loading weights.
+        self.restart()._publish_execution_receipt(self.payload)
+        self.cli(self.restart())
+        self.assertEqual(self.http().json()['job_id'], 'fc-existing123')
+        self.assert_no_bypass()
+
+    def test_real_worker_body_publishes_and_fences_before_any_model_import(self):
+        import builtins
+        self.assertEqual(self.http().status_code,200)
+        original_import=builtins.__import__
+        class ModelBoundaryReached(Exception):pass
+        def stopped_import(name,*args,**kwargs):
+            if name=='torch':
+                execution=self.store.get('execution:'+self.payload['generation_job_id'])
+                self.assertIsNotNone(execution,'Execution must be durably admitted before model loading')
+                self.assertEqual(execution['job_id'],'fc-existing123')
+                raise ModelBoundaryReached()
+            return original_import(name,*args,**kwargs)
+        with patch('builtins.__import__',stopped_import):
+            with self.assertRaises(ModelBoundaryReached):
+                self.worker.single_motion_proof(self.payload,IMAGE,ACKNOWLEDGEMENT)
+            # A provider retry of even the same call stops BEFORE another model
+            # import. No torch, model weights or GPU API is ever imported here.
+            with self.assertRaisesRegex(MotionContractError,'ALREADY_ADMITTED'):
+                self.worker.single_motion_proof(self.payload,IMAGE,ACKNOWLEDGEMENT)
+        self.assert_no_bypass()
+
+    def test_execution_receipt_write_refusal_cannot_authorize_inference(self):
+        self.spawn.side_effect = TimeoutError('MOCK_SPAWN_REPLY_LOST')
+        with self.assertRaises(TimeoutError):
+            self.cli()
+        self.store.put = MagicMock(side_effect=RuntimeError('MOCK_DATABASE_OUTAGE'))
+        with self.assertRaisesRegex(RuntimeError, 'DATABASE_OUTAGE'):
+            self.restart()._publish_execution_receipt(self.payload)
+        self.assertNotIn('job_id', self.store.get(self.payload['generation_job_id']))
+
+    def test_execution_cannot_publish_conflicting_receipt_or_unreserved_payload(self):
+        self.assertEqual(self.http().status_code, 200)
+        for payload in [{**self.payload, 'project_id': str(uuid.UUID(int=9))}, {**self.payload, 'generation_job_id': str(uuid.UUID(int=9))}]:
+            with self.assertRaisesRegex(MotionContractError, 'FINGERPRINT_CONFLICT'):
+                self.restart()._publish_execution_receipt(payload)
+        record = self.store.get(self.payload['generation_job_id'])
+        self.store.put(self.payload['generation_job_id'], {**record, 'job_id': 'fc-other'})
+        with self.assertRaisesRegex(MotionContractError, 'RECEIPT_CONFLICT'):
+            self.restart()._publish_execution_receipt(self.payload)
+        self.assert_no_bypass()
+
+    def test_competing_execution_containers_admit_one_before_model_loading(self):
+        self.spawn.side_effect = TimeoutError('MOCK_SPAWN_REPLY_LOST')
+        with self.assertRaises(TimeoutError):
+            self.cli()
+        workers=[worker_runtime(self.store,self.spawn,execution_call_id='fc-container'+str(n)) for n in range(20)]
+        def admit(worker):
+            try:worker._publish_execution_receipt(self.payload);return True
+            except MotionContractError:return False
+        with ThreadPoolExecutor(max_workers=20) as pool:
+            self.assertEqual(sum(pool.map(admit,workers)),1)
+        record=self.store.get('execution:'+self.payload['generation_job_id'])
+        self.assertEqual(self.http().json()['job_id'],record['job_id'])
+        self.assert_no_bypass()
+
+    def test_execution_claim_survives_convenience_receipt_write_failure(self):
+        self.spawn.side_effect = TimeoutError('MOCK_SPAWN_REPLY_LOST')
+        with self.assertRaises(TimeoutError):self.cli()
+        original=self.store.put
+        def interrupted(key,value,skip_if_exists=False):
+            if not skip_if_exists:raise RuntimeError('MOCK_RECEIPT_WRITE_FAILURE')
+            return original(key,value,skip_if_exists)
+        self.store.put=interrupted
+        with self.assertRaises(RuntimeError):self.restart()._publish_execution_receipt(self.payload)
+        self.assertEqual(self.http(method='GET',path='/receipt/'+self.payload['generation_job_id']).json()['job_id'],'fc-existing123')
+        with self.assertRaisesRegex(MotionContractError,'ALREADY_ADMITTED'):
+            self.restart()._publish_execution_receipt(self.payload)
+        self.assert_no_bypass()
+
+    def test_parent_and_execution_receipt_conflict_never_prefers_one_or_resubmits(self):
+        self.assertEqual(self.http().status_code,200)
+        record=self.store.get(self.payload['generation_job_id'])
+        self.store.put('execution:'+self.payload['generation_job_id'],{**record,'job_id':'fc-conflict'})
+        with self.assertRaisesRegex(MotionContractError,'RECEIPT_CONFLICT'):self.cli(self.restart())
+        self.assertEqual(self.http().status_code,409)
+        self.assertEqual(self.http(method='GET',path='/receipt/'+self.payload['generation_job_id']).status_code,409)
+        self.assertEqual(self.store.get(self.payload['generation_job_id'])['job_id'],'fc-existing123')
+        self.assert_no_bypass()
+
+    def test_execution_receipt_survives_parent_entry_loss_without_another_spawn(self):
+        self.assertEqual(self.http().status_code,200)
+        self.worker._publish_execution_receipt(self.payload)
+        del self.store.store[self.payload['generation_job_id']]
+        self.assertEqual(self.http(method='GET',path='/receipt/'+self.payload['generation_job_id']).json()['job_id'],'fc-existing123')
+        self.cli(self.restart())
         self.assert_no_bypass()
 
 

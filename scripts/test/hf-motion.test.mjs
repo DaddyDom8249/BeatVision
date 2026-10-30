@@ -170,16 +170,17 @@ test('HF completion stores immutable private video and pins the generating image
   globalThis.fetch = async (url) => url.includes('/queue/data')
     ? new Response(queueComplete({data:[{video:{url:HF_MOTION.host+'/gradio_api/file=/tmp/real.mp4'}},42]}))
     : new Response(container());
-  let uploaded, inserted; const imageFilters = {};
+  let uploaded, inserted; const imageFilters = {}, objects = new Map();
   const client = {
     storage: { from(bucket) { assert.equal(bucket,'visual-assets'); return {
-      download: async()=>({error:{message:'not found'}}),
-      upload: async(path,bytes,options)=>{ uploaded={path,bytes,options};return {data:{path}} },
+      download: async path => objects.has(path) ? {data:new Blob([objects.get(path)])} : {error:{message:'not found'}},
+      upload: async(path,bytes,options)=>{ if(options.contentType==='video/mp4')uploaded={path,bytes,options};objects.set(path,bytes);return {data:{path}} },
       createSignedUrl: async(path)=>({data:{signedUrl:'https://private.test/'+path}}),
     }; } },
     from(table) { return {
       select(){return this},eq(k,v){if(table==='scene_image_assets')imageFilters[k]=v;return this},order(){return this},limit(){return this},
-      maybeSingle:async()=>({data:table==='scene_image_assets'?{id:'source-approved'}:null}),
+      update(changes){Object.assign(job,changes);return this},
+      maybeSingle:async()=>({data:table==='scene_image_assets'?{id:'source-approved'}:table==='generation_jobs'?structuredClone(job):null}),
       insert(row){inserted=row;return this},single:async()=>({data:inserted}),
     }; },
   };

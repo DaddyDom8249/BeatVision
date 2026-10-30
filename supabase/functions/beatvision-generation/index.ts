@@ -90,6 +90,10 @@ class HttpError extends Error {
 function arenaBase() {
   const value = env("ARENA_GATEWAY_URL").replace(/\/$/, "");
   if (!value) throw new Error("Arena gateway is not configured.");
+  const url = new URL(value);
+  if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443") ||
+      !url.hostname.includes(".") || url.hostname.includes(":") || /^(\d+\.){3}\d+$/.test(url.hostname) ||
+      /(?:^|\.)(?:localhost|local|internal)$/.test(url.hostname)) throw new Error("ARENA_GATEWAY_URL_INVALID");
   return value;
 }
 
@@ -191,7 +195,7 @@ async function bridgePayload(db: any, job: any) {
 
 async function arena(path: string, method: "GET" | "POST", payload: unknown, requestId: string) {
   const response = await fetch(arenaBase() + path, {
-    method,
+    method, redirect: "error", signal: AbortSignal.timeout(30000),
     headers: {
       Authorization: "Bearer " + arenaToken(),
       "Content-Type": "application/json",
@@ -451,16 +455,20 @@ function terminalState(response: Response, data: any, jobType?: string) {
   return "processing";
 }
 
-async function setFailed(db: any, id: string, message: string, detail?: unknown) {
-  const res = await db.from("generation_jobs").update({
+async function setFailed(db: any, id: string, message: string, detail?: unknown, job?: any) {
+  let query = db.from("generation_jobs").update({
     status: "failed",
+    ...(job?.poll_lease_token ? { poll_lease_token: null, poll_lease_until: null } : {}),
     // Preserve known, sanitized HF adapter codes for creator-readable failures,
     // without promoting arbitrary upstream text into error.code.
     error: { code: message.startsWith("PROVIDER_COST_UNVERIFIED:") ? "PROVIDER_COST_UNVERIFIED"
       : message.startsWith("PROVIDER_TIMEOUT:") ? "PROVIDER_TIMEOUT"
       : ["HF_GENERATION_FAILED", "HF_CAPACITY_UNAVAILABLE", "HF_QUOTA_EXHAUSTED"].includes(message) ? message
       : "ARENA_GENERATION_FAILED", message: message.slice(0, 1200), detail },
-  }).eq("id", id).in("status", ["queued", "submitted", "processing"]).select("id");
+  }).eq("id", id).in("status", ["queued", "submitted", "processing"]);
+  if (job?.poll_lease_token) query = query.eq("poll_lease_token", job.poll_lease_token);
+  if (job?.updated_at) query = query.eq("updated_at", job.updated_at);
+  const res = await query.select("id");
   if (res.error) throw new Error("SET_FAILED_PERSIST_FAILED: " + res.error.message);
   if (!res.data || res.data.length === 0) {
     throw new Error("SET_FAILED_ZERO_ROWS_AFFECTED: Job status was not updated to failed.");
@@ -542,33 +550,148 @@ async function hfBridgeSubmit(db: any, job: any) {
 }
 
 async function hfBridgePoll(db: any, job: any) {
-  const accepted = Date.parse(job.output?.arena_response?.eligibility?.checked_at || job.created_at || "");
-  if (!Number.isFinite(accepted) || Date.now() - accepted > 30 * 60 * 1000) throw new Error("HF_POLL_DEADLINE_EXCEEDED: No automatic resubmission.");
+  const cached = await storedMotion(db, job);
+  if (cached) return cached;
   const data: any = await hfPoll(env("HF_VIDEO_TOKEN"), job.output.upstream_job_id);
   if (data.status !== "completed") return { response: new Response(null), data };
-  const path = job.project_id + "/scene-motion/" + job.visual_plan_id + "/" + job.visual_plan_scene_id + "/" + job.id + ".mp4";
-  // Immutable, deterministic object: concurrent pollers reuse it, never overwrite.
-  let verification: any = null;
-  const existing = await db.storage.from("visual-assets").download(path);
-  if (!existing.error && existing.data) {
-    const { validateMp4 } = await import("./hf-motion.ts");
-    verification = validateMp4(new Uint8Array(await existing.data.arrayBuffer()));
-  } else {
-    const downloaded = await hfDownload(data.result.video_url, env("HF_VIDEO_TOKEN"));
-    verification = downloaded.verification;
-    const saved = await db.storage.from("visual-assets").upload(path, downloaded.bytes, { contentType: "video/mp4", upsert: false });
-    if (saved.error) {
-      // A concurrent first upload is acceptable only if its real bytes validate.
-      const winner = await db.storage.from("visual-assets").download(path);
-      if (winner.error || !winner.data) throw new Error("HF_VIDEO_STORAGE_FAILED");
-      const { validateMp4 } = await import("./hf-motion.ts");
-      verification = validateMp4(new Uint8Array(await winner.data.arrayBuffer()));
-    }
+  const downloaded = await hfDownload(data.result.video_url, env("HF_VIDEO_TOKEN"));
+  return await saveMotion(db, job, downloaded.bytes, "huggingface-zerogpu", HF_MOTION.model);
+}
+
+function motionPath(job: any) {
+  for (const value of [job.project_id, job.visual_plan_id, job.visual_plan_scene_id, job.id]) {
+    if (typeof value !== "string" || !value || /[/.\\]/.test(value)) throw new Error("MOTION_STORAGE_PATH_INVALID");
   }
-  const signed = await db.storage.from("visual-assets").createSignedUrl(path, 3600);
-  if (signed.error || !signed.data?.signedUrl) throw new Error("HF_VIDEO_SIGNING_FAILED");
-  return { response: new Response(null), data: { ...data, source_image_id: job.input_snapshot.hf_motion.source_image_id,
-    result: { ...data.result, video_url: signed.data.signedUrl, storage_path: path, verification, ai_generated: true } } };
+  return job.project_id + "/scene-motion/" + job.visual_plan_id + "/" + job.visual_plan_scene_id + "/" + job.id + ".mp4";
+}
+
+function canonical(value: any): string {
+  if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
+  if (value && typeof value === "object") return "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}";
+  return JSON.stringify(value);
+}
+
+async function proofSignature(proof: any) {
+  const secret = env("MOTION_CHECKPOINT_SIGNING_KEY") || env("SUPABASE_SERVICE_ROLE_KEY");
+  if (!secret) throw new Error("MOTION_CHECKPOINT_SIGNING_UNAVAILABLE");
+  const { signature: ignored, ...content } = proof;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return Array.from(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(canonical(content)))))
+    .map(byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function pollWrite(db: any, job: any, changes: any) {
+  if (job.poll_lease_token && ["completed", "failed"].includes(changes.status)) {
+    changes = { ...changes, poll_lease_token: null, poll_lease_until: null };
+  }
+  let query = db.from("generation_jobs").update(changes).eq("id", job.id).eq("status", job.status);
+  if (job.poll_lease_token) query = query.eq("poll_lease_token", job.poll_lease_token);
+  if (job.updated_at) query = query.eq("updated_at", job.updated_at);
+  return query;
+}
+
+async function infrastructureFailure(db: any, job: any, error: unknown) {
+  const message = error instanceof Error ? error.message : "";
+  const integrity = /PROVENANCE|CONFLICT|HOST_REJECTED|PATH_INVALID|MP4_|VIDEO_EMPTY|CODEC_UNSUPPORTED/.test(message);
+  const phase = /SIGN|DELIVERY/.test(message) ? "delivery" : /STORAGE|UPLOAD/.test(message) ? "storage" :
+    /PERSIST|UPDATE|LOOKUP|DATABASE/.test(message) ? "persistence" : integrity ? "verification" : "polling";
+  const count = Math.min(1000, Math.max(0, Number(job.output?.infrastructure_errors) || 0) + 1);
+  const saved = await pollWrite(db, job, { output: {
+    ...job.output, execution_phase: phase, infrastructure_errors: count,
+    infrastructure_error: { code: integrity ? "OUTPUT_PROVENANCE_UNVERIFIED" : phase.toUpperCase() + "_UNAVAILABLE", at: new Date().toISOString() },
+    ...(integrity ? { reconciliation_required: true, reconciliation_reason: "OUTPUT_PROVENANCE_UNVERIFIED" } : {}),
+    automatic_resubmission_disabled: true,
+  } }).select("*").maybeSingle();
+  if (saved.error) throw new Error("GENERATION_RECOVERY_STATE_PERSIST_FAILED");
+  if (saved.data) return saved.data;
+  const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+  if (latest.error || !latest.data) throw new Error("GENERATION_RECOVERY_STATE_READ_FAILED");
+  return latest.data;
+}
+
+async function checkpointMotion(db: any, job: any, proof: any) {
+  const saved = await pollWrite(db, job, { status: "processing", output: { ...job.output, motion_checkpoint: proof, execution_phase: "delivery" } }).select("*").maybeSingle();
+  if (saved.error) throw new Error("MOTION_CHECKPOINT_PERSIST_FAILED");
+  if (!saved.data) throw new Error("GENERATION_JOB_RACE_LOST: Motion checkpoint lost its row version.");
+  Object.assign(job, saved.data);
+}
+
+async function deliverMotion(db: any, job: any, proof: any) {
+  const signed = await db.storage.from("visual-assets").createSignedUrl(motionPath(job), 3600);
+  if (signed.error || !signed.data?.signedUrl) throw new Error("MOTION_DELIVERY_UNAVAILABLE");
+  return { response: new Response(null), data: { status: "completed", provider: proof.provider, model: proof.model,
+    source_image_id: proof.source_image_id, result: { video_url: signed.data.signedUrl, storage_path: proof.storage_path,
+      verification: proof.verification, ai_generated: true, generation_type: "GENERATIVE_VIDEO" } } };
+}
+
+async function verifyMotionProof(job: any, proof: any, bytes: Uint8Array) {
+  const frozen = job.input_snapshot?.modal_motion || job.input_snapshot?.hf_motion;
+  const expectedProvider = job.input_snapshot?.modal_motion ? "modal" : "huggingface-zerogpu";
+  const expectedModel = job.input_snapshot?.modal_motion ? MODAL_MOTION.model : HF_MOTION.model;
+  const digest = await sha256Hex(new TextEncoder().encode(canonical(job.input_snapshot)));
+  if (proof?.schema_version !== 1 || proof.job_id !== job.id || proof.project_id !== job.project_id ||
+      proof.visual_plan_id !== job.visual_plan_id || proof.scene_id !== job.visual_plan_scene_id ||
+      proof.source_image_id !== frozen?.source_image_id || proof.input_sha256 !== digest ||
+      proof.storage_path !== motionPath(job) || proof.provider !== expectedProvider || proof.model !== expectedModel ||
+      !job.output?.upstream_job_id || proof.upstream_job_id !== job.output.upstream_job_id ||
+      proof.video_sha256 !== await sha256Hex(bytes) || !proof.signature ||
+      !await timingSafeEqualText(proof.signature, await proofSignature(proof)) ||
+      (expectedProvider === "modal" && proof.source_sha256 !== (job.output?.modal_source_sha256 || job.output?.arena_response?.source_sha256))) {
+    throw new Error("MOTION_CHECKPOINT_PROVENANCE_INVALID");
+  }
+  return { ...proof, verification: validateMp4(bytes) };
+}
+
+async function storedMotion(db: any, job: any, deliver = true) {
+  const storage = db.storage?.from("visual-assets");
+  if (!storage?.download) return null;
+  const path = motionPath(job);
+  const saved = await storage.download(path + ".proof.json");
+  if (saved.error || !saved.data) return null;
+  if (saved.data.size > 16384) throw new Error("MOTION_CHECKPOINT_PROVENANCE_INVALID");
+  let proof;
+  try { proof = JSON.parse(await saved.data.text()); } catch { throw new Error("MOTION_CHECKPOINT_PROVENANCE_INVALID"); }
+  const media = await storage.download(path);
+  if (media.error || !media.data) throw new Error("MOTION_STORAGE_UNAVAILABLE");
+  // An authenticated checkpoint can recover a receipt lost with the database
+  // write, but an unsigned object or a receipt for another frozen job cannot.
+  const candidate = { ...job, output: { ...job.output } };
+  if (!candidate.output.upstream_job_id) {
+    const valid = job.input_snapshot?.modal_motion ? /^fc-[A-Za-z0-9_-]+$/ : /^[a-f0-9]{32}$/;
+    if (!valid.test(String(proof?.upstream_job_id || ""))) throw new Error("MOTION_CHECKPOINT_PROVENANCE_INVALID");
+    candidate.output.upstream_job_id = proof.upstream_job_id;
+    candidate.output.provider_receipt = { provider: proof.provider, upstream_job_id: proof.upstream_job_id, recovered: true, verified_checkpoint: true };
+  }
+  proof = await verifyMotionProof(candidate, proof, new Uint8Array(await media.data.arrayBuffer()));
+  await checkpointMotion(db, candidate, proof);
+  Object.assign(job, candidate);
+  return deliver ? await deliverMotion(db, job, proof) : proof;
+}
+
+async function saveMotion(db: any, job: any, bytes: Uint8Array, provider: string, model: string) {
+  const verification = validateMp4(bytes), path = motionPath(job), hash = await sha256Hex(bytes);
+  const storage = db.storage.from("visual-assets");
+  const existing = await storage.download(path);
+  if (existing.error || !existing.data) await storage.upload(path, bytes, { contentType: "video/mp4", upsert: false });
+  // Verify persisted bytes independently; an upload acknowledgement alone is insufficient.
+  const durable = await storage.download(path);
+  if (durable.error || !durable.data) throw new Error("MOTION_STORAGE_UNAVAILABLE");
+  if (await sha256Hex(new Uint8Array(await durable.data.arrayBuffer())) !== hash) throw new Error("MOTION_CHECKPOINT_PROVENANCE_INVALID");
+  const proof = { schema_version: 1, job_id: job.id, project_id: job.project_id, visual_plan_id: job.visual_plan_id,
+    scene_id: job.visual_plan_scene_id, source_image_id: (job.input_snapshot.modal_motion || job.input_snapshot.hf_motion).source_image_id,
+    upstream_job_id: job.output.upstream_job_id, provider, model, storage_path: path, video_sha256: hash,
+    input_sha256: await sha256Hex(new TextEncoder().encode(canonical(job.input_snapshot))),
+    ...(provider === "modal" ? { source_sha256: job.output.modal_source_sha256 || job.output.arena_response?.source_sha256 } : {}), verification };
+  const signedProof = { ...proof, signature: await proofSignature(proof) };
+  await storage.upload(path + ".proof.json", JSON.stringify(signedProof), { contentType: "application/json", upsert: false });
+  const winner = await storage.download(path + ".proof.json");
+  if (winner.error || !winner.data) throw new Error("MOTION_STORAGE_UNAVAILABLE");
+  if (winner.data.size > 16384) throw new Error("MOTION_CHECKPOINT_PROVENANCE_INVALID");
+  let previous;
+  try { previous = JSON.parse(await winner.data.text()); } catch { throw new Error("MOTION_CHECKPOINT_PROVENANCE_INVALID"); }
+  await verifyMotionProof(job, previous, bytes);
+  await checkpointMotion(db, job, signedProof);
+  return await deliverMotion(db, job, signedProof);
 }
 
 async function modalBridgeSubmit(db: any,job: any) {
@@ -606,6 +729,8 @@ async function modalBridgeSubmit(db: any,job: any) {
   return {response:new Response(null,{status:200}),data};
 }
 async function modalBridgePoll(db: any,job: any) {
+  const cached = await storedMotion(db, job);
+  if (cached) return cached;
   const result=await pollModalMotion(String(job.output?.upstream_job_id||""));
   if(result.status==="processing") return {response:new Response(null),data:result};
   const manifest: any=result.manifest;
@@ -617,24 +742,7 @@ async function modalBridgePoll(db: any,job: any) {
       manifest.model!==MODAL_MOTION.model || manifest.revision!==MODAL_MOTION.revision ||
       manifest.creator_approved!==false)
     throw new ModalMotionError("MODAL_PROVENANCE_INVALID");
-  const verification=validateMp4(result.video);
-  const path=job.project_id+"/scene-motion/"+job.visual_plan_id+"/"+job.visual_plan_scene_id+"/"+job.id+".mp4";
-  const storage=db.storage.from("visual-assets");
-  const existing=await storage.download(path);
-  if(existing.error || !existing.data) {
-    const upload=await storage.upload(path,result.video,{contentType:"video/mp4",upsert:false});
-    if(upload.error) {
-      const winner=await storage.download(path);
-      if(winner.error || !winner.data || await sha256Hex(new Uint8Array(await winner.data.arrayBuffer()))!==manifest.video_sha256)
-        throw new ModalMotionError("MODAL_MP4_STORAGE_FAILED");
-    }
-  } else if(await sha256Hex(new Uint8Array(await existing.data.arrayBuffer()))!==manifest.video_sha256)
-    throw new ModalMotionError("MODAL_MP4_STORAGE_CONFLICT");
-  const signed=await storage.createSignedUrl(path,3600);
-  if(signed.error || !signed.data?.signedUrl) throw new ModalMotionError("MODAL_MP4_SIGN_FAILED");
-  return {response:new Response(null),data:{status:"completed",provider:"modal",model:MODAL_MOTION.model,
-    source_image_id:manifest.source_image_id,
-    result:{video_url:signed.data.signedUrl,storage_path:path,verification,ai_generated:true}}};
+  return await saveMotion(db, job, result.video, "modal", MODAL_MOTION.model);
 }
 
 async function motionUrl(db: any, projectId: string, assetId: string) {
@@ -784,7 +892,7 @@ async function run(db: any, job: any) {
     // These adapter failures cannot safely be interpreted as rejection.
     const errorCode = error instanceof Error ? error.message : String(error);
     const acceptanceUnknown = error instanceof TypeError ||
-      /^(HF_SUBMISSION_ACCEPTANCE_UNKNOWN|MODAL_HTTP_TIMEOUT|MODAL_HTTP_UNAVAILABLE|MODAL_HTTP_RESPONSE_INVALID|MODAL_JOB_RECEIPT_INVALID)(:|$)/.test(errorCode);
+      /^(HF_SUBMISSION_ACCEPTANCE_UNKNOWN|MODAL_HTTP_TIMEOUT|MODAL_HTTP_UNAVAILABLE|MODAL_HTTP_RESPONSE_INVALID|MODAL_JOB_RECEIPT_INVALID|MODAL_HTTP_(?:5\d\d|408))(:|$)/.test(errorCode);
     if (acceptanceUnknown && !job.output?.upstream_job_id) {
       const marked = await db.from("generation_jobs").update({ output: {
         ...(job.output || {}),
@@ -792,6 +900,7 @@ async function run(db: any, job: any) {
         reconciliation_reason: "PROVIDER_ACCEPTANCE_UNKNOWN",
         reconciliation_recorded_at: new Date().toISOString(),
         automatic_resubmission_disabled: true,
+        ...(error instanceof HfMotionError && error.evidence ? { submission_evidence: error.evidence } : {}),
       } }).eq("id", job.id).eq("status", "processing").select("*").maybeSingle();
       if (marked.error) throw new Error("PROVIDER_UNCERTAIN_SUBMISSION_PERSIST_FAILED: " + marked.error.message);
       if (marked.data) return marked.data;
@@ -820,7 +929,10 @@ const DISPATCH_GRACE_MS = 5 * 60 * 1000;
 
 async function recoverDispatch(db: any, job: any) {
   const upstream = String(job.output?.upstream_job_id || "").trim();
-  const timestamp = job.updated_at || job.created_at;
+  if (!upstream && job.job_type === "scene_motion" && (job.input_snapshot?.modal_motion || job.input_snapshot?.hf_motion)) {
+    if (await storedMotion(db, job, false)) return job;
+  }
+  const timestamp = job.output?.dispatch_started_at || job.created_at || job.updated_at;
   const started = Date.parse(String(timestamp || ""));
   if (!upstream && Number.isFinite(started) && Date.now() - started < DISPATCH_GRACE_MS) return job;
 
@@ -841,6 +953,7 @@ async function recoverDispatch(db: any, job: any) {
       } };
       let query = db.from("generation_jobs").update(changes).eq("id",job.id).eq("status",job.status);
       if(job.updated_at) query=query.eq("updated_at",job.updated_at);
+      if(job.poll_lease_token) query=query.eq("poll_lease_token",job.poll_lease_token);
       const adopted=await query.select("*").maybeSingle();
       if(adopted.error) throw new Error("MODAL_RECEIPT_ADOPTION_PERSIST_FAILED: "+adopted.error.message);
       if(adopted.data) return adopted.data;
@@ -868,6 +981,7 @@ async function recoverDispatch(db: any, job: any) {
   // A concurrent dispatch may have persisted an upstream ID since this read.
   // Its new row version must win over this stale recovery attempt.
   if (job.updated_at) query = query.eq("updated_at", job.updated_at);
+  if (job.poll_lease_token) query = query.eq("poll_lease_token", job.poll_lease_token);
   const result = await query.select("*").maybeSingle();
   if (result.error) throw new Error("DISPATCH_RECOVERY_PERSIST_FAILED: " + result.error.message);
   if (result.data) return result.data;
@@ -881,24 +995,11 @@ async function poll(db: any, job: any) {
   if (job.status !== "processing") return job;
   const accepted = Date.parse(job.output?.dispatch_started_at || job.created_at || "");
   if (Number.isFinite(accepted) && Date.now() - accepted > 30 * 60 * 1000) {
-    // Deadline exceeded does not prove that the external provider failed.
-    // Stop automatic polling, preserve the provider receipt and frozen input,
-    // and require reconciliation before any new provider execution.
-    if (job.output?.reconciliation_required === true) return job;
-    const update = await db.from("generation_jobs").update({
-      output: {
-        ...(job.output || {}),
-        reconciliation_required: true,
-        reconciliation_reason: "PROVIDER_DEADLINE_EXCEEDED",
-        reconciliation_recorded_at: new Date().toISOString(),
-        automatic_resubmission_disabled: true,
-      },
-    }).eq("id", job.id).eq("status", "processing").eq("updated_at", job.updated_at).select("*").maybeSingle();
-    if (update.error) throw new Error("PROVIDER_TIMEOUT_RECONCILIATION_PERSIST_FAILED: " + update.error.message);
-    if (update.data) return update.data;
-    const latest = await db.from("generation_jobs").select("*").eq("id",job.id).single();
-    if(latest.error) throw new Error(latest.error.message);
-    return latest.data;
+    // The deadline changes retry cadence, not eligibility to recover an existing
+    // execution. No deadline or missing receipt ever authorizes another POST.
+    job.output = { ...job.output, reconciliation_required: true,
+      reconciliation_reason: job.output?.reconciliation_reason || "PROVIDER_DEADLINE_EXCEEDED",
+      automatic_resubmission_disabled: true };
   }
   const upstream = String(job.output?.upstream_job_id || "").trim();
   if (!upstream) return await recoverDispatch(db, job);
@@ -923,25 +1024,28 @@ async function poll(db: any, job: any) {
       : job.job_type === "scene_motion" && job.input_snapshot?.hf_motion
         ? await hfBridgePoll(db, job)
         : await arena(path, job.job_type === "assembly" ? "POST" : "GET", pollPayload, "beatvision:" + job.id + ":poll");
+    if (!result.response.ok) throw new Error("PROVIDER_POLL_UNAVAILABLE");
     const state = terminalState(result.response, result.data);
     if (state === "failed") {
-      await setFailed(db, job.id, String(result.data?.error?.message || result.data?.error || "Arena provider job failed."), result.data);
+      const providerState = String(result.data?.status || result.data?.state || result.data?.result?.status || "").toLowerCase();
+      if (!["failed", "error", "cancelled", "canceled"].includes(providerState)) throw new Error("PROVIDER_POLL_UNAVAILABLE");
+      await setFailed(db, job.id, "PROVIDER_EXECUTION_FAILED", undefined, job);
     } else if (state === "completed") {
       if (job.job_type === "scene_motion") {
         const persistedMotion = await persistMotionClip(db, job, result.data);
-        const updateRes = await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, motion_clip_asset: persistedMotion || null } }).eq("id", job.id).eq("status", "processing").select("id");
+        const updateRes = await pollWrite(db, job, { status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, motion_clip_asset: persistedMotion || null, execution_phase: "completed", reconciliation_required: false, reconciliation_reason: null } }).select("id");
         if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
         if (!updateRes.data || updateRes.data.length === 0) throw new Error("GENERATION_JOB_RACE_LOST: Job was modified concurrently.");
       } else if (job.job_type === "assembly") {
         const finalVideo = await persistFinalVideo(db, job, result.data);
-        const updateRes = await db.from("generation_jobs").update({ status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, final_video: finalVideo } }).eq("id", job.id).eq("status", "processing").select("id");
+        const updateRes = await pollWrite(db, job, { status: "completed", output: { ...(job.output || {}), arena_status_response: result.data, final_video: finalVideo } }).select("id");
         if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
         if (!updateRes.data || updateRes.data.length === 0) throw new Error("GENERATION_JOB_RACE_LOST: Job was modified concurrently.");
       }
     } else {
-      const updateRes = await db.from("generation_jobs").update({
-        output: { ...(job.output || {}), arena_status_response: result.data, last_polled_at: new Date().toISOString() },
-      }).eq("id", job.id).eq("status", "processing").select("id");
+      const updateRes = await pollWrite(db, job, {
+        output: { ...(job.output || {}), arena_status_response: result.data, last_polled_at: new Date().toISOString(), infrastructure_errors: 0, infrastructure_error: null },
+      }).select("id");
       if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
       if (!updateRes.data || updateRes.data.length === 0) throw new Error("GENERATION_JOB_RACE_LOST: Job was modified concurrently.");
     }
@@ -953,17 +1057,10 @@ async function poll(db: any, job: any) {
       if (latest.error) throw new Error(latest.error.message);
       return latest.data;
     }
-    if (job.input_snapshot?.hf_motion && (error instanceof HfMotionError && error.retryable || error instanceof TypeError)) {
-      const retries = Number(job.output?.hf_poll_errors || 0) + 1;
-      if (retries <= 3) {
-        const updated = await db.from("generation_jobs").update({ output: { ...job.output, hf_poll_errors: retries, last_polled_at: new Date().toISOString() } }).eq("id", job.id).eq("status", "processing").eq("updated_at", job.updated_at).select("id");
-        if (updated.error) throw new Error("HF_RETRY_STATE_PERSIST_FAILED");
-        const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
-        if (latest.error) throw new Error("HF_RETRY_STATE_READ_FAILED");
-        return latest.data;
-      }
-    }
-    try { await setFailed(db, job.id, error instanceof Error ? error.message : String(error)); }
+    const confirmedHfFailure = error instanceof HfMotionError &&
+      ["HF_GENERATION_FAILED", "HF_CAPACITY_UNAVAILABLE", "HF_QUOTA_EXHAUSTED"].includes(error.code);
+    if (!confirmedHfFailure) return await infrastructureFailure(db, job, error);
+    try { await setFailed(db, job.id, (error as HfMotionError).code, undefined, job); }
     catch (failure) {
       if (!(failure instanceof Error) || !failure.message.startsWith("SET_FAILED_ZERO_ROWS_AFFECTED")) throw failure;
       const winner = await db.from("generation_jobs").select("*").eq("id",job.id).single();
@@ -974,6 +1071,55 @@ async function poll(db: any, job: any) {
 
   const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
   if (latest.error) throw new Error(latest.error.message);
+  return latest.data;
+}
+
+async function reconcileCandidate(db: any, job: any, receiptId: string) {
+  if (!job.input_snapshot?.modal_motion || !/^fc-[A-Za-z0-9_-]+$/.test(receiptId))
+    throw new HttpError(400, "RECEIPT_CANDIDATE_INVALID", "A valid Modal receipt is required.");
+  if (job.output?.upstream_job_id && job.output.upstream_job_id !== receiptId)
+    throw new HttpError(409, "PROVIDER_RECEIPT_CONFLICT", "The execution already has a different receipt.");
+  // A running call carries no identity proof. Adopt only completed output whose
+  // manifest, source hash, frozen lineage and actual bytes all validate.
+  const candidate = { ...job, output: { ...job.output, upstream_job_id: receiptId } };
+  const result = await modalBridgePoll(db, candidate);
+  if (terminalState(result.response, result.data) !== "completed")
+    throw new HttpError(409, "PROVIDER_RECEIPT_UNVERIFIED", "Receipt is not yet verifiably bound to this execution; no new inference was submitted.");
+  const asset = await persistMotionClip(db, candidate, result.data);
+  const saved = await pollWrite(db, candidate, { status: "completed", output: {
+    ...candidate.output, provider_receipt: { provider: "modal", upstream_job_id: receiptId, recovered: true, verified_manifest: true },
+    arena_status_response: result.data, motion_clip_asset: asset, execution_phase: "completed",
+    reconciliation_required: false, reconciliation_reason: null, automatic_resubmission_disabled: true,
+  } }).select("*").maybeSingle();
+  if (saved.error) throw new Error("RECONCILIATION_RESULT_PERSIST_FAILED");
+  if (!saved.data) throw new Error("GENERATION_JOB_RACE_LOST: Receipt reconciliation lost its lease.");
+  return saved.data;
+}
+
+async function leasedPoll(db: any, job: any, receiptId?: string) {
+  let result: any;
+  try {
+    result = receiptId ? await reconcileCandidate(db, job, receiptId) : await poll(db, job);
+    return result;
+  } finally {
+    const errors = Number(result?.output?.infrastructure_errors ?? job.output?.infrastructure_errors ?? 0);
+    const accepted = Date.parse(job.output?.dispatch_started_at || job.created_at || "");
+    const overdue = Number.isFinite(accepted) && Date.now() - accepted > 30 * 60 * 1000;
+    const delay = Math.min(900, Math.max(overdue ? 300 : 30, 30 * 2 ** Math.min(errors, 5)));
+    const released = await db.from("generation_jobs").update({
+      poll_lease_token: null, poll_lease_until: null, next_poll_at: new Date(Date.now() + delay * 1000).toISOString(),
+    }).eq("id", job.id).in("status", ["submitted", "processing"]).eq("poll_lease_token", job.poll_lease_token).select("id");
+    if (released.error) throw new Error("POLL_LEASE_RELEASE_FAILED");
+  }
+}
+
+async function claimAndPoll(db: any, job: any, receiptId?: string) {
+  if (!["submitted", "processing"].includes(job.status)) return job;
+  const claim = await db.rpc("claim_generation_poll", { p_job_id: job.id, p_limit: 1 });
+  if (claim.error || !Array.isArray(claim.data)) throw new Error("POLL_CLAIM_UNAVAILABLE");
+  if (claim.data.length) return await leasedPoll(db, claim.data[0], receiptId);
+  const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+  if (latest.error || !latest.data) throw new Error("POLL_CLAIM_READ_FAILED");
   return latest.data;
 }
 
@@ -995,16 +1141,16 @@ Deno.serve(async (req) => {
       // queued work from ever being submitted.
       const [queued, active] = await Promise.all([
         db.from("generation_jobs").select("*").eq("status", "queued").order("created_at", { ascending: true }).limit(8),
-        db.from("generation_jobs").select("*").in("status", ["submitted", "processing"]).order("created_at", { ascending: true }).limit(8),
+        db.rpc("claim_generation_poll", { p_limit: 8 }),
       ]);
       if (queued.error) throw new Error(queued.error.message);
-      if (active.error) throw new Error(active.error.message);
+      if (active.error || !Array.isArray(active.data)) throw new Error("POLL_CLAIM_UNAVAILABLE");
       const pending = [...(queued.data || []), ...(active.data || [])]
         .filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index);
       const results = [];
       for (const item of pending) {
         try {
-          const result = item.status !== "queued" ? await poll(db, item) : await run(db, item);
+          const result = item.status !== "queued" ? await leasedPoll(db, item) : await run(db, item);
           results.push({ id: item.id, action: item.status !== "queued" ? "poll" : "run", status: result.status });
         } catch (error) {
           results.push({ id: item.id, error: error instanceof Error ? error.message : String(error) });
@@ -1014,7 +1160,7 @@ Deno.serve(async (req) => {
     }
 
     if (!projectId || (!["image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility", "modal_capability"].includes(action) && !jobId)) return json(req, { error: { code: "JOB_REQUIRED", message: "projectId and jobId are required." } }, 400);
-    if (!["run", "poll", "image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility", "modal_capability"].includes(action)) return json(req, { error: { code: "INVALID_ACTION", message: "action must be run, poll, image_url, or drain." } }, 400);
+    if (!["run", "poll", "reconcile", "image_url", "motion_url", "enqueue_ai_motion", "motion_eligibility", "modal_capability"].includes(action)) return json(req, { error: { code: "INVALID_ACTION", message: "action must be run, poll, reconcile, image_url, or drain." } }, 400);
     const project = await db.from("projects").select("id,owner_id").eq("id", projectId).maybeSingle();
     if (project.error) throw new Error(project.error.message);
     if (!project.data || (uid.kind !== "system" && project.data.owner_id !== uid.userId)) return json(req, { error: { code: "NOT_FOUND", message: "Project not found." } }, 404);
@@ -1052,7 +1198,11 @@ Deno.serve(async (req) => {
     if (job.error) throw new Error(job.error.message);
     if (!job.data) return json(req, { error: { code: "NOT_FOUND", message: "Generation job not found." } }, 404);
 
-    const result = action === "poll" ? await poll(db, job.data) : await run(db, job.data);
+    if (action === "reconcile" && !["submitted", "processing"].includes(job.data.status))
+      return json(req, { error: { code: "RECONCILIATION_NOT_ACTIVE", message: "Only an existing nonterminal execution can be reconciled." } }, 409);
+    const result = action === "poll" || action === "reconcile"
+      ? await claimAndPoll(db, job.data, action === "reconcile" && body.receiptId ? String(body.receiptId) : undefined)
+      : await run(db, job.data);
     return json(req, { job: result });
   } catch (error) {
     if (error instanceof HttpError) {
