@@ -31,7 +31,7 @@ to retained database history and a controlled cutover of every execution path.
 | Recovery | Unknown claims remain held. An executing worker can publish its actual call ID before model loading. Late receipt writes merge without erasing the execution fence. Receipt conflict HTTP409 stays processing with reconciliation required; no automatic POST retry. |
 | After | PostgreSQL16: 20 independent mixed CLI/HTTP processes produced **one mocked provider submission**. A 100-year-old retained claim, four process-death boundaries, lost execution-claim reply, same-call reentry, actual database stop/start and actual outage all preserved duplicate containment. |
 | Security | Private RLS-enabled table; anon/authenticated cannot execute RPC; anon/authenticated/service_role cannot directly delete it. Service-role credentials stay server-only; HTTPS origin is restricted to Supabase, redirects rejected, network errors sanitized. Current owner, immutable prepared payload, pinned model/revision, source hash and approvals are checked at reservation and model entry. |
-| Status | **IMPLEMENTED / TESTED** for permanent admission under the stated assumptions. Unconditional exactly-once execution and completion remain **NOT VERIFIED / provider-boundary BLOCKED**. Implementation SHA is recorded in the publication entry of `PROJECT_LOG.md`. |
+| Commit / status | `6f28b1a6e87cbda583b15c0487541e5ada07feda`: **IMPLEMENTED / TESTED** for permanent admission under the stated assumptions. Unconditional exactly-once execution and completion remain **NOT VERIFIED / provider-boundary BLOCKED**. |
 
 Independent review found two additional authorization hazards during this change:
 SQL NULL operation flags could bypass boolean guards, and model entry did not
@@ -72,8 +72,9 @@ prepared dispatch payload survives receipt persistence.
   Edge check uses installed vendor declarations and a temporary PNG typing
   annotation, as explained in the earlier report; it is not a deployment check.
 - The candidate migration applied to isolated PostgreSQL16 and PGlite, exit0.
-  Full Supabase17 replay is checked separately on the final published GitHub CI
-  head. Local full replay remains unavailable after the previously documented
+  Full Supabase17 replay passed on published implementation6f28b1a in GitHub CI,
+  together with all three other workflows (links in `PROJECT_LOG.md`). Local
+  full replay remains unavailable after the previously documented
   Docker image unpacking disk exhaustion; it was not retried blindly.
 - Independent second source review challenged lineage, receipt replay, factory
   wiring and failure classification. Identified issues received fixes and

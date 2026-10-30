@@ -1634,3 +1634,60 @@ Exact executed command ledger (cwd `/workspace/BeatVision-pr164` for every row; 
 | 2026-10-30T22:33:12.625149+00:00 | versions | 0 | `python -c 'import subprocess,json;commands=[["/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node","--version"],["npm","--version"],["git","--version"],["/workspace/beatvision-baseline-20261029/venv/bin/python","-c","import sys,importlib.metadata as m;print(sys.version);print({k:m.version(k) for k in [\"fastapi\",\"httpx\"]})"],["./node_modules/.bin/tsc","--version"],["./node_modules/.bin/vite","--version"],["/workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno","--version"]];[(print(json.dumps(c)),subprocess.run(c,check=True)) for c in commands]'` |
 
 `postgres-process-v2` runner executed the following subcommands, all exit0: `docker --host=unix:///var/run/docker.sock exec -i beatvision-admission-local-20261030 psql -U postgres -d postgres -X -v ON_ERROR_STOP=1 -f -` with stdin first from `scripts/test/sql/generation-enqueue-fixture.sql`, then `supabase/migrations/20261030204115_durable_modal_admission.sql`; then `BEATVISION_LEDGER_TEST_ISOLATED=1 /workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/verify_modal_admission.py --psql '["docker","--host=unix:///var/run/docker.sock","exec","-i","beatvision-admission-local-20261030","psql","-U","postgres","-d","postgres"]'`. It unsets DOCKER_HOST/CONTEXT/TLS/TLS_VERIFY/CERT_PATH and injects only fixture configuration. The isolated driver contains the exact parameterized SQL/process commands; mock spawn events are counted in a fixture-only SQL table. PostgreSQL fixture result is distinct from full Supabase migration replay.
+
+
+### Permanent admission publication — 2026-10-30
+
+Implementation SHA: **`6f28b1a6e87cbda583b15c0487541e5ada07feda`**, `Use permanent PostgreSQL admission for Modal execution`,18files,1034insertions/27deletions. Exact `git add -- <18 paths listed in this phase inventory>` exited0; `git diff --cached --check` exit0; `git commit -m 'Use permanent PostgreSQL admission for Modal execution'` exit0 at22:35:07UTC. Subsequent `git diff d735fb5f96cb18cef980748d05b255e60f22f6fc HEAD --check` exit0.
+
+Publication: an interrupted permission/tool call produced no push execution record and did not advance remote. `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` in the restricted sandbox then exited128 (`Failed to connect to proxy port8080`, evidence push-default). The same direct command with sandbox network permission exited0, advancing d735fb5→6f28b1a; observed remote by23:11UTC. No force push. GitHub PR metadata confirms open/draft/unmerged and exact6f28b1a head; main remains3e26d855 and original checkout clean. PR body updated through GitHub update_pull_request to describe verified permanent admission, explicit protocol2/CLI contract changes and unresolved rollout/provider-boundary limits.
+
+All four GitHub workflows passed on exact implementation SHA6f28b1a6e87cbda583b15c0487541e5ada07feda (GitHub Actions API statuses completed/success):
+
+- Production CI: https://github.com/DaddyDom8249/BeatVision/actions/runs/41142959447
+- Generation enqueue security including independent permanent-admission worker processes: https://github.com/DaddyDom8249/BeatVision/actions/runs/41142959552
+- Full isolated Supabase PostgreSQL migration replay including new ledger migration: https://github.com/DaddyDom8249/BeatVision/actions/runs/41142959516
+- Storage ownership security: https://github.com/DaddyDom8249/BeatVision/actions/runs/41142959494
+
+This establishes TESTED full migration replay in CI, despite the separately documented local Docker disk limitation. No staging/production/provider verification is inferred. Node421/421 and Python67/67 totals above are actual local suite results, not inferred from CI. No tests skipped locally. Documentation-only follow-up records implementation SHA, publication and CI; final documentation head and its own CI are independently reported in PR metadata/final response, rather than claiming a commit can contain its own SHA. `git diff --check`, `git add PROJECT_LOG.md docs/audits/pr164-permanent-admission-20261030.md`, `git diff --cached --check`, `git commit -m 'Record permanent admission publication and verification'` and normal push to the same existing branch are the follow-up commands; actual exits are checked before final reporting.
+
+Complete PR changed-file inventory relative to verified main3e26d855 (38paths; separate from the18-path repair inventory above):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-lifecycle-repair-20261030.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `providers/__init__.py`
+- `providers/modal_motion/README.md`
+- `providers/modal_motion/__init__.py`
+- `providers/modal_motion/admission.py`
+- `providers/modal_motion/contracts.py`
+- `providers/modal_motion/tests/staging_worker.py`
+- `providers/modal_motion/tests/test_admission_client.py`
+- `providers/modal_motion/tests/test_contention_probe.py`
+- `providers/modal_motion/tests/test_contracts.py`
+- `providers/modal_motion/tests/test_process_recovery.py`
+- `providers/modal_motion/tests/test_submit_concurrency.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/beatvision-generation-auth.test.mjs`
+- `scripts/test/beatvision-generation-state.test.mjs`
+- `scripts/test/generation-dispatch-recovery.test.mjs`
+- `scripts/test/generation-lifecycle-recovery.test.mjs`
+- `scripts/test/generation-poll-leases.db.test.mjs`
+- `scripts/test/generation-receipt-persistence.test.mjs`
+- `scripts/test/generation-runtime.mjs`
+- `scripts/test/hf-acceptance-recovery.test.mjs`
+- `scripts/test/hf-motion.test.mjs`
+- `scripts/test/modal-admission-ledger.db.test.mjs`
+- `scripts/test/modal-motion-integration.test.mjs`
+- `scripts/test/modal-postgres-crash-recovery.test.mjs`
+- `scripts/test/verify_modal_admission.py`
+- `scripts/test/verify_multiprocess_contention.py`
+- `scripts/test/verify_poll_leases.py`
+- `src/pages/ProductionWorkspacePage.tsx`
+- `supabase/functions/beatvision-generation/hf-motion.ts`
+- `supabase/functions/beatvision-generation/index.ts`
+- `supabase/functions/beatvision-generation/modal-motion.ts`
+- `supabase/migrations/20261030010000_generation_poll_leases.sql`
+- `supabase/migrations/20261030204115_durable_modal_admission.sql`
