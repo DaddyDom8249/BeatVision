@@ -105,6 +105,7 @@ export async function submitModalMotion(
   requester: Fetcher = fetch,
 ): Promise<{status: string; job_id: string; provider: string; model: string; source_sha256: string}> {
   assertModalSubmissionEnabled(env);
+  if (payload.admission_protocol !== 2) throw new ModalMotionError("MODAL_ADMISSION_PROTOCOL_REQUIRED");
   checkedBytes(source);
   for (const id of ["project_id","scene_id","source_image_id","generation_job_id"])
     if (!uuid(payload[id])) throw new ModalMotionError("MODAL_REQUEST_ID_INVALID");

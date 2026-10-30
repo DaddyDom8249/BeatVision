@@ -28,6 +28,7 @@ function fixtureImage() {
 }
 async function fixturePayload(image = fixtureImage()) {
   return {
+    admission_protocol:2,
     project_id:uuids[0],scene_id:uuids[1],source_image_id:uuids[2],generation_job_id:uuids[3],
     image_sha256:await sha256Hex(image),prompt:'A character moves within the approved location.',seed:42,
   };
@@ -71,6 +72,13 @@ test('Invalid source provenance fails before any Modal HTTP request',async()=>{
   for(const [candidate,source,code] of cases)
     await assert.rejects(submitModalMotion(candidate,source,safeEnv,requester),
       error=>error.code===code);
+  assert.equal(requests,0);
+});
+
+test('legacy Modal payload cannot be dispatched by the new adapter',async()=>{
+  const image=fixtureImage(),payload=await fixturePayload(image);delete payload.admission_protocol;
+  let requests=0;
+  await assert.rejects(submitModalMotion(payload,image,safeEnv,async()=>{requests++;throw Error('No request allowed');}),/MODAL_ADMISSION_PROTOCOL_REQUIRED/);
   assert.equal(requests,0);
 });
 test('Invalid Modal submit receipt is rejected without retry',async()=>{

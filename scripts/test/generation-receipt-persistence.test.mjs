@@ -9,7 +9,7 @@ const receipt = 'fc-acceptedfixture';
 const env = { MODAL_TOKEN_ID: 'fixture', MODAL_TOKEN_SECRET: 'fixture',
   BRAGORA_MODAL_GPU_ENABLED: 'true', BRAGORA_MODAL_BUDGET_VERIFIED: 'true' };
 
-function fixture({ failure = 'none', concurrent = null, recoveryRace = false } = {}) {
+function fixture({ failure = 'none', concurrent = null, recoveryRace = false, providerConflict = false } = {}) {
   const source = PNG.sync.write(new PNG({ width: 2, height: 2 }));
   const image = { id: ids[2], project_id: ids[0], visual_plan_id: 'fixture-plan',
     scene_id: ids[1], approved: true, status: 'approved',
@@ -71,6 +71,7 @@ function fixture({ failure = 'none', concurrent = null, recoveryRace = false } =
     if (options.method === 'POST') {
       assert.equal(url, MODAL_MOTION.apiBase + '/submit');
       submits++;
+      if(providerConflict)return new Response(JSON.stringify({error:'MODAL_EXECUTION_RECEIPT_CONFLICT'}),{status:409});
       return new Response(JSON.stringify({ status: 'processing', job_id: receipt }));
     }
     assert.equal(options.method, 'GET');
@@ -100,9 +101,22 @@ test('healthy accepted submission persists its receipt without reconciliation', 
     assert.equal(result.status, 'processing');
     assert.equal(result.output.upstream_job_id, receipt);
     assert.equal(result.output.provider_receipt.upstream_job_id, receipt);
+    assert.equal(result.output.modal_dispatch_payload.admission_protocol,2);
+    assert.equal(result.output.modal_dispatch_payload.generation_job_id,result.id);
+    assert.equal(result.output.modal_dispatch_payload.image_sha256,result.output.modal_source_sha256);
     assert.notEqual(result.output.reconciliation_required, true);
     assert.deepEqual(result.input_snapshot, f.original.input_snapshot);
     assert.deepEqual(f.stats(), { receiptFailures: 0, failedWrites: 0, submits: 1, lookups: 0 });
+  });
+});
+
+test('provider admission conflict retains reconciliation instead of terminal failure or resubmission',async()=>{
+  const f=fixture({providerConflict:true});
+  await withRuntime(f,async runtime=>{
+    const held=await runtime.run(f.db,f.original);
+    assert.equal(held.status,'processing');assert.equal(held.output.reconciliation_required,true);
+    assert.equal(held.output.automatic_resubmission_disabled,true);assert.equal(f.stats().failedWrites,0);
+    assert.equal((await runtime.run(f.db,f.row())).status,'processing');assert.equal(f.stats().submits,1);
   });
 });
 

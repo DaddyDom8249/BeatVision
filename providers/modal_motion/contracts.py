@@ -40,6 +40,8 @@ class MotionRequest:
     image_sha256: str
     prompt: str
     seed: int
+    admission_protocol: int = 2
+    admission_token: str | None = None
 
 
 def _uuid(value: str, field: str) -> str:
@@ -51,6 +53,8 @@ def _uuid(value: str, field: str) -> str:
 
 
 def validate_request(request: MotionRequest, image: bytes) -> MotionRequest:
+    if type(request.admission_protocol) is not int or request.admission_protocol != 2:
+        raise MotionContractError('MODAL_ADMISSION_PROTOCOL_REQUIRED')
     if not isinstance(image, bytes) or not 16 <= len(image) <= MAX_IMAGE_BYTES:
         raise MotionContractError('IMAGE_BYTES_INVALID')
     if not (image.startswith(b'\x89PNG\r\n\x1a\n') or image.startswith(b'\xff\xd8\xff')):

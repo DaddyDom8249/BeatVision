@@ -518,7 +518,7 @@ async function enqueueHfMotion(db: any, projectId: string, sceneId: string, acce
     project_id: projectId, vision_lock_id: base.vision_lock_id, visual_plan_id: base.visual_plan_id,
     visual_plan_scene_id: sceneId, job_type: "scene_motion", idempotency_key: key,
     input_snapshot: {...base.input_snapshot, ...(provider === "modal"
-      ? {modal_motion:{source_image_id:image.data.id,model:MODAL_MOTION.model,revision:MODAL_MOTION.revision,
+      ? {modal_motion:{source_image_id:image.data.id,model:MODAL_MOTION.model,revision:MODAL_MOTION.revision,admission_protocol:2,
           duration_seconds:MODAL_MOTION.frames/MODAL_MOTION.fps,terms_accepted_at:new Date().toISOString()}}
       : {hf_motion:{source_image_id:image.data.id,space:HF_MOTION.space,revision:HF_MOTION.revision,
           duration_seconds:HF_MOTION.duration,terms_accepted_at:new Date().toISOString()}})},
@@ -714,7 +714,7 @@ async function modalBridgeSubmit(db: any,job: any) {
   const prompt=[scene.title,scene.visual_direction,scene.movement_direction,scene.location,
     scene.mood,scene.continuity_notes,"Preserve character, face, wardrobe, setting and natural physical motion."]
     .filter(x=>typeof x==="string" && x.trim()).join(". ").slice(0,1600);
-  const payload={project_id:job.project_id,scene_id:job.visual_plan_scene_id,
+  const payload={admission_protocol:2,project_id:job.project_id,scene_id:job.visual_plan_scene_id,
     source_image_id:frozen.source_image_id,generation_job_id:job.id,
     image_sha256:await sha256Hex(bytes),prompt,seed:parseInt(job.id.replace(/-/g,"").slice(0,7),16)||42};
   // Persist source provenance before the external submission: the provider may
@@ -722,9 +722,10 @@ async function modalBridgeSubmit(db: any,job: any) {
   const recorded = await db.from("generation_jobs").update({output: {
     ...(job.output || {}),
     modal_source_sha256: payload.image_sha256,
+    modal_dispatch_payload: payload,
   }}).eq("id",job.id).eq("status","processing").select("id").maybeSingle();
   if(recorded.error || !recorded.data) throw new ModalMotionError("MODAL_SOURCE_PROVENANCE_PERSIST_FAILED");
-  job.output = {...(job.output || {}), modal_source_sha256: payload.image_sha256};
+  job.output = {...(job.output || {}), modal_source_sha256: payload.image_sha256, modal_dispatch_payload: payload};
   const data=await submitModalMotion(payload,bytes);
   return {response:new Response(null,{status:200}),data};
 }
@@ -892,7 +893,7 @@ async function run(db: any, job: any) {
     // These adapter failures cannot safely be interpreted as rejection.
     const errorCode = error instanceof Error ? error.message : String(error);
     const acceptanceUnknown = error instanceof TypeError ||
-      /^(HF_SUBMISSION_ACCEPTANCE_UNKNOWN|MODAL_HTTP_TIMEOUT|MODAL_HTTP_UNAVAILABLE|MODAL_HTTP_RESPONSE_INVALID|MODAL_JOB_RECEIPT_INVALID|MODAL_HTTP_(?:5\d\d|408))(:|$)/.test(errorCode);
+      /^(HF_SUBMISSION_ACCEPTANCE_UNKNOWN|MODAL_HTTP_TIMEOUT|MODAL_HTTP_UNAVAILABLE|MODAL_HTTP_RESPONSE_INVALID|MODAL_JOB_RECEIPT_INVALID|MODAL_HTTP_(?:5\d\d|408|409))(:|$)/.test(errorCode);
     if (acceptanceUnknown && !job.output?.upstream_job_id) {
       const marked = await db.from("generation_jobs").update({ output: {
         ...(job.output || {}),

@@ -59,7 +59,7 @@ def execute_child(filename, directory, entry, crash=None):
     worker = worker_runtime(store, spawn, lambda _: result)
     if entry == 'cli':
         os.environ['BRAGORA_MODAL_GPU_ENABLED'] = 'true'  # Stub SDK only.
-        payload = {key: value for key, value in body()['payload'].items() if key != 'image_sha256'}
+        payload = {key: value for key, value in body()['payload'].items() if key not in ('image_sha256','admission_protocol','admission_token')}
         try:
             worker.main(image_path=str(pathlib.Path(directory) / 'source.png'),
                 output_dir=str(pathlib.Path(directory) / str(os.getpid())), execute=True,

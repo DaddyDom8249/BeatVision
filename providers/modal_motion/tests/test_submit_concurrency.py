@@ -66,6 +66,7 @@ def worker_runtime(store, spawn, get_result=None, legacy_remote=None, execution_
 
     fake_modal = SimpleNamespace(
         App=FakeApp, Image=FakeImage,
+        Secret=SimpleNamespace(from_name=lambda *args,**kwargs: object()),
         current_function_call_id=lambda: execution_call_id,
         Dict=SimpleNamespace(from_name=lambda *args, **kwargs: store),
         FunctionCall=SimpleNamespace(from_id=lambda call_id: SimpleNamespace(
@@ -76,6 +77,8 @@ def worker_runtime(store, spawn, get_result=None, legacy_remote=None, execution_
     worker = importlib.util.module_from_spec(spec)
     with patch.dict(sys.modules, {'modal': fake_modal}):
         spec.loader.exec_module(worker)
+    worker._production_submission_receipts=worker._submission_receipts
+    worker._submission_receipts=lambda:store
     return worker
 
 
@@ -89,7 +92,7 @@ def body(**overrides):
         source_image_id=str(uuid.UUID(int=3)),
         generation_job_id=str(uuid.UUID(int=4)),
         image_sha256=hashlib.sha256(IMAGE).hexdigest(),
-        prompt='A character walks naturally across the scene.', seed=42,
+        prompt='A character walks naturally across the scene.', seed=42, admission_protocol=2,
     )
     payload.update(overrides)
     return {'payload': payload, 'image_base64': base64.b64encode(IMAGE).decode(),
@@ -200,9 +203,12 @@ class CliReservationTests(unittest.TestCase):
 
     def cli(self, worker=None, output='output', **changes):
         payload = {**self.payload, **changes}
-        kwargs = {key: value for key, value in payload.items() if key != 'image_sha256'}
+        kwargs = {key: value for key, value in payload.items() if key not in ('image_sha256','admission_protocol','admission_token')}
         (worker or self.worker).main(image_path=str(self.source), output_dir=str(self.root / output),
                                      execute=True, acknowledgment=ACKNOWLEDGEMENT, **kwargs)
+
+    def execution_payload(self):
+        return {**self.payload,'admission_token':self.store.get(self.payload['generation_job_id'])['admission_token']}
 
     def http(self, worker=None, method='POST', path='/submit', data=None):
         app = (worker or self.worker).motion_api()
@@ -396,7 +402,7 @@ class CliReservationTests(unittest.TestCase):
         self.assertEqual(self.http().status_code, 202)
         # Simulate the already accepted remote container starting later. The
         # real function calls this before importing torch or loading weights.
-        self.restart()._publish_execution_receipt(self.payload)
+        self.restart()._publish_execution_receipt(self.execution_payload())
         self.cli(self.restart())
         self.assertEqual(self.http().json()['job_id'], 'fc-existing123')
         self.assert_no_bypass()
@@ -415,11 +421,11 @@ class CliReservationTests(unittest.TestCase):
             return original_import(name,*args,**kwargs)
         with patch('builtins.__import__',stopped_import):
             with self.assertRaises(ModelBoundaryReached):
-                self.worker.single_motion_proof(self.payload,IMAGE,ACKNOWLEDGEMENT)
+                self.worker.single_motion_proof(self.execution_payload(),IMAGE,ACKNOWLEDGEMENT)
             # A provider retry of even the same call stops BEFORE another model
             # import. No torch, model weights or GPU API is ever imported here.
             with self.assertRaisesRegex(MotionContractError,'ALREADY_ADMITTED'):
-                self.worker.single_motion_proof(self.payload,IMAGE,ACKNOWLEDGEMENT)
+                self.worker.single_motion_proof(self.execution_payload(),IMAGE,ACKNOWLEDGEMENT)
         self.assert_no_bypass()
 
     def test_execution_receipt_write_refusal_cannot_authorize_inference(self):
@@ -428,7 +434,7 @@ class CliReservationTests(unittest.TestCase):
             self.cli()
         self.store.put = MagicMock(side_effect=RuntimeError('MOCK_DATABASE_OUTAGE'))
         with self.assertRaisesRegex(RuntimeError, 'DATABASE_OUTAGE'):
-            self.restart()._publish_execution_receipt(self.payload)
+            self.restart()._publish_execution_receipt(self.execution_payload())
         self.assertNotIn('job_id', self.store.get(self.payload['generation_job_id']))
 
     def test_execution_cannot_publish_conflicting_receipt_or_unreserved_payload(self):
@@ -439,7 +445,7 @@ class CliReservationTests(unittest.TestCase):
         record = self.store.get(self.payload['generation_job_id'])
         self.store.put(self.payload['generation_job_id'], {**record, 'job_id': 'fc-other'})
         with self.assertRaisesRegex(MotionContractError, 'RECEIPT_CONFLICT'):
-            self.restart()._publish_execution_receipt(self.payload)
+            self.restart()._publish_execution_receipt(self.execution_payload())
         self.assert_no_bypass()
 
     def test_competing_execution_containers_admit_one_before_model_loading(self):
@@ -448,7 +454,7 @@ class CliReservationTests(unittest.TestCase):
             self.cli()
         workers=[worker_runtime(self.store,self.spawn,execution_call_id='fc-container'+str(n)) for n in range(20)]
         def admit(worker):
-            try:worker._publish_execution_receipt(self.payload);return True
+            try:worker._publish_execution_receipt(self.execution_payload());return True
             except MotionContractError:return False
         with ThreadPoolExecutor(max_workers=20) as pool:
             self.assertEqual(sum(pool.map(admit,workers)),1)
@@ -464,10 +470,10 @@ class CliReservationTests(unittest.TestCase):
             if not skip_if_exists:raise RuntimeError('MOCK_RECEIPT_WRITE_FAILURE')
             return original(key,value,skip_if_exists)
         self.store.put=interrupted
-        with self.assertRaises(RuntimeError):self.restart()._publish_execution_receipt(self.payload)
+        with self.assertRaises(RuntimeError):self.restart()._publish_execution_receipt(self.execution_payload())
         self.assertEqual(self.http(method='GET',path='/receipt/'+self.payload['generation_job_id']).json()['job_id'],'fc-existing123')
         with self.assertRaisesRegex(MotionContractError,'ALREADY_ADMITTED'):
-            self.restart()._publish_execution_receipt(self.payload)
+            self.restart()._publish_execution_receipt(self.execution_payload())
         self.assert_no_bypass()
 
     def test_parent_and_execution_receipt_conflict_never_prefers_one_or_resubmits(self):
@@ -482,7 +488,7 @@ class CliReservationTests(unittest.TestCase):
 
     def test_execution_receipt_survives_parent_entry_loss_without_another_spawn(self):
         self.assertEqual(self.http().status_code,200)
-        self.worker._publish_execution_receipt(self.payload)
+        self.worker._publish_execution_receipt(self.execution_payload())
         del self.store.store[self.payload['generation_job_id']]
         self.assertEqual(self.http(method='GET',path='/receipt/'+self.payload['generation_job_id']).json()['job_id'],'fc-existing123')
         self.cli(self.restart())

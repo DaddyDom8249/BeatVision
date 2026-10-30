@@ -200,6 +200,7 @@ class LocalEntryPointTests(unittest.TestCase):
 
         fake_modal = SimpleNamespace(
             App=FakeApp, Image=FakeImage,
+            Secret=SimpleNamespace(from_name=lambda *args,**kwargs: object()),
             asgi_app=lambda **kwargs: (lambda fn: fn),
         )
         spec = importlib.util.spec_from_file_location('modal_motion_test_worker', ROOT/'worker.py')

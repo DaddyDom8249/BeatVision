@@ -24,6 +24,7 @@ from providers.modal_motion.contracts import (
     STEPS, WIDTH, MotionContractError, MotionRequest, manifest,
     manifest_json, require_execution_authorization, validate_request,
 )
+from providers.modal_motion.admission import PostgresReceiptStore
 
 # Modal SDK is only needed when running "modal run" or deploying this file.
 import modal
@@ -36,6 +37,7 @@ MODEL = 'Lightricks/LTX-Video-0.9.5'
 MODEL_REVISION = 'e58e28c39631af4d1468ee57a853764e11c1d37e'
 
 app = modal.App(APP_NAME)
+ledger_secret = modal.Secret.from_name('bragoraforge-motion-ledger')
 image = modal.Image.debian_slim(python_version='3.11').pip_install(
     'torch==2.7.1', 'diffusers==0.35.2', 'transformers==4.56.2',
     'accelerate==1.10.1', 'huggingface-hub==0.34.4',
@@ -57,6 +59,7 @@ web_image = modal.Image.debian_slim(python_version='3.11').pip_install(
     timeout=300,
     retries=0,
     name='single_motion_proof',
+    secrets=[ledger_secret],
 )
 def single_motion_proof(payload: dict, image_bytes: bytes, ack: str) -> dict:
     """One bounded 49-frame model inference; no external public endpoint.
@@ -69,6 +72,8 @@ def single_motion_proof(payload: dict, image_bytes: bytes, ack: str) -> dict:
     # Remote workers do not inherit the caller's local env. Require an explicit
     # per-invocation acknowledgement; the local CLI separately checks the env.
     require_execution_authorization(ack, 'true')
+    if payload.get('admission_protocol') != 2:
+        raise MotionContractError('MODAL_ADMISSION_PROTOCOL_REQUIRED')
     request = MotionRequest(**payload)
     validate_request(request, image_bytes)
     # The execution can outlive its submitting container. Publish its own
@@ -126,20 +131,20 @@ def single_motion_proof(payload: dict, image_bytes: bytes, ack: str) -> dict:
 
 
 def _submission_receipts():
-    return modal.Dict.from_name('bragoraforge-modal-submissions-v1', create_if_missing=True)
+    return PostgresReceiptStore.from_env()
 
 
 def _request_fingerprint(payload: dict):
     normalized = {**payload, 'generation_job_id': str(uuid.UUID(payload['generation_job_id']))}
+    normalized.pop('admission_token', None)
     return hashlib.sha256(json.dumps(normalized, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
 def _publish_execution_receipt(payload: dict):
     """Recover a lost caller reply once the reserved execution actually starts.
 
-    This does not make reservation/spawn atomic. Dict retention is finite (the
-    documented new-Dict default is seven inactive days); no permanent replay
-    guarantee or safe replacement of an unknown execution is implied.
+    PostgreSQL admission never expires or re-grants an existing claim. This
+    still does not make the database/provider boundary atomic or reclaimable.
     """
     key = str(uuid.UUID(payload['generation_job_id']))
     fingerprint = _request_fingerprint(payload)
@@ -148,11 +153,16 @@ def _publish_execution_receipt(payload: dict):
         raise MotionContractError('MODAL_JOB_RECEIPT_INVALID')
     receipts = _submission_receipts()
     existing = receipts.get(key)
+    if existing and existing.get('legacy_hold'):
+        raise MotionContractError('MODAL_LEGACY_EXECUTION_UNCERTAIN')
     if not isinstance(existing, dict) or existing.get('fingerprint') != fingerprint:
         raise MotionContractError('MODAL_REQUEST_FINGERPRINT_CONFLICT')
     if existing.get('job_id') not in (None, call_id):
         raise MotionContractError('MODAL_EXECUTION_RECEIPT_CONFLICT')
-    execution = {'fingerprint': fingerprint, 'state': 'accepted', 'job_id': call_id}
+    token = payload.get('admission_token')
+    if not isinstance(token, str) or existing.get('admission_token') != token:
+        raise MotionContractError('MODAL_ADMISSION_TOKEN_INVALID')
+    execution = {'fingerprint': fingerprint, 'state': 'accepted', 'job_id': call_id, 'admission_token': token}
     # Fence competing executions and same-call re-entry before model loading.
     # The immutable claim itself contains the receipt, so interruption of the
     # following convenience update cannot hide an already admitted call.
@@ -167,6 +177,11 @@ def _submission_receipt(receipts, generation_job_id: str, fingerprint=None):
     execution = receipts.get('execution:' + key)
     if not isinstance(existing, dict) and isinstance(execution, dict):
         existing = {'fingerprint': execution.get('fingerprint')}
+    if isinstance(existing, dict) and existing.get('legacy_hold'):
+        receipt = existing.get('job_id')
+        if isinstance(receipt, str) and re.fullmatch(r'fc-[A-Za-z0-9_-]+', receipt):
+            return {'status': 'processing', 'job_id': receipt}
+        return {'status': 'reconciliation_required', 'receipt_known': False}
     if fingerprint is not None and (
         not isinstance(existing, dict) or existing.get('fingerprint') != fingerprint
     ):
@@ -197,29 +212,34 @@ def _reserve_motion(payload: dict, source: bytes, ack: str):
     provider acceptance and receipt persistence are still separate operations.
     """
     require_execution_authorization(ack, 'true')
+    if payload.get('admission_protocol') != 2:
+        raise MotionContractError('MODAL_ADMISSION_PROTOCOL_REQUIRED')
     validated = MotionRequest(**payload)
     validate_request(validated, source)
     key = str(uuid.UUID(validated.generation_job_id))
     payload = {**payload, 'generation_job_id': key}
+    payload.pop('admission_token', None)
     fingerprint = _request_fingerprint(payload)
     receipts = _submission_receipts()
-    reservation = {'fingerprint': fingerprint, 'state': 'receipt_unknown'}
+    token = str(uuid.uuid4())
+    reservation = {'fingerprint': fingerprint, 'state': 'receipt_unknown', 'admission_token': token, 'request': payload}
     if not receipts.put(key, reservation, skip_if_exists=True):
         return _submission_receipt(receipts, key, fingerprint)
-    # The convenience parent entry may expire before a still-live execution
-    # claim. Consult that claim BEFORE spawning, including after parent loss.
+    # Consult the independent execution receipt before spawning. Neither
+    # PostgreSQL claim expires; a known execution must always win over submit.
     retained = _submission_receipt(receipts, key, fingerprint)
     if retained.get('job_id'):
         return retained
     # A crash before/after spawn or during receipt persistence leaves the hold
     # intact. Neither entry point may infer that another execution is safe.
+    payload = {**payload, 'admission_token': token}
     call = single_motion_proof.spawn(payload, source, ack)
     if not re.fullmatch(r'fc-[A-Za-z0-9_-]+', call.object_id):
         raise MotionContractError('MODAL_JOB_RECEIPT_INVALID')
     observed = _submission_receipt(receipts, key, fingerprint)
     if observed.get('job_id') not in (None, call.object_id):
         raise MotionContractError('MODAL_EXECUTION_RECEIPT_CONFLICT')
-    receipts.put(key, {'fingerprint': fingerprint, 'state': 'accepted', 'job_id': call.object_id})
+    receipts.put(key, {'fingerprint': fingerprint, 'state': 'accepted', 'job_id': call.object_id, 'admission_token': token})
     return {'status': 'processing', 'job_id': call.object_id}
 
 
@@ -231,6 +251,7 @@ def _reserve_motion(payload: dict, source: bytes, ack: str):
     scaledown_window=2,
     timeout=30,
     name='motion_api',
+    secrets=[ledger_secret],
 )
 @modal.asgi_app(requires_proxy_auth=True)
 def motion_api():
@@ -269,7 +290,7 @@ def motion_api():
                 return JSONResponse({'status': 'reconciliation_required', 'receipt_known': False}, status_code=202)
             return submission
         except MotionContractError as exc:
-            status = 409 if str(exc) in ('MODAL_REQUEST_FINGERPRINT_CONFLICT', 'MODAL_EXECUTION_RECEIPT_CONFLICT') else 400
+            status = 503 if str(exc).startswith('MODAL_LEDGER_') else 409 if str(exc) in ('MODAL_REQUEST_FINGERPRINT_CONFLICT', 'MODAL_EXECUTION_RECEIPT_CONFLICT') else 400
             return JSONResponse({'error': str(exc)}, status_code=status)
         except (TypeError, ValueError) as exc:
             return JSONResponse({'error': str(exc)}, status_code=400)
@@ -328,6 +349,10 @@ def main(
     execute: bool = False,
 ):
     """Dry-run by default; --execute additionally requires local env + full ack.
+
+    Execute now requires an existing authorized generation job and its exact
+    prepared dispatch payload in the permanent PostgreSQL ledger. Arbitrary
+    standalone UUIDs cannot authorize execution. Dry-run remains entirely local.
 
     Neither --execute nor the acknowledge string is financial proof. Verify
     workspace cap AND residual credits BEFORE invoking remotely.
