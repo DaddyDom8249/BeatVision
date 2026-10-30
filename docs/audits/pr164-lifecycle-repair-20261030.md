@@ -18,8 +18,8 @@ The worktree was clean before this cycle. AGENTS.md and all 1,395 existing
 PROJECT_LOG.md lines were read; independent review also confirmed a complete read.
 PR comments contained bot preview/draft-review information and no human review
 requiring a conflicting implementation. Fetch/remote-head checks were repeated
-before edits and again before committing. Exact implementation SHA is recorded
-in the following PROJECT_LOG publication entry; the command ledger is in that log.
+before edits and again before committing. Implementation commit: `41b42a7663f6e9dea1059633599880e8bba8c992`. The following
+PROJECT_LOG publication entry records push evidence and the command ledger.
 
 Baseline checks: Node 367/367 and Python 44/44 passed, exit 0. New fault tests on
 the unchanged baseline failed: lifecycle 0/9 passed, HF acceptance 2/9 passed.

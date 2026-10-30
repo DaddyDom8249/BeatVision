@@ -1525,3 +1525,26 @@ All commands below ran with cwd `/workspace/BeatVision-pr164` unless the row spe
 The SQL fixture runner executed, each exit0: `docker --host=unix:///var/run/docker.sock exec -i beatvision-lifecycle-local-20261030 psql -U postgres -d postgres -X -v ON_ERROR_STOP=1 -f -` with stdin from generation-enqueue-fixture.sql, generation-enqueue-baseline.sql, owner-checked enqueue migration, canonical assembly-type migration, generation-enqueue-security.sql, assembly-motion-provenance migration and assembly-motion-provenance.sql. It then added fixture-only timestamps, applied the new poll migration and ran `BEATVISION_POLL_TEST_ISOLATED=1 python scripts/test/verify_poll_leases.py --psql '["docker","--host=unix:///var/run/docker.sock","exec","-i","beatvision-lifecycle-local-20261030","psql","-U","postgres","-d","postgres"]'`, exit0. The committed runner contains exact concurrent SQL; no production connection was used. The owned fixture container was removed afterward, exit0.
 
 Edge check used temporary import map to installed Supabase declarations and an unchanged image module copy with `@ts-types` for PNG; no platform behavior was stubbed by the controller fault tests beyond explicit mocks. Direct JSR fetch/vendor typing and unsupported cached-only CLI attempts failed as recorded before a successful check. Supabase CLI init initially failed due read-only default config location; `SUPABASE_HOME` then isolated it inside the evidence workspace. Public source URLs returned404; official Modal reference docs returned200 and supplied the quoted retention/API evidence. Full migration replay is not represented as passed.
+
+
+### PR #164 publication — 2026-10-30 20:24 UTC
+
+Implementation commit: `41b42a7663f6e9dea1059633599880e8bba8c992` (`Recover accepted motion jobs without replacement inference`), all18 changed files listed above. `git add` of the18 listed paths, `git diff --cached --check`, and `git commit` each exited0. `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` exited0 at20:24:10UTC and advanced the existing PR branch from3b5d102 to41b42a7; no force, main unchanged. A documentation-only follow-up records this implementation SHA and publication evidence. Its own final head is externally verifiable with git/PR metadata and reported to the user.
+
+Final code verification:410/410 Node (zero skips),60/60 Python, audit/build/typechecks/compilation/diff checks exit0. Local full Supabase replay remainsBLOCKED(space); expiry negative probe remainsFAILED(2mock submissions), not included among passing suite totals. No exactly-once, staging or production claim. New Node regression files contain26lifecycle cases,14HF acceptance cases and3SQL claim cases (43addedNode tests versus367baseline), finaltotal410. Python added16tests versus44baseline, including7independent-process cases. Source review findings and all known limits are preserved in the report; PR staysdraft.
+
+Final executed command evidence (same cwd as above):
+
+| Label | Exit | Command |
+| --- | --- | --- |
+| release-python-final | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m unittest discover -s providers/modal_motion/tests -v` |
+| release-node-final | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| reviewed-edge | 0 | `env DENO_TLS_CA_STORE=system DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-lock --import-map=/workspace/beatvision-lifecycle-repair-20261030/typecheck/import-map.json supabase/functions/beatvision-generation/index.ts` |
+| release-compile | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/worker.py providers/modal_motion/tests/test_process_recovery.py scripts/test/verify_poll_leases.py` |
+| release-whitespace | 0 | `git diff --check` |
+| publish-audit | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| publish-build | 0 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| implementation-commit | 0 | `git commit -m 'Recover accepted motion jobs without replacement inference'` |
+| implementation-push | 0 | `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` |
+
+`git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028` exit0 before publication reconfirmed main3e26d855 and PR3b5d102. Exact-head CI is observed separately after publication; no result from a historical head is represented as passing on the candidate.
