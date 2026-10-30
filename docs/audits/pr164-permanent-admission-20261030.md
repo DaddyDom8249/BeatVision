@@ -217,3 +217,9 @@ remain NOT VERIFIED. See [runner guide](../../providers/modal_motion/STAGING_PRO
 for setup and evidence limits. Next: review cost and isolated platform packaging,
 then obtain authorization for actual authenticated staging transport/container
 verification. Keep draft; no merge, deployment, real provider call or spending.
+
+Published implementation: `19c71b0abfd54162475ffa6bc4fb1390844dde85`.
+All four GitHub workflows passed on that exact commit, including the new CPU
+probe/backup-restore step and full migration replay. Publication links and exact
+command exits are recorded in PROJECT_LOG.md. This CI result does not establish
+the outstanding staging/provider guarantees listed above.

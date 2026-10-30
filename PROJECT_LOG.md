@@ -1773,3 +1773,68 @@ Fixture setup subcommands, each exit0: `docker --host=unix:///var/run/docker.soc
 Backup/restore subcommands, each exit0: `docker --host=unix:///var/run/docker.sock exec beatvision-protocol2-staging-local-20261030 pg_dump -U postgres -Fc -d postgres` with stdout to `/workspace/beatvision-protocol2-staging-20261030/retained-fixture.dump`; `docker --host=unix:///var/run/docker.sock exec beatvision-protocol2-staging-local-20261030 createdb -U postgres protocol2_restored`; `docker --host=unix:///var/run/docker.sock exec -i beatvision-protocol2-staging-local-20261030 pg_restore -U postgres --exit-on-error --clean --if-exists -d protocol2_restored` with stdin from that synthetic fixture dump. These operate only inside the owned network-none test container. No database connection string or credential is in the evidence.
 
 Publication preparation correction: staged `git diff --cached --check` caught a new trailing blank line at protocol.py EOF, exit2. The shell continued and created unpublished local17be8a594aa35f57c9978badedaaf8ab878da3a6 despite the failed check. Removed only that trailing blank line, reran staged/complete diff checks and corrected the unpublished commit before any push. No behavior/test result was changed and no published history or concurrent work was rewritten. Exact correction commands/exits are recorded in publication evidence.
+
+
+### Protocol-2 CPU runner publication — 2026-10-30
+
+Published implementation SHA: **`19c71b0abfd54162475ffa6bc4fb1390844dde85`**, `Add CPU-only staging probe for shared PostgreSQL admission`.16files,916insertions/104deletions. `git add -- <all16paths in this phase inventory>` exit0. Initial `git diff --cached --check` exit2 found new blank EOF at protocol.py; unpublished local17be8a594aa35f57c9978badedaaf8ab878da3a6 was created because the shell continued. Removed that blank, appended the transparent correction entry above, `git add providers/modal_motion/protocol.py PROJECT_LOG.md` exit0, `git diff --cached --check` exit0, `git commit --amend --no-edit` exit0, yielding19c71b0 before any remote publication. `git diff 43ab6eb5e096da2fde02ca7adb2dc766a930bae0 HEAD --check` exit0. This amended only our unpublished local commit; no force push or published history rewrite occurred.
+
+`git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` with sandbox network permission exited0, advancing43ab6eb→19c71b0. GitHub readback confirms exact19c71b0, open/draft/unmerged, main3e26d8556e62b40e9f20823cb253854ae5efcec6. Original main-baseline checkout remains clean. PR body updated to accurately distinguish implemented/local CPU-tested runner from actual staging/Modal proof.
+
+All four exact-implementation GitHub workflows completed/success:
+
+- Production CI: https://github.com/DaddyDom8249/BeatVision/actions/runs/41146271933
+- Generation security, original independent-worker admission tests, new CPU probe and isolated backup/restore verification: https://github.com/DaddyDom8249/BeatVision/actions/runs/41146271796
+- Full isolated Supabase migration replay: https://github.com/DaddyDom8249/BeatVision/actions/runs/41146271791
+- Storage ownership security: https://github.com/DaddyDom8249/BeatVision/actions/runs/41146272015
+
+Local actual totals remain421/421 Node and78/78 Python, zero skips. No inference/deployment/production access was used to obtain CI. Live HTTPS/PostgREST, Modal CPU/two-container recovery, old-worker shutdown, staging cost approval, actual GPU/Android output and production remain NOT VERIFIED. No exactly-once or eventual-completion claim.
+
+Documentation-only follow-up records this implementation SHA and publication evidence. Commands: `git diff --check`; `git add PROJECT_LOG.md docs/audits/pr164-permanent-admission-20261030.md`; `git diff --cached --check`; `git commit -m 'Record protocol2 CPU runner publication evidence'`; normal `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028`. Exits are checked before final reporting. Its own final head/CI are independently reported through PR metadata and final response rather than embedding its own impossible self-SHA.
+
+Complete PR changed-file inventory relative to verified main3e26d855 (44paths, distinct from16-file current repair inventory):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-lifecycle-repair-20261030.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `providers/__init__.py`
+- `providers/modal_motion/README.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/__init__.py`
+- `providers/modal_motion/admission.py`
+- `providers/modal_motion/contracts.py`
+- `providers/modal_motion/protocol.py`
+- `providers/modal_motion/staging.py`
+- `providers/modal_motion/tests/staging_worker.py`
+- `providers/modal_motion/tests/test_admission_client.py`
+- `providers/modal_motion/tests/test_contention_probe.py`
+- `providers/modal_motion/tests/test_contracts.py`
+- `providers/modal_motion/tests/test_process_recovery.py`
+- `providers/modal_motion/tests/test_protocol2_staging.py`
+- `providers/modal_motion/tests/test_submit_concurrency.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/beatvision-generation-auth.test.mjs`
+- `scripts/test/beatvision-generation-state.test.mjs`
+- `scripts/test/generation-dispatch-recovery.test.mjs`
+- `scripts/test/generation-lifecycle-recovery.test.mjs`
+- `scripts/test/generation-poll-leases.db.test.mjs`
+- `scripts/test/generation-receipt-persistence.test.mjs`
+- `scripts/test/generation-runtime.mjs`
+- `scripts/test/hf-acceptance-recovery.test.mjs`
+- `scripts/test/hf-motion.test.mjs`
+- `scripts/test/modal-admission-ledger.db.test.mjs`
+- `scripts/test/modal-motion-integration.test.mjs`
+- `scripts/test/modal-postgres-crash-recovery.test.mjs`
+- `scripts/test/sql/protocol2-staging-fixture.sql`
+- `scripts/test/verify_modal_admission.py`
+- `scripts/test/verify_multiprocess_contention.py`
+- `scripts/test/verify_poll_leases.py`
+- `scripts/test/verify_protocol2_staging.py`
+- `src/pages/ProductionWorkspacePage.tsx`
+- `supabase/functions/beatvision-generation/hf-motion.ts`
+- `supabase/functions/beatvision-generation/index.ts`
+- `supabase/functions/beatvision-generation/modal-motion.ts`
+- `supabase/migrations/20261030010000_generation_poll_leases.sql`
+- `supabase/migrations/20261030204115_durable_modal_admission.sql`
