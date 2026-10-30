@@ -683,6 +683,9 @@ async function run(db: any, job: any) {
   if (processing.error) throw new Error(processing.error.message);
   job = processing.data;
 
+  // A returned receipt proves acceptance even if its following database write fails.
+  // Keep it outside the try block so persistence errors cannot become rejection.
+  let acceptedOutput: any = null;
   try {
     const path = job.job_type === "scene_image" ? "/v2/scene-image" : job.job_type === "scene_motion" ? "/v2/animate" : "/v2/assemble";
     if (job.job_type === "scene_motion" && !job.input_snapshot?.hf_motion && !job.input_snapshot?.modal_motion) throw new Error("HF_FREE_MOTION_REQUIRED: Legacy motion providers are disabled for new submissions.");
@@ -729,21 +732,47 @@ async function run(db: any, job: any) {
         } }).eq("id", job.id).eq("status", "processing").select("id");
         if (unresolved.error || !unresolved.data?.length) throw new Error("PROVIDER_RECEIPT_UNCERTAIN_PERSIST_FAILED");
       } else {
+        acceptedOutput = {
+          ...job.output,
+          arena_request_id: requestId,
+          upstream_job_id: upstreamJobId,
+          provider_receipt: { provider: job.provider, upstream_job_id: upstreamJobId, recorded_at: new Date().toISOString() },
+          arena_response: compactArenaResponse(result.data, job.job_type),
+          bridge_contract: "2.0",
+        };
         const updateRes = await db.from("generation_jobs").update({
-          output: {
-            ...job.output,
-            arena_request_id: requestId,
-            upstream_job_id: upstreamJobId,
-            provider_receipt: { provider: job.provider, upstream_job_id: upstreamJobId, recorded_at: new Date().toISOString() },
-            arena_response: compactArenaResponse(result.data, job.job_type),
-            bridge_contract: "2.0",
-          },
+          output: acceptedOutput,
         }).eq("id", job.id).eq("status", "processing").select("id");
         if (updateRes.error) throw new Error("GENERATION_JOB_UPDATE_FAILED: " + updateRes.error.message);
         if (!updateRes.data || updateRes.data.length === 0) throw new Error("GENERATION_JOB_RACE_LOST: Job was modified concurrently.");
       }
     }
   } catch (error) {
+    if (acceptedOutput) {
+      // Re-read before a bounded recovery write; another worker's terminal state
+      // and execution metadata must win over the original dispatch's stale row.
+      const latest = await db.from("generation_jobs").select("*").eq("id", job.id).single();
+      if (latest.error || !latest.data) throw new Error("PROVIDER_RECEIPT_RECONCILIATION_READ_FAILED");
+      if (latest.data.status !== "processing") return latest.data;
+      const known = latest.data.output?.upstream_job_id;
+      if (known && known !== acceptedOutput.upstream_job_id) throw new Error("PROVIDER_RECEIPT_CONFLICT");
+      let recovery = db.from("generation_jobs").update({ output: {
+        ...acceptedOutput, ...(latest.data.output || {}),
+        upstream_job_id: acceptedOutput.upstream_job_id,
+        provider_receipt: acceptedOutput.provider_receipt,
+        reconciliation_required: true,
+        reconciliation_reason: "PROVIDER_RECEIPT_PERSISTENCE_UNCERTAIN",
+        reconciliation_recorded_at: new Date().toISOString(),
+        automatic_resubmission_disabled: true,
+      } }).eq("id", job.id).eq("status", "processing");
+      if (latest.data.updated_at) recovery = recovery.eq("updated_at", latest.data.updated_at);
+      const saved = await recovery.select("*").maybeSingle();
+      // If storage is still unavailable, leave the durable nonterminal claim
+      // intact. Never resubmit; Modal can recover via its existing receipt lookup.
+      if (saved.error) throw new Error("PROVIDER_RECEIPT_RECONCILIATION_PERSIST_FAILED");
+      if (saved.data) return saved.data;
+      throw new Error("PROVIDER_RECEIPT_RECONCILIATION_RACE: Reload the authoritative job before reconciliation.");
+    }
     // Losing a conditional write means another request owns the current state.
     // Return that state instead of attempting to fail its completed job.
     if (error instanceof Error && /^(GENERATION_JOB_RACE_LOST|SET_FAILED_ZERO_ROWS_AFFECTED):/.test(error.message)) {
