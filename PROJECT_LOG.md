@@ -2003,3 +2003,73 @@ Exact completed commands, cwd `/workspace/BeatVision-pr164`; evidence `/workspac
 | 2026-10-31T05:27:36.178844+00:00 | full-node-direct | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs > /workspace/beatvision-acceptance-review-20261031/full-node.log 2>&1` |
 
 Direct baseline commands, each exit0: `git fetch origin refs/heads/fix/preserve-uncertain-dispatch-20261028`; `git rev-parse FETCH_HEAD`; `git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028`, returnedf90b267/3e26d855. No network-enabled model/provider command or account/billing query was executed.
+
+
+### Offline acceptance-review publication — 2026-10-31
+
+Implementation/test/specification commit: **`d87627992fbf4fcde7e14837cbf7c236444ba6cf`**, `Specify staging acceptance evidence and cover expired submissions`,6files/323insertions. `git add -- <6paths in this phase inventory>`, `git diff --cached --check`, `git commit -m 'Specify staging acceptance evidence and cover expired submissions'` each exit0. `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` with sandbox network permission exit0, advancedf90b267→d876279, no force. PR readback confirms exactd876279/open/draft/unmerged, main3e26d8556e62b40e9f20823cb253854ae5efcec6. Runtime/provider code and production schema were not changed.
+
+All four GitHub workflows completed/success on exactd87627992fbf4fcde7e14837cbf7c236444ba6cf:
+
+- Production CI including real pinned SDK socket-denied validation: https://github.com/DaddyDom8249/BeatVision/actions/runs/41172744179
+- Generation security/isolated independent workers and backup-restore: https://github.com/DaddyDom8249/BeatVision/actions/runs/41172744178
+- Full isolated migration replay: https://github.com/DaddyDom8249/BeatVision/actions/runs/41172744186
+- Storage ownership security: https://github.com/DaddyDom8249/BeatVision/actions/runs/41172744177
+
+Actual local422/422 Node,84/84 Python, zero skips; audit/build/compilation/diff/SDK checks exit0. The acceptance specification's13live cases remain NOT_RUN and all authority/evidence unset. No live client/controller or real staging recovery is claimed. Live costs/account enforcement/database/old-worker/authorization gates unchanged. No Modal container/GPU/provider call or production change, paid operation, merge or deployment.
+
+Documentation-only follow-up records this SHA/publication. Exact follow-up commands: `git diff --check`; `git add PROJECT_LOG.md docs/audits/pr164-permanent-admission-20261030.md`; `git diff --cached --check`; `git commit -m 'Record offline acceptance review verification'`; normal `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028`. Exits are checked before final reporting. Its own final SHA/CI is externally recorded through PR metadata/final response rather than a self-referential commit.
+
+Complete PR changed-file inventory relative to main3e26d855 (51paths; current6-file change listed separately above):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-lifecycle-repair-20261030.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `docs/audits/pr164-staging-acceptance-checklist.md`
+- `docs/audits/pr164-staging-evidence-template.json`
+- `providers/__init__.py`
+- `providers/modal_motion/README.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/__init__.py`
+- `providers/modal_motion/admission.py`
+- `providers/modal_motion/contracts.py`
+- `providers/modal_motion/protocol.py`
+- `providers/modal_motion/requirements-staging.txt`
+- `providers/modal_motion/staging.py`
+- `providers/modal_motion/staging_modal.py`
+- `providers/modal_motion/tests/staging_worker.py`
+- `providers/modal_motion/tests/test_admission_client.py`
+- `providers/modal_motion/tests/test_contention_probe.py`
+- `providers/modal_motion/tests/test_contracts.py`
+- `providers/modal_motion/tests/test_process_recovery.py`
+- `providers/modal_motion/tests/test_protocol2_staging.py`
+- `providers/modal_motion/tests/test_staging_modal_package.py`
+- `providers/modal_motion/tests/test_submit_concurrency.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/beatvision-generation-auth.test.mjs`
+- `scripts/test/beatvision-generation-state.test.mjs`
+- `scripts/test/generation-dispatch-recovery.test.mjs`
+- `scripts/test/generation-lifecycle-recovery.test.mjs`
+- `scripts/test/generation-poll-leases.db.test.mjs`
+- `scripts/test/generation-receipt-persistence.test.mjs`
+- `scripts/test/generation-runtime.mjs`
+- `scripts/test/hf-acceptance-recovery.test.mjs`
+- `scripts/test/hf-motion.test.mjs`
+- `scripts/test/modal-admission-ledger.db.test.mjs`
+- `scripts/test/modal-motion-integration.test.mjs`
+- `scripts/test/modal-postgres-crash-recovery.test.mjs`
+- `scripts/test/protocol2-staging-package.db.test.mjs`
+- `scripts/test/sql/protocol2-staging-fixture.sql`
+- `scripts/test/verify_modal_admission.py`
+- `scripts/test/verify_modal_package_offline.py`
+- `scripts/test/verify_multiprocess_contention.py`
+- `scripts/test/verify_poll_leases.py`
+- `scripts/test/verify_protocol2_staging.py`
+- `src/pages/ProductionWorkspacePage.tsx`
+- `supabase/functions/beatvision-generation/hf-motion.ts`
+- `supabase/functions/beatvision-generation/index.ts`
+- `supabase/functions/beatvision-generation/modal-motion.ts`
+- `supabase/migrations/20261030010000_generation_poll_leases.sql`
+- `supabase/migrations/20261030204115_durable_modal_admission.sql`

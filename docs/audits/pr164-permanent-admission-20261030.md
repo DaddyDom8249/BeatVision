@@ -306,3 +306,8 @@ Status: OFFLINE REVIEW/TESTED; live campaign BLOCKED. No Modal deployment, image
 build, Modal container launch, live provider/DB request, GPU work, production change,
 spending or merge was performed in this cycle. Existing account/no-overage,
 database, old-worker and explicit-authorization gates remain unchanged.
+
+Offline review/acceptance-specification commit:
+`d87627992fbf4fcde7e14837cbf7c236444ba6cf`. All four workflows passed on that
+exact commit, including real-SDK validation and full migration replay. This adds
+coverage/specification evidence only; it is not a live acceptance result.
