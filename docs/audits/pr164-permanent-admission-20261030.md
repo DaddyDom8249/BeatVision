@@ -228,7 +228,7 @@ the outstanding staging/provider guarantees listed above.
 
 Continued from confirmed remotec0cb980358d5f4b17b6985d77d8460eb3b185aec;
 main remains3e26d8556e62b40e9f20823cb253854ae5efcec6. The user's spending question
-was not treated as approval. No cloud/account resource was queried or created.
+was not treated as approval. No Modal account resource was queried or created.
 
 `staging_modal.py` now defines a separate proxy-authenticated CPU App, with a
 stage-environment guard, stage-scoped Secret and seven explicitly selected CPU
@@ -263,3 +263,9 @@ cost limitation. Packaging is IMPLEMENTED / OFFLINE SDK TESTED; actual image
 build, deployment, authenticated PostgREST, two-container behavior, old-worker
 shutdown, GPU/Android and production remain NOT VERIFIED. No deployment, provider
 invocation, paid operation, production change or merge was performed. Keep draft.
+
+Offline packaging implementation: `30189b4f7ee99cd65439102b3efe206849763cb5`.
+All four workflows passed on that exact commit, including real-SDK socket-denied
+validation, isolated worker/backup tests and migration replay. Publication and
+command evidence are recorded in PROJECT_LOG.md. No live-stage gate is cleared
+by these CI results.

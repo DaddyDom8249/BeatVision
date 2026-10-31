@@ -1893,3 +1893,71 @@ Exact completed command ledger; cwd `/workspace/BeatVision-pr164` throughout, ev
 | 2026-10-31T05:06:37.087807+00:00 | full-node-direct | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
 
 Additional exact direct setup command, exit0: `env -u PIP_INDEX_URL -u PIP_EXTRA_INDEX_URL /workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -m pip download --disable-pip-version-check --only-binary=:all: --index-url https://pypi.org/simple --dest /workspace/beatvision-modal-packaging-20261030/wheels modal==1.6.3`. Direct baseline commands `git fetch origin refs/heads/fix/preserve-uncertain-dispatch-20261028`, `git rev-parse FETCH_HEAD`, `git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028` exited0 and returnedc0cb980/3e26d855. Official URL reads used `curl --max-time20 -fsSL URL -o <evidence file>` for modal.App, modal.Secret, modal.asgi_app, modal.concurrent, PyPI modal JSON and pricing; successful files were read locally. App.function URL404exit22 was retained as a failed documentation lookup, not a failed deployment.
+
+
+### Offline Modal CPU packaging publication — 2026-10-31
+
+Implementation SHA: **`30189b4f7ee99cd65439102b3efe206849763cb5`**, `Package protocol2 staging probe as an isolated Modal CPU app`,11files,453insertions/2deletions. `git add -- <11paths in this phase inventory>` exit0; `git diff --cached --check` exit0; `git commit -m 'Package protocol2 staging probe as an isolated Modal CPU app'` exit0 at05:07:00UTC. `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` with sandbox network permission exit0, advancedc0cb980→30189b4, no force. GitHub readback confirms exact30189b4, open/draft/unmerged; main3e26d8556e62b40e9f20823cb253854ae5efcec6 unchanged. PR body explicitly says no live spending approval, package/source-only and financial/runtime gates remain blocked.
+
+All four GitHub workflows completed/success on implementation30189b4f7ee99cd65439102b3efe206849763cb5:
+
+- Production CI including actual Modal1.6.3 socket-denied package validation: https://github.com/DaddyDom8249/BeatVision/actions/runs/41171295982
+- Generation security, independent worker/CPU fixture and backup/restore tests: https://github.com/DaddyDom8249/BeatVision/actions/runs/41171295981
+- Full isolated Supabase migration replay: https://github.com/DaddyDom8249/BeatVision/actions/runs/41171296001
+- Storage ownership security: https://github.com/DaddyDom8249/BeatVision/actions/runs/41171295999
+
+Actual local totals:422/422 Node,83/83 Python, zero skipped; audit/build/compilation/staged diff/real-SDK offline check exit0. CI performs no Modal deployment, Function invocation or image build. No actual container startup, PostgREST staging traffic or financial eligibility is inferred. Deadline/resource caps are application/configuration controls, not billing caps. User has not authorized live credit consumption; account/provider hard no-overage evidence and separate deploy/campaign/teardown approval are still missing. Main and production untouched; no GPU/spending/merge.
+
+Documentation-only follow-up records implementation SHA and verification. Follow-up commands: `git diff --check`; `git add PROJECT_LOG.md docs/audits/pr164-permanent-admission-20261030.md`; `git diff --cached --check`; `git commit -m 'Record offline Modal packaging verification'`; normal push to existing branch. Their exits are checked before final reporting. Final documentation SHA and its exact-head CI are externally reported in PR metadata/final response; a commit cannot embed its own hash.
+
+Complete PR inventory relative to verified main3e26d855 (49paths; current packaging repair11paths separately listed above):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-lifecycle-repair-20261030.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `providers/__init__.py`
+- `providers/modal_motion/README.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/__init__.py`
+- `providers/modal_motion/admission.py`
+- `providers/modal_motion/contracts.py`
+- `providers/modal_motion/protocol.py`
+- `providers/modal_motion/requirements-staging.txt`
+- `providers/modal_motion/staging.py`
+- `providers/modal_motion/staging_modal.py`
+- `providers/modal_motion/tests/staging_worker.py`
+- `providers/modal_motion/tests/test_admission_client.py`
+- `providers/modal_motion/tests/test_contention_probe.py`
+- `providers/modal_motion/tests/test_contracts.py`
+- `providers/modal_motion/tests/test_process_recovery.py`
+- `providers/modal_motion/tests/test_protocol2_staging.py`
+- `providers/modal_motion/tests/test_staging_modal_package.py`
+- `providers/modal_motion/tests/test_submit_concurrency.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/beatvision-generation-auth.test.mjs`
+- `scripts/test/beatvision-generation-state.test.mjs`
+- `scripts/test/generation-dispatch-recovery.test.mjs`
+- `scripts/test/generation-lifecycle-recovery.test.mjs`
+- `scripts/test/generation-poll-leases.db.test.mjs`
+- `scripts/test/generation-receipt-persistence.test.mjs`
+- `scripts/test/generation-runtime.mjs`
+- `scripts/test/hf-acceptance-recovery.test.mjs`
+- `scripts/test/hf-motion.test.mjs`
+- `scripts/test/modal-admission-ledger.db.test.mjs`
+- `scripts/test/modal-motion-integration.test.mjs`
+- `scripts/test/modal-postgres-crash-recovery.test.mjs`
+- `scripts/test/protocol2-staging-package.db.test.mjs`
+- `scripts/test/sql/protocol2-staging-fixture.sql`
+- `scripts/test/verify_modal_admission.py`
+- `scripts/test/verify_modal_package_offline.py`
+- `scripts/test/verify_multiprocess_contention.py`
+- `scripts/test/verify_poll_leases.py`
+- `scripts/test/verify_protocol2_staging.py`
+- `src/pages/ProductionWorkspacePage.tsx`
+- `supabase/functions/beatvision-generation/hf-motion.ts`
+- `supabase/functions/beatvision-generation/index.ts`
+- `supabase/functions/beatvision-generation/modal-motion.ts`
+- `supabase/migrations/20261030010000_generation_poll_leases.sql`
+- `supabase/migrations/20261030204115_durable_modal_admission.sql`
