@@ -8,7 +8,8 @@ function fixture({ status = 'processing', age = 0, upstream = null, race = null,
   let writes = 0;
   let selectedStatuses;
   const client = {
-    rpc: async () => ({ data: 'test-queue-secret' }),
+    rpc: async name => name === 'get_generation_scheduler_secret' ? { data: 'test-queue-secret' } :
+      (selectedStatuses = ['submitted', 'processing'], { data: [structuredClone(row)] }),
     from(table) {
       assert.equal(table, 'generation_jobs');
       let changes;
@@ -19,7 +20,7 @@ function fixture({ status = 'processing', age = 0, upstream = null, race = null,
         eq(key, value) { filters[key] = value; return this; },
         in(key, value) { selectedStatuses = value; return this; },
         order() { return this; },
-        async limit() { return { data: [structuredClone(original)] }; },
+        async limit() { return { data: filters.status === 'queued' ? [] : [structuredClone(original)] }; },
         async maybeSingle() {
           if (persistError) return { error: { message: persistError } };
           if (race) row = structuredClone(race);
@@ -44,14 +45,15 @@ for (const status of ['submitted', 'processing']) test('fresh ' + status + ' dis
   } finally { await runtime.cleanup(); }
 });
 
-for (const status of ['submitted', 'processing']) test('interrupted ' + status + ' dispatch fails explicitly after grace without resubmission', async () => {
+for (const status of ['submitted', 'processing']) test('interrupted ' + status + ' dispatch remains nonterminal and flagged for reconciliation', async () => {
   const f = fixture({ status, age: 6 * 60 * 1000 });
   const runtime = await loadGeneration();
   try {
     const result = await runtime.poll(f.client, f.original);
-    assert.equal(result.status, 'failed');
-    assert.match(result.error.message, /without a provider job id/);
-    assert.match(result.error.message, /automatic resubmission is disabled/);
+    assert.equal(result.status, status);
+    assert.equal(result.output.reconciliation_required, true);
+    assert.equal(result.output.reconciliation_reason, 'PROVIDER_ACCEPTANCE_UNKNOWN');
+    assert.equal(result.output.automatic_resubmission_disabled, true);
     assert.equal(f.state().writes, 1);
   } finally { await runtime.cleanup(); }
 });
@@ -104,7 +106,8 @@ test('scheduler scans and recovers submitted jobs', async () => {
     assert.equal(response.status, 200);
     const result = await response.json();
     assert.equal(result.results[0].action, 'poll');
-    assert.equal(result.results[0].status, 'failed');
+    assert.equal(result.results[0].status, 'submitted');
+    assert.equal(f.state().row.output.reconciliation_required, true);
     assert.ok(f.state().selectedStatuses.includes('submitted'));
   } finally { await runtime.cleanup(); }
 });
@@ -113,7 +116,10 @@ test('scheduler reserves dispatch capacity when eight older provider jobs are st
   const active = Array.from({ length: 8 }, (_, index) => ({ id: `active-${index}`, job_type: 'scene_motion', status: 'processing', created_at: new Date(Date.now() - 60_000).toISOString(), updated_at: new Date().toISOString(), output: { upstream_job_id: `provider-${index}`, dispatch_started_at: new Date().toISOString() } }));
   const queued = { id: 'queued-new-work', job_type: 'scene_image', status: 'queued', created_at: new Date().toISOString(), output: {} };
   const selected = [];
-  const client = { rpc: async () => ({ data: 'test-queue-secret' }), from(table) { assert.equal(table, 'generation_jobs'); let statuses = []; return { select() { return this; }, eq(key, value) { if (key === 'status') statuses = [value]; return this; }, in(key, values) { if (key === 'status') statuses = values; return this; }, order() { return this; }, async limit() { selected.push(statuses); return { data: statuses.includes('queued') ? [queued] : active }; } }; } };
+  const client = { rpc: async name => {
+    if (name === 'get_generation_scheduler_secret') return { data: 'test-queue-secret' };
+    assert.equal(name, 'claim_generation_poll'); selected.push(['submitted', 'processing']); return { data: active };
+  }, from(table) { assert.equal(table, 'generation_jobs'); let statuses = []; return { select() { return this; }, eq(key, value) { if (key === 'status') statuses = [value]; return this; }, in(key, values) { if (key === 'status') statuses = values; return this; }, order() { return this; }, async limit() { selected.unshift(statuses); return { data: statuses.includes('queued') ? [queued] : active }; } }; } };
   const runtime = await loadGeneration(client);
   const originalRun = globalThis.fetch;
   globalThis.fetch = async () => new Response(JSON.stringify({ error: 'provider must not be called by fixture' }), { status: 503 });
@@ -124,4 +130,146 @@ test('scheduler reserves dispatch capacity when eight older provider jobs are st
     assert.ok(result.results.some(item => item.id === queued.id));
     assert.deepEqual(selected, [['queued'], ['submitted', 'processing']]);
   } finally { globalThis.fetch = originalRun; await runtime.cleanup(); }
+});
+
+for (const status of ['submitted', 'processing']) test('already flagged unknown dispatch does not mutate again', async () => {
+  const f = fixture({ status, age: 10 * 60 * 1000 });
+  f.original.output = { reconciliation_required: true, reconciliation_reason: 'PROVIDER_ACCEPTANCE_UNKNOWN' };
+  const runtime = await loadGeneration();
+  try {
+    const result = await runtime.poll(f.client, f.original);
+    assert.equal(result.status, status);
+    assert.equal(f.state().writes, 0);
+  } finally { await runtime.cleanup(); }
+});
+
+test('dispatch intent and actual provider receipt remain separate from immutable input', async () => {
+  const { readFileSync } = await import('node:fs');
+  const controller = readFileSync(new URL('../../supabase/functions/beatvision-generation/index.ts', import.meta.url), 'utf8');
+  assert.match(controller, /dispatch_intent: \{ request_id: requestId/);
+  assert.match(controller, /provider_receipt: \{ provider: job.provider, upstream_job_id: upstreamJobId/);
+  assert.doesNotMatch(controller, /input_snapshot\s*=\s*jsonb_set/);
+});
+test('missing returned provider ID is reconciliation-required, not a terminal failure', async () => {
+  const { readFileSync } = await import('node:fs');
+  const controller = readFileSync(new URL('../../supabase/functions/beatvision-generation/index.ts', import.meta.url), 'utf8');
+  const start = controller.indexOf('if (!upstreamJobId) {');
+  const end = controller.indexOf('} else {', start);
+  assert.ok(start > 0 && end > start);
+  const path = controller.slice(start, end);
+  assert.match(path, /reconciliation_required: true/);
+  assert.doesNotMatch(path, /setFailed\(/);
+});
+
+test('unknown provider HTTP acceptance is nonterminal and cannot trigger duplicate dispatch', async () => {
+  const { readFileSync } = await import('node:fs');
+  const source = readFileSync(new URL('../../supabase/functions/beatvision-generation/index.ts', import.meta.url), 'utf8');
+  const start = source.indexOf('const acceptanceUnknown =');
+  const end = source.indexOf('try { await setFailed(db, job.id', start);
+  assert.ok(start > 0 && end > start, 'uncertain submission handler must precede terminal failure');
+  const handler = source.slice(start, end);
+  assert.match(handler, /HF_SUBMISSION_ACCEPTANCE_UNKNOWN/);
+  assert.match(handler, /MODAL_HTTP_TIMEOUT/);
+  assert.match(handler, /MODAL_HTTP_UNAVAILABLE/);
+  assert.match(handler, /reconciliation_required: true/);
+  assert.match(handler, /automatic_resubmission_disabled: true/);
+  assert.match(handler, /return marked.data/);
+});
+
+test('fresh controller instance reconciles durable Modal intent without a second provider submission', async () => {
+  // This fixture represents a committed generation_jobs row after Modal accepted
+  // work but the submit HTTP response was lost. The database object survives
+  // between independently loaded controller modules.
+  const persisted = {
+    id: 'modal-crash-job', job_type: 'scene_motion', status: 'processing',
+    provider: 'modal', created_at: new Date(Date.now()-7*60_000).toISOString(),
+    updated_at: new Date(Date.now()-7*60_000).toISOString(),
+    input_snapshot: { modal_motion: { source_image_id: 'approved-image' } },
+    output: { dispatch_started_at: new Date(Date.now()-7*60_000).toISOString(),
+      dispatch_intent: { request_id: 'beatvision:modal-crash-job', provider: 'modal', state: 'submission_pending' } },
+  };
+  let writes=0, providerRequests=0;
+  const db = { from(table) {
+    assert.equal(table,'generation_jobs');
+    let changes, filters={};
+    return {
+      update(row) { changes=row; return this; },
+      select() { return this; },
+      eq(k,v) { filters[k]=v; return this; },
+      async maybeSingle() {
+        if (Object.entries(filters).some(([k,v])=>persisted[k]!==v)) return {data:null,error:null};
+        if (changes) { writes++; Object.assign(persisted,structuredClone(changes)); }
+        return {data:structuredClone(persisted),error:null};
+      },
+      async single() { return {data:structuredClone(persisted),error:null}; },
+    };
+  } };
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async()=>{providerRequests++;throw new Error('DUPLICATE_GPU_DISPATCH');};
+  try {
+    // A new runtime is loaded after the original dispatch process disappeared.
+    for(let restart=0;restart<2;restart++) {
+      const runtime=await loadGeneration();
+      try {
+        const result=await runtime.poll(db,structuredClone(persisted));
+        assert.equal(result.status,'processing');
+        assert.equal(result.output.dispatch_intent.request_id,'beatvision:modal-crash-job');
+        assert.equal(result.output.reconciliation_required,true);
+        assert.equal(result.output.automatic_resubmission_disabled,true);
+      } finally { await runtime.cleanup(); }
+    }
+    assert.equal(writes,1,'only the first restart records the reconciliation marker');
+    assert.equal(providerRequests,0,'neither fresh process may contact the provider');
+  } finally {globalThis.fetch=originalFetch;}
+});
+
+test('fresh controller adopts Modal receipt and never submits a duplicate', async () => {
+  const jobId='00000004-0000-4000-8000-000000000004';
+  const f=fixture({status:'submitted',age:6*60*1000});
+  f.original.id=jobId;
+  f.original.input_snapshot={modal_motion:{source_image_id:'approved-source'}};
+  f.original.output={dispatch_intent:{request_id:'beatvision:'+jobId,provider:'modal',state:'submission_pending'}};
+  // fixture captures a clone of the original; use a separate row-backed
+  // client to ensure the persisted state, not the caller's object, is updated.
+  let row=structuredClone(f.original), writes=0, requests=0;
+  const client={from(table){
+    assert.equal(table,'generation_jobs');
+    let patch=null;const filters={};
+    return {
+      update(value){patch=value;return this;},
+      select(){return this;},
+      eq(k,v){filters[k]=v;return this;},
+      async maybeSingle(){
+        if(Object.entries(filters).some(([k,v])=>row[k]!==v))return {data:null,error:null};
+        if(patch){Object.assign(row,structuredClone(patch));writes++;}
+        return {data:structuredClone(row),error:null};
+      },
+      async single(){return {data:structuredClone(row),error:null};},
+    };
+  }};
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async (url,options)=>{
+    requests++;assert.equal(options.method,'GET');
+    assert.ok(String(url).endsWith('/receipt/'+jobId));
+    return new Response(JSON.stringify({status:'processing',job_id:'fc-existing001'}),{status:200});
+  };
+  try{
+    const env={MODAL_TOKEN_ID:'mock',MODAL_TOKEN_SECRET:'mock'};
+    const first=await loadGeneration({},env);
+    try {
+      const result=await first.poll(client,structuredClone(row));
+      assert.equal(result.output.upstream_job_id,'fc-existing001');
+      assert.equal(result.output.provider_receipt.recovered,true);
+      assert.equal(result.status,'processing');
+      assert.equal(result.output.automatic_resubmission_disabled,true);
+    } finally {await first.cleanup();}
+    const second=await loadGeneration({},env);
+    try {
+      // A fresh process sees the already adopted receipt. No new submit.
+      assert.equal(row.output.upstream_job_id,'fc-existing001');
+      assert.equal(row.output.dispatch_intent.request_id,'beatvision:'+jobId);
+    } finally {await second.cleanup();}
+    assert.equal(requests,1);
+    assert.equal(writes,1);
+  } finally {globalThis.fetch=originalFetch;}
 });

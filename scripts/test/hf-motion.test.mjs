@@ -170,16 +170,17 @@ test('HF completion stores immutable private video and pins the generating image
   globalThis.fetch = async (url) => url.includes('/queue/data')
     ? new Response(queueComplete({data:[{video:{url:HF_MOTION.host+'/gradio_api/file=/tmp/real.mp4'}},42]}))
     : new Response(container());
-  let uploaded, inserted; const imageFilters = {};
+  let uploaded, inserted; const imageFilters = {}, objects = new Map();
   const client = {
     storage: { from(bucket) { assert.equal(bucket,'visual-assets'); return {
-      download: async()=>({error:{message:'not found'}}),
-      upload: async(path,bytes,options)=>{ uploaded={path,bytes,options};return {data:{path}} },
+      download: async path => objects.has(path) ? {data:new Blob([objects.get(path)])} : {error:{message:'not found'}},
+      upload: async(path,bytes,options)=>{ if(options.contentType==='video/mp4')uploaded={path,bytes,options};objects.set(path,bytes);return {data:{path}} },
       createSignedUrl: async(path)=>({data:{signedUrl:'https://private.test/'+path}}),
     }; } },
     from(table) { return {
       select(){return this},eq(k,v){if(table==='scene_image_assets')imageFilters[k]=v;return this},order(){return this},limit(){return this},
-      maybeSingle:async()=>({data:table==='scene_image_assets'?{id:'source-approved'}:null}),
+      update(changes){Object.assign(job,changes);return this},
+      maybeSingle:async()=>({data:table==='scene_image_assets'?{id:'source-approved'}:table==='generation_jobs'?structuredClone(job):null}),
       insert(row){inserted=row;return this},single:async()=>({data:inserted}),
     }; },
   };
@@ -275,11 +276,11 @@ test('image completion rejects any provider outside pinned Cloudflare Free FLUX 
   } finally {await runtime.cleanup()}
 });
 
-test('stale provider work fails from acceptance age despite recent poll timestamp',async()=>{
+test('stale provider work requires nonterminal reconciliation despite recent poll timestamp',async()=>{
  let job={id:'stale-job',job_type:'assembly',status:'processing',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),output:{upstream_job_id:'existing',dispatch_started_at:new Date(Date.now()-31*60*1000).toISOString()}};let calls=0;
- const db={from(){return {select(){return this},eq(){return this},in(){return this},update(row){job={...job,...row};return this},async single(){return{data:job}},then(resolve){return Promise.resolve({data:[{id:job.id}]}).then(resolve)}}}};
+ const db={from(){return {select(){return this},eq(){return this},in(){return this},update(row){job={...job,...row};return this},async maybeSingle(){return{data:job}},async single(){return{data:job}},then(resolve){return Promise.resolve({data:[{id:job.id}]}).then(resolve)}}}};
  const original=globalThis.fetch;const runtime=await loadGeneration(db);globalThis.fetch=async()=>{calls++;throw Error('unexpected network')};
- try{const result=await runtime.poll(db,job);assert.equal(result.status,'failed');assert.equal(result.error.code,'PROVIDER_TIMEOUT');assert.equal(calls,0)}finally{globalThis.fetch=original;await runtime.cleanup()}
+ try{const result=await runtime.poll(db,job);assert.equal(result.status,'processing');assert.equal(result.output.reconciliation_required,true);assert.equal(result.output.reconciliation_reason,'PROVIDER_DEADLINE_EXCEEDED');assert.equal(result.output.upstream_job_id,'existing');assert.equal(calls,0)}finally{globalThis.fetch=original;await runtime.cleanup()}
 });
 
 test('free motion claim never PATCHes nonexistent generation_jobs.model', async () => {
