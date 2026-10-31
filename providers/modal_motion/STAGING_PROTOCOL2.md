@@ -1,5 +1,9 @@
 # CPU-only protocol-2 staging probe
 
+The [acceptance checklist](../../docs/audits/pr164-staging-acceptance-checklist.md)
+and its evidence template specify reproducible cases, stop conditions and the
+remaining live-client/fault-controller gap. They authorize no live execution.
+
 Source and local verification only. This guide does not authorize infrastructure
 deployment, remote database requests or Modal CPU/GPU spending. Confirm staging
 costs and obtain explicit authorization before those actions. No GPU or model

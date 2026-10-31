@@ -269,3 +269,40 @@ All four workflows passed on that exact commit, including real-SDK socket-denied
 validation, isolated worker/backup tests and migration replay. Publication and
 command evidence are recorded in PROJECT_LOG.md. No live-stage gate is cleared
 by these CI results.
+
+## Offline package review and acceptance specification — 2026-10-31
+
+Confirmed remote baselinef90b2670efb01f90e8705dfa1ac2894c09da6b5b; main remains
+3e26d8556e62b40e9f20823cb253854ae5efcec6. Package/source selection, resource,
+environment, authentication and expiry configuration match the deployment guide.
+No new runtime defect was confirmed and no runtime/provider code was changed.
+
+Added a regression for the previously untested expired POST path: a healthy
+submission is followed by authenticated requests at the captured warm deadline,
+attempting environment/header/body renewal. They return410 without another
+submission, DB call or receipt/fence/event mutation; anonymous POST remains401.
+The existing correct implementation passed on its first execution. Local totals
+are422/422 Node and84/84 Python, no skips; audit/build and real-SDK socket-denied
+verification passed. Exact commands/exits are in PROJECT_LOG.md.
+
+The [acceptance checklist](pr164-staging-acceptance-checklist.md) and
+[evidence template](pr164-staging-evidence-template.json) specify thirteen cases,
+explicit oracles, source/fixture manifests, aggregate caps, independent financial
+and isolation evidence, immutable input checks, reconciliation and actual
+teardown proof. All live results remain NOT_RUN; no authority/evidence is filled.
+Independent review corrected the expiry oracle:410/401 describe an initialized
+warm app; an expired cold start refuses initialization before DB, and its platform
+HTTP status remains unverified. No keep-alive traffic may be improvised to force
+a warm instance under min_containers0/idle2 configuration.
+
+Additional preparation gap: the existing psql/ASGI process driver and legacy
+Dict client are not a protocol2 live HTTP client. A reviewed bounded live client
+and deterministic external crash controller are not implemented. Prepare and
+test them offline before the corresponding live cases; do not claim this
+specification alone makes the full live matrix executable. Production shutdown
+requires separate authority; this plan authorizes no production modification.
+
+Status: OFFLINE REVIEW/TESTED; live campaign BLOCKED. No Modal deployment, image
+build, Modal container launch, live provider/DB request, GPU work, production change,
+spending or merge was performed in this cycle. Existing account/no-overage,
+database, old-worker and explicit-authorization gates remain unchanged.

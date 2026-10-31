@@ -121,3 +121,34 @@ class ModalPackageTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code,200);self.assertTrue(response.json()['synthetic'])
         self.assertEqual(response.json()['worker_id'],'modal-ta-fixtureContainer')
         self.assertEqual([e['phase'] for e in events],['spawn_attempt','model_start','completed'])
+
+    async def test_expired_post_cannot_submit_or_extend_captured_campaign_window(self):
+        import copy
+        from providers.modal_motion.tests.test_protocol2_staging import ProbeTests,TOKEN
+        from providers.modal_motion.tests.test_submit_concurrency import body
+        from providers.modal_motion.staging import CPU_ACK
+        probe,store,events=ProbeTests().fixture();module,_=load_package()
+        with patch.dict(os.environ,self.env(),clear=True),patch.object(module.time,'time',return_value=1000),\
+            patch.object(module,'from_env',return_value=(probe,TOKEN)):
+            app=module.protocol2_probe()
+        probe.submit=MagicMock(wraps=probe.submit)
+        data=body();data['ack']=CPU_ACK
+        async with AsyncClient(transport=ASGITransport(app=app),base_url='http://fixture') as http:
+            headers={'Authorization':'Bearer '+TOKEN}
+            with patch.object(module.time,'time',return_value=1000):
+                healthy=await http.post('/submit',json=data,headers=headers)
+                self.assertEqual(healthy.status_code,200)
+            retained=copy.deepcopy(store.store);before=copy.deepcopy(events)
+            probe.checked_store=MagicMock(side_effect=AssertionError('Expired POST must not reach database'))
+            # Refreshing environment/header/body values cannot renew this warm
+            # container's already captured deadline. None is authorization.
+            with patch.dict(os.environ,self.env(5000),clear=True),patch.object(module.time,'time',return_value=1300):
+                for request_body in [data,{**data,'campaign_expires_at':5000}]:
+                    response=await http.post('/submit',json=request_body,
+                        headers={**headers,'X-Campaign-Expires-At':'5000'})
+                    self.assertEqual(response.status_code,410)
+                anonymous=await http.post('/submit',json=data)
+                self.assertEqual(anonymous.status_code,401)
+        probe.submit.assert_called_once()
+        probe.checked_store.assert_not_called()
+        self.assertEqual(store.store,retained);self.assertEqual(events,before)

@@ -1961,3 +1961,45 @@ Complete PR inventory relative to verified main3e26d855 (49paths; current packag
 - `supabase/functions/beatvision-generation/modal-motion.ts`
 - `supabase/migrations/20261030010000_generation_poll_leases.sql`
 - `supabase/migrations/20261030204115_durable_modal_admission.sql`
+
+
+### Offline package review, POST-expiry coverage and acceptance specification — 2026-10-31
+
+Scope: continue entirely offline as requested; inspect package/guide, strengthen missing regression coverage and prepare a reproducible staging acceptance specification. No new runtime defect confirmed. Exact PR baselinef90b2670efb01f90e8705dfa1ac2894c09da6b5b/main3e26d8556e62b40e9f20823cb253854ae5efcec6 confirmed with PR metadata, explicit fetch/FETCH_HEAD and ls-remote before edits. Existing branch `fix/preserve-uncertain-dispatch-20261028`, clean worktree `/workspace/BeatVision-pr164`; no concurrent diff found. AGENTS.md completely reread; full log had been read and subsequent entries authored/inspected in preceding cycles; latest log/package/guide/tests/SDK verifier inspected again. Main unchanged.
+
+Finding: deployment guide matches the package's selectedCPU files, limits, staging environment/Secret, auth, SDK1.6.3 and expiry configuration. Existing expiry regression covered GET only. Added `test_expired_post_cannot_submit_or_extend_captured_campaign_window`: a healthy POST first creates one synthetic attempt; at the captured warm deadline, repeated authenticated POSTs plus header/body/environment renewal attempts return410 without another submit, database access, receipt/fence change or event; anonymous POST remains401. The existing correct implementation passed immediately. This is additional coverage, not a runtime defect repair; no production/provider/runtime code changed.
+
+Deliverables: thirteen-case checklist and JSON evidence template, initially BLOCKED/NOT_RUN with every authority/gate reference unset. Specification includes candidate/source/image/fixture hashes, explicit account/no-overage/database/automation/old-worker/approval gates, aggregate request ceilings, independent SQL receipts/counters and synthetic-vs-real identity distinctions, immutable approved input evidence, unknown-hold recovery and actual teardown/budget evidence. Filling a template/flag does not grant approval. Production shutdown has separate authority; staging permission does not allow production modification.
+
+Independent read-only review found a documentation oracle mismatch: universal post-expiry410 incorrectly assumed a warm instance. Corrected to warm410/401 versus expired cold initialization refusal before DB with platform HTTP status NOT VERIFIED; added separate warm/cold evidence fields and no assumed warmth/unbounded keepalive under min0/idle2. Reviewer inspected source/spec/template and ran read/diff checks exit0; no network/DB/provider calls. Final supplied wording was confirmed without a second file reread (not represented as another executed review). Root validation confirms all13case IDs match, statuses NOT_RUN, authority/gate refs null. Initial inline validator exit1 mistakenly counted the table's ID header as a case; corrected parser excludes only that header, fixed validation exit0. No product/test assertion was weakened.
+
+Preparation gap explicitly recorded: the psql/ASGI process driver is not a live HTTP client; the Dict probe is legacy-only; the package has no public crash/reset endpoints. A reviewed bounded protocol2 live client and deterministic external crash controller remain NOT IMPLEMENTED. Prepare/test them offline before corresponding live cases; the checklist does not falsely claim full live automation. Actual async-provider recovery and exactly-once/completion remain unproven.
+
+Verification: **422/422 Node and84/84 Python**, zero skips, audit, production TypeScript/Vite build, test compilation and real pinned SDK socket-denied check exit0. SDK reported0socket attempts/0cloud invocations. No new dependencies installed. Existing bundle917.86kB warning remains. Node22.23.4 tests/build (host24.19),npm11.9,Python3.12.14 (CI3.11),FastAPI0.162.0,httpx0.28.1,TypeScript5.9.3,Vite7.3.7,SDK1.6.3,Git2.52.0 from verified unchanged environments. Edge TypeScript/production schema unchanged; prior checks preserved, no Deno repeat or local database/container provisioning needed. Existing GitHub isolated fixture workflows are checked separately after publication.
+
+Status: OFFLINE REVIEW/TESTED. Current task performed no Modal/SDK deployment, image build, local Docker/Modal container launch, live provider/DB request, GPU work, production modification, spending or merge. Source-control publication and existing isolated CI do not authorize live staging. Account/no-overage enforcement, isolated database eligibility, old-worker shutdown and explicit deploy/campaign/teardown authorization remain BLOCKED/NOT VERIFIED. No deadline/resource setting is treated as a spending cap. Next independent engineering action: design/review bounded protocol2 live client and external fault method with mocked transports, entirely offline; no live campaign follows automatically. Keep PR draft.
+
+Changed-file inventory relative tof90b267 (publication SHA follows separately):
+
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `docs/audits/pr164-staging-acceptance-checklist.md`
+- `docs/audits/pr164-staging-evidence-template.json`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/tests/test_staging_modal_package.py`
+
+Exact completed commands, cwd `/workspace/BeatVision-pr164`; evidence `/workspace/beatvision-acceptance-review-20261031`. Harness `python /workspace/beatvision-acceptance-review-20261031/run_check.py <label> /workspace/BeatVision-pr164 <argv>` propagates actual exit. Direct Node row uses observation time rather than an invented start time; full output is saved.
+
+| UTC start or observation | Label | Exit | Exact command |
+| --- | --- | --- | --- |
+| 2026-10-31T05:17:30.079409+00:00 | post-expiry | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_modal_package -v` |
+| 2026-10-31T05:22:58.715188+00:00 | checklist-template | 0 | `python /workspace/beatvision-acceptance-review-20261031/validate_checklist.py` |
+| 2026-10-31T05:23:42.974832+00:00 | audit | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| 2026-10-31T05:23:42.985726+00:00 | full-python | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-31T05:23:43.005493+00:00 | build | 0 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| 2026-10-31T05:23:43.020621+00:00 | sdk-offline | 0 | `/workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -B scripts/test/verify_modal_package_offline.py` |
+| 2026-10-31T05:25:40.425491+00:00 | compile | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/tests/test_staging_modal_package.py` |
+| 2026-10-31T05:25:40.474476+00:00 | whitespace | 0 | `git diff --check` |
+| 2026-10-31T05:27:36.178844+00:00 | full-node-direct | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs > /workspace/beatvision-acceptance-review-20261031/full-node.log 2>&1` |
+
+Direct baseline commands, each exit0: `git fetch origin refs/heads/fix/preserve-uncertain-dispatch-20261028`; `git rev-parse FETCH_HEAD`; `git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028`, returnedf90b267/3e26d855. No network-enabled model/provider command or account/billing query was executed.
