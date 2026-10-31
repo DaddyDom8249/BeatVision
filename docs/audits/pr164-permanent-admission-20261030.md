@@ -223,3 +223,43 @@ All four GitHub workflows passed on that exact commit, including the new CPU
 probe/backup-restore step and full migration replay. Publication links and exact
 command exits are recorded in PROJECT_LOG.md. This CI result does not establish
 the outstanding staging/provider guarantees listed above.
+
+## Modal CPU packaging and cost boundary — 2026-10-31
+
+Continued from confirmed remotec0cb980358d5f4b17b6985d77d8460eb3b185aec;
+main remains3e26d8556e62b40e9f20823cb253854ae5efcec6. The user's spending question
+was not treated as approval. No cloud/account resource was queried or created.
+
+`staging_modal.py` now defines a separate proxy-authenticated CPU App, with a
+stage-environment guard, stage-scoped Secret and seven explicitly selected CPU
+source files. GPU worker/test files and automatic source inclusion are excluded.
+Requested/hard limits:0.125core and256MiB; max2containers,0warm/buffer, one input,
+60-second input/startup timeouts and2-second idle scale-down configuration.
+Runtime uses trusted `MODAL_TASK_ID`, dedicated bearer authentication and a
+maximum10-minute absolute campaign deadline. New expired requests stop before
+probe/database work; in-flight work and infrastructure billing are separate.
+
+Real pinned Modal1.6.3 validation with every socket connection denied passed:
+zero socket attempts and zero cloud invocations. It caught an invalid initial
+`retries=0` declaration: Web Functions forbid the retries argument, including
+zero. Removed the unsupported argument; no application retry loop was added.
+Five new Python packaging tests and one real SQL identity/counting test pass.
+Full local suites:422/422 Node,83/83 Python, zero skips. Audit, production
+TypeScript/Vite build, compilation and complete diff checks passed. CI now also
+executes the real-SDK offline verifier; its published-head result is recorded
+separately in PROJECT_LOG.md.
+
+Official public pricing matches the quoted CPU/memory rates. A nominal allocation
+example is documented in the [guide](../../providers/modal_motion/STAGING_PROTOCOL2.md),
+explicitly not a bill estimate/cap. No connected Modal billing tool is available.
+Remaining credits, account eligibility, enforceable no-overage controls and
+isolated cloud database costs remain NOT VERIFIED. The request deadline does
+not stop deployment or prevent startup/idle/late-request charges. Approval alone
+cannot establish a no-overage guarantee; require platform/account enforcement
+and separate deploy/campaign/teardown authorization before any live operation.
+
+Independent read-only review found no further concrete defect and confirmed the
+cost limitation. Packaging is IMPLEMENTED / OFFLINE SDK TESTED; actual image
+build, deployment, authenticated PostgREST, two-container behavior, old-worker
+shutdown, GPU/Android and production remain NOT VERIFIED. No deployment, provider
+invocation, paid operation, production change or merge was performed. Keep draft.

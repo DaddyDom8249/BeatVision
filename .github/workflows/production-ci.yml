@@ -22,3 +22,7 @@ jobs:
       - run: npm run production-audit
       - run: npm run build
       - run: test -f README.md && test -d src && test -d supabase
+      - name: Validate CPU staging package with real SDK and network denied
+        run: |
+          python -m pip install --only-binary=:all: 'modal==1.6.3'
+          python -B scripts/test/verify_modal_package_offline.py

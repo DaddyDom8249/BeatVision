@@ -33,7 +33,7 @@ begin
   if p_action='event' then
     if jsonb_typeof(p_event) is distinct from 'object'
       or coalesce(p_event->>'phase','') not in ('spawn_attempt','model_start','completed')
-      or coalesce(p_event->>'worker_id','') !~ '^local-[A-Za-z0-9_-]{1,100}$' then
+      or coalesce(p_event->>'worker_id','') !~ '^(local|modal)-[A-Za-z0-9_-]{1,100}$' then
       raise exception 'STAGING_EVENT_INVALID';
     end if;
     insert into private.protocol2_staging_events(event_id,job_id,phase,call_id,worker_id)

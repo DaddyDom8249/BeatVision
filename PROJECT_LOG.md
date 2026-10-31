@@ -1838,3 +1838,58 @@ Complete PR changed-file inventory relative to verified main3e26d855 (44paths, d
 - `supabase/functions/beatvision-generation/modal-motion.ts`
 - `supabase/migrations/20261030010000_generation_poll_leases.sql`
 - `supabase/migrations/20261030204115_durable_modal_admission.sql`
+
+
+### Separate Modal CPU packaging and spending boundary — 2026-10-31
+
+Objective: finish safe offline packaging on existing PR164. The user's question asking whether a CPU-credit test is approved was not treated as authorization to spend. No live campaign/deploy/provider/GPU operation was run. Remote PRc0cb980358d5f4b17b6985d77d8460eb3b185aec and main3e26d8556e62b40e9f20823cb253854ae5efcec6 reconfirmed before edits using GitHub metadata, explicit fetch and ls-remote. Worktree `/workspace/BeatVision-pr164`, branch `fix/preserve-uncertain-dispatch-20261028`, initially clean; no advanced diff/concurrent work found. AGENTS.md reread completely; complete log was read in earlier repair and new entries authored/inspected; latest log/runner/guide/tests/CI inspected this cycle. Main untouched.
+
+Root cause: portable CPU ASGI runner had no independent Modal deployment definition. Five packaging regression cases failed before implementation (`package-red`, missing module, exit1). Added `staging_modal.py`, separate App `bragoraforge-protocol2-cpu-probe`, selected7CPU files only (no GPU worker/tests), include_sourceFalse, proxy authentication plus existing dedicated bearer, pinned staging Secret/environment, actual runtime task-ID requirement, max2containers,0warm/buffer,1input/container, hard/request CPU0.125 and memory256MiB,60second input/startup limits,2second idle-scale-down configuration and restricted Modal resource access. Stage-only metadata SQL accepts local and Modal labels; actual task identity comes from environment, never request fields. Added operator requirements pin Modal1.6.3/FastAPI0.162.0. Neither production worker nor admission protocol/migration changed.
+
+A timezone-aware absolute deadline, at most10minutes ahead at startup, fails closed before DB setup if missing/expired/unbounded. Authenticated new expired requests get410 before probe/DB access; bad bearer stays401. Deadline is fixed for that warm container. This does not stop the deployment, in-flight work, image/startup/idle billing or charges from later requests reaching infrastructure. It is not a spending cap.
+
+Public documentation/PyPI fetched without provider invocation. App reference returned a JavaScript redirect; attempted App.function reference404(exit22) was diagnosed by inspecting the official pinned wheel. PyPI modal1.6.3 wheel SHA25631e8952c8908740f3fbc666191fec78ff5fadecb7a48a29d40aed90b39531ffe matched downloaded bytes. Downloaded binary-only wheels from explicit public PyPI, installed offline/no-index into an isolated evidence venv, not repository/app dependencies. A source inspection initially requested nonexistent modal/cli/deploy.py (diagnostic KeyError); inspected actual modal/cli/run.py instead, confirming --env is resolved before module import. No credentials printed. Read-only pip cache warning was harmless; no permission escalation for cache.
+
+Real SDK validation caught `Web Functions do not support retries` for initial retries=0, exit1. Removed unsupported retries argument; SDK forbids Web Function retry configuration and no application retry loop exists. Actual Modal1.6.3 package declaration and hard-limit conversion now pass with socket.connect/connect_ex/create_connection denied, zero attempted connections and zero cloud invocations. Removed deprecated registered_functions inspection in favor of Function type validation; the pinned resource converter is used only in the verifier, not application behavior. CI adds this real-SDK offline check after normal checks.
+
+Verification: **422/422 Node,83/83 Python, zero skips**; audit, production TypeScript/Vite build, Python compilation and real-SDK offline verification exit0. Added1SQL case covering local/Modal labels, untrusted labels, append counts and direct deletion denial; added5Python package/resource/auth/expiry/identity/config cases. Existing admission/owner/RLS/provenance/crash/backup tests remain enabled. Complete source/diff reviewed independently; no further concrete defect identified. Reviewer made no DB/network/provider calls and emphasized expiry cannot establish no-overage. No frontend/Edge TypeScript changed; build ran tsc-b, earlier Deno check not repeated for unchanged Edge code. Existing917.86kB bundle warning remains. Versions retained: Node22.23.4 tests/build (host24.19),npm11.9,Python3.12.14 (CI3.11),FastAPI0.162.0,httpx0.28.1,TypeScript5.9.3,Vite7.3.7,Git2.52.0; new separate SDK1.6.3. No package.json/lock or production schema change.
+
+User-interrupted long tool calls produced no SDK-download/Node execution record and were not counted as passing. Direct SDK download succeeded exit0. The later direct Node invocation completed with TAP422/422,fail0,skip0 and exit0; its exact start timestamp was not captured. Earlier Python/build exec sessions expired before polling after interruption; their completed harness result files prove exit0 and actual83tests. No test was declared passing from an interrupted call.
+
+Spending decision: BLOCKED. Tool discovery found no connected Modal billing/account capability. Official https://modal.com/pricing fetched this cycle confirms CPU$0.0000131/core-second and memory$0.00000222/GiB-second, not current account balance/eligibility. Hypothetical allocation-only arithmetic2*600*(0.125*0.0000131+0.25*0.00000222)=$0.002631 (Decimal check), explicitly not a bill estimate or upper bound. Free-credit balance, provider/account hard no-overage enforcement, isolated database cost and deploy/campaign/teardown approval remain NOT VERIFIED. If enforceable no-overage cannot be established, do not run under current zero-cost rule. No live authorization was inferred from the question; only the owner can authorize credit consumption.
+
+Status: packaging IMPLEMENTED / OFFLINE SDK TESTED. Actual image build/deployment, PostgREST, two-container proof, old-worker shutdown, account eligibility, GPU/Android and production NOT VERIFIED. Existing reservation/provider gap and retained-history assumptions remain; no exactly-once/eventual-completion claim. Next action: verify account enforcement and isolated DB, then obtain explicit bounded deploy/campaign/teardown authorization. Keep PR draft; no merge/production modification/cloud resources/spending. Full guide/cost conditions in providers/modal_motion/STAGING_PROTOCOL2.md; current audit appended without rewriting historical claims.
+
+Changed files relative toc0cb980 (implementation SHA follows in publication entry):
+
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/requirements-staging.txt`
+- `providers/modal_motion/staging_modal.py`
+- `providers/modal_motion/tests/test_staging_modal_package.py`
+- `scripts/test/protocol2-staging-package.db.test.mjs`
+- `scripts/test/sql/protocol2-staging-fixture.sql`
+- `scripts/test/verify_modal_package_offline.py`
+- `scripts/test/verify_protocol2_staging.py`
+
+Exact completed command ledger; cwd `/workspace/BeatVision-pr164` throughout, evidence `/workspace/beatvision-modal-packaging-20261030` (directory created when session began; actual timestamps below areUTC2026-10-31). Harness `python /workspace/beatvision-modal-packaging-20261030/run_check.py <label> /workspace/BeatVision-pr164 <argv>` propagates exit. Direct Node row gives observation time, not fabricated start time.
+
+| UTC start or observation | Label | Exit | Exact command |
+| --- | --- | --- | --- |
+| 2026-10-31T00:03:42.651353+00:00 | sdk-venv | 0 | `python -m venv /workspace/beatvision-modal-packaging-20261030/sdk-venv` |
+| 2026-10-31T01:18:54.431626+00:00 | sdk-install | 0 | `/workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -m pip install --disable-pip-version-check --no-index --find-links=/workspace/beatvision-modal-packaging-20261030/wheels modal==1.6.3` |
+| 2026-10-31T01:21:27.045821+00:00 | package-red | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_modal_package -v` |
+| 2026-10-31T01:22:45.581140+00:00 | package-unit | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_modal_package -v` |
+| 2026-10-31T01:23:30.247950+00:00 | sdk-offline | 1 | `/workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -B scripts/test/verify_modal_package_offline.py` |
+| 2026-10-31T01:23:49.837292+00:00 | sdk-offline-fixed | 0 | `/workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -B scripts/test/verify_modal_package_offline.py` |
+| 2026-10-31T01:24:19.259205+00:00 | sdk-offline-final | 0 | `/workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -B scripts/test/verify_modal_package_offline.py` |
+| 2026-10-31T01:26:31.517538+00:00 | sql-identity | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node --test scripts/test/protocol2-staging-package.db.test.mjs` |
+| 2026-10-31T01:27:09.920002+00:00 | build | 0 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| 2026-10-31T01:27:09.920428+00:00 | audit | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| 2026-10-31T01:27:09.933567+00:00 | full-python | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-31T05:04:56.314282+00:00 | compile | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/staging_modal.py providers/modal_motion/tests/test_staging_modal_package.py scripts/test/verify_modal_package_offline.py scripts/test/verify_protocol2_staging.py` |
+| 2026-10-31T05:06:37.087807+00:00 | full-node-direct | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+
+Additional exact direct setup command, exit0: `env -u PIP_INDEX_URL -u PIP_EXTRA_INDEX_URL /workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -m pip download --disable-pip-version-check --only-binary=:all: --index-url https://pypi.org/simple --dest /workspace/beatvision-modal-packaging-20261030/wheels modal==1.6.3`. Direct baseline commands `git fetch origin refs/heads/fix/preserve-uncertain-dispatch-20261028`, `git rev-parse FETCH_HEAD`, `git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028` exited0 and returnedc0cb980/3e26d855. Official URL reads used `curl --max-time20 -fsSL URL -o <evidence file>` for modal.App, modal.Secret, modal.asgi_app, modal.concurrent, PyPI modal JSON and pricing; successful files were read locally. App.function URL404exit22 was retained as a failed documentation lookup, not a failed deployment.

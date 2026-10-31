@@ -124,3 +124,91 @@ Actual PostgREST, Modal CPU deployment, two-container recovery, old-worker
 shutdown, staging cost approval, GPU output and production remain NOT VERIFIED.
 Keep PR #164 draft. The reservation-to-provider gap still cannot guarantee
 exactly-once execution or eventual completion.
+
+## Separate Modal CPU package (offline verified, not deployed)
+
+`providers/modal_motion/staging_modal.py` packages the existing ASGI runner as
+the distinct App `bragoraforge-protocol2-cpu-probe`. The pinned operator setup is
+`providers/modal_motion/requirements-staging.txt` (Modal1.6.3, FastAPI0.162.0).
+Installing the SDK is not a deployment. The real SDK definition is checked by
+`scripts/test/verify_modal_package_offline.py` with every socket connect denied;
+it never runs/deploys a Function or builds an image remotely.
+
+The image includes exactly seven explicitly selected CPU source files, including
+both package initializers. Automatic source inclusion is disabled. GPU worker,
+legacy tests, models and production secrets are excluded from this image.
+
+| Configuration | Value |
+| --- | --- |
+| CPU request and hard limit |0.125core each |
+| Memory request and hard limit |256MiB each |
+| Maximum concurrent containers |2 |
+| Warm/buffer containers |0 /0 |
+| Inputs per container |1 |
+| Input/startup timeout |60seconds each |
+| Idle scale-down configuration |2seconds |
+| Proxy authentication |Required, in addition to probe bearer token |
+| Modal resource access from runner |Restricted |
+
+Modal1.6.3 forbids configuring `retries` for Web Functions, including zero. The
+initial actual-SDK check caught that error; the unsupported argument was removed.
+There is no application retry loop. Duplicate HTTP inputs still consult the
+shared permanent ledger. Provider enforcement and image startup remain untested.
+
+The CLI must select the dedicated environment `bragoraforge-protocol2-staging`;
+the local definition rejects default/production environments before referencing
+resources. The named Secret `bragoraforge-protocol2-staging` is pinned to that
+environment and requires all existing staging settings plus
+`BEATVISION_STAGING_CAMPAIGN_EXPIRES_AT`: a timezone-aware ISO8601 timestamp no
+more than ten minutes ahead at container startup. Missing/expired/unbounded
+windows fail before database setup. Authenticated new requests after the captured
+deadline receive410 before probe/database access; unauthorized requests stay401.
+
+The wrapper requires actual runtime `MODAL_TASK_ID` in `ta-*` form and records
+`modal-ta-*` as worker identity. It never accepts identity from a request. The
+staging-only event fixture now allows both local and Modal labels. Unit tests use
+clearly synthetic task IDs; this does not prove an actual Modal container ran.
+Existing inline fake execution still produces synthetic receipts, not provider
+call IDs, and no media.
+
+Only after all approval/budget/database conditions below are independently
+satisfied, the reviewed deployment command would be:
+
+```sh
+python -m modal deploy --env bragoraforge-protocol2-staging -m providers.modal_motion.staging_modal
+```
+
+This command has **not been executed**. It can create resources/build images and
+consume credits. A dedicated proxy credential/token, exact staging API origin,
+prepared isolated jobs and verified shutdown/teardown procedure are required for
+a future bounded campaign. A20-request success must also show at least two
+different trusted `modal-ta-*` identities; max_containers2 alone does not prove
+two containers actually handled work. Do not use the legacy Dict probe client as
+protocol2 acceptance evidence.
+
+## Spending decision remains blocked
+
+No live-test approval has been inferred from the user's cost-review question.
+Only the owner can authorize consumption of account credits. No account-specific
+remaining balance, payment eligibility, enforceable no-overage setting or
+isolated cloud database budget was verified here; there is no connected Modal
+billing tool in this session. Missing evidence is not treated as available credit.
+
+[Official Modal pricing](https://modal.com/pricing), fetched during this work,
+lists CPU at$0.0000131/core-second and memory at$0.00000222/GiB-second. These rates
+do not establish a free test. At those rates, a hypothetical two containers each
+allocated0.125core/0.25GiB for600seconds computes to$0.002631. This is an arithmetic
+example, **not a bill estimate or upper bound**: startup/image builds, platform
+metering, idle time, additional requests and other charges are not established.
+Included monthly credits do not prove the current account has credits remaining.
+
+The application deadline does not stop the Modal App or cap spending. A
+proxy-authenticated request after expiry may still allocate/start a billed
+container before receiving410 or failing startup; in-flight work can continue.
+Verify a provider/account hard no-overage gate and separate deploy/campaign/
+teardown authorization before any live action. If an enforceable no-overage gate
+cannot be established, do not run this test under the current zero-cost rule.
+
+Current status: packaging IMPLEMENTED / OFFLINE SDK TESTED. Deployment, actual
+PostgREST, two-container recovery, account eligibility, old-worker shutdown,
+GPU/Android and production remain NOT VERIFIED. No cloud resource was created.

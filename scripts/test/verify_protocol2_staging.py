@@ -118,7 +118,8 @@ def main():
         after=summary(number);assert after.get('job_id')==before.get('job_id')
     # All event identities remain distinct and every duplicate would be counted.
     finish(process(10028));assert counts(10028)==(1,1,1)
-    instance.event(uid(10028),'model_start','fc-staging-'+uuid.uuid4().hex)
+    modal_identity_fixture=StagingProbe(instance.store_factory,instance.rpc,run_id,'modal-ta-fixture')
+    modal_identity_fixture.event(uid(10028),'model_start','fc-staging-'+uuid.uuid4().hex)
     assert counts(10028)==(1,2,1),'Negative duplicate-event oracle must expose both starts'
     sql(prefix,"update private.modal_motion_admissions set created_at=now()-interval '100 years';")
     for number in range(FIRST,LAST+1):
