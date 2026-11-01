@@ -53,7 +53,7 @@
   "remaining_limitations": [
     "No live execution authorized",
     "Account and no-overage eligibility unverified",
-    "Live protocol2 client and external fault controller not implemented",
+    "Offline bounded client/local crash controller implemented; live authorizer unconfigured and remote fault controller not implemented",
     "No staging, provider atomicity, exactly-once or production verification"
   ]
 }

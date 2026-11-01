@@ -311,3 +311,75 @@ Offline review/acceptance-specification commit:
 `d87627992fbf4fcde7e14837cbf7c236444ba6cf`. All four workflows passed on that
 exact commit, including real-SDK validation and full migration replay. This adds
 coverage/specification evidence only; it is not a live acceptance result.
+
+## Bounded HTTP client and external local crash controller — 2026-11-01
+
+Resumed exact published head `a1585e3c73ee16278d0c07ff47437bdd4b27f9a2`;
+main remained `3e26d8556e62b40e9f20823cb253854ae5efcec6`. The original worktree
+and seven unpublished files were recovered intact after environment startup was
+unavailable. The earlier interrupted network command never ran; its missing log
+and lack of exit code were not counted as a test result.
+
+Implemented a standard-library protocol2 client with exact Modal HTTPS origin
+allowlisting, production app-label denial across regional aliases, independent
+proxy/bearer credentials, immutable prepared request hashes, bounded/schema-
+checked responses, receipt conflict/replay detection, atomic shared request caps,
+unique request IDs and no automatic POST retry. Recovery-only clients cannot POST.
+Each exchange uses an owned transport process and absolute deadline, rechecked
+after connection setup. Timeout kills the transport; uncertain acceptance is
+preserved. Fatal cleanup failure is recorded, propagated and prevents subsequent
+shared-budget debits; it cannot undo already dispatched/in-flight requests.
+
+The external local controller launches only a fixed CPU fixture target. A private
+nonce/PID/run/job/request/digest frame proves the selected pause; the parent kills
+its stored Process handle and requires exit-9. There is no arbitrary PID/command
+API or public crash/reset route. All owned workers are attempted during cleanup.
+CLI default prints a plan; explicit offline mode creates disposable SQLite and
+loopback workers. No live authorizer is configured/shipped and no live CLI flag
+exists. A template/environment value does not authorize a request. Future trusted
+authority references are integration contracts, not financial verification.
+
+Tests first reproduced production-alias/permit-expiry gaps in the new client
+(exit1, four failed subcases); their repair passed15tests. Independent review then
+identified pipe/start cleanup and swallowed-fatal-cleanup gaps. New regressions
+failed with two failures/one error, exit1, before the repair and passed afterward.
+Final independent review confirmed those fixes and no additional concrete blocker.
+It was source-only review, not another test/provider/database execution.
+
+Final local results: **422/422 Node,112/112 Python**, zero skips, audit and production
+TypeScript/Vite build exit0. Pinned real Modal1.6.3 socket-denied verifier reported
+0socket attempts/0cloud invocations, exit0. Production runtime/schema/provider
+code was not changed; the new files are operator tooling/test fixtures only.
+
+Standalone offline campaign:13OFFLINE_PASS scenarios,46POST/12GET/58total within
+64POST/48GET/112total/180seconds;20concurrent clients across two owned local workers,
+seven private-boundary SIGKILLs, retry/GET recovery, fingerprint/project conflict,
+database refusal, durable execution receipt retention, consistent SQLite backup/
+restore, warm410/401 and refused expired cold start, legacy holds and duplicate
+event negative oracle. Its intentionally duplicated model-start count2 was
+classified FAIL by the oracle. Actual delayed-socket timeout/transport kill and
+GET-only recovery also passed. No synthetic MP4/provider acceptance was claimed.
+
+Final raw redacted evidence:
+`/workspace/beatvision-http-controller-20261031/offline-campaign-final-v2.json`,
+SHA256 `6fc1f68c626f90a0e1f1c6bb2fc365c91d45599422eff0e95dab56d24142325e`,
+2026-11-01T22:46:17.266686Z–2026-11-01T22:46:30.604579Z. Its11source hashes matched the tested
+files. Evidence records request IDs/statuses, transport/worker exits, durable
+counts, receipt/input digests and source hashes; it excludes credentials, admission
+tokens, prompts, image bodies and raw HTTP headers/bodies. CI adds the same HTTP
+campaign with actual isolated PostgreSQL service-role RPCs via psql, external
+worker kills and pg_dump/restore; its redacted artifact retains one day. Local
+psql/pg_dump are absent, so actual PostgreSQL results follow publication/CI below.
+
+**IMPLEMENTED / OFFLINE TESTED. LIVE BLOCKED.** SQLite is a durable simulation,
+not PostgreSQL/RLS proof. Actual PostgreSQL CI still uses a psql adapter, not live
+PostgREST. Local PIDs/synthetic receipts are not Modal identities/acceptance.
+HTTPS/proxy authorization is mocked; real proxy/TLS/container behavior remains
+NOT VERIFIED. Every live template case remains NOT_RUN. Remote crash control is
+not implemented; account/no-overage, isolated live DB eligibility, old-worker
+shutdown and explicit deploy/campaign/teardown authority remain blocked. Provider
+atomicity, unconditional recovery/completion, exactly-once, GPU/Android and
+production are not established. No deployment, cloud container, real GPU,
+production data change, paid operation or merge was performed. Keep PR draft.
+
+Final adapter review: production receipt-store RPC exceptions are sanitized to `MODAL_LEDGER_UNAVAILABLE`/HTTP503. A store+ASGI refusing-opener regression verifies503 before fake execution. Actual PostgreSQL negative cases expect exactly503, SQLite400/409; independent durable state/counter oracles are unchanged. Final post-adapter local Python112/112 and standalone13-case/58-request campaign exited0. Actual PostgreSQL execution follows CI; this local classification test is mocked.

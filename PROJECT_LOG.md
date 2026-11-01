@@ -2073,3 +2073,153 @@ Complete PR changed-file inventory relative to main3e26d855 (51paths; current6-f
 - `supabase/functions/beatvision-generation/modal-motion.ts`
 - `supabase/migrations/20261030010000_generation_poll_leases.sql`
 - `supabase/migrations/20261030204115_durable_modal_admission.sql`
+
+### Recover and finish bounded protocol2 HTTP/crash tooling — 2026-11-01
+
+Objective: implement the user's next offline engineering target: an allowlisted,
+bounded protocol2 HTTP client and external deterministic crash controller with
+redacted evidence compared against all13 acceptance case IDs. No live execution,
+deployment, Modal/container/GPU request, production data change, merge or spending
+is authorized. Keep the existing PR draft and main unchanged.
+
+Baseline: `/workspace/BeatVision-pr164`, branch
+`fix/preserve-uncertain-dispatch-20261028`, HEAD and actual remote PR#164
+`a1585e3c73ee16278d0c07ff47437bdd4b27f9a2`, open/draft/unmerged. Main remote and
+the untouched original `/workspace/BeatVision` checkout remain
+`3e26d8556e62b40e9f20823cb253854ae5efcec6`. GitHub metadata was read before edits;
+subsequent fetch/ls-remote confirmed no concurrent advance. AGENTS.md was read in
+full; the complete prior PROJECT_LOG was read in this continuous assignment and
+its subsequent entries authored/read. Existing protocol, staging/package,
+admission/schema/fixtures, security tests, CI and acceptance docs were inspected.
+
+Recovery: seven unpublished files survived in the original worktree. They were
+not reconstructed from an unverified replacement checkout. The earlier command
+awaiting execution permission was aborted without running; no controller log or
+exit code existed. During the outage the executor repeatedly reported no usable
+environment; readiness was offline. On resumption it reported connected and the
+actual original files/logs were present. Default sandbox integration attempt
+then failed exit1 because socket creation was denied. The rerun used only the
+additional network permission required for127.0.0.1 sockets and passed3/3 tests.
+This was an environment restriction, not a production lifecycle failure.
+
+Implementation and evidence:
+
+- `probe_client.py`: exact canonical HTTPS Modal origin allowlist; production
+  first-label denial across regional/nonregional aliases; separate proxy/bearer
+  auth; exact prepared payload hashes; stable job IDs; unique request IDs; shared
+  atomic caps/deadline; no redirects or automatic POST retry; GET-only recovery;
+  response/schema/size checks and retained receipt conflict/replay guards.
+- Each transport is an owned child process with a total deadline. It checks
+  expiry after DNS/TLS before dispatch. Timeout kills it and preserves unknown
+  acceptance. Fatal cleanup failure records a fatal result, aborts subsequent
+  shared-budget debits and propagates; existing in-flight work cannot be undone.
+- `probe_crash_controller.py` plus a fixed private test worker: nonce/PID/run/
+  job/request/digest handshake; pause after reserve, acceptance, begin,
+  before/after receipt, model start and before first HTTP reply byte; parent
+  SIGKILLs only its stored process handle and requires exit-9. No arbitrary PID,
+  command or HTTP fault/reset endpoint. Cleanup attempts every owned worker.
+- CLI defaults to a plan and has no live URL/credential/approval/PID/command
+  options. Explicit offline mode uses disposable SQLite and CPU loopback workers.
+  A future trusted-authorizer interface has no configured/shipped live issuer;
+  references/environment flags are not authorization or financial evidence.
+-13offline cases passed:20concurrent HTTP clients/two local workers; retry;
+  seven crash/lost-reply boundaries; fingerprint/project conflict; DB pre-admission
+  outage and receipt-write refusal; known execution receipt retained; consistent
+  SQLite backup/restore; warm expiry410/401/cold startup refusal; legacy hold;
+  duplicate-event negative counterexample correctly classified FAIL with2starts.
+  A separate actual delayed-socket test killed its timed-out transport and
+  recovered via GET with zero recovery POSTs. All live rows remain NOT_RUN.
+- Existing generation-security CI now runs the same guarded localhost/fixed-DB
+  campaign against actual PostgreSQL RPCs via psql with pg_dump/restore, preserving
+  redacted evidence for1day. No infrastructure provisioning was performed here.
+
+Confirmed tooling defects were reproduced before repair: alias/short-permit tests
+exit1 (four failed subcases), then15/15 policy tests passed. Independent source
+review identified early-deadline pipe leakage, spawn-failure cleanup omission and
+fatal cleanup swallowed as ordinary unavailability; new tests failed exit1 with
+two failures/one error before repair. Fixed them and added kill-error redaction,
+concurrent shared-cap, same-job conflicting receipt and best-effort cleanup tests.
+Final independent review found no further concrete blocker; it did not execute
+tests/network/DB/SDK/provider calls. It correctly noted the abort latch does not
+retroactively cancel already dispatched work.
+
+Final verification: **422/422 Node,112/112 Python, zero skipped**, audit, production
+TypeScript/Vite build, compilation, evidence/source-hash and whitespace checks
+exit0. No dependencies installed/changed; reused the verified setup. Versions:
+Node22.23.4,npm11.9.0,Python3.12.14 (CI3.11),FastAPI0.162.0,httpx0.28.1,
+TypeScript5.9.3,Vite7.3.7,PGlite0.5.9,Git2.52.0,ModalSDK1.6.3. Real pinned SDK
+socket-denied verifier:0socket attempts/0cloud invocations, exit0. Existing
+917.86kB Vite bundle warning remains. Local psql/pg_dump are absent (each
+`command -v` exit1); actual PostgreSQL campaign and full migration replay are
+validated separately by existing isolated CI after publication, not claimed local.
+Node suites include embedded SQL migration/admission/security coverage.
+
+Raw evidence directory: `/workspace/beatvision-http-controller-20261031`.
+Final JSON: `offline-campaign-final-v2.json`, SHA256
+`6fc1f68c626f90a0e1f1c6bb2fc365c91d45599422eff0e95dab56d24142325e`,
+2026-11-01T22:46:17.266686Z–2026-11-01T22:46:30.604579Z. It records46POST/12GET/58total,
+13OFFLINE_PASS results,7confirmed kill-9 exits and all owned workers stopped;
+11source hashes matched the final tested tooling. Logs/evidence exclude credentials,
+admission tokens, prompts, image bodies and raw HTTP headers/bodies. Failed
+campaigns retain already-collected redacted evidence. Mock proof clips printed by
+existing Python tests are synthetic CPU fixtures, not real inference or approval.
+
+Exact significant executed commands, cwd `/workspace/BeatVision-pr164` unless
+specified. Harness prefix H is
+`/workspace/beatvision-baseline-20261029/venv/bin/python /workspace/beatvision-http-controller-20261031/run_check.py`;
+it writes actual UTC times/commands/exits and propagates the command exit.
+Direct process exits below were observed from their execution sessions; no start
+timestamp is invented. Earlier published-phase commands remain recorded above.
+
+| Label | Exit | Exact command |
+| --- | --- | --- |
+| Remote refs |0| `git fetch origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028; git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028` |
+| Initial policy reproduction |1| `H client-review-red /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_probe_http_client -v` |
+| Initial policy repair |0| `H client-review-green /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_probe_http_client -v` |
+| Socket denied |1| `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_probe_http_controller -v > /workspace/beatvision-http-controller-20261031/controller-first.log 2>&1` |
+| Socket-permitted controller |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_probe_http_controller -v > /workspace/beatvision-http-controller-20261031/controller-network.log 2>&1` |
+| Non-executing default |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/run_protocol2_http_probe.py` |
+| Initial standalone campaign |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/run_protocol2_http_probe.py --offline --evidence /workspace/beatvision-http-controller-20261031/offline-campaign.json > /workspace/beatvision-http-controller-20261031/offline-campaign.log 2>&1` |
+| First full Python (104tests before cleanup additions) |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v > /workspace/beatvision-http-controller-20261031/full-python.log 2>&1` |
+| Cleanup reproduction |1| `H cleanup-red /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_probe_http_client -v` |
+| Cleanup repair |0| `H cleanup-green /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_probe_http_client -v` |
+| Node422 |0| `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs > /workspace/beatvision-http-controller-20261031/full-node.log 2>&1` |
+| Audit |0| `H audit /workspace/BeatVision-pr164 /home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| Build/TypeScript |0| `H build /workspace/BeatVision-pr164 env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| Real SDK, sockets denied |0| `H sdk-offline /workspace/BeatVision-pr164 /workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -B scripts/test/verify_modal_package_offline.py` |
+| Python before adapter regression111 |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v > /workspace/beatvision-http-controller-20261031/full-python-final.log 2>&1` |
+| Final standalone campaign |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/run_protocol2_http_probe.py --offline --evidence /workspace/beatvision-http-controller-20261031/offline-campaign-final.json > /workspace/beatvision-http-controller-20261031/offline-campaign-final.log 2>&1` |
+| Compile |0| `H compile /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/probe_client.py providers/modal_motion/probe_crash_controller.py providers/modal_motion/tests/http_probe_fixture.py providers/modal_motion/tests/http_probe_worker.py providers/modal_motion/tests/probe_campaign.py providers/modal_motion/tests/test_probe_http_client.py providers/modal_motion/tests/test_probe_http_controller.py scripts/test/run_protocol2_http_probe.py` |
+| Diff |0| `git diff --check` |
+
+Generated .pyc files from our compile/test commands were removed; no user file was
+discarded. Live template still has BLOCKED/NOT_RUN and unset authority/evidence.
+No production runtime/schema/provider contract changed. Status: IMPLEMENTED /
+OFFLINE TESTED; actual PostgreSQL CI results follow below. Staging, HTTPS proxy/
+PostgREST, real Modal cross-container death/recovery, financial eligibility,
+old-worker shutdown, GPU/Android and production remain NOT VERIFIED/BLOCKED.
+Reservation/provider atomicity, unconditional recovery and exactly-once execution
+are not established. The next independent engineering action is to design/review
+the remote fault method and trusted live-authority integration without executing
+them; no live action follows automatically. Keep PR#164 draft.
+
+Complete phase changed-file inventory (14paths; commit SHA/publication follows):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `docs/audits/pr164-staging-acceptance-checklist.md`
+- `docs/audits/pr164-staging-evidence-template.json`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/probe_client.py`
+- `providers/modal_motion/probe_crash_controller.py`
+- `providers/modal_motion/tests/http_probe_fixture.py`
+- `providers/modal_motion/tests/http_probe_worker.py`
+- `providers/modal_motion/tests/probe_campaign.py`
+- `providers/modal_motion/tests/test_probe_http_client.py`
+- `providers/modal_motion/tests/test_probe_http_controller.py`
+- `scripts/test/run_protocol2_http_probe.py`
+
+Final adapter compatibility review confirmed the production receipt store sanitizes SQL/RPC refusals to `MODAL_LEDGER_UNAVAILABLE` and staging503. Added an actual store+ASGI mocked-opener regression proving503 before fake execution; the PostgreSQL campaign expects exactly503 for its prepared negative SQL cases, while SQLite keeps400/409. Independent ledger/input/receipt/event no-mutation oracles remain unchanged. This is mocked refusal classification plus source review; actual PostgreSQL execution remains a CI result, not a local claim.
+
+Final post-adapter repeat, each observed exit0: `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v > /workspace/beatvision-http-controller-20261031/full-python-final-v2.log 2>&1` (**112/112**); `/workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/run_protocol2_http_probe.py --offline --evidence /workspace/beatvision-http-controller-20261031/offline-campaign-final-v2.json > /workspace/beatvision-http-controller-20261031/offline-campaign-final-v2.log 2>&1` (**13cases/58requests**). The earlier parallel permission request was interrupted before either command ran; no exit/result is assigned to that interrupted request. `H compile-final` used the same cwd and complete argv as the Compile row, exit0; final compilation follows the adapter test addition before commit.

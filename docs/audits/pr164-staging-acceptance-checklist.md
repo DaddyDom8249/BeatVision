@@ -114,18 +114,29 @@ bounded method for reaching the warm deadline within the request/budget cap.
 If that cannot be established, leave warm expiry NOT VERIFIED; do not send an
 unbounded keep-alive loop. Record warm/cold observations separately in the template.
 
-## 5. Current tooling gap: stop before a live fault campaign
+## 5. Offline tooling and remaining live fault gap
 
 The repository's `verify_protocol2_staging.py` is an isolated psql/ASGI process
 driver, not a live HTTP campaign client. The old
 `verify_multiprocess_contention.py` targets the legacy Dict protocol and is
 explicitly unsuitable. The deployed CPU package exposes no crash/reset endpoints.
 
-A complete reviewed protocol2 live client and deterministic external live crash
-controller are not yet implemented. Prepare/test those offline, with bounded
-requests and mocked transports, before scheduling the corresponding live rows.
-Do not improvise repeated curl calls, weaken auth, add public fault flags or
-claim local os._exit/PID evidence proves real Modal container recovery.
+`scripts/test/run_protocol2_http_probe.py` now defaults to a non-executing plan.
+Its explicit `--offline` mode exercises real loopback HTTP, durable SQLite and
+an external controller that SIGKILLs only its own fixed CPU worker processes at
+private commit boundaries. The same campaign has a strictly isolated PostgreSQL
+CI adapter with backup/restore. The bounded client has mocked HTTPS/proxy tests,
+exact origin and payload checks, no redirects/automatic POST retries, shared
+caps, per-request total deadlines and GET-only recovery. See the
+[operator guide](../../providers/modal_motion/STAGING_PROTOCOL2.md#bounded-offline-http-and-external-crash-campaign).
+
+Its thirteen OFFLINE_PASS results are simulations mapped to these IDs. Every
+live row/template remains NOT_RUN. Local PIDs, synthetic receipts and psql do
+not establish real Modal identity/recovery, proxy auth or PostgREST behavior.
+No live authorizer is shipped/configured; a reviewed external **remote** crash
+method remains NOT IMPLEMENTED. Actual financial/isolation/authority gates
+remain BLOCKED. Do not improvise repeated curl calls, weaken auth, add public
+fault flags or promote local SIGKILL evidence to real container verification.
 
 ## 6. Preserve evidence, reconcile, then tear down
 

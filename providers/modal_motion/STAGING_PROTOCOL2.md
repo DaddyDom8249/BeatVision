@@ -2,7 +2,7 @@
 
 The [acceptance checklist](../../docs/audits/pr164-staging-acceptance-checklist.md)
 and its evidence template specify reproducible cases, stop conditions and the
-remaining live-client/fault-controller gap. They authorize no live execution.
+remaining live authorization/remote-controller gap. They authorize no live execution.
 
 Source and local verification only. This guide does not authorize infrastructure
 deployment, remote database requests or Modal CPU/GPU spending. Confirm staging
@@ -216,3 +216,73 @@ cannot be established, do not run this test under the current zero-cost rule.
 Current status: packaging IMPLEMENTED / OFFLINE SDK TESTED. Deployment, actual
 PostgREST, two-container recovery, account eligibility, old-worker shutdown,
 GPU/Android and production remain NOT VERIFIED. No cloud resource was created.
+
+## Bounded offline HTTP and external crash campaign
+
+`probe_client.py` provides a bounded protocol2 client. Exact canonical HTTPS
+Modal origin allowlisting, production app-label denial across regions, separate
+proxy/bearer credentials, prepared payload hashes, unique request IDs, response
+size/schema checks, a shared atomic request budget and fixed deadlines apply.
+Redirects are never followed. There is no automatic POST retry. A recovery-only
+client can only GET existing receipts, including after a not-found response.
+Receipt conflicts/replays and malformed responses remain uncertain.
+
+Each HTTP exchange runs in an owned process with a total deadline covering
+DNS/TLS/headers/body. Expiry is checked again after connection setup and before
+dispatch. Timeout kills that transport; a timed-out POST may already be accepted
+and requires reconciliation. Fatal cleanup failure aborts the shared budget.
+This cannot cancel work already dispatched or provide provider atomicity.
+
+The shipped CLI **does not configure a live authorizer** and accepts no live
+URL, credential, arbitrary command or PID options. Default invocation prints a
+plan without starting workers. Supplying a template or environment flag cannot
+enable live requests. The library's future trusted-authorizer interface requires
+scoped, expiring authority/account/database/teardown references; these references
+alone do not prove eligibility. HTTPS/proxy behavior is mocked in policy tests,
+not verified against any live endpoint. No production credential is read.
+
+From the repository root using the verified Python environment:
+
+```sh
+python -B scripts/test/run_protocol2_http_probe.py
+python -B scripts/test/run_protocol2_http_probe.py --offline --evidence /tmp/protocol2-http-evidence.json
+python -B -m unittest providers.modal_motion.tests.test_probe_http_client providers.modal_motion.tests.test_probe_http_controller -v
+```
+
+The explicit offline command uses disposable SQLite and owned CPU worker
+processes on `127.0.0.1`. It needs local socket permission, not cloud access.
+Evidence output must not already exist. It is created with mode0600 and records
+source hashes, request IDs/statuses/exits, private-boundary kill evidence,
+receipt/input digests, independent durable counters and case results. No bearer,
+proxy secret, admission token, prompt or raw HTTP body/header is exported.
+Interrupted/failed campaigns retain completed redacted records and report FAIL.
+
+`probe_crash_controller.py` owns only its fixed worker target, never an arbitrary
+PID or remote container. A private nonce/PID/run/job/request/digest handshake
+identifies the pause after reserve, acceptance, begin, before/after receipt,
+model-start, or before the first HTTP reply byte. The parent sends SIGKILL to
+its stored process handle; workers cannot advance past the pause. Cleanup
+attempts every owned worker. No public HTTP fault/reset endpoint is added.
+
+The campaign compares thirteen offline scenarios with the live checklist IDs:
+20 concurrent HTTP requests across two local workers; retries; seven crash/lost
+reply boundaries; fingerprint/project conflicts; database unavailability and
+receipt write refusal; consistent backup/restore; warm/cold expiry; legacy hold;
+and an intentional duplicate-event counterexample classified FAIL by the oracle.
+Its aggregate cap is64POST/48GET/112total and180seconds, with8-second request
+timeouts. The normal observed campaign uses46POST/12GET/58total. Additional
+unit coverage tests a genuinely stalled socket, transport kill and GET recovery.
+
+The existing generation-security CI fixture also runs `--ci-postgres` with
+explicit isolation acknowledgment, `CI=true`, localhost:5432 and a fixed fixture
+database. It uses actual service-role admission RPCs through the psql adapter,
+independent workers and pg_dump/restore. It accepts no arbitrary database/host or
+psql command. The redacted CI artifact is retained one day. Do not run this mode
+against any other database or provision infrastructure just to execute it.
+
+SQLite is a durable simulation, not PostgreSQL/RLS proof. Even actual isolated
+PostgreSQL tests use a psql adapter, not live PostgREST. Local process identities
+are not Modal task identities; proxy authentication and real cross-container
+recovery remain NOT VERIFIED. Every live case remains NOT_RUN. A reviewed remote
+fault controller and actual account/no-overage/isolation/authority gates remain
+BLOCKED. This tooling does not authorize deployment, provider requests or spending.

@@ -79,3 +79,15 @@ jobs:
           createdb protocol2_staging_restored
           pg_restore --exit-on-error --clean --if-exists -d protocol2_staging_restored "$RUNNER_TEMP/protocol2-staging-fixture.dump"
           PGDATABASE=protocol2_staging_restored python scripts/test/verify_protocol2_staging.py --psql '["psql"]' --verify-existing
+      - name: Verify bounded HTTP campaign and externally killed CPU workers
+        env:
+          BEATVISION_PROTOCOL2_TEST_ISOLATED: '1'
+        run: python -B scripts/test/run_protocol2_http_probe.py --ci-postgres --evidence "$RUNNER_TEMP/protocol2-http-evidence.json"
+      - name: Preserve redacted HTTP campaign evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: protocol2-http-offline-evidence
+          path: ${{ runner.temp }}/protocol2-http-evidence.json
+          if-no-files-found: ignore
+          retention-days: 1
