@@ -2223,3 +2223,93 @@ Complete phase changed-file inventory (14paths; commit SHA/publication follows):
 Final adapter compatibility review confirmed the production receipt store sanitizes SQL/RPC refusals to `MODAL_LEDGER_UNAVAILABLE` and staging503. Added an actual store+ASGI mocked-opener regression proving503 before fake execution; the PostgreSQL campaign expects exactly503 for its prepared negative SQL cases, while SQLite keeps400/409. Independent ledger/input/receipt/event no-mutation oracles remain unchanged. This is mocked refusal classification plus source review; actual PostgreSQL execution remains a CI result, not a local claim.
 
 Final post-adapter repeat, each observed exit0: `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v > /workspace/beatvision-http-controller-20261031/full-python-final-v2.log 2>&1` (**112/112**); `/workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/run_protocol2_http_probe.py --offline --evidence /workspace/beatvision-http-controller-20261031/offline-campaign-final-v2.json > /workspace/beatvision-http-controller-20261031/offline-campaign-final-v2.log 2>&1` (**13cases/58requests**). The earlier parallel permission request was interrupted before either command ran; no exit/result is assigned to that interrupted request. `H compile-final` used the same cwd and complete argv as the Compile row, exit0; final compilation follows the adapter test addition before commit.
+
+
+### HTTP/crash tooling publication and actual CI verification — 2026-11-01
+
+Implementation commit **80b47fb995462edc1aa7553aae61b734ec7d82fb**, `Add bounded offline protocol2 HTTP and crash campaign`,14files/1616insertions/8deletions. Staged checks, commit and normal push each exited0. Exact commands: `git add .github/workflows/generation-enqueue-security.yml PROJECT_LOG.md docs/audits/pr164-permanent-admission-20261030.md docs/audits/pr164-staging-acceptance-checklist.md docs/audits/pr164-staging-evidence-template.json providers/modal_motion/STAGING_PROTOCOL2.md providers/modal_motion/probe_client.py providers/modal_motion/probe_crash_controller.py providers/modal_motion/tests/http_probe_fixture.py providers/modal_motion/tests/http_probe_worker.py providers/modal_motion/tests/probe_campaign.py providers/modal_motion/tests/test_probe_http_client.py providers/modal_motion/tests/test_probe_http_controller.py scripts/test/run_protocol2_http_probe.py`; subsequent `git add PROJECT_LOG.md docs/audits/pr164-permanent-admission-20261030.md providers/modal_motion/tests/probe_campaign.py providers/modal_motion/tests/test_probe_http_controller.py`; `git diff --check`; `git diff --cached --check`; `git commit -m 'Add bounded offline protocol2 HTTP and crash campaign'`; `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` (sandbox network permission, no force).
+
+All four GitHub workflows completed/success on exact80b47fb995462edc1aa7553aae61b734ec7d82fb:
+
+- Production CI/offline real SDK: https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935864
+- Generation security/actual isolated PostgreSQL HTTP/crash/restore: https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935901
+- Full isolated migration replay: https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935889
+- Legacy storage ownership security: https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935971
+
+Actual CI job logs independently read through GitHub tools:
+
+- 22:48:37.3157153Z:112Python tests passed in20.601s.
+- 22:49:29.4416485Z:422Node tests,422pass,0fail,0skipped.
+- 22:49:40.5834832Z: real Modal1.6.3 SDK definition check,0socket attempts/0cloud invocations.
+- 22:49:59.6703838Z: new actual PostgreSQL campaign printed13offline cases,46POST/12GET/58total, `LIVE_BLOCKED`, all owned workers stopped; step14success. Script assertions cover7external kill-9 exits, durable receipt/fence/input/event invariants and consistent pg_dump/restore. This is isolated PostgreSQL execution evidence, not source inference or live PostgREST/Modal verification.
+- Earlier independent SQL/ASGI worker checks,100-year retained claims, backup/restoration, owner/RLS/provenance, full migration replay and storage ownership steps also succeeded.
+
+New CI command, actual exit0: `python -B scripts/test/run_protocol2_http_probe.py --ci-postgres --evidence "$RUNNER_TEMP/protocol2-http-evidence.json"`, with `CI=true`, `BEATVISION_PROTOCOL2_TEST_ISOLATED=1`, fixture localhost:5432/enqueue_fixture. The runner executed fixed `pg_dump -Fc -f <temporary-fixture.dump>`, `createdb http_controller_restored`, and `pg_restore --exit-on-error --clean --if-exists -d http_controller_restored <temporary-fixture.dump>` successfully before fresh-worker lookup/retry assertions. Fixture values only; no live database was used.
+
+Redacted CI evidence artifact ID13104602042,7138bytes, archive SHA256 `5e82b7348aeac66b1ea4923e4c11523b73dafeb10eede36e78cc28a8c3f8c20e`, expires2026-11-02T22:49:59Z. Metadata confirms exact80b47fb head. Link: https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935901/artifacts/13104602042 . The archive was fetched through the GitHub connector; no claim is made of separately unpacking/rechecking every JSON record. CI job logs and executable assertions supply the verification above. Local full JSON/code hashes and command records remain in this phase's evidence directory.
+
+Final compile repeat: `H compile-final-v2` with the Compile row's exact cwd/eight-path argv, exit0. No source change followed the112-test/13-case run. Documentation-only follow-up records this implementation SHA, actual CI and59-file full PR inventory. Follow-up commands are `git diff --check`; `git add PROJECT_LOG.md docs/audits/pr164-permanent-admission-20261030.md`; `git diff --cached --check`; `git commit -m 'Record HTTP crash campaign verification'`; normal `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028`. Their results and final head/CI are checked before final reporting; final SHA is externally recorded in PR metadata/final response rather than self-referentially committed.
+
+Status: IMPLEMENTED / OFFLINE TESTED, including actual isolated PostgreSQL and migration replay. Production/main unchanged; PR open/draft/unmerged. No live authorizer, remote crash controller, paid provider, GPU, Modal deployment or cloud container was invoked. Existing isolated CI service databases ran as part of authorized repository checks. Real staging, proxy/PostgREST, Modal container recovery, old-worker shutdown, no-overage/account eligibility and production remain BLOCKED/NOT VERIFIED. Exactly-once/provider atomicity is not claimed. Next engineering action: separately review the remote fault method/trusted-authority integration offline; obtain independent live eligibility/authority evidence before any future live action.
+
+Complete PR changed-file inventory relative to actual main3e26d8556e62b40e9f20823cb253854ae5efcec6 (59paths; phase14paths listed above):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-lifecycle-repair-20261030.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `docs/audits/pr164-staging-acceptance-checklist.md`
+- `docs/audits/pr164-staging-evidence-template.json`
+- `providers/__init__.py`
+- `providers/modal_motion/README.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/__init__.py`
+- `providers/modal_motion/admission.py`
+- `providers/modal_motion/contracts.py`
+- `providers/modal_motion/probe_client.py`
+- `providers/modal_motion/probe_crash_controller.py`
+- `providers/modal_motion/protocol.py`
+- `providers/modal_motion/requirements-staging.txt`
+- `providers/modal_motion/staging.py`
+- `providers/modal_motion/staging_modal.py`
+- `providers/modal_motion/tests/http_probe_fixture.py`
+- `providers/modal_motion/tests/http_probe_worker.py`
+- `providers/modal_motion/tests/probe_campaign.py`
+- `providers/modal_motion/tests/staging_worker.py`
+- `providers/modal_motion/tests/test_admission_client.py`
+- `providers/modal_motion/tests/test_contention_probe.py`
+- `providers/modal_motion/tests/test_contracts.py`
+- `providers/modal_motion/tests/test_probe_http_client.py`
+- `providers/modal_motion/tests/test_probe_http_controller.py`
+- `providers/modal_motion/tests/test_process_recovery.py`
+- `providers/modal_motion/tests/test_protocol2_staging.py`
+- `providers/modal_motion/tests/test_staging_modal_package.py`
+- `providers/modal_motion/tests/test_submit_concurrency.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/beatvision-generation-auth.test.mjs`
+- `scripts/test/beatvision-generation-state.test.mjs`
+- `scripts/test/generation-dispatch-recovery.test.mjs`
+- `scripts/test/generation-lifecycle-recovery.test.mjs`
+- `scripts/test/generation-poll-leases.db.test.mjs`
+- `scripts/test/generation-receipt-persistence.test.mjs`
+- `scripts/test/generation-runtime.mjs`
+- `scripts/test/hf-acceptance-recovery.test.mjs`
+- `scripts/test/hf-motion.test.mjs`
+- `scripts/test/modal-admission-ledger.db.test.mjs`
+- `scripts/test/modal-motion-integration.test.mjs`
+- `scripts/test/modal-postgres-crash-recovery.test.mjs`
+- `scripts/test/protocol2-staging-package.db.test.mjs`
+- `scripts/test/run_protocol2_http_probe.py`
+- `scripts/test/sql/protocol2-staging-fixture.sql`
+- `scripts/test/verify_modal_admission.py`
+- `scripts/test/verify_modal_package_offline.py`
+- `scripts/test/verify_multiprocess_contention.py`
+- `scripts/test/verify_poll_leases.py`
+- `scripts/test/verify_protocol2_staging.py`
+- `src/pages/ProductionWorkspacePage.tsx`
+- `supabase/functions/beatvision-generation/hf-motion.ts`
+- `supabase/functions/beatvision-generation/index.ts`
+- `supabase/functions/beatvision-generation/modal-motion.ts`
+- `supabase/migrations/20261030010000_generation_poll_leases.sql`
+- `supabase/migrations/20261030204115_durable_modal_admission.sql`

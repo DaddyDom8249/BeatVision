@@ -383,3 +383,14 @@ production are not established. No deployment, cloud container, real GPU,
 production data change, paid operation or merge was performed. Keep PR draft.
 
 Final adapter review: production receipt-store RPC exceptions are sanitized to `MODAL_LEDGER_UNAVAILABLE`/HTTP503. A store+ASGI refusing-opener regression verifies503 before fake execution. Actual PostgreSQL negative cases expect exactly503, SQLite400/409; independent durable state/counter oracles are unchanged. Final post-adapter local Python112/112 and standalone13-case/58-request campaign exited0. Actual PostgreSQL execution follows CI; this local classification test is mocked.
+
+
+Implementation/publication commit: **80b47fb995462edc1aa7553aae61b734ec7d82fb**.
+All four workflows passed on this exact SHA: [Production/SDK](https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935864), [Generation/PostgreSQL](https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935901), [Migration replay](https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935889), [Storage ownership](https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935971).
+Actual job logs confirm112Python/422Node tests and13PostgreSQL HTTP cases,
+58requests, owned workers stopped, external kill/receipt/restore assertions passed.
+The redacted one-day [artifact](https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935901/artifacts/13104602042)
+is tied to this SHA. Exact commands/exits, artifact digest and59-file full inventory
+are in PROJECT_LOG.md. This advances isolated PostgreSQL evidence; live staging,
+PostgREST/proxy, real Modal recovery, provider atomicity and financial/authority
+release gates are unchanged. Keep PR draft; no production deployment or GPU test.
