@@ -490,5 +490,19 @@ class RemoteFaultModelTests(unittest.TestCase):
             self.assertEqual(model.reconcile(operation['operation_id'])['state'],'MODEL_VERIFIED')
             self.assertEqual(len(remote.stop_calls),1)
 
+    def test_restarted_observation_only_model_can_reconcile_without_reopening_control(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manifest,witnesses,_,clock,remote,ledger,model=setup_remote(directory)
+            operation=model.stop_at_boundary(JOB,'after_begin');clock[0]=1061;remote.finish()
+            observer=PolicyModel(manifest,witnesses,lambda:clock[0],observation_only=True)
+            restarted=RemoteFaultModel(observer,OperationLedger(ledger.path),remote)
+            self.assertEqual(restarted.reconcile(operation['operation_id'])['state'],'MODEL_VERIFIED')
+            for action in ['POST','GET','CONTROL','deploy','teardown']:
+                with self.subTest(action=action),self.assertRaises(Refused):observer.evaluate(observer.scope(),action,JOB)
+            with self.assertRaises(Refused):restarted.stop_at_boundary(JOB,'after_begin')
+            self.assertEqual(len(remote.stop_calls),1)
+            clock[0]=1120
+            with self.assertRaises(Refused):observer.evaluate(observer.scope(),'OBSERVE',JOB)
+
 
 if __name__=='__main__':unittest.main()

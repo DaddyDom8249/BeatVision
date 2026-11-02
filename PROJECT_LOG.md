@@ -2571,3 +2571,46 @@ Complete PR changed-file inventory relative to unchanged main3e26d8556e62b40e9f2
 - `supabase/functions/beatvision-generation/modal-motion.ts`
 - `supabase/migrations/20261030010000_generation_poll_leases.sql`
 - `supabase/migrations/20261030204115_durable_modal_admission.sql`
+
+
+### Observation-only model restart refinement — 2026-11-02
+
+The documentation head `c920a0c63de28129866a01632c5c4fd28880f565` also received4/4
+successful workflows (Production41487845253, Generation41487845178, Replay41487845093,
+Storage41487846061). A final scope check then found that a new normal model policy
+requires an active control deadline, preventing a newly restarted observer from
+opening the retained manifest after control expiry even while read authority was
+still valid. The earlier test advanced an existing object and missed restart.
+This is a test-model capability/refinement, not a production provider defect.
+
+Added explicit strictly boolean `observation_only` fixture-policy mode. It can
+reopen the retained immutable manifest within its original observation horizon;
+all other actions (POST/GET/CONTROL/deploy/teardown) are refused before grant or
+request debit. Reconciliation still checks original manifest/owner/task/proofs and
+changes only the fixture verification record. It cannot renew a claim/deadline,
+issue a LivePermit, submit inference or dispatch another stop. Normal policies
+still require an active control deadline. Design contract updated accordingly.
+
+The new test failed before the capability existed (constructor refused, exit1).
+After implementation: **43/43 model tests and155/155 full Python**, exit0, zero
+skips; compilation/whitespace exit0. Earlier phase Node422/audit/build/SDK checks
+remain applicable because Node/production/package/SDK code did not change.
+Independent source review found no defect and specifically confirmed all five
+non-observation actions blocked, reopened retained-ledger scope/deadlines intact,
+no LivePermit/additional stop and exact read expiry. Reviewer did not execute tests,
+DB, SDK or network calls. Actual live issuer and remote-control gaps remain blocked.
+
+Exact commands, cwd `/workspace/BeatVision-pr164`, H as defined above:
+
+- Exit1: `H observer-restart-red /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model.RemoteFaultModelTests.test_restarted_observation_only_model_can_reconcile_without_reopening_control -v`.
+- Exit0: `H observer-restart-green /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` (43tests).
+- Exit0: `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v > /workspace/beatvision-integration-design-20261102/full-python-observer.log 2>&1` (155tests).
+- Exit0: `H compile-observer /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/tests/staging_control_model.py providers/modal_motion/tests/test_staging_control_model.py scripts/test/verify_modal_control_surface_offline.py`.
+- Exit0: `git diff --check`.
+
+Changed4paths: PROJECT_LOG.md, the remote-control/authority design doc, test model
+and its regression suite. Full PR inventory remains63paths; original eight-file
+phase inventory and frozen bae2a0c evidence remain above. No history was rewritten
+or earlier42/154 results relabeled. Latest model totals are43/155. Publication SHA
+and exact CI follow below. No production/runtime/schema/provider/dependency or live
+permission change. No deployment, real remote stop, GPU, paid provider or merge.

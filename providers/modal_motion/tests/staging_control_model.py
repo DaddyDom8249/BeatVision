@@ -76,8 +76,10 @@ class PolicyModel:
     ACTIONS=['POST','GET','CONTROL','OBSERVE','deploy','teardown']
 
     @sanitized
-    def __init__(self,manifest,sources,clock=lambda:1000.0):
+    def __init__(self,manifest,sources,clock=lambda:1000.0,*,observation_only=False):
         self._manifest=cloned(manifest);self.sources=dict(sources)
+        require(type(observation_only) is bool)
+        self.observation_only=observation_only
         self._clock_reader=clock;self._last_clock=None;self._clock_lock=threading.Lock()
         m=self._manifest
         require(set(m)=={'owner_id','account_id','workspace_id','environment','app_id','function_id',
@@ -90,8 +92,9 @@ class PolicyModel:
         require(m['origin'].split('://')[1].split('.')[0]!=PRODUCTION_ORIGIN.split('://')[1].split('.')[0])
         require(re.fullmatch('[0-9a-f]{40}',m['source_commit']) is not None and hex64(m['image_digest']))
         require(str(uuid.UUID(m['run_id']))==m['run_id'])
-        require(number(m['expires_utc']) and self.clock()<m['expires_utc']<=self.clock()+600)
+        require(number(m['expires_utc']) and m['expires_utc']<=self.clock()+600)
         require(number(m['observe_until_utc']) and m['expires_utc']<m['observe_until_utc']<=m['expires_utc']+3600)
+        require(self.clock()<(m['observe_until_utc'] if observation_only else m['expires_utc']))
         require(set(m['limits'])=={'POST','GET','total','CONTROL'})
         require(all(type(v) is int and 0<=v<=128 for v in m['limits'].values()))
         require(m['limits']['POST']<=64 and m['limits']['GET']<=64)
@@ -120,6 +123,7 @@ class PolicyModel:
     @sanitized
     def evaluate(self,scope,action,job,*,task_id=None):
         m=self._manifest;now=self.clock()
+        require(not self.observation_only or action=='OBSERVE','MODEL_OBSERVATION_ONLY')
         require(scope==self.scope() and action in self.ACTIONS and job in m['fixtures'],'MODEL_SCOPE_REJECTED')
         require(number(now) and now<(m['observe_until_utc'] if action=='OBSERVE' else m['expires_utc']),
             'MODEL_AUTHORITY_EXPIRED')

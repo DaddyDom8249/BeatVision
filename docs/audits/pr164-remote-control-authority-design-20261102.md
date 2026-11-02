@@ -110,6 +110,11 @@ a distributed authorization service or account spending cap.
    modify jobs. Teardown remains a distinct owner-authorized operation with actual
    provider/account termination evidence; expiry is not billing teardown.
 
+The model can reopen a retained manifest after controller restart only through
+an explicitly observation-only policy within its original observation window.
+That mode rejects POST, GET, control, deploy and teardown decisions; it reads
+existing independent evidence without extending either deadline or claim.
+
 ## Executable model and explicit limits
 
 `providers/modal_motion/tests/staging_control_model.py` is a **test-only model**.
