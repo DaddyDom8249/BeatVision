@@ -138,6 +138,15 @@ method remains NOT IMPLEMENTED. Actual financial/isolation/authority gates
 remain BLOCKED. Do not improvise repeated curl calls, weaken auth, add public
 fault flags or promote local SIGKILL evidence to real container verification.
 
+The [remote-control/authority offline design](pr164-remote-control-authority-design-20261102.md)
+now includes executable mock rejection contracts. It is not a connected live
+issuer or remote controller. Pinned SDK inspection documents SIGINT/input
+rescheduling and incomplete stop/death/identity evidence. A negative model oracle
+also exposes the final observation→control race. Actual provider-supported
+conditional targeting/immutable pause and independently verified permissions,
+identity and no-overage enforcement remain BLOCKED. Passing these tests cannot
+satisfy a live row or authorize a container stop.
+
 ## 6. Preserve evidence, reconcile, then tear down
 
 Collect before/after event counts, receipt identity (redacted/digest), fence state,

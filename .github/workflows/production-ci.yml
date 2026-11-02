@@ -26,3 +26,4 @@ jobs:
         run: |
           python -m pip install --only-binary=:all: 'modal==1.6.3'
           python -B scripts/test/verify_modal_package_offline.py
+          python -B scripts/test/verify_modal_control_surface_offline.py

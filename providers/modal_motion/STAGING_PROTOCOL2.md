@@ -286,3 +286,26 @@ are not Modal task identities; proxy authentication and real cross-container
 recovery remain NOT VERIFIED. Every live case remains NOT_RUN. A reviewed remote
 fault controller and actual account/no-overage/isolation/authority gates remain
 BLOCKED. This tooling does not authorize deployment, provider requests or spending.
+
+## Remote fault and trusted-authority design remains offline
+
+The [offline design and executable contracts](../../docs/audits/pr164-remote-control-authority-design-20261102.md)
+specify separate owner/account/deployment/database/access evidence, retained
+request/control budgets, exact task/input identity, private paused checkpoints
+and independent termination/before-after evidence. The test-only model issues
+no `LivePermit`, ships no SDK adapter and cannot enable the HTTP client.
+
+Pinned Modal1.6.3 source says default container stop sends SIGINT and may
+reschedule Function inputs. Its inspected request has task_id/graceful only,
+its response is empty, and TaskGetInfo alone lacks complete identity binding.
+Do not use it as an established hard-crash/no-replay mechanism. The new
+`scripts/test/verify_modal_control_surface_offline.py` reproduces these local
+limits with sockets denied; exit0 means inspection passed, while live control
+remains BLOCKED. It does not invoke the SDK client or CLI.
+
+The model deliberately demonstrates that changing an input after the final
+client-side observation can still produce an unsafe fake stop. Fresh proofs
+are not an atomic provider predicate. Actual conditional targeting/immutable
+pause, authenticated trust roots, task permissions and no-overage enforcement
+remain unresolved live requirements. All live cases stay NOT_RUN; no deployment,
+remote stop, spending or production modification follows from these model tests.

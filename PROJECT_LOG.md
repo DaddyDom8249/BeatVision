@@ -2313,3 +2313,167 @@ Complete PR changed-file inventory relative to actual main3e26d8556e62b40e9f2082
 - `supabase/functions/beatvision-generation/modal-motion.ts`
 - `supabase/migrations/20261030010000_generation_poll_leases.sql`
 - `supabase/migrations/20261030204115_durable_modal_admission.sql`
+
+
+### Offline remote-control and trusted-authority design — 2026-11-02
+
+Objective: implement the user's next safe work, designing/testing remote fault
+control and trusted authorization with mocks and explicit rejections. No live test,
+remote stop, provider deployment, GPU inference or spending is authorized. Existing
+PR#164 branch retained; no new PR, main change, force-push or merge.
+
+Actual pre-edit baseline: `/workspace/BeatVision-pr164`, clean branch
+`fix/preserve-uncertain-dispatch-20261028`, local/remote PR HEAD
+`09d65d0357b1d24d9cf7fadbc72afe4bcc96a5fa`, open/draft/unmerged. Fetch/ls-remote
+before edits and again after the environment interruption confirmed that head
+and actual main `3e26d8556e62b40e9f20823cb253854ae5efcec6`; original main worktree
+was left untouched. Full AGENTS.md was reread. Complete prior PROJECT_LOG had
+already been read in this continuous assignment; the latest authored/published
+entries were reread. Current client, controller, seven-file package, admission,
+acceptance template/guide, fixtures, SDK source/protobufs and CI were inspected.
+Feature-development skill applied. Its optional Python reference was unavailable;
+repository-supported Python/Node commands and verified environments were used.
+
+Confirmed provider limitation (SOURCE INSPECTED, not live observed): pinned Modal
+SDK1.6.3 container stop documents SIGINT with Function inputs cancelled/rescheduled;
+graceful stop waits. Its inspected ContainerStopRequest has only task_id/graceful;
+response is empty. TaskGetInfoResponse has app_id/info and lacks a complete
+function/deployment/image/environment/workspace/input binding. Therefore this
+examined surface does not establish a hard-crash/no-replay/atomic-target/death
+primitive. No claim is made about every provider API. Inspection source SHA256:
+`bb2451d3c9307de2f0688b658f18d960ee7d2801006005aae9393d6641bf5e38`.
+
+Implementation is OFFLINE MODEL ONLY:
+
+- Added a design/audit contract for separate authenticated owner, account/cost,
+  deployment, database/fixture and task-access witnesses. Independent trust roots,
+  keys, audience/subject/action/job/scope/challenge, revocation and actual enforced
+  limits must be verified by future adapters. References/flags/signatures alone
+  do not prove financial or isolation facts. No actual issuer, signature verifier,
+  billing/IAM adapter or LivePermit is created by the test model.
+- Five explicit fake witness domains reject stale/replayed/unknown-key proofs,
+  missing identities, scope/ownership/deployment/fixture drift, unverified no-
+  overage, broad permissions and cross-purpose authority. Even a positive model
+  decision is rejected by the real HTTP client. CLI/default/live template remain
+  unchanged and all13live cases are NOT_RUN with authority evidence unset.
+- Disposable SQLite models atomic retained request budgets, no refunded/reissued
+  request IDs, immutable per-run manifests and one-shot control intents. A global
+  account/workspace/task/incarnation fence also blocks a new run from reclaiming
+  an unresolved stop. Independent private-checkpoint and provider fixtures bind
+  job/request/input/receipt/fence/provenance and exact task permission.
+- Eight independent CPU controller processes append exactly one fake provider
+  call; every call is counted in separate append-only evidence. Actual local
+  process exits42 before/after fake dispatch preserve unknown claims. No local
+  exit is called remote container death; no actual remote action is performed.
+- Lost reply/ACK/DB refusal remain STOP_UNKNOWN with no automatic stop retry,
+  replacement task or inference. Verification needs independent mock termination,
+  no replacement/rescheduling, settled unchanged before/after evidence and durable
+  whitelisted proof storage. Collected deadlines are checked at dispatch and
+  inside verification transaction; expiry rolls back state/proof. Separately
+  authorized read-only observation works after control expiry without another stop.
+- SDK surface inspector parses CLI source without executing/importing it and
+  reads local protobuf descriptors with sockets denied. Exit0 means inspection
+  PASS while live control remains BLOCKED. Added it to the existing pinned-SDK CI
+  step; the deployed package and all production runtime/provider/schema code are
+  unchanged. No dependencies were installed or changed.
+
+Reproduction/review evidence: initial spec-before exit1 is a missing new module,
+not a production defect reproduction. First24, expanded32 and35model tests passed.
+Independent source review identified three model-only holes: final-read freshness,
+empty identities mirrored by fake witnesses, and cross-run task re-admission.
+The parent agent executed regressions:39tests with33failed subcases, exit1,
+before repair;39passed after repair. Later rollback/proof/out-of-order/counterexample
+coverage brought the model to42tests, all passed. Final source/doc review confirmed
+repairs and accurate limitations; reviewer did not execute tests, SDK, DB/network
+or provider calls. Production lifecycle fixes are not claimed from these models.
+
+Unresolved, explicitly tested counterexample: a target/input can change after
+client-side observation and before provider effect. The negative oracle deliberately
+sends one UNSAFE fake stop, refuses verification and retains STOP_UNKNOWN. This
+is not a successful crash case. Conditional provider targeting or independently
+guaranteed immutable pause remains a live capability requirement. Fresh proofs,
+another DB flag or mock capability assertions do not close the distributed gap.
+The inspected SDK stop method is rejected; no actual remote adapter is shipped.
+
+Environment interruption: the first full-suite request was aborted without
+execution; no full-python.log or exit code existed. Readiness briefly reported
+no usable executor even while connector observed connected. On continuation the
+original worktree/new files and42-test log survived. The full suite then actually
+ran. No interrupted/awaiting-permission request is counted as a test result.
+
+Actual local final results: **154/154 Python,422/422 Node**, zero skipped;42new
+model tests plus112baseline. Node was executed in this work cycle; Node/production
+source did not change thereafter. Production audit, TypeScript/Vite build,
+compilation, whitespace and SDK package/surface checks exited0. SDK checks each
+reported0socket attempts/0cloud invocations; surface inspection explicitly reports
+live_remote_fault_control:BLOCKED. Baseline Python112passed before edits. Versions:
+Node22.23.4,npm11.9.0,Python3.12.14 (CI3.11),FastAPI0.162.0,httpx0.28.1,
+Modal1.6.3,Git2.52.0,TypeScript5.9.3,Vite7.3.7. Existing917.86kB bundle warning
+remains. No SQL/migration/runtime change; local psql/pg_dump remain absent, so no
+local actual PostgreSQL/migration replay is invented. Existing isolated CI checks
+are verified after publication. SQLite here is a durable simulation, not RLS proof.
+
+Evidence directory `/workspace/beatvision-integration-design-20261102` contains
+raw logs and command-result JSON. `model-evidence.json` records the actual unsafe
+counterexample,42model/154Python totals, source hashes and13NOT_RUN live rows;
+SHA256 `59b6415d4357c385b06a1daf6fe12beb883877f31db4978f40d723bfa78f74ab`.
+No credentials, admission tokens, prompts or raw provider HTTP bodies/headers are
+exported. Doc-only wording/hash refresh followed source review; no model code
+change followed the final154-test execution. Own generated .pyc files were removed.
+
+Exact significant commands/exits, cwd `/workspace/BeatVision-pr164`. H prefix is
+`/workspace/beatvision-baseline-20261029/venv/bin/python /workspace/beatvision-integration-design-20261102/run_check.py`;
+its JSON records exact argv/timestamps and propagates actual exit. Direct sessions
+below had observed exits; no invented start time is assigned.
+
+| Check | Exit | Exact command |
+| --- | --- | --- |
+| Remote refs (before edits/repeated after interruption) |0| `git fetch origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028; git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028` |
+| Baseline Python112 |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v > /workspace/beatvision-integration-design-20261102/baseline-python.log 2>&1` |
+| Node422 |0| `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs > /workspace/beatvision-integration-design-20261102/full-node.log 2>&1` |
+| Final Python154 |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v > /workspace/beatvision-integration-design-20261102/full-python.log 2>&1` |
+| Whitespace |0| `git diff --check` |
+
+Completed harness invocations (exact H command is `H <label> /workspace/BeatVision-pr164 <argv>`):
+
+| UTC start | Label | Exit | Exact argv |
+| --- | --- | --- | --- |
+| 2026-11-02T01:53:29.202935+00:00 | spec-before | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T01:57:30.245229+00:00 | spec-first | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T02:02:04.521271+00:00 | spec-expanded | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T02:04:37.116778+00:00 | spec-final-pre-review | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T02:05:12.916252+00:00 | sdk-control-surface | 0 | `/workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -B scripts/test/verify_modal_control_surface_offline.py` |
+| 2026-11-02T02:08:28.022720+00:00 | review-model-red | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T02:09:51.788128+00:00 | review-model-green | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T02:11:19.109215+00:00 | model-pre-final-review | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T02:15:29.227032+00:00 | model-final | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T16:54:41.185876+00:00 | compile | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/tests/staging_control_model.py providers/modal_motion/tests/test_staging_control_model.py scripts/test/verify_modal_control_surface_offline.py` |
+| 2026-11-02T16:54:41.198397+00:00 | audit | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| 2026-11-02T16:54:41.201761+00:00 | sdk-package | 0 | `/workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -B scripts/test/verify_modal_package_offline.py` |
+| 2026-11-02T16:54:41.211200+00:00 | build | 0 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+
+
+Status: OFFLINE DESIGN/EXECUTABLE MODEL IMPLEMENTED AND TESTED. Actual live
+integrations remain BLOCKED/NOT IMPLEMENTED: authenticated issuer/trust roots,
+provider-enforced zero paid overage, exact task permissions/identity, conditional
+stop/immutable pause, authenticated private checkpoint and provider termination
+proof. Model key IDs/booleans/capabilities are fixtures, not real verification.
+The clock rollback detector is per instance, not a distributed trusted clock.
+Provider/reservation atomicity and exactly-once execution are not established.
+Staging, PostgREST/proxy, real container recovery, GPU/Android and production remain
+NOT VERIFIED. No live deployment, remote control, production data change, paid
+provider, GPU or merge occurred. Keep PR draft. Next engineering action: establish
+provider-supported targeting/pause/termination semantics and independently enforced
+identity/permissions/no-overage evidence; if unavailable, keep live rows blocked.
+No live authorization is requested or inferred from the user's Continue.
+
+Complete phase changed-file inventory (8paths; publication SHA/CI follows):
+
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-remote-control-authority-design-20261102.md`
+- `docs/audits/pr164-staging-acceptance-checklist.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/tests/staging_control_model.py`
+- `providers/modal_motion/tests/test_staging_control_model.py`
+- `scripts/test/verify_modal_control_surface_offline.py`
