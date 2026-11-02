@@ -166,3 +166,15 @@ targeting/immutable-pause and termination semantics, complete authenticated task
 identity evidence, actual enforceable task permissions and no-overage proof.
 If these cannot be established, report the limitation and keep the affected live
 cases blocked; do not broaden termination permissions or infer account eligibility.
+
+
+Publication: **bae2a0cb3ad01868af2750b729e18e04bfb0e521**. All four workflows
+passed on this exact SHA: [Production/model/SDK](https://github.com/DaddyDom8249/BeatVision/actions/runs/41487096163),
+[Generation/PostgreSQL](https://github.com/DaddyDom8249/BeatVision/actions/runs/41487096399),
+[Migration replay](https://github.com/DaddyDom8249/BeatVision/actions/runs/41487096259),
+[Storage ownership](https://github.com/DaddyDom8249/BeatVision/actions/runs/41487096122).
+Actual logs confirm154Python/422Node,42new mock-contract tests, socket-denied
+SDK inspections and the existing13-case/58-request isolated PostgreSQL campaign.
+Exact commands/exits, regression failures/repairs, evidence hashes and63-file
+inventory are in PROJECT_LOG.md. These results do not establish real authority,
+conditional control, provider atomicity, account eligibility or staging readiness.

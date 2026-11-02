@@ -2477,3 +2477,97 @@ Complete phase changed-file inventory (8paths; publication SHA/CI follows):
 - `providers/modal_motion/tests/staging_control_model.py`
 - `providers/modal_motion/tests/test_staging_control_model.py`
 - `scripts/test/verify_modal_control_surface_offline.py`
+
+
+### Offline integration-design publication and CI — 2026-11-02
+
+Implementation commit: **`bae2a0cb3ad01868af2750b729e18e04bfb0e521`**, `Model staging authority and remote fault safety offline`,8files/1329insertions. Exact commands, each exit0: `git add .github/workflows/production-ci.yml PROJECT_LOG.md docs/audits/pr164-remote-control-authority-design-20261102.md docs/audits/pr164-staging-acceptance-checklist.md providers/modal_motion/STAGING_PROTOCOL2.md providers/modal_motion/tests/staging_control_model.py providers/modal_motion/tests/test_staging_control_model.py scripts/test/verify_modal_control_surface_offline.py`; `git diff --cached --check`; `git commit -m 'Model staging authority and remote fault safety offline'`; `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` (sandbox network permission, no force). GitHub readback confirmed exactbae2a0c/open/draft/unmerged and unchanged main3e26d8556e62b40e9f20823cb253854ae5efcec6.
+
+All four workflows completed/success on exactbae2a0cb3ad01868af2750b729e18e04bfb0e521:
+
+- Production CI including42new model regressions and both socket-denied SDK checks: https://github.com/DaddyDom8249/BeatVision/actions/runs/41487096163
+- Generation security/isolated PostgreSQL admission/HTTP-crash/backup-restore: https://github.com/DaddyDom8249/BeatVision/actions/runs/41487096399
+- Full isolated migration replay: https://github.com/DaddyDom8249/BeatVision/actions/runs/41487096259
+- Legacy storage ownership security: https://github.com/DaddyDom8249/BeatVision/actions/runs/41487096122
+
+Actual decoded GitHub job logs independently read, not merely inferred from green workflow badges:
+
+- Production job125420192572 at17:01:53.9212931Z: **154Python tests in20.775s**.
+- 17:02:49.0649684Z: **422Node,422pass,0skipped**.
+- 17:02:59.8792838Z: real pinned Modal1.6.3 package,0socket attempts/0cloud invocations.
+- 17:03:00.0037181Z: local SDK control inspection PASS, live_remote_fault_control BLOCKED, stop_ack_proves_death false, complete_task_identity_in_get_info false, request[graceful,task_id], response[], SIGINT_WITH_POSSIBLE_FUNCTION_INPUT_RESCHEDULING,0sockets/0cloud. SDK CLI source hash matches the local inspected hash.
+- Generation job125420193792 at17:03:12.1502588Z: existing actual PostgreSQL protocol2 HTTP campaign **13cases/46POST/12GET/58total**, LIVE_BLOCKED, all owned workers stopped. Step14and backup/restore/security/provenance/owner/RLS steps succeeded.
+
+Thus actual isolated PostgreSQL and full migration replay checks passed in CI; no local PostgreSQL claim is made. New control-ledger durability tests remain disposable SQLite plus independent local processes/fake provider evidence, not a real trust service or remote Modal execution.
+
+`model-evidence.json` source hashes were checked with `git show bae2a0cb3ad01868af2750b729e18e04bfb0e521:<path>` for each recorded file and matched (Python assertion helper exit0). Its digest is recorded above. It is frozen evidence for this implementation SHA; the documentation-only publication addition does not alter tested model/SDK code or retroactively change that artifact. All13live template rows remain NOT_RUN and authority evidence unset.
+
+Documentation follow-up records implementation SHA, actual CI results and the63-file complete PR inventory. Exact follow-up commands: `git diff --check`; `git add PROJECT_LOG.md docs/audits/pr164-remote-control-authority-design-20261102.md`; `git diff --cached --check`; `git commit -m 'Record offline authority design verification'`; normal `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028`. Results/final head/CI are checked before final reporting, with final SHA externally recorded in PR metadata/final response rather than self-referentially committed.
+
+Status remains **OFFLINE DESIGN/MODEL TESTED — LIVE INTEGRATIONS BLOCKED**. No production runtime/provider/schema changes, live trust root, real stop adapter, paid provider, production data edit, GPU or deployment. Fresh observations do not make provider stop atomic with paused input/identity. SDK/source inspection establishes local limits only. Actual no-overage, task permissions, complete authenticated identity, immutable pause/conditional targeting, termination/rescheduling evidence and explicit live authority remain missing. Exactly-once/provider atomicity is not claimed. Keep PR draft; no next blocker/live task is started automatically.
+
+Complete PR changed-file inventory relative to unchanged main3e26d8556e62b40e9f20823cb253854ae5efcec6 (63paths; phase8paths above):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-lifecycle-repair-20261030.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `docs/audits/pr164-remote-control-authority-design-20261102.md`
+- `docs/audits/pr164-staging-acceptance-checklist.md`
+- `docs/audits/pr164-staging-evidence-template.json`
+- `providers/__init__.py`
+- `providers/modal_motion/README.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/__init__.py`
+- `providers/modal_motion/admission.py`
+- `providers/modal_motion/contracts.py`
+- `providers/modal_motion/probe_client.py`
+- `providers/modal_motion/probe_crash_controller.py`
+- `providers/modal_motion/protocol.py`
+- `providers/modal_motion/requirements-staging.txt`
+- `providers/modal_motion/staging.py`
+- `providers/modal_motion/staging_modal.py`
+- `providers/modal_motion/tests/http_probe_fixture.py`
+- `providers/modal_motion/tests/http_probe_worker.py`
+- `providers/modal_motion/tests/probe_campaign.py`
+- `providers/modal_motion/tests/staging_control_model.py`
+- `providers/modal_motion/tests/staging_worker.py`
+- `providers/modal_motion/tests/test_admission_client.py`
+- `providers/modal_motion/tests/test_contention_probe.py`
+- `providers/modal_motion/tests/test_contracts.py`
+- `providers/modal_motion/tests/test_probe_http_client.py`
+- `providers/modal_motion/tests/test_probe_http_controller.py`
+- `providers/modal_motion/tests/test_process_recovery.py`
+- `providers/modal_motion/tests/test_protocol2_staging.py`
+- `providers/modal_motion/tests/test_staging_control_model.py`
+- `providers/modal_motion/tests/test_staging_modal_package.py`
+- `providers/modal_motion/tests/test_submit_concurrency.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/beatvision-generation-auth.test.mjs`
+- `scripts/test/beatvision-generation-state.test.mjs`
+- `scripts/test/generation-dispatch-recovery.test.mjs`
+- `scripts/test/generation-lifecycle-recovery.test.mjs`
+- `scripts/test/generation-poll-leases.db.test.mjs`
+- `scripts/test/generation-receipt-persistence.test.mjs`
+- `scripts/test/generation-runtime.mjs`
+- `scripts/test/hf-acceptance-recovery.test.mjs`
+- `scripts/test/hf-motion.test.mjs`
+- `scripts/test/modal-admission-ledger.db.test.mjs`
+- `scripts/test/modal-motion-integration.test.mjs`
+- `scripts/test/modal-postgres-crash-recovery.test.mjs`
+- `scripts/test/protocol2-staging-package.db.test.mjs`
+- `scripts/test/run_protocol2_http_probe.py`
+- `scripts/test/sql/protocol2-staging-fixture.sql`
+- `scripts/test/verify_modal_admission.py`
+- `scripts/test/verify_modal_control_surface_offline.py`
+- `scripts/test/verify_modal_package_offline.py`
+- `scripts/test/verify_multiprocess_contention.py`
+- `scripts/test/verify_poll_leases.py`
+- `scripts/test/verify_protocol2_staging.py`
+- `src/pages/ProductionWorkspacePage.tsx`
+- `supabase/functions/beatvision-generation/hf-motion.ts`
+- `supabase/functions/beatvision-generation/index.ts`
+- `supabase/functions/beatvision-generation/modal-motion.ts`
+- `supabase/migrations/20261030010000_generation_poll_leases.sql`
+- `supabase/migrations/20261030204115_durable_modal_admission.sql`
