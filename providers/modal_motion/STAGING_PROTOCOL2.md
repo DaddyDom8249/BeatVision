@@ -1,0 +1,311 @@
+# CPU-only protocol-2 staging probe
+
+The [acceptance checklist](../../docs/audits/pr164-staging-acceptance-checklist.md)
+and its evidence template specify reproducible cases, stop conditions and the
+remaining live authorization/remote-controller gap. They authorize no live execution.
+
+Source and local verification only. This guide does not authorize infrastructure
+deployment, remote database requests or Modal CPU/GPU spending. Confirm staging
+costs and obtain explicit authorization before those actions. No GPU or model
+dependency exists in this runner.
+
+`staging.py` uses the same `protocol.py` functions as the production worker for
+reserve, receipt lookup, execution begin and receipt persistence. Its only
+execution implementation is inline synthetic CPU work. Receipts start with
+`fc-staging-` and responses say `synthetic:true`. They are not Modal call IDs and
+must never be supplied to the production controller or treated as output media.
+
+The old `tests/staging_worker.py` and `verify_multiprocess_contention.py` use Dict
+and remain **legacy only**. Their PASS output now explicitly reports
+`protocol:legacy_dict,protocol2_verified:false`.
+
+## Isolated local database verification
+
+Use a fresh local PostgreSQL16 container with no exposed ports and no external
+network. The following file order is required; none is a production operation:
+
+1. `scripts/test/sql/generation-enqueue-fixture.sql` (minimal synthetic schema).
+2. `supabase/migrations/20261030204115_durable_modal_admission.sql`.
+3. `scripts/test/sql/protocol2-staging-fixture.sql` (staging-only sentinel,
+   prepared-job allowlist and append-only event RPC; outside migration directory).
+4. Insert exactly one random UUID into `private.protocol2_staging_environment`.
+
+Then run the independent CPU process driver against that explicit container:
+
+```sh
+BEATVISION_PROTOCOL2_TEST_ISOLATED=1 python -B scripts/test/verify_protocol2_staging.py \
+  --psql '["docker","--host=unix:///var/run/docker.sock","exec","-i","YOUR_ISOLATED_CONTAINER","psql","-U","postgres","-d","postgres"]'
+```
+
+This driver inserts synthetic fixture jobs10021–10028 and their allowlist entries
+only after checking readiness. It must not run against an application database.
+It never edits source approvals or resets admissions. A second first-run attempt
+on the same fixture fails instead of clearing history. Use a fresh database for
+a new campaign.
+
+The driver exercises20 independent ASGI client/worker processes and verifies one
+synthetic spawn/start, six process-death/lost-reply boundaries, fingerprints,
+ownership, unprepared jobs, role denial and100-year retained claims. Its negative
+oracle deliberately appends a second `model_start` event for job10028 to prove
+the event table cannot conceal duplicates. That job is an intentionally failing
+counterexample, not a healthy one-start execution.
+
+Stop the owned database and run the same command with `--expect-unavailable`.
+Restart it and use `--verify-existing`: all eight jobs must add zero events.
+An isolated full `pg_dump`/`pg_restore` into a second local database can be checked
+with `--verify-existing` against that database. Never restore over production.
+Only a backup retaining every relevant claim supports this containment property;
+stale snapshots or lost ledger history do not.
+
+The test transport uses production `PostgresReceiptStore` JSON/authentication and
+reply validation with an injected psql opener executing real service-role RPCs.
+It does **not** establish live HTTPS/PostgREST behavior. All test endpoints and
+events are local; local process identities do not prove Modal container identity.
+
+## Future authorized isolated staging configuration
+
+Use a dedicated non-production database with the reviewed application migrations
+and stage-only fixture RPC installed. Do not install the minimal local schema on
+an existing application database. An operator must prepare synthetic authorized
+jobs with exact frozen dispatch payloads and approved fixture sources, and add
+only those UUIDs to `private.protocol2_staging_jobs`. The serving application
+cannot create jobs, approve media, clear reservations or append arbitrary events
+from HTTP request fields.
+
+Supply these server-only settings through the authorized secret mechanism:
+
+- `BEATVISION_PROTOCOL2_STAGING=ISOLATED_CPU_ONLY`.
+- `BEATVISION_STAGING_SUPABASE_URL` and `BEATVISION_STAGING_EXPECTED_ORIGIN`:
+  the reviewed HTTPS origin under `*.supabase.co`.
+- `BEATVISION_PRODUCTION_SUPABASE_URL`: independently verified production origin
+  to deny. Hostname case, explicit443 and trailing slash cannot evade comparison.
+- `BEATVISION_STAGING_SERVICE_ROLE_KEY`: staging credential only.
+- `BEATVISION_STAGING_RUN_ID`: the isolated database sentinel UUID.
+- `BEATVISION_STAGING_PROBE_TOKEN`: dedicated random bearer token, at least32
+  characters. Do not reuse a production credential or put it in command history.
+
+There is no fallback to `SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY`. The declared
+origin denial and database marker are guards, not independent proof that an
+operator selected a non-production database. Verify actual project identity
+separately before any request. Missing/mismatched marker or unavailable database
+fails before admission. HTTPS redirects are rejected; errors omit credentials.
+
+For an authorized local ASGI server with those settings already injected:
+
+```sh
+python -m uvicorn providers.modal_motion.staging:application --factory --host 127.0.0.1 --port 8765
+```
+
+Use Python3.11+ and the repository's verified FastAPI/httpx setup; serving needs
+the uvicorn extra (`fastapi[standard]`). No server was started against a remote
+database in this work. Bind to loopback; a future container/proxy deployment
+requires a separate reviewed configuration and cost authorization.
+
+Every HTTP route requires `Authorization: Bearer <staging probe token>`.
+`POST /submit` accepts exactly `payload`, `image_base64` and `ack`, where ack is
+`I_AUTHORIZE_ISOLATED_CPU_FAKE_EXECUTION_ONLY`. The payload/image must match a
+prepared job. `GET /verify/{job_uuid}` returns synthetic receipt state and event
+counts, never retained prompts, fingerprints or admission tokens. There are no
+HTTP crash controls or ledger-reset endpoints.
+
+## Interpretation of interruption tests
+
+`after_reserve` and `after_begin` terminate after SQL commit but before the reply.
+`after_acceptance` terminates after a recorded synthetic spawn attempt but before
+execution begin. `after_receipt` terminates at the execution-side convenience
+receipt write before fake model start; it does not model a separate asynchronous
+provider's caller-side receipt write. `after_model_start` retains a start event
+without completion. `lost_submit_reply` ends after HTTP handling completed.
+
+Each event has a fresh UUID and a fresh synthetic call ID per spawn attempt;
+there is no per-job UPSERT masking duplicate attempts. Event persistence and a
+side effect are separate operations: missing events are not unconditional proof
+that no external work happened. The synthetic body produces no image/video and
+never marks generation jobs complete.
+
+Status: runner IMPLEMENTED; exact executed local checks are in PROJECT_LOG.md.
+Actual PostgREST, Modal CPU deployment, two-container recovery, old-worker
+shutdown, staging cost approval, GPU output and production remain NOT VERIFIED.
+Keep PR #164 draft. The reservation-to-provider gap still cannot guarantee
+exactly-once execution or eventual completion.
+
+## Separate Modal CPU package (offline verified, not deployed)
+
+`providers/modal_motion/staging_modal.py` packages the existing ASGI runner as
+the distinct App `bragoraforge-protocol2-cpu-probe`. The pinned operator setup is
+`providers/modal_motion/requirements-staging.txt` (Modal1.6.3, FastAPI0.162.0).
+Installing the SDK is not a deployment. The real SDK definition is checked by
+`scripts/test/verify_modal_package_offline.py` with every socket connect denied;
+it never runs/deploys a Function or builds an image remotely.
+
+The image includes exactly seven explicitly selected CPU source files, including
+both package initializers. Automatic source inclusion is disabled. GPU worker,
+legacy tests, models and production secrets are excluded from this image.
+
+| Configuration | Value |
+| --- | --- |
+| CPU request and hard limit |0.125core each |
+| Memory request and hard limit |256MiB each |
+| Maximum concurrent containers |2 |
+| Warm/buffer containers |0 /0 |
+| Inputs per container |1 |
+| Input/startup timeout |60seconds each |
+| Idle scale-down configuration |2seconds |
+| Proxy authentication |Required, in addition to probe bearer token |
+| Modal resource access from runner |Restricted |
+
+Modal1.6.3 forbids configuring `retries` for Web Functions, including zero. The
+initial actual-SDK check caught that error; the unsupported argument was removed.
+There is no application retry loop. Duplicate HTTP inputs still consult the
+shared permanent ledger. Provider enforcement and image startup remain untested.
+
+The CLI must select the dedicated environment `bragoraforge-protocol2-staging`;
+the local definition rejects default/production environments before referencing
+resources. The named Secret `bragoraforge-protocol2-staging` is pinned to that
+environment and requires all existing staging settings plus
+`BEATVISION_STAGING_CAMPAIGN_EXPIRES_AT`: a timezone-aware ISO8601 timestamp no
+more than ten minutes ahead at container startup. Missing/expired/unbounded
+windows fail before database setup. Authenticated new requests after the captured
+deadline receive410 before probe/database access; unauthorized requests stay401.
+
+The wrapper requires actual runtime `MODAL_TASK_ID` in `ta-*` form and records
+`modal-ta-*` as worker identity. It never accepts identity from a request. The
+staging-only event fixture now allows both local and Modal labels. Unit tests use
+clearly synthetic task IDs; this does not prove an actual Modal container ran.
+Existing inline fake execution still produces synthetic receipts, not provider
+call IDs, and no media.
+
+Only after all approval/budget/database conditions below are independently
+satisfied, the reviewed deployment command would be:
+
+```sh
+python -m modal deploy --env bragoraforge-protocol2-staging -m providers.modal_motion.staging_modal
+```
+
+This command has **not been executed**. It can create resources/build images and
+consume credits. A dedicated proxy credential/token, exact staging API origin,
+prepared isolated jobs and verified shutdown/teardown procedure are required for
+a future bounded campaign. A20-request success must also show at least two
+different trusted `modal-ta-*` identities; max_containers2 alone does not prove
+two containers actually handled work. Do not use the legacy Dict probe client as
+protocol2 acceptance evidence.
+
+## Spending decision remains blocked
+
+No live-test approval has been inferred from the user's cost-review question.
+Only the owner can authorize consumption of account credits. No account-specific
+remaining balance, payment eligibility, enforceable no-overage setting or
+isolated cloud database budget was verified here; there is no connected Modal
+billing tool in this session. Missing evidence is not treated as available credit.
+
+[Official Modal pricing](https://modal.com/pricing), fetched during this work,
+lists CPU at$0.0000131/core-second and memory at$0.00000222/GiB-second. These rates
+do not establish a free test. At those rates, a hypothetical two containers each
+allocated0.125core/0.25GiB for600seconds computes to$0.002631. This is an arithmetic
+example, **not a bill estimate or upper bound**: startup/image builds, platform
+metering, idle time, additional requests and other charges are not established.
+Included monthly credits do not prove the current account has credits remaining.
+
+The application deadline does not stop the Modal App or cap spending. A
+proxy-authenticated request after expiry may still allocate/start a billed
+container before receiving410 or failing startup; in-flight work can continue.
+Verify a provider/account hard no-overage gate and separate deploy/campaign/
+teardown authorization before any live action. If an enforceable no-overage gate
+cannot be established, do not run this test under the current zero-cost rule.
+
+Current status: packaging IMPLEMENTED / OFFLINE SDK TESTED. Deployment, actual
+PostgREST, two-container recovery, account eligibility, old-worker shutdown,
+GPU/Android and production remain NOT VERIFIED. No cloud resource was created.
+
+## Bounded offline HTTP and external crash campaign
+
+`probe_client.py` provides a bounded protocol2 client. Exact canonical HTTPS
+Modal origin allowlisting, production app-label denial across regions, separate
+proxy/bearer credentials, prepared payload hashes, unique request IDs, response
+size/schema checks, a shared atomic request budget and fixed deadlines apply.
+Redirects are never followed. There is no automatic POST retry. A recovery-only
+client can only GET existing receipts, including after a not-found response.
+Receipt conflicts/replays and malformed responses remain uncertain.
+
+Each HTTP exchange runs in an owned process with a total deadline covering
+DNS/TLS/headers/body. Expiry is checked again after connection setup and before
+dispatch. Timeout kills that transport; a timed-out POST may already be accepted
+and requires reconciliation. Fatal cleanup failure aborts the shared budget.
+This cannot cancel work already dispatched or provide provider atomicity.
+
+The shipped CLI **does not configure a live authorizer** and accepts no live
+URL, credential, arbitrary command or PID options. Default invocation prints a
+plan without starting workers. Supplying a template or environment flag cannot
+enable live requests. The library's future trusted-authorizer interface requires
+scoped, expiring authority/account/database/teardown references; these references
+alone do not prove eligibility. HTTPS/proxy behavior is mocked in policy tests,
+not verified against any live endpoint. No production credential is read.
+
+From the repository root using the verified Python environment:
+
+```sh
+python -B scripts/test/run_protocol2_http_probe.py
+python -B scripts/test/run_protocol2_http_probe.py --offline --evidence /tmp/protocol2-http-evidence.json
+python -B -m unittest providers.modal_motion.tests.test_probe_http_client providers.modal_motion.tests.test_probe_http_controller -v
+```
+
+The explicit offline command uses disposable SQLite and owned CPU worker
+processes on `127.0.0.1`. It needs local socket permission, not cloud access.
+Evidence output must not already exist. It is created with mode0600 and records
+source hashes, request IDs/statuses/exits, private-boundary kill evidence,
+receipt/input digests, independent durable counters and case results. No bearer,
+proxy secret, admission token, prompt or raw HTTP body/header is exported.
+Interrupted/failed campaigns retain completed redacted records and report FAIL.
+
+`probe_crash_controller.py` owns only its fixed worker target, never an arbitrary
+PID or remote container. A private nonce/PID/run/job/request/digest handshake
+identifies the pause after reserve, acceptance, begin, before/after receipt,
+model-start, or before the first HTTP reply byte. The parent sends SIGKILL to
+its stored process handle; workers cannot advance past the pause. Cleanup
+attempts every owned worker. No public HTTP fault/reset endpoint is added.
+
+The campaign compares thirteen offline scenarios with the live checklist IDs:
+20 concurrent HTTP requests across two local workers; retries; seven crash/lost
+reply boundaries; fingerprint/project conflicts; database unavailability and
+receipt write refusal; consistent backup/restore; warm/cold expiry; legacy hold;
+and an intentional duplicate-event counterexample classified FAIL by the oracle.
+Its aggregate cap is64POST/48GET/112total and180seconds, with8-second request
+timeouts. The normal observed campaign uses46POST/12GET/58total. Additional
+unit coverage tests a genuinely stalled socket, transport kill and GET recovery.
+
+The existing generation-security CI fixture also runs `--ci-postgres` with
+explicit isolation acknowledgment, `CI=true`, localhost:5432 and a fixed fixture
+database. It uses actual service-role admission RPCs through the psql adapter,
+independent workers and pg_dump/restore. It accepts no arbitrary database/host or
+psql command. The redacted CI artifact is retained one day. Do not run this mode
+against any other database or provision infrastructure just to execute it.
+
+SQLite is a durable simulation, not PostgreSQL/RLS proof. Even actual isolated
+PostgreSQL tests use a psql adapter, not live PostgREST. Local process identities
+are not Modal task identities; proxy authentication and real cross-container
+recovery remain NOT VERIFIED. Every live case remains NOT_RUN. A reviewed remote
+fault controller and actual account/no-overage/isolation/authority gates remain
+BLOCKED. This tooling does not authorize deployment, provider requests or spending.
+
+## Remote fault and trusted-authority design remains offline
+
+The [offline design and executable contracts](../../docs/audits/pr164-remote-control-authority-design-20261102.md)
+specify separate owner/account/deployment/database/access evidence, retained
+request/control budgets, exact task/input identity, private paused checkpoints
+and independent termination/before-after evidence. The test-only model issues
+no `LivePermit`, ships no SDK adapter and cannot enable the HTTP client.
+
+Pinned Modal1.6.3 source says default container stop sends SIGINT and may
+reschedule Function inputs. Its inspected request has task_id/graceful only,
+its response is empty, and TaskGetInfo alone lacks complete identity binding.
+Do not use it as an established hard-crash/no-replay mechanism. The new
+`scripts/test/verify_modal_control_surface_offline.py` reproduces these local
+limits with sockets denied; exit0 means inspection passed, while live control
+remains BLOCKED. It does not invoke the SDK client or CLI.
+
+The model deliberately demonstrates that changing an input after the final
+client-side observation can still produce an unsafe fake stop. Fresh proofs
+are not an atomic provider predicate. Actual conditional targeting/immutable
+pause, authenticated trust roots, task permissions and no-overage enforcement
+remain unresolved live requirements. All live cases stay NOT_RUN; no deployment,
+remote stop, spending or production modification follows from these model tests.

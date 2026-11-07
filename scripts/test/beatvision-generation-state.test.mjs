@@ -108,20 +108,21 @@ for (const [name, owner, assetProject, expected] of [
   } finally { await runtime.cleanup(); }
 });
 
-test('poll fails processing job cleanly when upstream_job_id is missing', async () => {
+test('poll flags unknown processing job for reconciliation without terminal failure', async () => {
   let failedState = null;
   const client = { from() { return {
     update(data) { failedState = data; return this; },
     eq() { return this; },
     select() { return this; },
-    async maybeSingle() { return { data: { id: 'job-1', ...failedState } }; },
+    async maybeSingle() { return { data: { id: 'job-1', status: 'processing', output: {}, ...failedState } }; },
   }; } };
   const runtime = await loadGeneration();
   try {
     const result = await runtime.poll(client, { id: 'job-1', status: 'processing', job_type: 'scene_motion', output: {} });
-    assert.equal(result.status, 'failed');
-    assert.equal(result.error.code, 'ARENA_GENERATION_FAILED');
-    assert.match(result.error.message, /without a provider job id/);
+    assert.equal(result.status, 'processing');
+    assert.equal(result.output.reconciliation_required, true);
+    assert.equal(result.output.reconciliation_reason, 'PROVIDER_ACCEPTANCE_UNKNOWN');
+    assert.equal(result.output.automatic_resubmission_disabled, true);
   } finally { await runtime.cleanup(); }
 });
 

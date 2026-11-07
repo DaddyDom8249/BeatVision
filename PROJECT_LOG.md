@@ -1321,3 +1321,1375 @@ Verification: source branch CI, production user checks pending. Do not claim ful
 **Deployment:** Created Vercel production deployment `dpl_GWVYyY2SYfc3HGNY1ueiHfQgKBv4` from GitHub `main` pinned to SHA `eafb6529d6356fe4af05385c8981c334960182d3`. TypeScript/Vite build succeeded, deployment reached READY, and an independent production-domain lookup confirmed `beat-vision-theta.vercel.app` resolves to that deployment and exact SHA. The pre-existing bundle-size warning remains.
 
 **Limits and next action:** No production song analysis was invoked by the agent. The affected song was last seen in `failed` state with audio path preserved. The creator must retry **Analyze Music Signal** while signed in; a successful real-user save of `songs.analysis` and subsequent flow remains UNVERIFIED. No data/approval changes, SQL migration, RLS edits, paid provider calls, or unrelated Arcane-theme PR merge were made for this fix.
+
+
+## 2026-10-29 — Repair CPU staging contention probe receipt assertion (PR #164)
+
+**Baseline:** main `3e26d8556e62b40e9f20823cb253854ae5efcec6`; exact detached repair checkout `33d0a4b900cdd35f8f19d8b6048ff7bad75b4afd`, PR #164 draft/unmerged. Read AGENTS.md, full project log and relevant audit evidence. All four workflows succeeded on this exact remote SHA, including worker/staging/probe Python compilation, five mocked concurrency regressions, npm tests/audit/build. No real staging burst was part of those workflows.
+
+**Reproduced defect:** staging `/submit` returns HTTP 200 with the same stored receipt on duplicate requests after reservation completion. Operator probe incorrectly required exactly one HTTP 200, falsely failing a safe run with 20 identical receipts and one fake spawn event. New local regression failed before the change (six cases: five passed, one failed; exit 1).
+
+**Smallest fix:** accept repeated HTTP 200 responses only with one shared nonempty staging receipt. Preserve acceptable HTTP statuses, multiple Modal container requirement, reserved-state verification and exactly one fake spawn event. Add six local probe regressions and run them in existing CI alongside five worker-route concurrency tests. Production worker, GPU execution, auth, RLS, approved media and lifecycle behavior unchanged.
+
+**Executed verification:** `npm install --ignore-scripts --no-audit --no-fund` exit 0; Python fastapi/httpx dependency install exit 0. Initial Python check failed for missing fastapi (exit 1) before installation. Initial npm suite was started before dependency installation finished and failed with missing modules (exit 1); that attempt is not accepted as baseline. After installation, `npm test` exit 0: 359 tests, 358 passed, zero failed, one skipped because local Chromium is absent (browser layout UNVERIFIED). `python -m unittest providers.modal_motion.tests.test_submit_concurrency providers.modal_motion.tests.test_contention_probe -v` exit 0, 11/11 passed. `python -m py_compile providers/modal_motion/worker.py providers/modal_motion/tests/staging_worker.py scripts/test/verify_multiprocess_contention.py` exit 0. `npm run production-audit`, `npm run build`, `git diff --check` each exit 0; existing bundle-size warning remains. Host Node 24/Python 3.12; CI remains Node 22/Python 3.11.
+
+**Scope:** scripts/test/verify_multiprocess_contention.py; providers/modal_motion/tests/test_contention_probe.py; .github/workflows/production-ci.yml; PROJECT_LOG.md. No database change or production deployment. Reused only Jules session 11067167063386264554; follow-up returned empty acknowledgment, session still COMPLETED, so no new Jules execution or evidence accepted. Repair implemented and tested locally.
+
+**BLOCKED / NOT VERIFIED:** no Modal SDK, token configuration or local Modal profile in this execution environment. Real cross-container contention, Modal runtime semantics, GPU render and Android playable MP4 are unverified. No cloud deployment, provider submission, inference, spending, creative approval or main merge occurred. This is a test-tool correctness repair, not proof of working live motion. Next gate remains authenticated, cost-authorized CPU-only staging deployment and actual 20-process burst.
+
+## 2026-10-30 UTC — PR #164 accepted-submission receipt persistence containment
+
+**Objective / exact base:** Repair only the confirmed provider-accepted/database-receipt-failed boundary. Reconfirmed the OPEN/DRAFT PR #164 head through GitHub and `git fetch --no-tags origin refs/heads/fix/preserve-uncertain-dispatch-20261028` (exit 0): `bed47d8d7f2770978417437c5c8af8113371bbef`. Created `/workspace/BeatVision-pr164` on that exact commit with `git worktree add -b fix/preserve-uncertain-dispatch-20261028 /workspace/BeatVision-pr164 bed47d8d7f2770978417437c5c8af8113371bbef` (exit 0). Original `/workspace/BeatVision` remains on `work` at main baseline `3e26d8556e62b40e9f20823cb253854ae5efcec6`; no main edit, merge or deployment. AGENTS.md is unchanged from the prior complete read (SHA-256 b04ec63c16699a56f3bc474d5a9539f43684042c6316856ad905f8d6d237b739); prior full project-log read plus this PR's addition retained.
+
+**Reproduction / root cause:** A local actual-controller fixture returns one accepted Modal HTTP 200 receipt, then rejects just its database receipt write. `run()` threw generic GENERATION_JOB_UPDATE_FAILED; its catch classified that as provider failure and called setFailed. Test-only run on the unmodified exact base: six tests, two pass/four fail, exit 1; healthy control passed while returned/thrown receipt-write errors became `failed`, persistent outage lacked the required rejection, and concurrent output lost the receipt. No real provider or database was contacted.
+
+**Repair:** Retain the known receipt/output before attempting persistence. If that path throws or affects zero rows, re-read the authoritative job before one bounded recovery write. Preserve concurrent terminal results and other execution metadata; refuse conflicting receipts. Persist the known upstream ID plus `reconciliation_required=true`, `reconciliation_reason=PROVIDER_RECEIPT_PERSISTENCE_UNCERTAIN` and `automatic_resubmission_disabled=true`, guarded by processing status and the freshly read updated_at. A failed recovery read/write or lost version race surfaces an explicit persistence/reconciliation error without calling setFailed or resubmitting. The existing durable queued-to-submitted conditional claim remains intact across retries/workers. No new database migration or provider invocation path.
+
+**Changed files:** `supabase/functions/beatvision-generation/index.ts`; new `scripts/test/generation-receipt-persistence.test.mjs`; this `PROJECT_LOG.md`. Owner authentication, owner-scoped source lookup, RLS, immutable input_snapshot, approved media, provider worker and model configuration are unchanged. The regression fixture permits writes only to generation_jobs and validates exact approved-image filters; storage supplies a synthetic PNG only.
+
+**Implementation commit:** `8a4a63575b6755f82dbefa0959e75047494433b8` (`fix(generation): preserve accepted jobs after receipt write failure`), parent `bed47d8d7f2770978417437c5c8af8113371bbef`. `git commit -m 'fix(generation): preserve accepted jobs after receipt write failure'` exited 0 at 00:16:50 UTC. This subsequent documentation-only commit records that immutable implementation SHA and its verification; it does not change tested application source.
+
+**Executed commands / results:** Working directory `/workspace/BeatVision-pr164` unless noted. Commands were captured by `/workspace/beatvision-receipt-repair-20261030/run_check.py`, which records exact argv, cwd, timestamps and exit codes in adjacent `*-result.json` and full logs; the initial install capture was copied from the baseline evidence directory. Node executable below is v22.23.4, npm 11.9.0; Python executable is the previously installed isolated venv running Python 3.12.14, FastAPI 0.162.0/httpx 0.28.1. CI uses Python 3.11; local Python 3.11 parity is not claimed.
+
+- `npm install --ignore-scripts --no-audit --no-fund --fetch-retries=0 --fetch-timeout=20000` — exit 0, 130 packages, install.log. Reused verified Python test dependencies; did not install Modal SDK, GPU dependencies or model weights.
+- `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node --test scripts/test/generation-receipt-persistence.test.mjs` — exit 1 before repair; default sandbox reporter showed the failing file. Direct command below gave discriminating case evidence.
+- `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/test/generation-receipt-persistence.test.mjs` — before source repair exit 1, 2/6 passed (receipt-red-detail.log); after repair exit 0, 6/6 passed; after adding version-race/conflicting-receipt cases exit 0, 8/8 passed (receipt-final.log). Covers healthy persistence, returned DB error, thrown transport error, persistent receipt outage followed by fresh-worker GET-only adoption, concurrent completion/approved-output preservation, concurrent execution metadata, lost version race, and conflicting receipt. Stale queued copies from competing/restarted workers cannot win the existing claim; exactly one submission and one attempt are asserted.
+- `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm test` — exit 0, initial repaired suite 365/365; final suite 367/367, zero failed/skipped, node-tests-final.log (00:16:04–00:16:36 UTC). Network permission enabled only to permit the existing local Chromium fixture's loopback server. Includes auth, owner isolation, immutable-media and PostgreSQL fixture regressions; no provider GPU request.
+- `/workspace/beatvision-baseline-20261029/venv/bin/python -m unittest providers.modal_motion.tests.test_contracts providers.modal_motion.tests.test_submit_concurrency providers.modal_motion.tests.test_contention_probe -v` — exit 0, 28/28 passed, python-tests.log. Modal is stubbed and requests are ASGI/local mocks.
+- `/workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/worker.py providers/modal_motion/tests/staging_worker.py scripts/test/verify_multiprocess_contention.py` — exit 0, python-compile.log. Does not execute the worker.
+- `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run production-audit` — exit 0, PASS, production-audit.log.
+- `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` — exit 0, TypeScript/Vite PASS, build.log. Existing >500kB bundle warning remains.
+- `git diff --check` and `git diff --cached --check` — exit 0. Only the three scoped files are included; generated Python caches were removed locally. No auth/RLS/migration changes.
+
+**Verified boundary and limits:** This fixes the reproduced terminal-failure misclassification and preserves a known receipt when the bounded recovery write can succeed. During persistent database failure the durable claim remains nonterminal and prevents another controller submission of the same job; a restarted Modal controller can adopt the provider-side stored receipt through GET, as covered by the fault test. It does NOT guarantee recovery of every provider-accepted execution: if every durable write fails and the process exits, Hugging Face's current adapter has no job-key receipt lookup or provider-supported idempotency to reconstruct a lost event ID. Modal recovery also depends on its existing provider-side reservation/receipt remaining durable; real cross-container Modal Dict semantics and outages are UNVERIFIED. Do not erase/reset claims or issue replacement executions based on missing receipts. Unconditional recovery would need stronger durable execution/outbox/reconciliation design and/or provider-supported idempotency; no such guarantee is claimed and no migration was introduced.
+
+**Publication / production:** User explicitly authorized committing to the existing PR branch and updating PR #164 after local checks. Local checks above passed; publication and latest-head remote CI evidence are reported on the PR separately. Keep the PR draft/unmerged pending broader lifecycle review and recovery guarantees. No production mutation, deployment, Modal invocation, GPU inference, paid request, creative approval, or media replacement occurred. Full authenticated production recovery/playback remains UNVERIFIED.
+
+## 2026-10-30 UTC — PR #164 Modal CLI reservation bypass only
+
+**Exact baseline / scope:** Before editing, GitHub PR metadata and `git ls-remote origin refs/heads/fix/preserve-uncertain-dispatch-20261028 refs/heads/main` confirmed PR head `f5fd23b954beffc1c81f5705306342871e82098d` and main `3e26d8556e62b40e9f20823cb253854ae5efcec6`. `git fetch --no-tags origin refs/heads/fix/preserve-uncertain-dispatch-20261028` and `git rev-parse FETCH_HEAD` exited 0 and confirmed the same PR SHA. Continued the clean existing PR worktree `/workspace/BeatVision-pr164`; original main checkout untouched. Re-read AGENTS.md (345 lines), HTTP/CLI worker and reservation tests, and the latest log entry alongside the earlier complete PROJECT_LOG.md read. Pre-edit hashes: AGENTS.md b04ec63c16699a56f3bc474d5a9539f43684042c6316856ad905f8d6d237b739; PROJECT_LOG.md 4c64a71654cad823e31d40a5d8fae45fc4832572cbb825fddaa19607da008594. User authorized only this CLI defect, local verification, log, commit and push; other lifecycle blockers are not repaired in this cycle.
+
+**Confirmed failure:** CLI main called `single_motion_proof.remote` directly, bypassing HTTP's named durable reservation. A fresh-module retry after a mocked accepted-but-lost result reply performed two GPU-function calls with the same generation-job ID. The new exact-base regression failed with `AssertionError: 2 != 1`, exit 1; no actual GPU or Modal SDK was used.
+
+**Implementation:** Extracted existing HTTP admission into `_reserve_motion`, backed by the same named `bragoraforge-modal-submissions-v1` Dict and atomic `put(..., skip_if_exists=True)`. `_submission_receipt` supplies the existing receipt lookup to both paths. CLI now uses shared admission, stops on reconciliation-required reservations, and retrieves the existing FunctionCall by stored receipt with a bounded 300-second wait. It never calls GPU `.remote` directly. Fingerprinting, canonical generation-job reservation key, HTTP 200/202/409/404 response contracts, proxy authentication, local dry-run/env acknowledgement gates and local output naming/exclusive writes are preserved. CLI checks all expected returned manifest fields before saving, preventing a conflicting receipt's output from being relabelled with the current project's provenance. No automatic retries, lease expiry/reclamation, reservation deletion, new IDs, provider fallback, migration, or database change.
+
+**Changed files:** `providers/modal_motion/worker.py`; `providers/modal_motion/tests/test_submit_concurrency.py`; this `PROJECT_LOG.md`. No Edge/frontend/provider-model configuration changes, RLS changes, approvals or approved-media edits. Project/scene/image identity remains in the fingerprint; conflicting identities fail closed with the original HTTP 409 contract. Existing owner-authenticated controller checks remain authoritative. CLI remains a privileged operator tool: syntactically valid IDs alone do not establish ownership, and this repair does not grant new credentials or claim otherwise.
+
+**Implementation commit:** `206a00bec0beefd19916fc2b44805388b2d22c7e` (`fix(modal): share durable reservations between CLI and HTTP`), parent `f5fd23b954beffc1c81f5705306342871e82098d`. `git commit -m 'fix(modal): share durable reservations between CLI and HTTP'` exited 0 at 00:51:39 UTC. This documentation-only follow-up records its immutable SHA and verified results.
+
+**Regression coverage:** Added 16 CLI cases to the existing CI-run reservation module: healthy CLI→HTTP and HTTP→CLI receipt reuse; concurrent CLI/HTTP in both admission orders; concurrent CLI processes; lost result reply; uncertain spawn acceptance; receipt-store crash; committed receipt with lost write reply; committed atomic reservation with lost reply; crash between reservation and spawn; process exit after a known receipt; conflicting project/prompt fingerprints; conflicting output provenance; invalid stored receipt; and equivalent generation-job UUID text. Tests load fresh worker modules over the same locked fake store, use deterministic thread barriers for competing callers, and assert zero direct GPU `.remote` calls and at most one mocked spawn. Existing HTTP and contract regressions remain included. Synthetic temporary PNG/MP4 bytes and fake SDK objects do not establish real inference, decoding or playback.
+
+**Exact local verification commands / exits:** cwd `/workspace/BeatVision-pr164`. `run_check.py` in `/workspace/beatvision-cli-repair-20261030/` captures exact argv, cwd, timestamps, full output and exit code in adjacent log/result JSON files. Reused the verified installed dependencies: Node 22.23.4 / npm 11.9.0; isolated Python 3.12.14 with FastAPI 0.162.0/httpx 0.28.1. CI uses Node 22 / Python 3.11; real SDK/GPU dependencies were not installed or invoked.
+
+- `PYTHONDONTWRITEBYTECODE=1 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_submit_concurrency.CliReservationTests.test_cli_lost_result_reply_does_not_invoke_twice -v` — exit 1 before source repair, two mocked GPU invocations for one ID; cli-red.log.
+- `PYTHONDONTWRITEBYTECODE=1 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_submit_concurrency -v` — exit 0 after initial repair, 17/17 at that stage; cli-green.log. Subsequent additional cases are included in the final full Python run below.
+- `PYTHONDONTWRITEBYTECODE=1 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_contracts providers.modal_motion.tests.test_submit_concurrency providers.modal_motion.tests.test_contention_probe -v` — exit 0 on final Python files, **44/44 passed** (15 contract, 22 reservation including all 16 new CLI cases, 7 probe); python-verified.log. Intermediate expanded runs passed 40/40 and 43/43 before the final receipt-write-acknowledgement case.
+- `/workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/worker.py providers/modal_motion/tests/staging_worker.py scripts/test/verify_multiprocess_contention.py` — exit 0; python-compile-final.log. Generated local bytecode caches removed; no worker execution occurs during compilation.
+- `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm test` — exit 0 on final worker source, **367/367 passed**, zero failed/skipped; node-tests-final.log, 00:50:43–00:51:16 UTC. Existing CPU/local Chromium fixture uses loopback; network permission was enabled for that fixture, not to contact providers.
+- `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run production-audit` — exit 0, PASS; production-audit.log.
+- `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` — exit 0, TypeScript/Vite PASS; build.log. Existing >500kB JavaScript bundle warning unchanged.
+- `git diff --check` and `git diff --cached --check` — exit 0. Local checks passed before committing/publishing; only the three scoped files are included.
+
+**Guarantees and remaining limits:** VERIFIED with mocks: the repaired CLI and HTTP share one reservation/receipt path, an existing known receipt is reused, and uncertain reservation/spawn/receipt states do not authorize another GPU invocation. This is not exactly-once execution or guaranteed eventual recovery. A process can still die between reservation and provider acceptance, or between acceptance and receipt persistence; the unresolved hold must remain in place. No transactional coupling, provider-supported idempotency, lease reclamation or durable result recovery was added. Real Modal Dict atomicity/durability/retention and cross-container failure semantics remain UNVERIFIED. Old CLI executions made before this repair may have no shared reservation/receipt; do not infer that retrying such an unresolved historic execution is safe. No production migration or reconciliation was attempted.
+
+**Release / next action:** Keep PR #164 OPEN/DRAFT and unmerged. User authorized a normal push to its existing branch after the above checks; remote publication/CI evidence is reported separately on the PR. No production deployment, provider request, GPU inference, paid operation, data mutation or main change. Stop after reporting this repair's evidence; polling-error classification, malformed HF acceptance, deadline recovery, scheduler starvation and the reservation/provider gap remain separate unresolved blockers.
+
+
+## 2026-10-30 — PR #164 lifecycle fault repairs and explicit release blockers
+
+Objective: implement the authorized six-blocker repair protocol on the existing PR branch, without production access, inference, deployment, merge, force-push or paid operations. Full evidence, per-blocker root causes/reproductions/security/statuses, provider references, crash map, manual recovery contract and residual risks are in `docs/audits/pr164-lifecycle-repair-20261030.md`.
+
+Actual baseline: original checkout `/workspace/BeatVision` remained branch `work` at main `3e26d8556e62b40e9f20823cb253854ae5efcec6`; repair worktree `/workspace/BeatVision-pr164`, branch `fix/preserve-uncertain-dispatch-20261028`, remote PR head `3b5d102fd5d2d357d6e34326344c670175642772`. The supplied f5fd23b head had advanced through the verified CLI fix; inspected that work before changes. `git fetch origin main fix/preserve-uncertain-dispatch-20261028` exit0, `git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028` exit0 (repeated before edits and commit), `git status --short` initially empty. Connector `github_get_pr_info` confirmed open, unmerged, draft, same branch/SHA. AGENTS.md345 lines and full PROJECT_LOG.md1395 lines read, including independent review. Existing audits/schema/controller/adapter/worker/tests/workflows and PR comments inspected. No concurrent remote advancement observed.
+
+Baseline:367 Node and44 Python passed. Original lifecycle fault test0/9 and HF acceptance2/9 passed, both exit1. Seven new worker-boundary tests against exact baseline worker failed (two behavior assertions, five missing-helper errors); actual model-import boundary lacked admission and conflicting companion receipt was ignored. Historical CLI-bypass red/green evidence remains in prior log entries.
+
+Implemented: nonterminal infrastructure recovery; durable MP4 readback plus HMAC-authenticated immutable lineage proof and DB checkpoint; receipt adoption from verified stored output; malformed HF acceptance containment with safe response evidence; service-only atomic poll leasing/fair due-time scheduling and backoff; owner-safe reconciliation beyond normal deadline; Modal execution self-publication and atomic admission before torch/model loading; conflicting receipts rejected and surviving execution claim checked before spawn after parent loss. Legacy source hash and optional dedicated checkpoint-key rotation are covered. Existing authentication, owner checks, RLS, immutable snapshots, pinned models, approved source selection and unapproved output status preserved.
+
+Verification:410/410 Node,60/60 Python, zero suite skips. Production audit, production TypeScript/Vite build, Edge Deno check with installed vendor declarations, compilation and whitespace checks passed. Local PostgreSQL16 fixture owner-enqueue/provenance/security tests passed;12 independent sessions claimed41 unique jobs including ninth, with lease recovery and stale-token fencing. Disk-backed PGlite restart/grant tests3/3 passed.20 independent CPU-only CLI/HTTP processes admitted one simulated execution; process-death matrix passed. No Modal SDK, torch, model weights or actual GPU were used.
+
+BLOCKED: full local Supabase17 migration replay could not unpack official image17.11.0.004 (`no space left on device`); CLI retry stopped, exit130. No production migration applied. Actual Modal cross-container behavior, staging, decoded generated motion and production are NOT VERIFIED. Public Modal docs confirm Dict entries expire after7inactive days. Explicit negative local expiry probe observed2mocked submissions for the same CLI job after admission records were removed, exit1. This is a remaining release blocker: no lifetime exactly-once or unconditional recovery claim. Worker self-publication narrows caller-loss recovery only once execution starts; unknown claims are never reset. HF lost-event recovery also remains provider-limited. Keep PR draft.
+
+Independent second source review found lease-updated_at grace starvation, orphaned signed-output receipt, receipt conflicts and legacy-hash mismatch; fixed and regression tested. Final reviewed patches had no further concrete identified defect; provider runtime guarantees were not independently tested. Dedicated signing key must be configured before creating proofs; subsequent signing-key changes require explicit verification-key/proof migration, otherwise fail closed. Serial polling can exceed lease duration; fenced writes contain stale completion while repeat GET retrieval is possible.
+
+Tool versions: Node22.23.4 for tests/build (host24.19.0); npm11.9.0; Python3.12.14 (CI3.11); FastAPI0.162.0; httpx0.28.1; TypeScript5.9.3; Vite7.3.7; PGlite0.5.9; Deno2.5.6 with TS5.9.2; Git2.52.0; Docker28.4.0. The existing Vite917.86kB minified bundle warning remains. Temporary Deno auto-install polluted frontend ambient timer types; restored verified npm ignore-scripts installation, reran tests/build successfully. No source workaround weakened types.
+
+Next action: replace finite provider-only admission with a non-expiring authoritative ledger shared by every entry point, preserving unknown holds/ownership; complete isolated migration replay with enough disk, then cost-verified controlled staging fault tests. Do not merge or deploy. Implementation/publication commit SHAs follow in the publication entry.
+
+Changed-file inventory (relative to confirmed3b5d102 baseline):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-lifecycle-repair-20261030.md`
+- `providers/modal_motion/tests/test_process_recovery.py`
+- `providers/modal_motion/tests/test_submit_concurrency.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/generation-dispatch-recovery.test.mjs`
+- `scripts/test/generation-lifecycle-recovery.test.mjs`
+- `scripts/test/generation-poll-leases.db.test.mjs`
+- `scripts/test/generation-receipt-persistence.test.mjs`
+- `scripts/test/hf-acceptance-recovery.test.mjs`
+- `scripts/test/hf-motion.test.mjs`
+- `scripts/test/verify_poll_leases.py`
+- `supabase/functions/beatvision-generation/hf-motion.ts`
+- `supabase/functions/beatvision-generation/index.ts`
+- `supabase/functions/beatvision-generation/modal-motion.ts`
+- `supabase/migrations/20261030010000_generation_poll_leases.sql`
+
+Exact executed setup, reproduction and verification command ledger:
+
+All commands below ran with cwd `/workspace/BeatVision-pr164` unless the row specifies otherwise. Labels identify raw `.log` and `-result.json` records in `/workspace/beatvision-lifecycle-repair-20261030`. Network permissions for docs/registry/git/local test browser/Docker did not authorize provider inference. Nonzero attempts and deliberate failing evidence are retained, not rewritten.
+
+| UTC start | Evidence label | Exit | Exact command |
+| --- | --- | --- | --- |
+| 2026-10-30T01:01:14.443743+00:00 | remote-baseline | 0 | `git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028 refs/pull/164/head` |
+| 2026-10-30T01:01:15.711269+00:00 | baseline-python | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_contracts providers.modal_motion.tests.test_submit_concurrency providers.modal_motion.tests.test_contention_probe -v` |
+| 2026-10-30T01:02:30.797982+00:00 | baseline-node | 0 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm test` |
+| 2026-10-30T01:07:26.207214+00:00 | lifecycle-red | 1 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/test/generation-lifecycle-recovery.test.mjs` |
+| 2026-10-30T01:07:40.683085+00:00 | hf-red | 1 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/test/hf-acceptance-recovery.test.mjs` |
+| 2026-10-30T01:12:33.423841+00:00 | phase-focused | 1 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node --test scripts/test/generation-lifecycle-recovery.test.mjs scripts/test/hf-acceptance-recovery.test.mjs` |
+| 2026-10-30T01:16:57.010920+00:00 | lifecycle-green | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/test/generation-lifecycle-recovery.test.mjs` |
+| 2026-10-30T01:16:57.405909+00:00 | hf-green | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/test/hf-acceptance-recovery.test.mjs` |
+| 2026-10-30T01:17:49.706756+00:00 | poll-db | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/test/generation-poll-leases.db.test.mjs` |
+| 2026-10-30T02:24:05.465386+00:00 | full-node | 1 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| 2026-10-30T02:26:17.784708+00:00 | focused-v2 | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node --test scripts/test/generation-lifecycle-recovery.test.mjs scripts/test/hf-motion.test.mjs scripts/test/generation-dispatch-recovery.test.mjs` |
+| 2026-10-30T02:32:16.176148+00:00 | postgres-image | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock pull postgres:16` |
+| 2026-10-30T02:33:01.610121+00:00 | python-process | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m unittest providers.modal_motion.tests.test_process_recovery -v` |
+| 2026-10-30T02:33:50.938156+00:00 | postgres-start | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock run --detach --name beatvision-lifecycle-local-20261030 --network none --memory 512m --cpus 2 -e POSTGRES_PASSWORD=fixture-only postgres:16` |
+| 2026-10-30T02:34:48.563547+00:00 | regressions-v3 | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/test/generation-lifecycle-recovery.test.mjs` |
+| 2026-10-30T02:34:49.470589+00:00 | python-process-v2 | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m unittest providers.modal_motion.tests.test_process_recovery -v` |
+| 2026-10-30T02:36:02.453305+00:00 | deno-install | 0 | `env npm_config_cache=/workspace/beatvision-lifecycle-repair-20261030/npm-cache npm install --prefix /workspace/beatvision-lifecycle-repair-20261030/typecheck --no-audit --no-fund deno@2.5.6` |
+| 2026-10-30T02:37:09.658178+00:00 | full-python | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T02:39:28.783068+00:00 | edge-types | 1 | `env DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-lock supabase/functions/beatvision-generation/index.ts` |
+| 2026-10-30T02:40:49.060321+00:00 | postgres-security | 0 | `python /workspace/beatvision-lifecycle-repair-20261030/local_postgres.py` |
+| 2026-10-30T02:41:22.545323+00:00 | production-audit | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| 2026-10-30T02:41:22.547700+00:00 | build | 127 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| 2026-10-30T02:41:29.976173+00:00 | edge-types-local | 1 | `env DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-lock --import-map=/workspace/beatvision-lifecycle-repair-20261030/typecheck/import-map.json supabase/functions/beatvision-generation/index.ts` |
+| 2026-10-30T02:42:13.657976+00:00 | build-v2 | 0 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| 2026-10-30T02:42:47.757330+00:00 | replay-cli-install | 0 | `env npm_config_cache=/workspace/beatvision-lifecycle-repair-20261030/npm-cache npm install --prefix /workspace/beatvision-lifecycle-repair-20261030/replay-tools --no-audit --no-fund supabase@2.120.0` |
+| 2026-10-30T02:43:44.999964+00:00 | full-node-v2 | 1 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| 2026-10-30T02:43:55.958912+00:00 | replay-init | 1 | `/workspace/beatvision-lifecycle-repair-20261030/replay-tools/node_modules/.bin/supabase init --workdir /workspace/beatvision-lifecycle-repair-20261030/replay` |
+| 2026-10-30T02:43:56.727629+00:00 | edge-types-adapters | 1 | `env DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-lock supabase/functions/beatvision-generation/modal-motion.ts supabase/functions/beatvision-generation/hf-motion.ts` |
+| 2026-10-30T02:44:41.897876+00:00 | replay-init-v2 | 1 | `/workspace/beatvision-lifecycle-repair-20261030/replay-tools/node_modules/.bin/supabase init --workdir /workspace/beatvision-lifecycle-repair-20261030/replay` |
+| 2026-10-30T02:44:42.411412+00:00 | edge-types-adapters-v2 | 0 | `env DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-lock supabase/functions/beatvision-generation/modal-motion.ts supabase/functions/beatvision-generation/hf-motion.ts` |
+| 2026-10-30T02:45:40.228851+00:00 | types-install | 0 | `env npm_config_cache=/workspace/beatvision-lifecycle-repair-20261030/npm-cache npm install --prefix /workspace/beatvision-lifecycle-repair-20261030/typecheck --no-audit --no-fund @types/pngjs@6.0.5` |
+| 2026-10-30T02:45:53.172060+00:00 | replay-cli-help | 0 | `env SUPABASE_HOME=/workspace/beatvision-lifecycle-repair-20261030/supabase-home SUPABASE_TELEMETRY_DISABLED=true /workspace/beatvision-lifecycle-repair-20261030/replay-tools/node_modules/.bin/supabase --help` |
+| 2026-10-30T02:45:53.675647+00:00 | replay-init-v3 | 0 | `env SUPABASE_HOME=/workspace/beatvision-lifecycle-repair-20261030/supabase-home SUPABASE_TELEMETRY_DISABLED=true /workspace/beatvision-lifecycle-repair-20261030/replay-tools/node_modules/.bin/supabase init --workdir /workspace/beatvision-lifecycle-repair-20261030/replay` |
+| 2026-10-30T02:45:54.231865+00:00 | edge-types-local-v2 | 1 | `env DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-lock --import-map=/workspace/beatvision-lifecycle-repair-20261030/typecheck/import-map.json supabase/functions/beatvision-generation/index.ts` |
+| 2026-10-30T02:46:08.319170+00:00 | edge-types-local-v3 | 1 | `env DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-lock --import-map=/workspace/beatvision-lifecycle-repair-20261030/typecheck/import-map.json supabase/functions/beatvision-generation/index.ts` |
+| 2026-10-30T02:46:08.864541+00:00 | replay-db-help | 0 | `env SUPABASE_HOME=/workspace/beatvision-lifecycle-repair-20261030/supabase-home SUPABASE_TELEMETRY_DISABLED=true /workspace/beatvision-lifecycle-repair-20261030/replay-tools/node_modules/.bin/supabase db start --help` |
+| 2026-10-30T02:47:18.034996+00:00 | edge-types-auto | 1 | `env DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-lock --node-modules-dir=auto --import-map=/workspace/beatvision-lifecycle-repair-20261030/typecheck/import-map.json supabase/functions/beatvision-generation/index.ts` |
+| 2026-10-30T02:47:22.213300+00:00 | replay-db-start | 130 | `env -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH DOCKER_HOST=unix:///var/run/docker.sock SUPABASE_HOME=/workspace/beatvision-lifecycle-repair-20261030/supabase-home SUPABASE_TELEMETRY_DISABLED=true /workspace/beatvision-lifecycle-repair-20261030/replay-tools/node_modules/.bin/supabase db start --workdir /workspace/beatvision-lifecycle-repair-20261030/replay` |
+| 2026-10-30T02:47:44.389668+00:00 | edge-types-system-ca | 1 | `env DENO_TLS_CA_STORE=system DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-lock --node-modules-dir=auto --import-map=/workspace/beatvision-lifecycle-repair-20261030/typecheck/import-map.json supabase/functions/beatvision-generation/index.ts` |
+| 2026-10-30T02:50:58.715316+00:00 | edge-types-vendor | 0 | `env DENO_TLS_CA_STORE=system DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-lock --node-modules-dir=auto --import-map=/workspace/beatvision-lifecycle-repair-20261030/typecheck/import-map.json supabase/functions/beatvision-generation/index.ts` |
+| 2026-10-30T02:52:35.099205+00:00 | docs-supabase | 0 | `curl -fsSL https://supabase.com/changelog.md -o /workspace/beatvision-lifecycle-repair-20261030/supabase-changelog.md` |
+| 2026-10-30T02:53:40.408129+00:00 | final-node | 1 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| 2026-10-30T02:53:41.742794+00:00 | final-python | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T02:56:42.843796+00:00 | final-node-v2 | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| 2026-10-30T02:56:44.281137+00:00 | final-compile | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/worker.py providers/modal_motion/tests/test_process_recovery.py scripts/test/verify_poll_leases.py` |
+| 2026-10-30T02:57:33.475785+00:00 | final-edge | 1 | `env DENO_TLS_CA_STORE=system DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --cached-only --no-lock --node-modules-dir=auto --import-map=/workspace/beatvision-lifecycle-repair-20261030/typecheck/import-map.json supabase/functions/beatvision-generation/index.ts` |
+| 2026-10-30T02:57:40.278532+00:00 | final-edge-v2 | 0 | `env DENO_TLS_CA_STORE=system DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-lock --node-modules-dir=auto --import-map=/workspace/beatvision-lifecycle-repair-20261030/typecheck/import-map.json supabase/functions/beatvision-generation/index.ts` |
+| 2026-10-30T02:58:16.466800+00:00 | final-audit | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| 2026-10-30T02:58:16.514816+00:00 | final-build | 1 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| 2026-10-30T03:00:14.424530+00:00 | postgres-cleanup | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock rm -f beatvision-lifecycle-local-20261030` |
+| 2026-10-30T03:01:21.642837+00:00 | restore-dependencies | 0 | `env npm_config_cache=/workspace/beatvision-lifecycle-repair-20261030/npm-cache npm install --ignore-scripts --no-audit --no-fund` |
+| 2026-10-30T03:02:54.043319+00:00 | modal-dict-source | 22 | `curl --max-time 20 -fsSL https://raw.githubusercontent.com/modal-labs/modal-client/main/modal/dict.py -o /workspace/beatvision-lifecycle-repair-20261030/modal-dict.py` |
+| 2026-10-30T03:02:57.600029+00:00 | modal-function-source | 22 | `curl --max-time 20 -fsSL https://raw.githubusercontent.com/modal-labs/modal-client/main/modal/_functions.py -o /workspace/beatvision-lifecycle-repair-20261030/modal-functions.py` |
+| 2026-10-30T03:03:12.367955+00:00 | restored-build | 0 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| 2026-10-30T03:03:32.864638+00:00 | modal-dict-docs | 0 | `curl --max-time 20 -fsSL https://modal.com/docs/reference/modal.Dict -o /workspace/beatvision-lifecycle-repair-20261030/modal-dict.html` |
+| 2026-10-30T03:03:51.389708+00:00 | modal-function-docs | 0 | `curl --max-time 20 -fsSL https://modal.com/docs/reference/modal.Function -o /workspace/beatvision-lifecycle-repair-20261030/modal-function.html` |
+| 2026-10-30T03:04:38.997509+00:00 | restored-node | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| 2026-10-30T03:05:29.989622+00:00 | modal-call-docs | 0 | `curl --max-time 20 -fsSL https://modal.com/docs/reference/modal.FunctionCall -o /workspace/beatvision-lifecycle-repair-20261030/modal-call.html` |
+| 2026-10-30T03:05:56.899902+00:00 | modal-current-id-docs | 0 | `curl --max-time 20 -fsSL https://modal.com/docs/reference/modal.current_function_call_id -o /workspace/beatvision-lifecycle-repair-20261030/modal-current-id.html` |
+| 2026-10-30T03:07:42.846358+00:00 | python-self-publish | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T03:08:55.621956+00:00 | python-self-publish-v2 | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T03:10:46.880781+00:00 | python-reviewed | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T03:10:48.154812+00:00 | lifecycle-reviewed | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/test/generation-lifecycle-recovery.test.mjs` |
+| 2026-10-30T03:11:58.290441+00:00 | reviewed-node | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| 2026-10-30T03:12:06.866621+00:00 | reviewed-edge | 0 | `env DENO_TLS_CA_STORE=system DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-lock --import-map=/workspace/beatvision-lifecycle-repair-20261030/typecheck/import-map.json supabase/functions/beatvision-generation/index.ts` |
+| 2026-10-30T03:12:34.401843+00:00 | isolated-edge | 1 | `env DENO_TLS_CA_STORE=system DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-config --no-lock --node-modules-dir=none --import-map=/workspace/beatvision-lifecycle-repair-20261030/typecheck/import-map.json supabase/functions/beatvision-generation/index.ts` |
+| 2026-10-30T03:12:59.794374+00:00 | self-publish-red | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python /workspace/beatvision-lifecycle-repair-20261030/self_publish_red.py` |
+| 2026-10-30T03:13:00.141730+00:00 | expired-reservation-blocker | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python /workspace/beatvision-lifecycle-repair-20261030/expired_reservation_probe.py` |
+| 2026-10-30T03:13:00.567286+00:00 | reviewed-audit | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| 2026-10-30T03:13:00.615239+00:00 | reviewed-build | 0 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| 2026-10-30T03:14:45.949521+00:00 | final-reviewed-python | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T03:14:47.223106+00:00 | worker-boundary-red | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python /workspace/beatvision-lifecycle-repair-20261030/self_publish_red.py` |
+| 2026-10-30T03:16:26.125294+00:00 | release-node | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| 2026-10-30T03:16:27.528964+00:00 | versions | 0 | `python -c 'import sys,subprocess,importlib.metadata,json; print(sys.version); print(subprocess.check_output(["/workspace/beatvision-baseline-20261029/venv/bin/python","-c","import sys,importlib.metadata as m; print(sys.version); print({k:m.version(k) for k in [\"fastapi\",\"httpx\"]})"],text=True)); print(subprocess.check_output(["/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node","--version"],text=True));print(subprocess.check_output(["npm","--version"],text=True)); print(subprocess.check_output(["/workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno","--version"],text=True)); print(subprocess.check_output(["git","--version"],text=True))'` |
+| 2026-10-30T20:19:07.557263+00:00 | release-python | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T20:19:08.716592+00:00 | release-compile | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/worker.py providers/modal_motion/tests/test_process_recovery.py scripts/test/verify_poll_leases.py` |
+| 2026-10-30T20:19:08.764431+00:00 | release-whitespace | 0 | `git diff --check` |
+| 2026-10-30T20:19:25.784130+00:00 | release-python-final | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T20:21:56.184039+00:00 | release-node-final | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+
+The SQL fixture runner executed, each exit0: `docker --host=unix:///var/run/docker.sock exec -i beatvision-lifecycle-local-20261030 psql -U postgres -d postgres -X -v ON_ERROR_STOP=1 -f -` with stdin from generation-enqueue-fixture.sql, generation-enqueue-baseline.sql, owner-checked enqueue migration, canonical assembly-type migration, generation-enqueue-security.sql, assembly-motion-provenance migration and assembly-motion-provenance.sql. It then added fixture-only timestamps, applied the new poll migration and ran `BEATVISION_POLL_TEST_ISOLATED=1 python scripts/test/verify_poll_leases.py --psql '["docker","--host=unix:///var/run/docker.sock","exec","-i","beatvision-lifecycle-local-20261030","psql","-U","postgres","-d","postgres"]'`, exit0. The committed runner contains exact concurrent SQL; no production connection was used. The owned fixture container was removed afterward, exit0.
+
+Edge check used temporary import map to installed Supabase declarations and an unchanged image module copy with `@ts-types` for PNG; no platform behavior was stubbed by the controller fault tests beyond explicit mocks. Direct JSR fetch/vendor typing and unsupported cached-only CLI attempts failed as recorded before a successful check. Supabase CLI init initially failed due read-only default config location; `SUPABASE_HOME` then isolated it inside the evidence workspace. Public source URLs returned404; official Modal reference docs returned200 and supplied the quoted retention/API evidence. Full migration replay is not represented as passed.
+
+
+### PR #164 publication — 2026-10-30 20:24 UTC
+
+Implementation commit: `41b42a7663f6e9dea1059633599880e8bba8c992` (`Recover accepted motion jobs without replacement inference`), all18 changed files listed above. `git add` of the18 listed paths, `git diff --cached --check`, and `git commit` each exited0. `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` exited0 at20:24:10UTC and advanced the existing PR branch from3b5d102 to41b42a7; no force, main unchanged. A documentation-only follow-up records this implementation SHA and publication evidence. Its own final head is externally verifiable with git/PR metadata and reported to the user.
+
+Final code verification:410/410 Node (zero skips),60/60 Python, audit/build/typechecks/compilation/diff checks exit0. Local full Supabase replay remainsBLOCKED(space); expiry negative probe remainsFAILED(2mock submissions), not included among passing suite totals. No exactly-once, staging or production claim. New Node regression files contain26lifecycle cases,14HF acceptance cases and3SQL claim cases (43addedNode tests versus367baseline), finaltotal410. Python added16tests versus44baseline, including7independent-process cases. Source review findings and all known limits are preserved in the report; PR staysdraft.
+
+Final executed command evidence (same cwd as above):
+
+| Label | Exit | Command |
+| --- | --- | --- |
+| release-python-final | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m unittest discover -s providers/modal_motion/tests -v` |
+| release-node-final | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| reviewed-edge | 0 | `env DENO_TLS_CA_STORE=system DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-lock --import-map=/workspace/beatvision-lifecycle-repair-20261030/typecheck/import-map.json supabase/functions/beatvision-generation/index.ts` |
+| release-compile | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/worker.py providers/modal_motion/tests/test_process_recovery.py scripts/test/verify_poll_leases.py` |
+| release-whitespace | 0 | `git diff --check` |
+| publish-audit | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| publish-build | 0 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| implementation-commit | 0 | `git commit -m 'Recover accepted motion jobs without replacement inference'` |
+| implementation-push | 0 | `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` |
+
+`git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028` exit0 before publication reconfirmed main3e26d855 and PR3b5d102. Exact-head CI is observed separately after publication; no result from a historical head is represented as passing on the candidate.
+
+
+### PR #164 permanent admission repair — 2026-10-30, local verification complete
+
+Objective: remove expiring Modal Dict as execution admission authority, continuing the existing PR. Remote PR head reconfirmed before edits and again after fetch before publication: `d735fb5f96cb18cef980748d05b255e60f22f6fc`; branch `fix/preserve-uncertain-dispatch-20261028`. Main and original clean checkout remain `3e26d8556e62b40e9f20823cb253854ae5efcec6`. Cwd `/workspace/BeatVision-pr164`. AGENTS.md and complete PROJECT_LOG.md read before modifications; existing lifecycle report, affected workers/controllers/adapters, schema/migrations, tests and draft PR/CI history inspected. No remote advancement or concurrent work was overwritten.
+
+Root cause and reproduction: `_submission_receipts()` depended on finite Modal Dict retention. Baseline `expiry-red` exit1 observed **two simulated GPU invocations** for the same job after cache expiry. Permanent PostgreSQL admission is the smallest durable repair within the existing architecture; no attempt was made to call an extra boolean exactly-once. New private RLS-enabled ledger retains job/owner/project/scene/source, exact normalized request, fingerprint, random admission token, execution fence and globally unique provider receipt. No TTL, cascading deletion, reset or reclaim. First reserve and first model entry grant once; same-token/same-call retries never regrant. Both CLI/HTTP and actual model function consult the same service-only RPC; model fence precedes torch import. Database refusal, uncertain reply or missing configuration fails closed. Current ownership/approved source, scene/plan, frozen payload/hash/model/revision are verified before reserve and model entry. HTTP409 retains nonterminal reconciliation and disables resubmission.
+
+Independent review found missing current-lineage revalidation at model entry and SQL NULL operation guard ambiguity; fixed with regressions. `begin-lineage-red` exit1 proved the original missing rejection; eight altered-lineage/approval variants now pass. Prepared payload is retained across healthy receipt persistence. Unique receipt binding blocks cross-job replay; real production factory regression prohibits Dict fallback. Final independent read-only review found no further concrete defect; its source reads exited0, and it did not run provider or database calls.
+
+Results: **421/421 Node**, **67/67 Python**, zero skips; baseline410/410 and60/60. Production audit, TypeScript/Vite production build, Edge Deno check using previously documented installed vendor declarations, Python compilation and whitespace checks exit0. Added11 Node cases (9 SQL ledger, legacy-protocol rejection, controller409 hold),7 Python cases. Existing917.86kB Vite warning remains. New migration applied to isolated PostgreSQL16/PGlite, exit0. Twenty independent mixed CLI/HTTP processes against PostgreSQL admitted **one mocked submission**; 100-year retained claim,4 caller process-death boundaries, lost model-admission acknowledgment and same-call reentry tests passed. Actual PostgreSQL outage blocked spawn; stop/start preserved all5 fixture claims and retry added0submissions. Anon/auth RPC denial and anon/auth/service direct-delete denial passed. Production JSON decoder was exercised via a psql opener: live PostgREST and Modal are NOT VERIFIED. Owned isolated container and volume removed afterward; no production data touched.
+
+Failures retained: initial Python test double lacked FakeModal.Secret; corrected its stub. First PostgreSQL fixture used UUID suffixes inconsistent with canonical fixture IDs, causing correct authorization refusal; corrected only fixtures. Final restricted-sandbox Node run and focused layout reproduction exit1 because unchanged browser test requires a local server; identical focused/full runs with local network permission exit0. User-interrupted calls without completed results are not claimed as executed/passing. Full local Supabase17 replay remains blocked by previously recorded image-unpacking disk exhaustion; not blindly retried. Candidate full migration replay and other final-head CI results are recorded after publication.
+
+Status: IMPLEMENTED / TESTED for retained-ledger protocol2 admission. ARCH-06 reservation/provider atomicity and unconditional completion remain BLOCKED/provider-limited. A crash after durable grant before provider start or model progress can permanently strand a zero-inference claim; automatic resubmission is forbidden. Deliberate ledger deletion/history rollback defeats its guarantee. Old deployed binaries must be frozen/drained/revoked; new database cannot govern code that ignores it. Protocol2 is an explicit internal contract change: old payloads/workers fail closed; existing/late legacy Modal jobs become permanent holds, including queued jobs, preserving known DB receipts. Arbitrary standalone CLI UUIDs no longer authorize execute; an approved controller-prepared job is required. README documents server-only named Modal Secret and schema-first controlled cutover; no secret was configured and no migration deployed. Real Modal cross-container recovery, staging, GPU render, Android playback and production remain NOT VERIFIED. No exactly-once claim, merge, deployment, actual provider/GPU request or paid operation. Keep PR draft.
+
+Full root-cause/security/crash map and next action: `docs/audits/pr164-permanent-admission-20261030.md`; previous six-blocker evidence remains in `docs/audits/pr164-lifecycle-repair-20261030.md`. Next: isolated, cost-verified staging cutover/CPU-only authenticated RPC recovery plan, verify all old paths disabled and retained ledger restoration before considering inference.
+
+Tool versions: Node22.23.4 tests/build; host24.19.0; npm11.9.0; Python3.12.14 (CI3.11), FastAPI0.162.0,httpx0.28.1; TypeScript5.9.3,Vite7.3.7,PGlite0.5.9; Deno2.5.6/TS5.9.2; Git2.52.0; Docker28.4.0,isolated PostgreSQL16. Verified ignore-scripts dependencies from prior setup retained; no dependency manifest/lock change. Supabase CLI2.120.0 created the additive migration with `env SUPABASE_HOME=/workspace/beatvision-admission-repair-20261030/supabase-home SUPABASE_TELEMETRY_DISABLED=true /workspace/beatvision-lifecycle-repair-20261030/replay-tools/node_modules/.bin/supabase migration new durable_modal_admission --workdir /workspace/BeatVision-pr164`, exit0.
+
+Complete changed-file inventory relative to d735fb5 (implementation/documentation SHA follows in publication entry):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `providers/modal_motion/README.md`
+- `providers/modal_motion/admission.py`
+- `providers/modal_motion/contracts.py`
+- `providers/modal_motion/tests/test_admission_client.py`
+- `providers/modal_motion/tests/test_contracts.py`
+- `providers/modal_motion/tests/test_process_recovery.py`
+- `providers/modal_motion/tests/test_submit_concurrency.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/generation-receipt-persistence.test.mjs`
+- `scripts/test/modal-admission-ledger.db.test.mjs`
+- `scripts/test/modal-motion-integration.test.mjs`
+- `scripts/test/verify_modal_admission.py`
+- `supabase/functions/beatvision-generation/index.ts`
+- `supabase/functions/beatvision-generation/modal-motion.ts`
+- `supabase/migrations/20261030204115_durable_modal_admission.sql`
+
+Exact executed command ledger (cwd `/workspace/BeatVision-pr164` for every row; raw `.log`/`-result.json` records in `/workspace/beatvision-admission-repair-20261030`). Harness invocation is `python /workspace/beatvision-admission-repair-20261030/run_check.py <label> /workspace/BeatVision-pr164 <exact argv below>` and propagates command exit. `git ls-remote`/fetch and local browser/Docker fixture checks used sandbox network permission, never provider inference. Shell quoting below reproduces argv; commands with pipes escape them for Markdown.
+
+| UTC start | Label | Exit | Exact command |
+| --- | --- | --- | --- |
+| 2026-10-30T20:39:32.860184+00:00 | expiry-red | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python /workspace/beatvision-lifecycle-repair-20261030/expired_reservation_probe.py` |
+| 2026-10-30T20:39:33.365632+00:00 | baseline-python | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T20:39:58.060873+00:00 | baseline-node | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| 2026-10-30T20:44:02.624857+00:00 | python-first | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T20:45:52.731034+00:00 | ledger-sql-first | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/test/modal-admission-ledger.db.test.mjs` |
+| 2026-10-30T20:46:35.089214+00:00 | ledger-sql-v2 | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/test/modal-admission-ledger.db.test.mjs` |
+| 2026-10-30T20:46:43.510366+00:00 | python-v2 | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T21:05:40.017131+00:00 | begin-lineage-red | 1 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/test/modal-admission-ledger.db.test.mjs` |
+| 2026-10-30T21:06:15.455836+00:00 | sql-lineage-green | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/test/modal-admission-ledger.db.test.mjs` |
+| 2026-10-30T21:06:18.577548+00:00 | node-first | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| 2026-10-30T21:07:41.164310+00:00 | postgres-start | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock run --detach --name beatvision-admission-local-20261030 --network none --memory 512m --cpus 2 -e POSTGRES_PASSWORD=fixture-only postgres:16` |
+| 2026-10-30T21:10:41.776815+00:00 | postgres-process | 1 | `python /workspace/beatvision-admission-repair-20261030/postgres_fixture.py` |
+| 2026-10-30T21:12:44.975199+00:00 | sql-new-guards | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/test/modal-admission-ledger.db.test.mjs` |
+| 2026-10-30T21:15:39.709419+00:00 | postgres-reset-fixture | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock rm -f -v beatvision-admission-local-20261030` |
+| 2026-10-30T21:15:40.053005+00:00 | postgres-start-v2 | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock run --detach --name beatvision-admission-local-20261030 --network none --memory 512m --cpus 2 -e POSTGRES_PASSWORD=fixture-only postgres:16` |
+| 2026-10-30T21:15:40.995483+00:00 | python-v3 | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T21:16:35.034580+00:00 | postgres-process-v2 | 0 | `python /workspace/beatvision-admission-repair-20261030/postgres_fixture.py` |
+| 2026-10-30T21:18:17.526690+00:00 | postgres-stop | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock stop beatvision-admission-local-20261030` |
+| 2026-10-30T21:18:17.794031+00:00 | focused-types-tests | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node --test scripts/test/modal-motion-integration.test.mjs scripts/test/generation-receipt-persistence.test.mjs` |
+| 2026-10-30T21:19:03.659738+00:00 | postgres-outage | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH BEATVISION_LEDGER_TEST_ISOLATED=1 /workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/verify_modal_admission.py --psql '["docker","--host=unix:///var/run/docker.sock","exec","-i","beatvision-admission-local-20261030","psql","-U","postgres","-d","postgres"]' --expect-unavailable` |
+| 2026-10-30T21:19:03.993761+00:00 | postgres-restart | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock start beatvision-admission-local-20261030` |
+| 2026-10-30T21:20:01.552321+00:00 | audit | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| 2026-10-30T21:20:01.559909+00:00 | full-python | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T21:20:01.613181+00:00 | build | 0 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| 2026-10-30T21:21:24.195641+00:00 | postgres-restart-verify | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH BEATVISION_LEDGER_TEST_ISOLATED=1 /workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/verify_modal_admission.py --psql '["docker","--host=unix:///var/run/docker.sock","exec","-i","beatvision-admission-local-20261030","psql","-U","postgres","-d","postgres"]' --verify-existing` |
+| 2026-10-30T21:21:27.717126+00:00 | full-node | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| 2026-10-30T21:23:40.366760+00:00 | edge-types | 0 | `env DENO_TLS_CA_STORE=system DENO_DIR=/workspace/beatvision-lifecycle-repair-20261030/deno-cache /workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno check --no-lock --import-map=/workspace/beatvision-lifecycle-repair-20261030/typecheck/import-map.json supabase/functions/beatvision-generation/index.ts` |
+| 2026-10-30T21:23:41.526403+00:00 | compile | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/worker.py providers/modal_motion/admission.py scripts/test/verify_modal_admission.py` |
+| 2026-10-30T21:26:44.825256+00:00 | whitespace | 0 | `git diff --check` |
+| 2026-10-30T21:28:32.658282+00:00 | conflict-focused | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/test/generation-receipt-persistence.test.mjs` |
+| 2026-10-30T21:39:29.903581+00:00 | final-node | 1 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| 2026-10-30T22:28:30.942901+00:00 | layout-diagnostic | 1 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node --test scripts/test/production-workspace-layout.test.mjs` |
+| 2026-10-30T22:30:38.876967+00:00 | layout-network-diagnostic | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node --test scripts/test/production-workspace-layout.test.mjs` |
+| 2026-10-30T22:30:48.042641+00:00 | final-node-network | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| 2026-10-30T22:30:49.273497+00:00 | remote-final-before-commit | 0 | `git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028 refs/pull/164/head` |
+| 2026-10-30T22:30:50.944100+00:00 | postgres-security-restart | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH BEATVISION_LEDGER_TEST_ISOLATED=1 /workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/verify_modal_admission.py --psql '["docker","--host=unix:///var/run/docker.sock","exec","-i","beatvision-admission-local-20261030","psql","-U","postgres","-d","postgres"]' --verify-existing` |
+| 2026-10-30T22:32:42.431143+00:00 | fetch-final | 0 | `git fetch origin` |
+| 2026-10-30T22:33:05.195462+00:00 | postgres-cleanup | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock rm -f -v beatvision-admission-local-20261030` |
+| 2026-10-30T22:33:12.625149+00:00 | versions | 0 | `python -c 'import subprocess,json;commands=[["/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node","--version"],["npm","--version"],["git","--version"],["/workspace/beatvision-baseline-20261029/venv/bin/python","-c","import sys,importlib.metadata as m;print(sys.version);print({k:m.version(k) for k in [\"fastapi\",\"httpx\"]})"],["./node_modules/.bin/tsc","--version"],["./node_modules/.bin/vite","--version"],["/workspace/beatvision-lifecycle-repair-20261030/typecheck/node_modules/.bin/deno","--version"]];[(print(json.dumps(c)),subprocess.run(c,check=True)) for c in commands]'` |
+
+`postgres-process-v2` runner executed the following subcommands, all exit0: `docker --host=unix:///var/run/docker.sock exec -i beatvision-admission-local-20261030 psql -U postgres -d postgres -X -v ON_ERROR_STOP=1 -f -` with stdin first from `scripts/test/sql/generation-enqueue-fixture.sql`, then `supabase/migrations/20261030204115_durable_modal_admission.sql`; then `BEATVISION_LEDGER_TEST_ISOLATED=1 /workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/verify_modal_admission.py --psql '["docker","--host=unix:///var/run/docker.sock","exec","-i","beatvision-admission-local-20261030","psql","-U","postgres","-d","postgres"]'`. It unsets DOCKER_HOST/CONTEXT/TLS/TLS_VERIFY/CERT_PATH and injects only fixture configuration. The isolated driver contains the exact parameterized SQL/process commands; mock spawn events are counted in a fixture-only SQL table. PostgreSQL fixture result is distinct from full Supabase migration replay.
+
+
+### Permanent admission publication — 2026-10-30
+
+Implementation SHA: **`6f28b1a6e87cbda583b15c0487541e5ada07feda`**, `Use permanent PostgreSQL admission for Modal execution`,18files,1034insertions/27deletions. Exact `git add -- <18 paths listed in this phase inventory>` exited0; `git diff --cached --check` exit0; `git commit -m 'Use permanent PostgreSQL admission for Modal execution'` exit0 at22:35:07UTC. Subsequent `git diff d735fb5f96cb18cef980748d05b255e60f22f6fc HEAD --check` exit0.
+
+Publication: an interrupted permission/tool call produced no push execution record and did not advance remote. `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` in the restricted sandbox then exited128 (`Failed to connect to proxy port8080`, evidence push-default). The same direct command with sandbox network permission exited0, advancing d735fb5→6f28b1a; observed remote by23:11UTC. No force push. GitHub PR metadata confirms open/draft/unmerged and exact6f28b1a head; main remains3e26d855 and original checkout clean. PR body updated through GitHub update_pull_request to describe verified permanent admission, explicit protocol2/CLI contract changes and unresolved rollout/provider-boundary limits.
+
+All four GitHub workflows passed on exact implementation SHA6f28b1a6e87cbda583b15c0487541e5ada07feda (GitHub Actions API statuses completed/success):
+
+- Production CI: https://github.com/DaddyDom8249/BeatVision/actions/runs/41142959447
+- Generation enqueue security including independent permanent-admission worker processes: https://github.com/DaddyDom8249/BeatVision/actions/runs/41142959552
+- Full isolated Supabase PostgreSQL migration replay including new ledger migration: https://github.com/DaddyDom8249/BeatVision/actions/runs/41142959516
+- Storage ownership security: https://github.com/DaddyDom8249/BeatVision/actions/runs/41142959494
+
+This establishes TESTED full migration replay in CI, despite the separately documented local Docker disk limitation. No staging/production/provider verification is inferred. Node421/421 and Python67/67 totals above are actual local suite results, not inferred from CI. No tests skipped locally. Documentation-only follow-up records implementation SHA, publication and CI; final documentation head and its own CI are independently reported in PR metadata/final response, rather than claiming a commit can contain its own SHA. `git diff --check`, `git add PROJECT_LOG.md docs/audits/pr164-permanent-admission-20261030.md`, `git diff --cached --check`, `git commit -m 'Record permanent admission publication and verification'` and normal push to the same existing branch are the follow-up commands; actual exits are checked before final reporting.
+
+Complete PR changed-file inventory relative to verified main3e26d855 (38paths; separate from the18-path repair inventory above):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-lifecycle-repair-20261030.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `providers/__init__.py`
+- `providers/modal_motion/README.md`
+- `providers/modal_motion/__init__.py`
+- `providers/modal_motion/admission.py`
+- `providers/modal_motion/contracts.py`
+- `providers/modal_motion/tests/staging_worker.py`
+- `providers/modal_motion/tests/test_admission_client.py`
+- `providers/modal_motion/tests/test_contention_probe.py`
+- `providers/modal_motion/tests/test_contracts.py`
+- `providers/modal_motion/tests/test_process_recovery.py`
+- `providers/modal_motion/tests/test_submit_concurrency.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/beatvision-generation-auth.test.mjs`
+- `scripts/test/beatvision-generation-state.test.mjs`
+- `scripts/test/generation-dispatch-recovery.test.mjs`
+- `scripts/test/generation-lifecycle-recovery.test.mjs`
+- `scripts/test/generation-poll-leases.db.test.mjs`
+- `scripts/test/generation-receipt-persistence.test.mjs`
+- `scripts/test/generation-runtime.mjs`
+- `scripts/test/hf-acceptance-recovery.test.mjs`
+- `scripts/test/hf-motion.test.mjs`
+- `scripts/test/modal-admission-ledger.db.test.mjs`
+- `scripts/test/modal-motion-integration.test.mjs`
+- `scripts/test/modal-postgres-crash-recovery.test.mjs`
+- `scripts/test/verify_modal_admission.py`
+- `scripts/test/verify_multiprocess_contention.py`
+- `scripts/test/verify_poll_leases.py`
+- `src/pages/ProductionWorkspacePage.tsx`
+- `supabase/functions/beatvision-generation/hf-motion.ts`
+- `supabase/functions/beatvision-generation/index.ts`
+- `supabase/functions/beatvision-generation/modal-motion.ts`
+- `supabase/migrations/20261030010000_generation_poll_leases.sql`
+- `supabase/migrations/20261030204115_durable_modal_admission.sql`
+
+
+### Protocol-2 CPU staging runner — 2026-10-30
+
+Objective: implement an isolated CPU runner using the actual permanent admission protocol, replacing the old Dict harness as protocol2 evidence without deploying or spending. Exact remote baseline confirmed with GitHub PR metadata and `git ls-remote`: PR43ab6eb5e096da2fde02ca7adb2dc766a930bae0, main3e26d8556e62b40e9f20823cb253854ae5efcec6. Active PR worktree `/workspace/BeatVision-pr164`, branch `fix/preserve-uncertain-dispatch-20261028`, initially clean atfe2036c. Inspected43ab diff: only19checklist lines in the permanent-admission audit. `git fetch origin refs/heads/fix/preserve-uncertain-dispatch-20261028` and `git merge --ff-only 43ab6eb5e096da2fde02ca7adb2dc766a930bae0` succeeded; main checkout not modified. Initial generic `git fetch origin` did not create an origin/PR-branch tracking ref under this checkout's fetch configuration; the subsequent diff against that absent ref failed128. Diagnosed and fetched the explicit ref/FETCH_HEAD before fast-forward, no reset/force/overwrite. AGENTS.md reread completely; complete PROJECT_LOG had been read in the preceding repair, its subsequent entries authored/inspected, and43ab did not change it. New checklist and affected worker/tests/SQL/CI/guides read before edits.
+
+Root cause: existing Modal staging app and probe only tested Dict reservations, not PostgreSQL admission. Their unqualified PASS lacked an explicit protocol2 disclaimer. Executed regression `legacy-label-red` exit1 (`None != legacy_dict`), then labeled both legacy files and made PASS return `protocol2_verified:false`. The new runner is distinct, CPU-only and imports no Modal/GPU worker/model. `runner-red` exit1 confirmed it did not yet exist;10new runner cases now pass, plus1new legacy label case.
+
+Implementation: extracted all four admission functions into dependency-free `protocol.py`, preserving worker API wrappers and injected production store/spawn/current-call dependencies. An executed AST equivalence comparison against43ab verifies unchanged function bodies under dependency/name substitution, exit0. Staging and production now use the exact same reserve/lookup/begin/receipt implementation; no separate copied admission algorithm. Existing Python concurrency/crash tests remain. Two source-location assertions initially failed after moving the implementation (Python/Node); updated them to follow both the production wrapper and shared body, and added behavioral dependency-wiring verification. These were test-location repairs, not suppression of runtime failures.
+
+`staging.py` provides a bearer-authenticated ASGI factory and inline synthetic CPU execution. Separate staging-only environment variables, strict HTTPS allowlist, canonical denial of independently declared production origin, a run/database marker and prepared-job allowlist are mandatory. No fallback to production SUPABASE_URL/key. Readiness/outage/malformed grants fail closed before reserve or fake spawn. Only prepared jobs may run; no runtime generation-job insertion, approval edits, asset output, complete-state writes or ledger reset. Synthetic IDs/labels cannot be represented as real Modal acceptance. Every synthetic attempt/phase appends a fresh event UUID, never a per-job UPSERT. Staging SQL is fixture-only and outside production migrations. Independent-process driver seeds only synthetic authorized local fixtures after explicit isolation acknowledgement, exercises service-role RPC permissions through production JSON/auth/decoder transport with a psql opener, and imports no GPU code. CI now runs this probe plus backup/restore of its isolated DB.
+
+Review found and reproduced a new raw-string origin-denial bypass (uppercase host/default443). `origin-red` exit1 showed3accepted production-equivalent variants; strict validation plus canonical origin comparison fixed it, `origin-green` exit0 across4variants. Final independent read-only review confirmed fix, unchanged admission ordering, auth/readiness/event semantics and accurate documentation; source reads/diff checks exited0, no further concrete defect identified. Review made no DB/provider calls.
+
+Verification: **421/421 Node,78/78 Python, zero skips**, production audit, TypeScript/Vite production build, Python compilation, AST equivalence and whitespace checks exit0. Python baseline67/67 passed before extraction; added11cases. Existing Vite917.86kB bundle warning remains. No Edge TypeScript changed, so its earlier Deno check was not repeated; production TypeScript check ran through `tsc -b` in build. Existing verified dependencies retained, no manifest/lock changes or installation needed. Versions executed this cycle: Node22.23.4 for tests/build (host24.19.0),npm11.9.0,Python3.12.14 (CI3.11),FastAPI0.162.0,httpx0.28.1,TypeScript5.9.3,Vite7.3.7,Git2.52.0. Local PostgreSQL16, previously verified Docker28.4.0.
+
+Isolated SQL evidence:20independent CPU ASGI worker/client processes yielded1synthetic spawn/1fake model start. Six interruption points passed: after durable reserve, synthetic acceptance, begin commit, execution-side convenience receipt commit, fake model-start event and lost completed-submit reply. Known synthetic receipt identity remained stable; retries added no events. Conflicting fingerprints, forged project lineage, unprepared IDs and anon/auth/service direct-write denial passed. Claims aged100years remained held. The negative oracle deliberately appended a second model-start event for job10028 and confirmed count2; that job is an explicit counterexample, not a healthy one-start execution. All application jobs remain processing.
+
+Actual database stop produced fail-closed response before reservation/spawn. Actual stop/start retained all8fixture jobs. Full local pg_dump/pg_restore into a second owned isolated database retained claims/events; retries added0synthetic attempts/starts and job statuses stayed processing. Each command exited0. Only the owned local container/volume was removed after verification, exit0; no production data was touched. Raw SQL failures for deliberate conflicting/unprepared fixture requests are expected negative cases, sanitized by the client, not failed overall tests.
+
+Limits: runner IMPLEMENTED / LOCAL CPU TESTED. psql opener verifies actual JSON/service-role SQL, not live HTTPS/PostgREST. Inline fake execution does not establish asynchronous remote provider behavior. `after_receipt` is the execution-side convenience write before model start; it does not claim caller-side asynchronous recovery. Event recording and side effects have their own crash gap; missing events are not proof of zero external work. No Modal SDK invocation, real container identities, two-container recovery, staging deployment/cost approval, old-worker shutdown, GPU/Android output or production verification. A retained consistent backup was tested; stale/lost ledger history still defeats guarantees. Reservation/provider atomicity and eventual completion remain unresolved: no exactly-once claim and no automatic resubmission of unknown work. Production migration absence remains a historical user/checklist finding, not rechecked this turn. Keep PR draft. Next action: review isolated platform packaging/cost, obtain authorization, then test actual authenticated staging transport and container recovery.
+
+Guides/evidence: `providers/modal_motion/STAGING_PROTOCOL2.md`, appended current-status section in `docs/audits/pr164-permanent-admission-20261030.md`. Existing checklist history is preserved. No merge, deployment, production query/write, real inference or paid operation occurred. Commit/publication SHA and CI follow in publication entry.
+
+Complete changed-file inventory relative to43ab6eb:
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `providers/modal_motion/README.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/protocol.py`
+- `providers/modal_motion/staging.py`
+- `providers/modal_motion/tests/staging_worker.py`
+- `providers/modal_motion/tests/test_contention_probe.py`
+- `providers/modal_motion/tests/test_contracts.py`
+- `providers/modal_motion/tests/test_protocol2_staging.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/modal-motion-integration.test.mjs`
+- `scripts/test/sql/protocol2-staging-fixture.sql`
+- `scripts/test/verify_multiprocess_contention.py`
+- `scripts/test/verify_protocol2_staging.py`
+
+Exact command ledger; every command cwd `/workspace/BeatVision-pr164`. Raw `.log`/`-result.json` records: `/workspace/beatvision-protocol2-staging-20261030`. Harness `python /workspace/beatvision-protocol2-staging-20261030/run_check.py <label> /workspace/BeatVision-pr164 <argv>` propagates recorded exit. Network permission was used only for GitHub/local browser/local Docker; never inference.
+
+| UTC start | Label | Exit | Exact command |
+| --- | --- | --- | --- |
+| 2026-10-30T23:24:39.314549+00:00 | baseline-python | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T23:24:51.706584+00:00 | protocol-extraction | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T23:25:44.726201+00:00 | runner-red | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_protocol2_staging -v` |
+| 2026-10-30T23:26:07.937551+00:00 | runner-unit | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_protocol2_staging -v` |
+| 2026-10-30T23:27:45.447420+00:00 | python-probe | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T23:30:45.550748+00:00 | postgres-start | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock run --detach --name beatvision-protocol2-staging-local-20261030 --network none --memory 512m --cpus 2 -e POSTGRES_PASSWORD=fixture-only postgres:16` |
+| 2026-10-30T23:31:08.642283+00:00 | postgres-setup | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH python /workspace/beatvision-protocol2-staging-20261030/setup_fixture.py` |
+| 2026-10-30T23:31:16.333552+00:00 | postgres-probe | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH BEATVISION_PROTOCOL2_TEST_ISOLATED=1 /workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/verify_protocol2_staging.py --psql '["docker","--host=unix:///var/run/docker.sock","exec","-i","beatvision-protocol2-staging-local-20261030","psql","-U","postgres","-d","postgres"]'` |
+| 2026-10-30T23:31:58.686874+00:00 | legacy-label-red | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_contention_probe.ContentionProbeTests.test_legacy_pass_cannot_be_mistaken_for_protocol2_verification -v` |
+| 2026-10-30T23:33:03.796441+00:00 | build | 0 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| 2026-10-30T23:33:03.799332+00:00 | audit | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| 2026-10-30T23:33:06.446539+00:00 | full-node | 1 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| 2026-10-30T23:33:14.948878+00:00 | postgres-stop | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock stop beatvision-protocol2-staging-local-20261030` |
+| 2026-10-30T23:33:25.188665+00:00 | postgres-outage | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH BEATVISION_PROTOCOL2_TEST_ISOLATED=1 /workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/verify_protocol2_staging.py --psql '["docker","--host=unix:///var/run/docker.sock","exec","-i","beatvision-protocol2-staging-local-20261030","psql","-U","postgres","-d","postgres"]' --expect-unavailable` |
+| 2026-10-30T23:33:39.006337+00:00 | origin-red | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_protocol2_staging.ProbeTests.test_equivalent_production_origins_are_rejected_before_transport -v` |
+| 2026-10-30T23:33:45.272626+00:00 | origin-green | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_protocol2_staging.ProbeTests.test_equivalent_production_origins_are_rejected_before_transport -v` |
+| 2026-10-30T23:34:27.104237+00:00 | postgres-restart | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock start beatvision-protocol2-staging-local-20261030` |
+| 2026-10-30T23:35:06.286660+00:00 | extraction-equivalence | 0 | `python /workspace/beatvision-protocol2-staging-20261030/compare_protocol.py` |
+| 2026-10-30T23:35:28.093862+00:00 | postgres-restart-verify | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH BEATVISION_PROTOCOL2_TEST_ISOLATED=1 /workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/verify_protocol2_staging.py --psql '["docker","--host=unix:///var/run/docker.sock","exec","-i","beatvision-protocol2-staging-local-20261030","psql","-U","postgres","-d","postgres"]' --verify-existing` |
+| 2026-10-30T23:36:07.818710+00:00 | node-focused | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node --test scripts/test/modal-motion-integration.test.mjs` |
+| 2026-10-30T23:36:21.036271+00:00 | postgres-backup-restore | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH python /workspace/beatvision-protocol2-staging-20261030/restore_fixture.py` |
+| 2026-10-30T23:36:27.389022+00:00 | full-python-final | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-30T23:36:29.660175+00:00 | full-node-final | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+| 2026-10-30T23:36:31.178449+00:00 | postgres-restored-verify | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH BEATVISION_PROTOCOL2_TEST_ISOLATED=1 /workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/verify_protocol2_staging.py --psql '["docker","--host=unix:///var/run/docker.sock","exec","-i","beatvision-protocol2-staging-local-20261030","psql","-U","postgres","-d","protocol2_restored"]' --verify-existing` |
+| 2026-10-30T23:39:16.240149+00:00 | compilation | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/protocol.py providers/modal_motion/staging.py providers/modal_motion/worker.py providers/modal_motion/tests/test_protocol2_staging.py scripts/test/verify_protocol2_staging.py` |
+| 2026-10-30T23:39:16.293432+00:00 | whitespace | 0 | `git diff --check` |
+| 2026-10-30T23:39:24.438185+00:00 | postgres-final-state-verify | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH BEATVISION_PROTOCOL2_TEST_ISOLATED=1 /workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/verify_protocol2_staging.py --psql '["docker","--host=unix:///var/run/docker.sock","exec","-i","beatvision-protocol2-staging-local-20261030","psql","-U","postgres","-d","protocol2_restored"]' --verify-existing` |
+| 2026-10-30T23:40:37.534597+00:00 | versions | 0 | `python -c 'import subprocess;[(print(command),subprocess.run(command,check=True)) for command in [["/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node","--version"],["npm","--version"],["/workspace/beatvision-baseline-20261029/venv/bin/python","-c","import sys,importlib.metadata as m;print(sys.version);print({k:m.version(k) for k in [\"fastapi\",\"httpx\"]})"],["./node_modules/.bin/tsc","--version"],["./node_modules/.bin/vite","--version"],["git","--version"]]]'` |
+| 2026-10-30T23:41:25.754215+00:00 | postgres-cleanup | 0 | `env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock rm -f -v beatvision-protocol2-staging-local-20261030` |
+
+Fixture setup subcommands, each exit0: `docker --host=unix:///var/run/docker.sock exec -i beatvision-protocol2-staging-local-20261030 psql -U postgres -d postgres -X -v ON_ERROR_STOP=1 -f -`, stdin from the three SQL files in the guide's ordered list, then stdin `insert into private.protocol2_staging_environment values('<fresh UUID>');`. The setup script emitted each filename and exit.
+
+Backup/restore subcommands, each exit0: `docker --host=unix:///var/run/docker.sock exec beatvision-protocol2-staging-local-20261030 pg_dump -U postgres -Fc -d postgres` with stdout to `/workspace/beatvision-protocol2-staging-20261030/retained-fixture.dump`; `docker --host=unix:///var/run/docker.sock exec beatvision-protocol2-staging-local-20261030 createdb -U postgres protocol2_restored`; `docker --host=unix:///var/run/docker.sock exec -i beatvision-protocol2-staging-local-20261030 pg_restore -U postgres --exit-on-error --clean --if-exists -d protocol2_restored` with stdin from that synthetic fixture dump. These operate only inside the owned network-none test container. No database connection string or credential is in the evidence.
+
+Publication preparation correction: staged `git diff --cached --check` caught a new trailing blank line at protocol.py EOF, exit2. The shell continued and created unpublished local17be8a594aa35f57c9978badedaaf8ab878da3a6 despite the failed check. Removed only that trailing blank line, reran staged/complete diff checks and corrected the unpublished commit before any push. No behavior/test result was changed and no published history or concurrent work was rewritten. Exact correction commands/exits are recorded in publication evidence.
+
+
+### Protocol-2 CPU runner publication — 2026-10-30
+
+Published implementation SHA: **`19c71b0abfd54162475ffa6bc4fb1390844dde85`**, `Add CPU-only staging probe for shared PostgreSQL admission`.16files,916insertions/104deletions. `git add -- <all16paths in this phase inventory>` exit0. Initial `git diff --cached --check` exit2 found new blank EOF at protocol.py; unpublished local17be8a594aa35f57c9978badedaaf8ab878da3a6 was created because the shell continued. Removed that blank, appended the transparent correction entry above, `git add providers/modal_motion/protocol.py PROJECT_LOG.md` exit0, `git diff --cached --check` exit0, `git commit --amend --no-edit` exit0, yielding19c71b0 before any remote publication. `git diff 43ab6eb5e096da2fde02ca7adb2dc766a930bae0 HEAD --check` exit0. This amended only our unpublished local commit; no force push or published history rewrite occurred.
+
+`git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` with sandbox network permission exited0, advancing43ab6eb→19c71b0. GitHub readback confirms exact19c71b0, open/draft/unmerged, main3e26d8556e62b40e9f20823cb253854ae5efcec6. Original main-baseline checkout remains clean. PR body updated to accurately distinguish implemented/local CPU-tested runner from actual staging/Modal proof.
+
+All four exact-implementation GitHub workflows completed/success:
+
+- Production CI: https://github.com/DaddyDom8249/BeatVision/actions/runs/41146271933
+- Generation security, original independent-worker admission tests, new CPU probe and isolated backup/restore verification: https://github.com/DaddyDom8249/BeatVision/actions/runs/41146271796
+- Full isolated Supabase migration replay: https://github.com/DaddyDom8249/BeatVision/actions/runs/41146271791
+- Storage ownership security: https://github.com/DaddyDom8249/BeatVision/actions/runs/41146272015
+
+Local actual totals remain421/421 Node and78/78 Python, zero skips. No inference/deployment/production access was used to obtain CI. Live HTTPS/PostgREST, Modal CPU/two-container recovery, old-worker shutdown, staging cost approval, actual GPU/Android output and production remain NOT VERIFIED. No exactly-once or eventual-completion claim.
+
+Documentation-only follow-up records this implementation SHA and publication evidence. Commands: `git diff --check`; `git add PROJECT_LOG.md docs/audits/pr164-permanent-admission-20261030.md`; `git diff --cached --check`; `git commit -m 'Record protocol2 CPU runner publication evidence'`; normal `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028`. Exits are checked before final reporting. Its own final head/CI are independently reported through PR metadata and final response rather than embedding its own impossible self-SHA.
+
+Complete PR changed-file inventory relative to verified main3e26d855 (44paths, distinct from16-file current repair inventory):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-lifecycle-repair-20261030.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `providers/__init__.py`
+- `providers/modal_motion/README.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/__init__.py`
+- `providers/modal_motion/admission.py`
+- `providers/modal_motion/contracts.py`
+- `providers/modal_motion/protocol.py`
+- `providers/modal_motion/staging.py`
+- `providers/modal_motion/tests/staging_worker.py`
+- `providers/modal_motion/tests/test_admission_client.py`
+- `providers/modal_motion/tests/test_contention_probe.py`
+- `providers/modal_motion/tests/test_contracts.py`
+- `providers/modal_motion/tests/test_process_recovery.py`
+- `providers/modal_motion/tests/test_protocol2_staging.py`
+- `providers/modal_motion/tests/test_submit_concurrency.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/beatvision-generation-auth.test.mjs`
+- `scripts/test/beatvision-generation-state.test.mjs`
+- `scripts/test/generation-dispatch-recovery.test.mjs`
+- `scripts/test/generation-lifecycle-recovery.test.mjs`
+- `scripts/test/generation-poll-leases.db.test.mjs`
+- `scripts/test/generation-receipt-persistence.test.mjs`
+- `scripts/test/generation-runtime.mjs`
+- `scripts/test/hf-acceptance-recovery.test.mjs`
+- `scripts/test/hf-motion.test.mjs`
+- `scripts/test/modal-admission-ledger.db.test.mjs`
+- `scripts/test/modal-motion-integration.test.mjs`
+- `scripts/test/modal-postgres-crash-recovery.test.mjs`
+- `scripts/test/sql/protocol2-staging-fixture.sql`
+- `scripts/test/verify_modal_admission.py`
+- `scripts/test/verify_multiprocess_contention.py`
+- `scripts/test/verify_poll_leases.py`
+- `scripts/test/verify_protocol2_staging.py`
+- `src/pages/ProductionWorkspacePage.tsx`
+- `supabase/functions/beatvision-generation/hf-motion.ts`
+- `supabase/functions/beatvision-generation/index.ts`
+- `supabase/functions/beatvision-generation/modal-motion.ts`
+- `supabase/migrations/20261030010000_generation_poll_leases.sql`
+- `supabase/migrations/20261030204115_durable_modal_admission.sql`
+
+
+### Separate Modal CPU packaging and spending boundary — 2026-10-31
+
+Objective: finish safe offline packaging on existing PR164. The user's question asking whether a CPU-credit test is approved was not treated as authorization to spend. No live campaign/deploy/provider/GPU operation was run. Remote PRc0cb980358d5f4b17b6985d77d8460eb3b185aec and main3e26d8556e62b40e9f20823cb253854ae5efcec6 reconfirmed before edits using GitHub metadata, explicit fetch and ls-remote. Worktree `/workspace/BeatVision-pr164`, branch `fix/preserve-uncertain-dispatch-20261028`, initially clean; no advanced diff/concurrent work found. AGENTS.md reread completely; complete log was read in earlier repair and new entries authored/inspected; latest log/runner/guide/tests/CI inspected this cycle. Main untouched.
+
+Root cause: portable CPU ASGI runner had no independent Modal deployment definition. Five packaging regression cases failed before implementation (`package-red`, missing module, exit1). Added `staging_modal.py`, separate App `bragoraforge-protocol2-cpu-probe`, selected7CPU files only (no GPU worker/tests), include_sourceFalse, proxy authentication plus existing dedicated bearer, pinned staging Secret/environment, actual runtime task-ID requirement, max2containers,0warm/buffer,1input/container, hard/request CPU0.125 and memory256MiB,60second input/startup limits,2second idle-scale-down configuration and restricted Modal resource access. Stage-only metadata SQL accepts local and Modal labels; actual task identity comes from environment, never request fields. Added operator requirements pin Modal1.6.3/FastAPI0.162.0. Neither production worker nor admission protocol/migration changed.
+
+A timezone-aware absolute deadline, at most10minutes ahead at startup, fails closed before DB setup if missing/expired/unbounded. Authenticated new expired requests get410 before probe/DB access; bad bearer stays401. Deadline is fixed for that warm container. This does not stop the deployment, in-flight work, image/startup/idle billing or charges from later requests reaching infrastructure. It is not a spending cap.
+
+Public documentation/PyPI fetched without provider invocation. App reference returned a JavaScript redirect; attempted App.function reference404(exit22) was diagnosed by inspecting the official pinned wheel. PyPI modal1.6.3 wheel SHA25631e8952c8908740f3fbc666191fec78ff5fadecb7a48a29d40aed90b39531ffe matched downloaded bytes. Downloaded binary-only wheels from explicit public PyPI, installed offline/no-index into an isolated evidence venv, not repository/app dependencies. A source inspection initially requested nonexistent modal/cli/deploy.py (diagnostic KeyError); inspected actual modal/cli/run.py instead, confirming --env is resolved before module import. No credentials printed. Read-only pip cache warning was harmless; no permission escalation for cache.
+
+Real SDK validation caught `Web Functions do not support retries` for initial retries=0, exit1. Removed unsupported retries argument; SDK forbids Web Function retry configuration and no application retry loop exists. Actual Modal1.6.3 package declaration and hard-limit conversion now pass with socket.connect/connect_ex/create_connection denied, zero attempted connections and zero cloud invocations. Removed deprecated registered_functions inspection in favor of Function type validation; the pinned resource converter is used only in the verifier, not application behavior. CI adds this real-SDK offline check after normal checks.
+
+Verification: **422/422 Node,83/83 Python, zero skips**; audit, production TypeScript/Vite build, Python compilation and real-SDK offline verification exit0. Added1SQL case covering local/Modal labels, untrusted labels, append counts and direct deletion denial; added5Python package/resource/auth/expiry/identity/config cases. Existing admission/owner/RLS/provenance/crash/backup tests remain enabled. Complete source/diff reviewed independently; no further concrete defect identified. Reviewer made no DB/network/provider calls and emphasized expiry cannot establish no-overage. No frontend/Edge TypeScript changed; build ran tsc-b, earlier Deno check not repeated for unchanged Edge code. Existing917.86kB bundle warning remains. Versions retained: Node22.23.4 tests/build (host24.19),npm11.9,Python3.12.14 (CI3.11),FastAPI0.162.0,httpx0.28.1,TypeScript5.9.3,Vite7.3.7,Git2.52.0; new separate SDK1.6.3. No package.json/lock or production schema change.
+
+User-interrupted long tool calls produced no SDK-download/Node execution record and were not counted as passing. Direct SDK download succeeded exit0. The later direct Node invocation completed with TAP422/422,fail0,skip0 and exit0; its exact start timestamp was not captured. Earlier Python/build exec sessions expired before polling after interruption; their completed harness result files prove exit0 and actual83tests. No test was declared passing from an interrupted call.
+
+Spending decision: BLOCKED. Tool discovery found no connected Modal billing/account capability. Official https://modal.com/pricing fetched this cycle confirms CPU$0.0000131/core-second and memory$0.00000222/GiB-second, not current account balance/eligibility. Hypothetical allocation-only arithmetic2*600*(0.125*0.0000131+0.25*0.00000222)=$0.002631 (Decimal check), explicitly not a bill estimate or upper bound. Free-credit balance, provider/account hard no-overage enforcement, isolated database cost and deploy/campaign/teardown approval remain NOT VERIFIED. If enforceable no-overage cannot be established, do not run under current zero-cost rule. No live authorization was inferred from the question; only the owner can authorize credit consumption.
+
+Status: packaging IMPLEMENTED / OFFLINE SDK TESTED. Actual image build/deployment, PostgREST, two-container proof, old-worker shutdown, account eligibility, GPU/Android and production NOT VERIFIED. Existing reservation/provider gap and retained-history assumptions remain; no exactly-once/eventual-completion claim. Next action: verify account enforcement and isolated DB, then obtain explicit bounded deploy/campaign/teardown authorization. Keep PR draft; no merge/production modification/cloud resources/spending. Full guide/cost conditions in providers/modal_motion/STAGING_PROTOCOL2.md; current audit appended without rewriting historical claims.
+
+Changed files relative toc0cb980 (implementation SHA follows in publication entry):
+
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/requirements-staging.txt`
+- `providers/modal_motion/staging_modal.py`
+- `providers/modal_motion/tests/test_staging_modal_package.py`
+- `scripts/test/protocol2-staging-package.db.test.mjs`
+- `scripts/test/sql/protocol2-staging-fixture.sql`
+- `scripts/test/verify_modal_package_offline.py`
+- `scripts/test/verify_protocol2_staging.py`
+
+Exact completed command ledger; cwd `/workspace/BeatVision-pr164` throughout, evidence `/workspace/beatvision-modal-packaging-20261030` (directory created when session began; actual timestamps below areUTC2026-10-31). Harness `python /workspace/beatvision-modal-packaging-20261030/run_check.py <label> /workspace/BeatVision-pr164 <argv>` propagates exit. Direct Node row gives observation time, not fabricated start time.
+
+| UTC start or observation | Label | Exit | Exact command |
+| --- | --- | --- | --- |
+| 2026-10-31T00:03:42.651353+00:00 | sdk-venv | 0 | `python -m venv /workspace/beatvision-modal-packaging-20261030/sdk-venv` |
+| 2026-10-31T01:18:54.431626+00:00 | sdk-install | 0 | `/workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -m pip install --disable-pip-version-check --no-index --find-links=/workspace/beatvision-modal-packaging-20261030/wheels modal==1.6.3` |
+| 2026-10-31T01:21:27.045821+00:00 | package-red | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_modal_package -v` |
+| 2026-10-31T01:22:45.581140+00:00 | package-unit | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_modal_package -v` |
+| 2026-10-31T01:23:30.247950+00:00 | sdk-offline | 1 | `/workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -B scripts/test/verify_modal_package_offline.py` |
+| 2026-10-31T01:23:49.837292+00:00 | sdk-offline-fixed | 0 | `/workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -B scripts/test/verify_modal_package_offline.py` |
+| 2026-10-31T01:24:19.259205+00:00 | sdk-offline-final | 0 | `/workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -B scripts/test/verify_modal_package_offline.py` |
+| 2026-10-31T01:26:31.517538+00:00 | sql-identity | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node --test scripts/test/protocol2-staging-package.db.test.mjs` |
+| 2026-10-31T01:27:09.920002+00:00 | build | 0 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| 2026-10-31T01:27:09.920428+00:00 | audit | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| 2026-10-31T01:27:09.933567+00:00 | full-python | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-31T05:04:56.314282+00:00 | compile | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/staging_modal.py providers/modal_motion/tests/test_staging_modal_package.py scripts/test/verify_modal_package_offline.py scripts/test/verify_protocol2_staging.py` |
+| 2026-10-31T05:06:37.087807+00:00 | full-node-direct | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs` |
+
+Additional exact direct setup command, exit0: `env -u PIP_INDEX_URL -u PIP_EXTRA_INDEX_URL /workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -m pip download --disable-pip-version-check --only-binary=:all: --index-url https://pypi.org/simple --dest /workspace/beatvision-modal-packaging-20261030/wheels modal==1.6.3`. Direct baseline commands `git fetch origin refs/heads/fix/preserve-uncertain-dispatch-20261028`, `git rev-parse FETCH_HEAD`, `git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028` exited0 and returnedc0cb980/3e26d855. Official URL reads used `curl --max-time20 -fsSL URL -o <evidence file>` for modal.App, modal.Secret, modal.asgi_app, modal.concurrent, PyPI modal JSON and pricing; successful files were read locally. App.function URL404exit22 was retained as a failed documentation lookup, not a failed deployment.
+
+
+### Offline Modal CPU packaging publication — 2026-10-31
+
+Implementation SHA: **`30189b4f7ee99cd65439102b3efe206849763cb5`**, `Package protocol2 staging probe as an isolated Modal CPU app`,11files,453insertions/2deletions. `git add -- <11paths in this phase inventory>` exit0; `git diff --cached --check` exit0; `git commit -m 'Package protocol2 staging probe as an isolated Modal CPU app'` exit0 at05:07:00UTC. `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` with sandbox network permission exit0, advancedc0cb980→30189b4, no force. GitHub readback confirms exact30189b4, open/draft/unmerged; main3e26d8556e62b40e9f20823cb253854ae5efcec6 unchanged. PR body explicitly says no live spending approval, package/source-only and financial/runtime gates remain blocked.
+
+All four GitHub workflows completed/success on implementation30189b4f7ee99cd65439102b3efe206849763cb5:
+
+- Production CI including actual Modal1.6.3 socket-denied package validation: https://github.com/DaddyDom8249/BeatVision/actions/runs/41171295982
+- Generation security, independent worker/CPU fixture and backup/restore tests: https://github.com/DaddyDom8249/BeatVision/actions/runs/41171295981
+- Full isolated Supabase migration replay: https://github.com/DaddyDom8249/BeatVision/actions/runs/41171296001
+- Storage ownership security: https://github.com/DaddyDom8249/BeatVision/actions/runs/41171295999
+
+Actual local totals:422/422 Node,83/83 Python, zero skipped; audit/build/compilation/staged diff/real-SDK offline check exit0. CI performs no Modal deployment, Function invocation or image build. No actual container startup, PostgREST staging traffic or financial eligibility is inferred. Deadline/resource caps are application/configuration controls, not billing caps. User has not authorized live credit consumption; account/provider hard no-overage evidence and separate deploy/campaign/teardown approval are still missing. Main and production untouched; no GPU/spending/merge.
+
+Documentation-only follow-up records implementation SHA and verification. Follow-up commands: `git diff --check`; `git add PROJECT_LOG.md docs/audits/pr164-permanent-admission-20261030.md`; `git diff --cached --check`; `git commit -m 'Record offline Modal packaging verification'`; normal push to existing branch. Their exits are checked before final reporting. Final documentation SHA and its exact-head CI are externally reported in PR metadata/final response; a commit cannot embed its own hash.
+
+Complete PR inventory relative to verified main3e26d855 (49paths; current packaging repair11paths separately listed above):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-lifecycle-repair-20261030.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `providers/__init__.py`
+- `providers/modal_motion/README.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/__init__.py`
+- `providers/modal_motion/admission.py`
+- `providers/modal_motion/contracts.py`
+- `providers/modal_motion/protocol.py`
+- `providers/modal_motion/requirements-staging.txt`
+- `providers/modal_motion/staging.py`
+- `providers/modal_motion/staging_modal.py`
+- `providers/modal_motion/tests/staging_worker.py`
+- `providers/modal_motion/tests/test_admission_client.py`
+- `providers/modal_motion/tests/test_contention_probe.py`
+- `providers/modal_motion/tests/test_contracts.py`
+- `providers/modal_motion/tests/test_process_recovery.py`
+- `providers/modal_motion/tests/test_protocol2_staging.py`
+- `providers/modal_motion/tests/test_staging_modal_package.py`
+- `providers/modal_motion/tests/test_submit_concurrency.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/beatvision-generation-auth.test.mjs`
+- `scripts/test/beatvision-generation-state.test.mjs`
+- `scripts/test/generation-dispatch-recovery.test.mjs`
+- `scripts/test/generation-lifecycle-recovery.test.mjs`
+- `scripts/test/generation-poll-leases.db.test.mjs`
+- `scripts/test/generation-receipt-persistence.test.mjs`
+- `scripts/test/generation-runtime.mjs`
+- `scripts/test/hf-acceptance-recovery.test.mjs`
+- `scripts/test/hf-motion.test.mjs`
+- `scripts/test/modal-admission-ledger.db.test.mjs`
+- `scripts/test/modal-motion-integration.test.mjs`
+- `scripts/test/modal-postgres-crash-recovery.test.mjs`
+- `scripts/test/protocol2-staging-package.db.test.mjs`
+- `scripts/test/sql/protocol2-staging-fixture.sql`
+- `scripts/test/verify_modal_admission.py`
+- `scripts/test/verify_modal_package_offline.py`
+- `scripts/test/verify_multiprocess_contention.py`
+- `scripts/test/verify_poll_leases.py`
+- `scripts/test/verify_protocol2_staging.py`
+- `src/pages/ProductionWorkspacePage.tsx`
+- `supabase/functions/beatvision-generation/hf-motion.ts`
+- `supabase/functions/beatvision-generation/index.ts`
+- `supabase/functions/beatvision-generation/modal-motion.ts`
+- `supabase/migrations/20261030010000_generation_poll_leases.sql`
+- `supabase/migrations/20261030204115_durable_modal_admission.sql`
+
+
+### Offline package review, POST-expiry coverage and acceptance specification — 2026-10-31
+
+Scope: continue entirely offline as requested; inspect package/guide, strengthen missing regression coverage and prepare a reproducible staging acceptance specification. No new runtime defect confirmed. Exact PR baselinef90b2670efb01f90e8705dfa1ac2894c09da6b5b/main3e26d8556e62b40e9f20823cb253854ae5efcec6 confirmed with PR metadata, explicit fetch/FETCH_HEAD and ls-remote before edits. Existing branch `fix/preserve-uncertain-dispatch-20261028`, clean worktree `/workspace/BeatVision-pr164`; no concurrent diff found. AGENTS.md completely reread; full log had been read and subsequent entries authored/inspected in preceding cycles; latest log/package/guide/tests/SDK verifier inspected again. Main unchanged.
+
+Finding: deployment guide matches the package's selectedCPU files, limits, staging environment/Secret, auth, SDK1.6.3 and expiry configuration. Existing expiry regression covered GET only. Added `test_expired_post_cannot_submit_or_extend_captured_campaign_window`: a healthy POST first creates one synthetic attempt; at the captured warm deadline, repeated authenticated POSTs plus header/body/environment renewal attempts return410 without another submit, database access, receipt/fence change or event; anonymous POST remains401. The existing correct implementation passed immediately. This is additional coverage, not a runtime defect repair; no production/provider/runtime code changed.
+
+Deliverables: thirteen-case checklist and JSON evidence template, initially BLOCKED/NOT_RUN with every authority/gate reference unset. Specification includes candidate/source/image/fixture hashes, explicit account/no-overage/database/automation/old-worker/approval gates, aggregate request ceilings, independent SQL receipts/counters and synthetic-vs-real identity distinctions, immutable approved input evidence, unknown-hold recovery and actual teardown/budget evidence. Filling a template/flag does not grant approval. Production shutdown has separate authority; staging permission does not allow production modification.
+
+Independent read-only review found a documentation oracle mismatch: universal post-expiry410 incorrectly assumed a warm instance. Corrected to warm410/401 versus expired cold initialization refusal before DB with platform HTTP status NOT VERIFIED; added separate warm/cold evidence fields and no assumed warmth/unbounded keepalive under min0/idle2. Reviewer inspected source/spec/template and ran read/diff checks exit0; no network/DB/provider calls. Final supplied wording was confirmed without a second file reread (not represented as another executed review). Root validation confirms all13case IDs match, statuses NOT_RUN, authority/gate refs null. Initial inline validator exit1 mistakenly counted the table's ID header as a case; corrected parser excludes only that header, fixed validation exit0. No product/test assertion was weakened.
+
+Preparation gap explicitly recorded: the psql/ASGI process driver is not a live HTTP client; the Dict probe is legacy-only; the package has no public crash/reset endpoints. A reviewed bounded protocol2 live client and deterministic external crash controller remain NOT IMPLEMENTED. Prepare/test them offline before corresponding live cases; the checklist does not falsely claim full live automation. Actual async-provider recovery and exactly-once/completion remain unproven.
+
+Verification: **422/422 Node and84/84 Python**, zero skips, audit, production TypeScript/Vite build, test compilation and real pinned SDK socket-denied check exit0. SDK reported0socket attempts/0cloud invocations. No new dependencies installed. Existing bundle917.86kB warning remains. Node22.23.4 tests/build (host24.19),npm11.9,Python3.12.14 (CI3.11),FastAPI0.162.0,httpx0.28.1,TypeScript5.9.3,Vite7.3.7,SDK1.6.3,Git2.52.0 from verified unchanged environments. Edge TypeScript/production schema unchanged; prior checks preserved, no Deno repeat or local database/container provisioning needed. Existing GitHub isolated fixture workflows are checked separately after publication.
+
+Status: OFFLINE REVIEW/TESTED. Current task performed no Modal/SDK deployment, image build, local Docker/Modal container launch, live provider/DB request, GPU work, production modification, spending or merge. Source-control publication and existing isolated CI do not authorize live staging. Account/no-overage enforcement, isolated database eligibility, old-worker shutdown and explicit deploy/campaign/teardown authorization remain BLOCKED/NOT VERIFIED. No deadline/resource setting is treated as a spending cap. Next independent engineering action: design/review bounded protocol2 live client and external fault method with mocked transports, entirely offline; no live campaign follows automatically. Keep PR draft.
+
+Changed-file inventory relative tof90b267 (publication SHA follows separately):
+
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `docs/audits/pr164-staging-acceptance-checklist.md`
+- `docs/audits/pr164-staging-evidence-template.json`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/tests/test_staging_modal_package.py`
+
+Exact completed commands, cwd `/workspace/BeatVision-pr164`; evidence `/workspace/beatvision-acceptance-review-20261031`. Harness `python /workspace/beatvision-acceptance-review-20261031/run_check.py <label> /workspace/BeatVision-pr164 <argv>` propagates actual exit. Direct Node row uses observation time rather than an invented start time; full output is saved.
+
+| UTC start or observation | Label | Exit | Exact command |
+| --- | --- | --- | --- |
+| 2026-10-31T05:17:30.079409+00:00 | post-expiry | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_modal_package -v` |
+| 2026-10-31T05:22:58.715188+00:00 | checklist-template | 0 | `python /workspace/beatvision-acceptance-review-20261031/validate_checklist.py` |
+| 2026-10-31T05:23:42.974832+00:00 | audit | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| 2026-10-31T05:23:42.985726+00:00 | full-python | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v` |
+| 2026-10-31T05:23:43.005493+00:00 | build | 0 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| 2026-10-31T05:23:43.020621+00:00 | sdk-offline | 0 | `/workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -B scripts/test/verify_modal_package_offline.py` |
+| 2026-10-31T05:25:40.425491+00:00 | compile | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/tests/test_staging_modal_package.py` |
+| 2026-10-31T05:25:40.474476+00:00 | whitespace | 0 | `git diff --check` |
+| 2026-10-31T05:27:36.178844+00:00 | full-node-direct | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs > /workspace/beatvision-acceptance-review-20261031/full-node.log 2>&1` |
+
+Direct baseline commands, each exit0: `git fetch origin refs/heads/fix/preserve-uncertain-dispatch-20261028`; `git rev-parse FETCH_HEAD`; `git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028`, returnedf90b267/3e26d855. No network-enabled model/provider command or account/billing query was executed.
+
+
+### Offline acceptance-review publication — 2026-10-31
+
+Implementation/test/specification commit: **`d87627992fbf4fcde7e14837cbf7c236444ba6cf`**, `Specify staging acceptance evidence and cover expired submissions`,6files/323insertions. `git add -- <6paths in this phase inventory>`, `git diff --cached --check`, `git commit -m 'Specify staging acceptance evidence and cover expired submissions'` each exit0. `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` with sandbox network permission exit0, advancedf90b267→d876279, no force. PR readback confirms exactd876279/open/draft/unmerged, main3e26d8556e62b40e9f20823cb253854ae5efcec6. Runtime/provider code and production schema were not changed.
+
+All four GitHub workflows completed/success on exactd87627992fbf4fcde7e14837cbf7c236444ba6cf:
+
+- Production CI including real pinned SDK socket-denied validation: https://github.com/DaddyDom8249/BeatVision/actions/runs/41172744179
+- Generation security/isolated independent workers and backup-restore: https://github.com/DaddyDom8249/BeatVision/actions/runs/41172744178
+- Full isolated migration replay: https://github.com/DaddyDom8249/BeatVision/actions/runs/41172744186
+- Storage ownership security: https://github.com/DaddyDom8249/BeatVision/actions/runs/41172744177
+
+Actual local422/422 Node,84/84 Python, zero skips; audit/build/compilation/diff/SDK checks exit0. The acceptance specification's13live cases remain NOT_RUN and all authority/evidence unset. No live client/controller or real staging recovery is claimed. Live costs/account enforcement/database/old-worker/authorization gates unchanged. No Modal container/GPU/provider call or production change, paid operation, merge or deployment.
+
+Documentation-only follow-up records this SHA/publication. Exact follow-up commands: `git diff --check`; `git add PROJECT_LOG.md docs/audits/pr164-permanent-admission-20261030.md`; `git diff --cached --check`; `git commit -m 'Record offline acceptance review verification'`; normal `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028`. Exits are checked before final reporting. Its own final SHA/CI is externally recorded through PR metadata/final response rather than a self-referential commit.
+
+Complete PR changed-file inventory relative to main3e26d855 (51paths; current6-file change listed separately above):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-lifecycle-repair-20261030.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `docs/audits/pr164-staging-acceptance-checklist.md`
+- `docs/audits/pr164-staging-evidence-template.json`
+- `providers/__init__.py`
+- `providers/modal_motion/README.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/__init__.py`
+- `providers/modal_motion/admission.py`
+- `providers/modal_motion/contracts.py`
+- `providers/modal_motion/protocol.py`
+- `providers/modal_motion/requirements-staging.txt`
+- `providers/modal_motion/staging.py`
+- `providers/modal_motion/staging_modal.py`
+- `providers/modal_motion/tests/staging_worker.py`
+- `providers/modal_motion/tests/test_admission_client.py`
+- `providers/modal_motion/tests/test_contention_probe.py`
+- `providers/modal_motion/tests/test_contracts.py`
+- `providers/modal_motion/tests/test_process_recovery.py`
+- `providers/modal_motion/tests/test_protocol2_staging.py`
+- `providers/modal_motion/tests/test_staging_modal_package.py`
+- `providers/modal_motion/tests/test_submit_concurrency.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/beatvision-generation-auth.test.mjs`
+- `scripts/test/beatvision-generation-state.test.mjs`
+- `scripts/test/generation-dispatch-recovery.test.mjs`
+- `scripts/test/generation-lifecycle-recovery.test.mjs`
+- `scripts/test/generation-poll-leases.db.test.mjs`
+- `scripts/test/generation-receipt-persistence.test.mjs`
+- `scripts/test/generation-runtime.mjs`
+- `scripts/test/hf-acceptance-recovery.test.mjs`
+- `scripts/test/hf-motion.test.mjs`
+- `scripts/test/modal-admission-ledger.db.test.mjs`
+- `scripts/test/modal-motion-integration.test.mjs`
+- `scripts/test/modal-postgres-crash-recovery.test.mjs`
+- `scripts/test/protocol2-staging-package.db.test.mjs`
+- `scripts/test/sql/protocol2-staging-fixture.sql`
+- `scripts/test/verify_modal_admission.py`
+- `scripts/test/verify_modal_package_offline.py`
+- `scripts/test/verify_multiprocess_contention.py`
+- `scripts/test/verify_poll_leases.py`
+- `scripts/test/verify_protocol2_staging.py`
+- `src/pages/ProductionWorkspacePage.tsx`
+- `supabase/functions/beatvision-generation/hf-motion.ts`
+- `supabase/functions/beatvision-generation/index.ts`
+- `supabase/functions/beatvision-generation/modal-motion.ts`
+- `supabase/migrations/20261030010000_generation_poll_leases.sql`
+- `supabase/migrations/20261030204115_durable_modal_admission.sql`
+
+### Recover and finish bounded protocol2 HTTP/crash tooling — 2026-11-01
+
+Objective: implement the user's next offline engineering target: an allowlisted,
+bounded protocol2 HTTP client and external deterministic crash controller with
+redacted evidence compared against all13 acceptance case IDs. No live execution,
+deployment, Modal/container/GPU request, production data change, merge or spending
+is authorized. Keep the existing PR draft and main unchanged.
+
+Baseline: `/workspace/BeatVision-pr164`, branch
+`fix/preserve-uncertain-dispatch-20261028`, HEAD and actual remote PR#164
+`a1585e3c73ee16278d0c07ff47437bdd4b27f9a2`, open/draft/unmerged. Main remote and
+the untouched original `/workspace/BeatVision` checkout remain
+`3e26d8556e62b40e9f20823cb253854ae5efcec6`. GitHub metadata was read before edits;
+subsequent fetch/ls-remote confirmed no concurrent advance. AGENTS.md was read in
+full; the complete prior PROJECT_LOG was read in this continuous assignment and
+its subsequent entries authored/read. Existing protocol, staging/package,
+admission/schema/fixtures, security tests, CI and acceptance docs were inspected.
+
+Recovery: seven unpublished files survived in the original worktree. They were
+not reconstructed from an unverified replacement checkout. The earlier command
+awaiting execution permission was aborted without running; no controller log or
+exit code existed. During the outage the executor repeatedly reported no usable
+environment; readiness was offline. On resumption it reported connected and the
+actual original files/logs were present. Default sandbox integration attempt
+then failed exit1 because socket creation was denied. The rerun used only the
+additional network permission required for127.0.0.1 sockets and passed3/3 tests.
+This was an environment restriction, not a production lifecycle failure.
+
+Implementation and evidence:
+
+- `probe_client.py`: exact canonical HTTPS Modal origin allowlist; production
+  first-label denial across regional/nonregional aliases; separate proxy/bearer
+  auth; exact prepared payload hashes; stable job IDs; unique request IDs; shared
+  atomic caps/deadline; no redirects or automatic POST retry; GET-only recovery;
+  response/schema/size checks and retained receipt conflict/replay guards.
+- Each transport is an owned child process with a total deadline. It checks
+  expiry after DNS/TLS before dispatch. Timeout kills it and preserves unknown
+  acceptance. Fatal cleanup failure records a fatal result, aborts subsequent
+  shared-budget debits and propagates; existing in-flight work cannot be undone.
+- `probe_crash_controller.py` plus a fixed private test worker: nonce/PID/run/
+  job/request/digest handshake; pause after reserve, acceptance, begin,
+  before/after receipt, model start and before first HTTP reply byte; parent
+  SIGKILLs only its stored process handle and requires exit-9. No arbitrary PID,
+  command or HTTP fault/reset endpoint. Cleanup attempts every owned worker.
+- CLI defaults to a plan and has no live URL/credential/approval/PID/command
+  options. Explicit offline mode uses disposable SQLite and CPU loopback workers.
+  A future trusted-authorizer interface has no configured/shipped live issuer;
+  references/environment flags are not authorization or financial evidence.
+-13offline cases passed:20concurrent HTTP clients/two local workers; retry;
+  seven crash/lost-reply boundaries; fingerprint/project conflict; DB pre-admission
+  outage and receipt-write refusal; known execution receipt retained; consistent
+  SQLite backup/restore; warm expiry410/401/cold startup refusal; legacy hold;
+  duplicate-event negative counterexample correctly classified FAIL with2starts.
+  A separate actual delayed-socket test killed its timed-out transport and
+  recovered via GET with zero recovery POSTs. All live rows remain NOT_RUN.
+- Existing generation-security CI now runs the same guarded localhost/fixed-DB
+  campaign against actual PostgreSQL RPCs via psql with pg_dump/restore, preserving
+  redacted evidence for1day. No infrastructure provisioning was performed here.
+
+Confirmed tooling defects were reproduced before repair: alias/short-permit tests
+exit1 (four failed subcases), then15/15 policy tests passed. Independent source
+review identified early-deadline pipe leakage, spawn-failure cleanup omission and
+fatal cleanup swallowed as ordinary unavailability; new tests failed exit1 with
+two failures/one error before repair. Fixed them and added kill-error redaction,
+concurrent shared-cap, same-job conflicting receipt and best-effort cleanup tests.
+Final independent review found no further concrete blocker; it did not execute
+tests/network/DB/SDK/provider calls. It correctly noted the abort latch does not
+retroactively cancel already dispatched work.
+
+Final verification: **422/422 Node,112/112 Python, zero skipped**, audit, production
+TypeScript/Vite build, compilation, evidence/source-hash and whitespace checks
+exit0. No dependencies installed/changed; reused the verified setup. Versions:
+Node22.23.4,npm11.9.0,Python3.12.14 (CI3.11),FastAPI0.162.0,httpx0.28.1,
+TypeScript5.9.3,Vite7.3.7,PGlite0.5.9,Git2.52.0,ModalSDK1.6.3. Real pinned SDK
+socket-denied verifier:0socket attempts/0cloud invocations, exit0. Existing
+917.86kB Vite bundle warning remains. Local psql/pg_dump are absent (each
+`command -v` exit1); actual PostgreSQL campaign and full migration replay are
+validated separately by existing isolated CI after publication, not claimed local.
+Node suites include embedded SQL migration/admission/security coverage.
+
+Raw evidence directory: `/workspace/beatvision-http-controller-20261031`.
+Final JSON: `offline-campaign-final-v2.json`, SHA256
+`6fc1f68c626f90a0e1f1c6bb2fc365c91d45599422eff0e95dab56d24142325e`,
+2026-11-01T22:46:17.266686Z–2026-11-01T22:46:30.604579Z. It records46POST/12GET/58total,
+13OFFLINE_PASS results,7confirmed kill-9 exits and all owned workers stopped;
+11source hashes matched the final tested tooling. Logs/evidence exclude credentials,
+admission tokens, prompts, image bodies and raw HTTP headers/bodies. Failed
+campaigns retain already-collected redacted evidence. Mock proof clips printed by
+existing Python tests are synthetic CPU fixtures, not real inference or approval.
+
+Exact significant executed commands, cwd `/workspace/BeatVision-pr164` unless
+specified. Harness prefix H is
+`/workspace/beatvision-baseline-20261029/venv/bin/python /workspace/beatvision-http-controller-20261031/run_check.py`;
+it writes actual UTC times/commands/exits and propagates the command exit.
+Direct process exits below were observed from their execution sessions; no start
+timestamp is invented. Earlier published-phase commands remain recorded above.
+
+| Label | Exit | Exact command |
+| --- | --- | --- |
+| Remote refs |0| `git fetch origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028; git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028` |
+| Initial policy reproduction |1| `H client-review-red /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_probe_http_client -v` |
+| Initial policy repair |0| `H client-review-green /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_probe_http_client -v` |
+| Socket denied |1| `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_probe_http_controller -v > /workspace/beatvision-http-controller-20261031/controller-first.log 2>&1` |
+| Socket-permitted controller |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_probe_http_controller -v > /workspace/beatvision-http-controller-20261031/controller-network.log 2>&1` |
+| Non-executing default |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/run_protocol2_http_probe.py` |
+| Initial standalone campaign |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/run_protocol2_http_probe.py --offline --evidence /workspace/beatvision-http-controller-20261031/offline-campaign.json > /workspace/beatvision-http-controller-20261031/offline-campaign.log 2>&1` |
+| First full Python (104tests before cleanup additions) |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v > /workspace/beatvision-http-controller-20261031/full-python.log 2>&1` |
+| Cleanup reproduction |1| `H cleanup-red /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_probe_http_client -v` |
+| Cleanup repair |0| `H cleanup-green /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_probe_http_client -v` |
+| Node422 |0| `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs > /workspace/beatvision-http-controller-20261031/full-node.log 2>&1` |
+| Audit |0| `H audit /workspace/BeatVision-pr164 /home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| Build/TypeScript |0| `H build /workspace/BeatVision-pr164 env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+| Real SDK, sockets denied |0| `H sdk-offline /workspace/BeatVision-pr164 /workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -B scripts/test/verify_modal_package_offline.py` |
+| Python before adapter regression111 |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v > /workspace/beatvision-http-controller-20261031/full-python-final.log 2>&1` |
+| Final standalone campaign |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/run_protocol2_http_probe.py --offline --evidence /workspace/beatvision-http-controller-20261031/offline-campaign-final.json > /workspace/beatvision-http-controller-20261031/offline-campaign-final.log 2>&1` |
+| Compile |0| `H compile /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/probe_client.py providers/modal_motion/probe_crash_controller.py providers/modal_motion/tests/http_probe_fixture.py providers/modal_motion/tests/http_probe_worker.py providers/modal_motion/tests/probe_campaign.py providers/modal_motion/tests/test_probe_http_client.py providers/modal_motion/tests/test_probe_http_controller.py scripts/test/run_protocol2_http_probe.py` |
+| Diff |0| `git diff --check` |
+
+Generated .pyc files from our compile/test commands were removed; no user file was
+discarded. Live template still has BLOCKED/NOT_RUN and unset authority/evidence.
+No production runtime/schema/provider contract changed. Status: IMPLEMENTED /
+OFFLINE TESTED; actual PostgreSQL CI results follow below. Staging, HTTPS proxy/
+PostgREST, real Modal cross-container death/recovery, financial eligibility,
+old-worker shutdown, GPU/Android and production remain NOT VERIFIED/BLOCKED.
+Reservation/provider atomicity, unconditional recovery and exactly-once execution
+are not established. The next independent engineering action is to design/review
+the remote fault method and trusted live-authority integration without executing
+them; no live action follows automatically. Keep PR#164 draft.
+
+Complete phase changed-file inventory (14paths; commit SHA/publication follows):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `docs/audits/pr164-staging-acceptance-checklist.md`
+- `docs/audits/pr164-staging-evidence-template.json`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/probe_client.py`
+- `providers/modal_motion/probe_crash_controller.py`
+- `providers/modal_motion/tests/http_probe_fixture.py`
+- `providers/modal_motion/tests/http_probe_worker.py`
+- `providers/modal_motion/tests/probe_campaign.py`
+- `providers/modal_motion/tests/test_probe_http_client.py`
+- `providers/modal_motion/tests/test_probe_http_controller.py`
+- `scripts/test/run_protocol2_http_probe.py`
+
+Final adapter compatibility review confirmed the production receipt store sanitizes SQL/RPC refusals to `MODAL_LEDGER_UNAVAILABLE` and staging503. Added an actual store+ASGI mocked-opener regression proving503 before fake execution; the PostgreSQL campaign expects exactly503 for its prepared negative SQL cases, while SQLite keeps400/409. Independent ledger/input/receipt/event no-mutation oracles remain unchanged. This is mocked refusal classification plus source review; actual PostgreSQL execution remains a CI result, not a local claim.
+
+Final post-adapter repeat, each observed exit0: `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v > /workspace/beatvision-http-controller-20261031/full-python-final-v2.log 2>&1` (**112/112**); `/workspace/beatvision-baseline-20261029/venv/bin/python -B scripts/test/run_protocol2_http_probe.py --offline --evidence /workspace/beatvision-http-controller-20261031/offline-campaign-final-v2.json > /workspace/beatvision-http-controller-20261031/offline-campaign-final-v2.log 2>&1` (**13cases/58requests**). The earlier parallel permission request was interrupted before either command ran; no exit/result is assigned to that interrupted request. `H compile-final` used the same cwd and complete argv as the Compile row, exit0; final compilation follows the adapter test addition before commit.
+
+
+### HTTP/crash tooling publication and actual CI verification — 2026-11-01
+
+Implementation commit **80b47fb995462edc1aa7553aae61b734ec7d82fb**, `Add bounded offline protocol2 HTTP and crash campaign`,14files/1616insertions/8deletions. Staged checks, commit and normal push each exited0. Exact commands: `git add .github/workflows/generation-enqueue-security.yml PROJECT_LOG.md docs/audits/pr164-permanent-admission-20261030.md docs/audits/pr164-staging-acceptance-checklist.md docs/audits/pr164-staging-evidence-template.json providers/modal_motion/STAGING_PROTOCOL2.md providers/modal_motion/probe_client.py providers/modal_motion/probe_crash_controller.py providers/modal_motion/tests/http_probe_fixture.py providers/modal_motion/tests/http_probe_worker.py providers/modal_motion/tests/probe_campaign.py providers/modal_motion/tests/test_probe_http_client.py providers/modal_motion/tests/test_probe_http_controller.py scripts/test/run_protocol2_http_probe.py`; subsequent `git add PROJECT_LOG.md docs/audits/pr164-permanent-admission-20261030.md providers/modal_motion/tests/probe_campaign.py providers/modal_motion/tests/test_probe_http_controller.py`; `git diff --check`; `git diff --cached --check`; `git commit -m 'Add bounded offline protocol2 HTTP and crash campaign'`; `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` (sandbox network permission, no force).
+
+All four GitHub workflows completed/success on exact80b47fb995462edc1aa7553aae61b734ec7d82fb:
+
+- Production CI/offline real SDK: https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935864
+- Generation security/actual isolated PostgreSQL HTTP/crash/restore: https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935901
+- Full isolated migration replay: https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935889
+- Legacy storage ownership security: https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935971
+
+Actual CI job logs independently read through GitHub tools:
+
+- 22:48:37.3157153Z:112Python tests passed in20.601s.
+- 22:49:29.4416485Z:422Node tests,422pass,0fail,0skipped.
+- 22:49:40.5834832Z: real Modal1.6.3 SDK definition check,0socket attempts/0cloud invocations.
+- 22:49:59.6703838Z: new actual PostgreSQL campaign printed13offline cases,46POST/12GET/58total, `LIVE_BLOCKED`, all owned workers stopped; step14success. Script assertions cover7external kill-9 exits, durable receipt/fence/input/event invariants and consistent pg_dump/restore. This is isolated PostgreSQL execution evidence, not source inference or live PostgREST/Modal verification.
+- Earlier independent SQL/ASGI worker checks,100-year retained claims, backup/restoration, owner/RLS/provenance, full migration replay and storage ownership steps also succeeded.
+
+New CI command, actual exit0: `python -B scripts/test/run_protocol2_http_probe.py --ci-postgres --evidence "$RUNNER_TEMP/protocol2-http-evidence.json"`, with `CI=true`, `BEATVISION_PROTOCOL2_TEST_ISOLATED=1`, fixture localhost:5432/enqueue_fixture. The runner executed fixed `pg_dump -Fc -f <temporary-fixture.dump>`, `createdb http_controller_restored`, and `pg_restore --exit-on-error --clean --if-exists -d http_controller_restored <temporary-fixture.dump>` successfully before fresh-worker lookup/retry assertions. Fixture values only; no live database was used.
+
+Redacted CI evidence artifact ID13104602042,7138bytes, archive SHA256 `5e82b7348aeac66b1ea4923e4c11523b73dafeb10eede36e78cc28a8c3f8c20e`, expires2026-11-02T22:49:59Z. Metadata confirms exact80b47fb head. Link: https://github.com/DaddyDom8249/BeatVision/actions/runs/41358935901/artifacts/13104602042 . The archive was fetched through the GitHub connector; no claim is made of separately unpacking/rechecking every JSON record. CI job logs and executable assertions supply the verification above. Local full JSON/code hashes and command records remain in this phase's evidence directory.
+
+Final compile repeat: `H compile-final-v2` with the Compile row's exact cwd/eight-path argv, exit0. No source change followed the112-test/13-case run. Documentation-only follow-up records this implementation SHA, actual CI and59-file full PR inventory. Follow-up commands are `git diff --check`; `git add PROJECT_LOG.md docs/audits/pr164-permanent-admission-20261030.md`; `git diff --cached --check`; `git commit -m 'Record HTTP crash campaign verification'`; normal `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028`. Their results and final head/CI are checked before final reporting; final SHA is externally recorded in PR metadata/final response rather than self-referentially committed.
+
+Status: IMPLEMENTED / OFFLINE TESTED, including actual isolated PostgreSQL and migration replay. Production/main unchanged; PR open/draft/unmerged. No live authorizer, remote crash controller, paid provider, GPU, Modal deployment or cloud container was invoked. Existing isolated CI service databases ran as part of authorized repository checks. Real staging, proxy/PostgREST, Modal container recovery, old-worker shutdown, no-overage/account eligibility and production remain BLOCKED/NOT VERIFIED. Exactly-once/provider atomicity is not claimed. Next engineering action: separately review the remote fault method/trusted-authority integration offline; obtain independent live eligibility/authority evidence before any future live action.
+
+Complete PR changed-file inventory relative to actual main3e26d8556e62b40e9f20823cb253854ae5efcec6 (59paths; phase14paths listed above):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-lifecycle-repair-20261030.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `docs/audits/pr164-staging-acceptance-checklist.md`
+- `docs/audits/pr164-staging-evidence-template.json`
+- `providers/__init__.py`
+- `providers/modal_motion/README.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/__init__.py`
+- `providers/modal_motion/admission.py`
+- `providers/modal_motion/contracts.py`
+- `providers/modal_motion/probe_client.py`
+- `providers/modal_motion/probe_crash_controller.py`
+- `providers/modal_motion/protocol.py`
+- `providers/modal_motion/requirements-staging.txt`
+- `providers/modal_motion/staging.py`
+- `providers/modal_motion/staging_modal.py`
+- `providers/modal_motion/tests/http_probe_fixture.py`
+- `providers/modal_motion/tests/http_probe_worker.py`
+- `providers/modal_motion/tests/probe_campaign.py`
+- `providers/modal_motion/tests/staging_worker.py`
+- `providers/modal_motion/tests/test_admission_client.py`
+- `providers/modal_motion/tests/test_contention_probe.py`
+- `providers/modal_motion/tests/test_contracts.py`
+- `providers/modal_motion/tests/test_probe_http_client.py`
+- `providers/modal_motion/tests/test_probe_http_controller.py`
+- `providers/modal_motion/tests/test_process_recovery.py`
+- `providers/modal_motion/tests/test_protocol2_staging.py`
+- `providers/modal_motion/tests/test_staging_modal_package.py`
+- `providers/modal_motion/tests/test_submit_concurrency.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/beatvision-generation-auth.test.mjs`
+- `scripts/test/beatvision-generation-state.test.mjs`
+- `scripts/test/generation-dispatch-recovery.test.mjs`
+- `scripts/test/generation-lifecycle-recovery.test.mjs`
+- `scripts/test/generation-poll-leases.db.test.mjs`
+- `scripts/test/generation-receipt-persistence.test.mjs`
+- `scripts/test/generation-runtime.mjs`
+- `scripts/test/hf-acceptance-recovery.test.mjs`
+- `scripts/test/hf-motion.test.mjs`
+- `scripts/test/modal-admission-ledger.db.test.mjs`
+- `scripts/test/modal-motion-integration.test.mjs`
+- `scripts/test/modal-postgres-crash-recovery.test.mjs`
+- `scripts/test/protocol2-staging-package.db.test.mjs`
+- `scripts/test/run_protocol2_http_probe.py`
+- `scripts/test/sql/protocol2-staging-fixture.sql`
+- `scripts/test/verify_modal_admission.py`
+- `scripts/test/verify_modal_package_offline.py`
+- `scripts/test/verify_multiprocess_contention.py`
+- `scripts/test/verify_poll_leases.py`
+- `scripts/test/verify_protocol2_staging.py`
+- `src/pages/ProductionWorkspacePage.tsx`
+- `supabase/functions/beatvision-generation/hf-motion.ts`
+- `supabase/functions/beatvision-generation/index.ts`
+- `supabase/functions/beatvision-generation/modal-motion.ts`
+- `supabase/migrations/20261030010000_generation_poll_leases.sql`
+- `supabase/migrations/20261030204115_durable_modal_admission.sql`
+
+
+### Offline remote-control and trusted-authority design — 2026-11-02
+
+Objective: implement the user's next safe work, designing/testing remote fault
+control and trusted authorization with mocks and explicit rejections. No live test,
+remote stop, provider deployment, GPU inference or spending is authorized. Existing
+PR#164 branch retained; no new PR, main change, force-push or merge.
+
+Actual pre-edit baseline: `/workspace/BeatVision-pr164`, clean branch
+`fix/preserve-uncertain-dispatch-20261028`, local/remote PR HEAD
+`09d65d0357b1d24d9cf7fadbc72afe4bcc96a5fa`, open/draft/unmerged. Fetch/ls-remote
+before edits and again after the environment interruption confirmed that head
+and actual main `3e26d8556e62b40e9f20823cb253854ae5efcec6`; original main worktree
+was left untouched. Full AGENTS.md was reread. Complete prior PROJECT_LOG had
+already been read in this continuous assignment; the latest authored/published
+entries were reread. Current client, controller, seven-file package, admission,
+acceptance template/guide, fixtures, SDK source/protobufs and CI were inspected.
+Feature-development skill applied. Its optional Python reference was unavailable;
+repository-supported Python/Node commands and verified environments were used.
+
+Confirmed provider limitation (SOURCE INSPECTED, not live observed): pinned Modal
+SDK1.6.3 container stop documents SIGINT with Function inputs cancelled/rescheduled;
+graceful stop waits. Its inspected ContainerStopRequest has only task_id/graceful;
+response is empty. TaskGetInfoResponse has app_id/info and lacks a complete
+function/deployment/image/environment/workspace/input binding. Therefore this
+examined surface does not establish a hard-crash/no-replay/atomic-target/death
+primitive. No claim is made about every provider API. Inspection source SHA256:
+`bb2451d3c9307de2f0688b658f18d960ee7d2801006005aae9393d6641bf5e38`.
+
+Implementation is OFFLINE MODEL ONLY:
+
+- Added a design/audit contract for separate authenticated owner, account/cost,
+  deployment, database/fixture and task-access witnesses. Independent trust roots,
+  keys, audience/subject/action/job/scope/challenge, revocation and actual enforced
+  limits must be verified by future adapters. References/flags/signatures alone
+  do not prove financial or isolation facts. No actual issuer, signature verifier,
+  billing/IAM adapter or LivePermit is created by the test model.
+- Five explicit fake witness domains reject stale/replayed/unknown-key proofs,
+  missing identities, scope/ownership/deployment/fixture drift, unverified no-
+  overage, broad permissions and cross-purpose authority. Even a positive model
+  decision is rejected by the real HTTP client. CLI/default/live template remain
+  unchanged and all13live cases are NOT_RUN with authority evidence unset.
+- Disposable SQLite models atomic retained request budgets, no refunded/reissued
+  request IDs, immutable per-run manifests and one-shot control intents. A global
+  account/workspace/task/incarnation fence also blocks a new run from reclaiming
+  an unresolved stop. Independent private-checkpoint and provider fixtures bind
+  job/request/input/receipt/fence/provenance and exact task permission.
+- Eight independent CPU controller processes append exactly one fake provider
+  call; every call is counted in separate append-only evidence. Actual local
+  process exits42 before/after fake dispatch preserve unknown claims. No local
+  exit is called remote container death; no actual remote action is performed.
+- Lost reply/ACK/DB refusal remain STOP_UNKNOWN with no automatic stop retry,
+  replacement task or inference. Verification needs independent mock termination,
+  no replacement/rescheduling, settled unchanged before/after evidence and durable
+  whitelisted proof storage. Collected deadlines are checked at dispatch and
+  inside verification transaction; expiry rolls back state/proof. Separately
+  authorized read-only observation works after control expiry without another stop.
+- SDK surface inspector parses CLI source without executing/importing it and
+  reads local protobuf descriptors with sockets denied. Exit0 means inspection
+  PASS while live control remains BLOCKED. Added it to the existing pinned-SDK CI
+  step; the deployed package and all production runtime/provider/schema code are
+  unchanged. No dependencies were installed or changed.
+
+Reproduction/review evidence: initial spec-before exit1 is a missing new module,
+not a production defect reproduction. First24, expanded32 and35model tests passed.
+Independent source review identified three model-only holes: final-read freshness,
+empty identities mirrored by fake witnesses, and cross-run task re-admission.
+The parent agent executed regressions:39tests with33failed subcases, exit1,
+before repair;39passed after repair. Later rollback/proof/out-of-order/counterexample
+coverage brought the model to42tests, all passed. Final source/doc review confirmed
+repairs and accurate limitations; reviewer did not execute tests, SDK, DB/network
+or provider calls. Production lifecycle fixes are not claimed from these models.
+
+Unresolved, explicitly tested counterexample: a target/input can change after
+client-side observation and before provider effect. The negative oracle deliberately
+sends one UNSAFE fake stop, refuses verification and retains STOP_UNKNOWN. This
+is not a successful crash case. Conditional provider targeting or independently
+guaranteed immutable pause remains a live capability requirement. Fresh proofs,
+another DB flag or mock capability assertions do not close the distributed gap.
+The inspected SDK stop method is rejected; no actual remote adapter is shipped.
+
+Environment interruption: the first full-suite request was aborted without
+execution; no full-python.log or exit code existed. Readiness briefly reported
+no usable executor even while connector observed connected. On continuation the
+original worktree/new files and42-test log survived. The full suite then actually
+ran. No interrupted/awaiting-permission request is counted as a test result.
+
+Actual local final results: **154/154 Python,422/422 Node**, zero skipped;42new
+model tests plus112baseline. Node was executed in this work cycle; Node/production
+source did not change thereafter. Production audit, TypeScript/Vite build,
+compilation, whitespace and SDK package/surface checks exited0. SDK checks each
+reported0socket attempts/0cloud invocations; surface inspection explicitly reports
+live_remote_fault_control:BLOCKED. Baseline Python112passed before edits. Versions:
+Node22.23.4,npm11.9.0,Python3.12.14 (CI3.11),FastAPI0.162.0,httpx0.28.1,
+Modal1.6.3,Git2.52.0,TypeScript5.9.3,Vite7.3.7. Existing917.86kB bundle warning
+remains. No SQL/migration/runtime change; local psql/pg_dump remain absent, so no
+local actual PostgreSQL/migration replay is invented. Existing isolated CI checks
+are verified after publication. SQLite here is a durable simulation, not RLS proof.
+
+Evidence directory `/workspace/beatvision-integration-design-20261102` contains
+raw logs and command-result JSON. `model-evidence.json` records the actual unsafe
+counterexample,42model/154Python totals, source hashes and13NOT_RUN live rows;
+SHA256 `59b6415d4357c385b06a1daf6fe12beb883877f31db4978f40d723bfa78f74ab`.
+No credentials, admission tokens, prompts or raw provider HTTP bodies/headers are
+exported. Doc-only wording/hash refresh followed source review; no model code
+change followed the final154-test execution. Own generated .pyc files were removed.
+
+Exact significant commands/exits, cwd `/workspace/BeatVision-pr164`. H prefix is
+`/workspace/beatvision-baseline-20261029/venv/bin/python /workspace/beatvision-integration-design-20261102/run_check.py`;
+its JSON records exact argv/timestamps and propagates actual exit. Direct sessions
+below had observed exits; no invented start time is assigned.
+
+| Check | Exit | Exact command |
+| --- | --- | --- |
+| Remote refs (before edits/repeated after interruption) |0| `git fetch origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028; git ls-remote origin refs/heads/main refs/heads/fix/preserve-uncertain-dispatch-20261028` |
+| Baseline Python112 |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v > /workspace/beatvision-integration-design-20261102/baseline-python.log 2>&1` |
+| Node422 |0| `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/run-tests.mjs > /workspace/beatvision-integration-design-20261102/full-node.log 2>&1` |
+| Final Python154 |0| `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v > /workspace/beatvision-integration-design-20261102/full-python.log 2>&1` |
+| Whitespace |0| `git diff --check` |
+
+Completed harness invocations (exact H command is `H <label> /workspace/BeatVision-pr164 <argv>`):
+
+| UTC start | Label | Exit | Exact argv |
+| --- | --- | --- | --- |
+| 2026-11-02T01:53:29.202935+00:00 | spec-before | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T01:57:30.245229+00:00 | spec-first | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T02:02:04.521271+00:00 | spec-expanded | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T02:04:37.116778+00:00 | spec-final-pre-review | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T02:05:12.916252+00:00 | sdk-control-surface | 0 | `/workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -B scripts/test/verify_modal_control_surface_offline.py` |
+| 2026-11-02T02:08:28.022720+00:00 | review-model-red | 1 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T02:09:51.788128+00:00 | review-model-green | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T02:11:19.109215+00:00 | model-pre-final-review | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T02:15:29.227032+00:00 | model-final | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` |
+| 2026-11-02T16:54:41.185876+00:00 | compile | 0 | `/workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/tests/staging_control_model.py providers/modal_motion/tests/test_staging_control_model.py scripts/test/verify_modal_control_surface_offline.py` |
+| 2026-11-02T16:54:41.198397+00:00 | audit | 0 | `/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node scripts/production-audit.mjs` |
+| 2026-11-02T16:54:41.201761+00:00 | sdk-package | 0 | `/workspace/beatvision-modal-packaging-20261030/sdk-venv/bin/python -B scripts/test/verify_modal_package_offline.py` |
+| 2026-11-02T16:54:41.211200+00:00 | build | 0 | `env PATH=/home/agent/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin npm run build` |
+
+
+Status: OFFLINE DESIGN/EXECUTABLE MODEL IMPLEMENTED AND TESTED. Actual live
+integrations remain BLOCKED/NOT IMPLEMENTED: authenticated issuer/trust roots,
+provider-enforced zero paid overage, exact task permissions/identity, conditional
+stop/immutable pause, authenticated private checkpoint and provider termination
+proof. Model key IDs/booleans/capabilities are fixtures, not real verification.
+The clock rollback detector is per instance, not a distributed trusted clock.
+Provider/reservation atomicity and exactly-once execution are not established.
+Staging, PostgREST/proxy, real container recovery, GPU/Android and production remain
+NOT VERIFIED. No live deployment, remote control, production data change, paid
+provider, GPU or merge occurred. Keep PR draft. Next engineering action: establish
+provider-supported targeting/pause/termination semantics and independently enforced
+identity/permissions/no-overage evidence; if unavailable, keep live rows blocked.
+No live authorization is requested or inferred from the user's Continue.
+
+Complete phase changed-file inventory (8paths; publication SHA/CI follows):
+
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-remote-control-authority-design-20261102.md`
+- `docs/audits/pr164-staging-acceptance-checklist.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/tests/staging_control_model.py`
+- `providers/modal_motion/tests/test_staging_control_model.py`
+- `scripts/test/verify_modal_control_surface_offline.py`
+
+
+### Offline integration-design publication and CI — 2026-11-02
+
+Implementation commit: **`bae2a0cb3ad01868af2750b729e18e04bfb0e521`**, `Model staging authority and remote fault safety offline`,8files/1329insertions. Exact commands, each exit0: `git add .github/workflows/production-ci.yml PROJECT_LOG.md docs/audits/pr164-remote-control-authority-design-20261102.md docs/audits/pr164-staging-acceptance-checklist.md providers/modal_motion/STAGING_PROTOCOL2.md providers/modal_motion/tests/staging_control_model.py providers/modal_motion/tests/test_staging_control_model.py scripts/test/verify_modal_control_surface_offline.py`; `git diff --cached --check`; `git commit -m 'Model staging authority and remote fault safety offline'`; `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` (sandbox network permission, no force). GitHub readback confirmed exactbae2a0c/open/draft/unmerged and unchanged main3e26d8556e62b40e9f20823cb253854ae5efcec6.
+
+All four workflows completed/success on exactbae2a0cb3ad01868af2750b729e18e04bfb0e521:
+
+- Production CI including42new model regressions and both socket-denied SDK checks: https://github.com/DaddyDom8249/BeatVision/actions/runs/41487096163
+- Generation security/isolated PostgreSQL admission/HTTP-crash/backup-restore: https://github.com/DaddyDom8249/BeatVision/actions/runs/41487096399
+- Full isolated migration replay: https://github.com/DaddyDom8249/BeatVision/actions/runs/41487096259
+- Legacy storage ownership security: https://github.com/DaddyDom8249/BeatVision/actions/runs/41487096122
+
+Actual decoded GitHub job logs independently read, not merely inferred from green workflow badges:
+
+- Production job125420192572 at17:01:53.9212931Z: **154Python tests in20.775s**.
+- 17:02:49.0649684Z: **422Node,422pass,0skipped**.
+- 17:02:59.8792838Z: real pinned Modal1.6.3 package,0socket attempts/0cloud invocations.
+- 17:03:00.0037181Z: local SDK control inspection PASS, live_remote_fault_control BLOCKED, stop_ack_proves_death false, complete_task_identity_in_get_info false, request[graceful,task_id], response[], SIGINT_WITH_POSSIBLE_FUNCTION_INPUT_RESCHEDULING,0sockets/0cloud. SDK CLI source hash matches the local inspected hash.
+- Generation job125420193792 at17:03:12.1502588Z: existing actual PostgreSQL protocol2 HTTP campaign **13cases/46POST/12GET/58total**, LIVE_BLOCKED, all owned workers stopped. Step14and backup/restore/security/provenance/owner/RLS steps succeeded.
+
+Thus actual isolated PostgreSQL and full migration replay checks passed in CI; no local PostgreSQL claim is made. New control-ledger durability tests remain disposable SQLite plus independent local processes/fake provider evidence, not a real trust service or remote Modal execution.
+
+`model-evidence.json` source hashes were checked with `git show bae2a0cb3ad01868af2750b729e18e04bfb0e521:<path>` for each recorded file and matched (Python assertion helper exit0). Its digest is recorded above. It is frozen evidence for this implementation SHA; the documentation-only publication addition does not alter tested model/SDK code or retroactively change that artifact. All13live template rows remain NOT_RUN and authority evidence unset.
+
+Documentation follow-up records implementation SHA, actual CI results and the63-file complete PR inventory. Exact follow-up commands: `git diff --check`; `git add PROJECT_LOG.md docs/audits/pr164-remote-control-authority-design-20261102.md`; `git diff --cached --check`; `git commit -m 'Record offline authority design verification'`; normal `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028`. Results/final head/CI are checked before final reporting, with final SHA externally recorded in PR metadata/final response rather than self-referentially committed.
+
+Status remains **OFFLINE DESIGN/MODEL TESTED — LIVE INTEGRATIONS BLOCKED**. No production runtime/provider/schema changes, live trust root, real stop adapter, paid provider, production data edit, GPU or deployment. Fresh observations do not make provider stop atomic with paused input/identity. SDK/source inspection establishes local limits only. Actual no-overage, task permissions, complete authenticated identity, immutable pause/conditional targeting, termination/rescheduling evidence and explicit live authority remain missing. Exactly-once/provider atomicity is not claimed. Keep PR draft; no next blocker/live task is started automatically.
+
+Complete PR changed-file inventory relative to unchanged main3e26d8556e62b40e9f20823cb253854ae5efcec6 (63paths; phase8paths above):
+
+- `.github/workflows/generation-enqueue-security.yml`
+- `.github/workflows/production-ci.yml`
+- `PROJECT_LOG.md`
+- `docs/audits/pr164-lifecycle-repair-20261030.md`
+- `docs/audits/pr164-permanent-admission-20261030.md`
+- `docs/audits/pr164-remote-control-authority-design-20261102.md`
+- `docs/audits/pr164-staging-acceptance-checklist.md`
+- `docs/audits/pr164-staging-evidence-template.json`
+- `providers/__init__.py`
+- `providers/modal_motion/README.md`
+- `providers/modal_motion/STAGING_PROTOCOL2.md`
+- `providers/modal_motion/__init__.py`
+- `providers/modal_motion/admission.py`
+- `providers/modal_motion/contracts.py`
+- `providers/modal_motion/probe_client.py`
+- `providers/modal_motion/probe_crash_controller.py`
+- `providers/modal_motion/protocol.py`
+- `providers/modal_motion/requirements-staging.txt`
+- `providers/modal_motion/staging.py`
+- `providers/modal_motion/staging_modal.py`
+- `providers/modal_motion/tests/http_probe_fixture.py`
+- `providers/modal_motion/tests/http_probe_worker.py`
+- `providers/modal_motion/tests/probe_campaign.py`
+- `providers/modal_motion/tests/staging_control_model.py`
+- `providers/modal_motion/tests/staging_worker.py`
+- `providers/modal_motion/tests/test_admission_client.py`
+- `providers/modal_motion/tests/test_contention_probe.py`
+- `providers/modal_motion/tests/test_contracts.py`
+- `providers/modal_motion/tests/test_probe_http_client.py`
+- `providers/modal_motion/tests/test_probe_http_controller.py`
+- `providers/modal_motion/tests/test_process_recovery.py`
+- `providers/modal_motion/tests/test_protocol2_staging.py`
+- `providers/modal_motion/tests/test_staging_control_model.py`
+- `providers/modal_motion/tests/test_staging_modal_package.py`
+- `providers/modal_motion/tests/test_submit_concurrency.py`
+- `providers/modal_motion/worker.py`
+- `scripts/test/beatvision-generation-auth.test.mjs`
+- `scripts/test/beatvision-generation-state.test.mjs`
+- `scripts/test/generation-dispatch-recovery.test.mjs`
+- `scripts/test/generation-lifecycle-recovery.test.mjs`
+- `scripts/test/generation-poll-leases.db.test.mjs`
+- `scripts/test/generation-receipt-persistence.test.mjs`
+- `scripts/test/generation-runtime.mjs`
+- `scripts/test/hf-acceptance-recovery.test.mjs`
+- `scripts/test/hf-motion.test.mjs`
+- `scripts/test/modal-admission-ledger.db.test.mjs`
+- `scripts/test/modal-motion-integration.test.mjs`
+- `scripts/test/modal-postgres-crash-recovery.test.mjs`
+- `scripts/test/protocol2-staging-package.db.test.mjs`
+- `scripts/test/run_protocol2_http_probe.py`
+- `scripts/test/sql/protocol2-staging-fixture.sql`
+- `scripts/test/verify_modal_admission.py`
+- `scripts/test/verify_modal_control_surface_offline.py`
+- `scripts/test/verify_modal_package_offline.py`
+- `scripts/test/verify_multiprocess_contention.py`
+- `scripts/test/verify_poll_leases.py`
+- `scripts/test/verify_protocol2_staging.py`
+- `src/pages/ProductionWorkspacePage.tsx`
+- `supabase/functions/beatvision-generation/hf-motion.ts`
+- `supabase/functions/beatvision-generation/index.ts`
+- `supabase/functions/beatvision-generation/modal-motion.ts`
+- `supabase/migrations/20261030010000_generation_poll_leases.sql`
+- `supabase/migrations/20261030204115_durable_modal_admission.sql`
+
+
+### Observation-only model restart refinement — 2026-11-02
+
+The documentation head `c920a0c63de28129866a01632c5c4fd28880f565` also received4/4
+successful workflows (Production41487845253, Generation41487845178, Replay41487845093,
+Storage41487846061). A final scope check then found that a new normal model policy
+requires an active control deadline, preventing a newly restarted observer from
+opening the retained manifest after control expiry even while read authority was
+still valid. The earlier test advanced an existing object and missed restart.
+This is a test-model capability/refinement, not a production provider defect.
+
+Added explicit strictly boolean `observation_only` fixture-policy mode. It can
+reopen the retained immutable manifest within its original observation horizon;
+all other actions (POST/GET/CONTROL/deploy/teardown) are refused before grant or
+request debit. Reconciliation still checks original manifest/owner/task/proofs and
+changes only the fixture verification record. It cannot renew a claim/deadline,
+issue a LivePermit, submit inference or dispatch another stop. Normal policies
+still require an active control deadline. Design contract updated accordingly.
+
+The new test failed before the capability existed (constructor refused, exit1).
+After implementation: **43/43 model tests and155/155 full Python**, exit0, zero
+skips; compilation/whitespace exit0. Earlier phase Node422/audit/build/SDK checks
+remain applicable because Node/production/package/SDK code did not change.
+Independent source review found no defect and specifically confirmed all five
+non-observation actions blocked, reopened retained-ledger scope/deadlines intact,
+no LivePermit/additional stop and exact read expiry. Reviewer did not execute tests,
+DB, SDK or network calls. Actual live issuer and remote-control gaps remain blocked.
+
+Exact commands, cwd `/workspace/BeatVision-pr164`, H as defined above:
+
+- Exit1: `H observer-restart-red /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model.RemoteFaultModelTests.test_restarted_observation_only_model_can_reconcile_without_reopening_control -v`.
+- Exit0: `H observer-restart-green /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest providers.modal_motion.tests.test_staging_control_model -v` (43tests).
+- Exit0: `/workspace/beatvision-baseline-20261029/venv/bin/python -B -m unittest discover -s providers/modal_motion/tests -v > /workspace/beatvision-integration-design-20261102/full-python-observer.log 2>&1` (155tests).
+- Exit0: `H compile-observer /workspace/BeatVision-pr164 /workspace/beatvision-baseline-20261029/venv/bin/python -m py_compile providers/modal_motion/tests/staging_control_model.py providers/modal_motion/tests/test_staging_control_model.py scripts/test/verify_modal_control_surface_offline.py`.
+- Exit0: `git diff --check`.
+
+Changed4paths: PROJECT_LOG.md, the remote-control/authority design doc, test model
+and its regression suite. Full PR inventory remains63paths; original eight-file
+phase inventory and frozen bae2a0c evidence remain above. No history was rewritten
+or earlier42/154 results relabeled. Latest model totals are43/155. Publication SHA
+and exact CI follow below. No production/runtime/schema/provider/dependency or live
+permission change. No deployment, real remote stop, GPU, paid provider or merge.
+
+
+### Observation-only refinement publication — 2026-11-02
+
+Repair/model capability commit: **`fe59aaf84d31c68dddcba6cfda4cfc4299bfc322`**,
+`Allow observation-only model recovery after restart`,4files/68insertions/2deletions.
+Exact commands, each exit0: `git add PROJECT_LOG.md docs/audits/pr164-remote-control-authority-design-20261102.md providers/modal_motion/tests/staging_control_model.py providers/modal_motion/tests/test_staging_control_model.py`; `git diff --cached --check`; `git commit -m 'Allow observation-only model recovery after restart'`; `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` (normal push, network permission, no force).
+
+All four actual workflows completed/success on exactfe59aaf84d31c68dddcba6cfda4cfc4299bfc322:
+
+- Production/model/SDK: https://github.com/DaddyDom8249/BeatVision/actions/runs/41489094061
+- Generation/security/isolated PostgreSQL: https://github.com/DaddyDom8249/BeatVision/actions/runs/41489093929
+- Full migration replay: https://github.com/DaddyDom8249/BeatVision/actions/runs/41489094126
+- Legacy storage ownership: https://github.com/DaddyDom8249/BeatVision/actions/runs/41489094041
+
+Decoded Production job125427057314 logs were independently read:17:14:02.1660228Z,
+155Python tests in26.846s;17:15:08.2449706Z,422Node/422pass/0skipped;
+17:15:21.8887996Z, package SDK0sockets/0cloud;17:15:22.0370104Z, control inspection
+PASS with live_remote_fault_control BLOCKED, incomplete task identity, empty ACK,
+SIGINT/possible Function input rescheduling, same pinned CLI source hash and
+0sockets/0cloud. Final totals are **155Python,422Node,43new model tests**. Audit,
+build, SDK/compilation/whitespace, actual isolated PG/security and migration checks
+passed. Frozen bae2 evidence/older totals remain historical, not relabeled.
+
+The final documentation-only record adds this SHA and actual CI results; no source
+change follows the155-test verification. Exact follow-up commands: `git diff --check`;
+`git add PROJECT_LOG.md docs/audits/pr164-remote-control-authority-design-20261102.md`;
+`git diff --cached --check`; `git commit -m 'Record observation-only recovery verification'`;
+normal `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028`.
+Results and final head/CI are checked before final reporting; final SHA is externally
+recorded in PR metadata/final response to avoid a self-referential commit.
+
+Full phase inventory remains8paths; observation refinement4paths are a subset.
+Full PR inventory remains63paths as recorded above. Main remains
+3e26d8556e62b40e9f20823cb253854ae5efcec6, PR open/draft/unmerged. No force-push,
+production/runtime/schema/provider change, deployment, live trust/stop adapter,
+GPU or paid operation. The unsafe check-then-stop counterexample and actual SDK
+limits remain BLOCKED live requirements. Trusted identity/IAM/no-overage/private
+checkpoint/conditional target/termination evidence is still missing. No exactly-once
+or staging claim is made; no live authorization follows from these checks.
+
+### Documentation publication recovery through GitHub API — 2026-11-07
+
+Repeated shell `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028`
+requests were aborted before a successful execution result; remote readback stayed
+at fe59aaf84d31c68dddcba6cfda4cfc4299bfc322. No exit0 is assigned to those stalled
+requests. The clean local pending documentation commit was
+58dfc4677637de52ad694303203c0d7e9d098516. Its contents and all prior155/422/43 test
+evidence survived. Main remained3e26d8556e62b40e9f20823cb253854ae5efcec6.
+
+Used the already-authorized GitHub connector publication path instead. No service,
+credential, provider, live test or production access was added. Exact successful
+API operations before the final ref update:
+
+- github.create_tree(repository DaddyDom8249/BeatVision, base_tree049898ab18b5fe9e1afcc59a3eebb1ea8a7792aa, entries PROJECT_LOG.md and docs/audits/pr164-remote-control-authority-design-20261102.md with exact local UTF-8 contents) returned91b1418f05ac86234aa9355faa56e45fc42a45bc.
+- That tree exactly equals `git rev-parse 58dfc4677637de52ad694303203c0d7e9d098516^{tree}`; no documentation/source content was changed by the transport.
+- github.create_commit(parent fe59aaf84d31c68dddcba6cfda4cfc4299bfc322, tree91b1418f05ac86234aa9355faa56e45fc42a45bc, message "Record observation-only recovery verification") returned9882d6c419246eaa797d69ee69ad5da30ea1e231. API author/time metadata gives a different commit ID from local58dfc46; the file tree is identical.
+- github.fetch GET /repos/DaddyDom8249/BeatVision/git/commits/9882d6c419246eaa797d69ee69ad5da30ea1e231 verified parent/tree/unsigned metadata. Exact raw object was reconstructed and SHA-checked locally with `git hash-object -t commit -w --stdin` (Python helper exit0); the API-normalized UTC date had stored Git offset-0600. An earlier UTC-offset candidate did not match and changed no ref.
+- `git branch archive/pr164-doc-58dfc46 58dfc4677637de52ad694303203c0d7e9d098516` exited0, preserving the unpublished local commit.
+- The first tree upload was rejected before execution because the tool catalog changed; reloading the tool definition and retrying the same content-addressed tree succeeded. This was not a force update or a provider operation.
+
+This publication note is the only added content beyond that exact documentation
+tree. Its API audit commit will parent9882d6c and be checked against the local
+staged tree. Final github.update_ref targets only the existing PR branch with
+expected_sha fe59aaf84d31c68dddcba6cfda4cfc4299bfc322 and force=false; a changed
+remote head must be inspected rather than overwritten. The final SHA and actual
+CI are checked/read back and recorded in PR metadata/final response.
+
+Local synchronization preserves archive58dfc46, verifies the complete index/tree
+against the published API commit, and uses expected-old-SHA local update-ref only
+for this PR branch and its verified origin tracking ref. No user changes are
+discarded, no merge/remote force-push occurs, and main is never moved. Final
+whitespace/status/tree checks are required before reporting completion.
+
+No runtime/model/test/package/dependency/schema change accompanies publication.
+Prior exact-source checks remain155Python/422Node/43new mock tests with4/4CI on
+fe59aaf. Final-head CI runs separately. Actual live authority, atomic remote
+targeting, provider no-rescheduling/death evidence and no-overage gates remain
+BLOCKED; no exactly-once, staging, deployment, GPU or paid-operation claim follows.

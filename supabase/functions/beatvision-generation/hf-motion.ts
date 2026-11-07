@@ -10,7 +10,7 @@ export const HF_MOTION = Object.freeze({
 });
 const EXPECTED_PARAMS = ['prompt','negative_prompt','input_image_filepath','input_video_filepath','height_ui','width_ui','mode','duration_ui','ui_frames_to_use','seed_ui','randomize_seed','ui_guidance_scale','improve_texture_flag'];
 export class HfMotionError extends Error {
-  code: string; retryable: boolean;
+  code: string; retryable: boolean; evidence?: Record<string, string | number>;
   constructor(code: string, retryable = false) { super(code); this.code = code; this.retryable = retryable; }
 }
 const fail = (code: string, retryable = false): never => { throw new HfMotionError(code, retryable); };
@@ -57,9 +57,33 @@ export async function hfSubmit(token: string, imageUrl: string, prompt: string, 
   let response: Response;
   try { response = await request(HF_MOTION.host + '/gradio_api/call/' + HF_MOTION.endpoint, { method: 'POST', headers: { ...headers(token), 'Content-Type': 'application/json' }, body: JSON.stringify({ data: input }), signal: AbortSignal.timeout(20000), redirect: 'error' }); }
   catch { return fail('HF_SUBMISSION_ACCEPTANCE_UNKNOWN'); }
-  if (!response.ok) fail(response.status === 429 ? 'HF_QUOTA_EXHAUSTED' : 'HF_SUBMIT_REJECTED');
-  const data = await response.json();
-  if (!/^[a-f0-9]{32}$/.test(data.event_id || '')) fail('HF_EVENT_ID_MISSING');
+  if (!response.ok && response.status >= 400 && response.status < 500 && response.status !== 408)
+    fail(response.status === 429 ? 'HF_QUOTA_EXHAUSTED' : 'HF_SUBMIT_REJECTED');
+  let data: any;
+  const evidence: Record<string, string | number> = { phase: 'submission_reply', http_status: response.status };
+  try {
+    if (!response.ok) throw new Error('unconfirmed_gateway_response');
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('missing_body');
+    let raw = ''; const decoder = new TextDecoder(); let size = 0;
+    try {
+      while (true) {
+        const item = await reader.read(); if (item.done) break;
+        size += item.value.byteLength;
+        if (size > 4096) throw new Error('response_too_large');
+        raw += decoder.decode(item.value, { stream: true });
+      }
+      raw += decoder.decode();
+    } finally { await reader.cancel().catch(() => {}); }
+    evidence.body_bytes = size;
+    evidence.body_sha256 = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw))))
+      .map(byte => byte.toString(16).padStart(2, '0')).join('');
+    data = JSON.parse(raw);
+    if (!data || typeof data !== 'object' || !/^[a-f0-9]{32}$/.test(data.event_id || '')) throw new Error('receipt_unusable');
+  } catch {
+    const failure = new HfMotionError('HF_SUBMISSION_ACCEPTANCE_UNKNOWN');
+    failure.evidence = evidence; throw failure;
+  }
   return { ok: true, status: 'processing', provider: 'huggingface-zerogpu', model: HF_MOTION.model, job_id: data.event_id, eligibility,
     result: { generation_type: 'GENERATIVE_VIDEO', duration_seconds: HF_MOTION.duration, requested_seed: seed } };
 }
@@ -107,7 +131,7 @@ export async function hfPoll(token: string, eventId: string, request: typeof fet
     // for failures. The existing /call POST defaults session_hash to event_id,
     // so its structured queue stream retains details without submitting work.
     const response = await request(HF_MOTION.host + '/gradio_api/queue/data?session_hash=' + eventId, { headers: headers(token), signal: abort.signal, redirect: 'error' });
-    if (!response.ok) fail(response.status === 429 ? 'HF_QUOTA_EXHAUSTED' : 'HF_POLL_UNAVAILABLE', response.status >= 500);
+    if (!response.ok) fail(response.status === 429 ? 'HF_POLL_RATE_LIMITED' : 'HF_POLL_UNAVAILABLE', true);
     reader = response.body?.getReader(); if (!reader) fail('HF_POLL_EMPTY');
     let buffer = ''; const decoder = new TextDecoder();
     while (true) {
