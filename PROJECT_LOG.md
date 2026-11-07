@@ -2654,3 +2654,42 @@ GPU or paid operation. The unsafe check-then-stop counterexample and actual SDK
 limits remain BLOCKED live requirements. Trusted identity/IAM/no-overage/private
 checkpoint/conditional target/termination evidence is still missing. No exactly-once
 or staging claim is made; no live authorization follows from these checks.
+
+### Documentation publication recovery through GitHub API — 2026-11-07
+
+Repeated shell `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028`
+requests were aborted before a successful execution result; remote readback stayed
+at fe59aaf84d31c68dddcba6cfda4cfc4299bfc322. No exit0 is assigned to those stalled
+requests. The clean local pending documentation commit was
+58dfc4677637de52ad694303203c0d7e9d098516. Its contents and all prior155/422/43 test
+evidence survived. Main remained3e26d8556e62b40e9f20823cb253854ae5efcec6.
+
+Used the already-authorized GitHub connector publication path instead. No service,
+credential, provider, live test or production access was added. Exact successful
+API operations before the final ref update:
+
+- github.create_tree(repository DaddyDom8249/BeatVision, base_tree049898ab18b5fe9e1afcc59a3eebb1ea8a7792aa, entries PROJECT_LOG.md and docs/audits/pr164-remote-control-authority-design-20261102.md with exact local UTF-8 contents) returned91b1418f05ac86234aa9355faa56e45fc42a45bc.
+- That tree exactly equals `git rev-parse 58dfc4677637de52ad694303203c0d7e9d098516^{tree}`; no documentation/source content was changed by the transport.
+- github.create_commit(parent fe59aaf84d31c68dddcba6cfda4cfc4299bfc322, tree91b1418f05ac86234aa9355faa56e45fc42a45bc, message "Record observation-only recovery verification") returned9882d6c419246eaa797d69ee69ad5da30ea1e231. API author/time metadata gives a different commit ID from local58dfc46; the file tree is identical.
+- github.fetch GET /repos/DaddyDom8249/BeatVision/git/commits/9882d6c419246eaa797d69ee69ad5da30ea1e231 verified parent/tree/unsigned metadata. Exact raw object was reconstructed and SHA-checked locally with `git hash-object -t commit -w --stdin` (Python helper exit0); the API-normalized UTC date had stored Git offset-0600. An earlier UTC-offset candidate did not match and changed no ref.
+- `git branch archive/pr164-doc-58dfc46 58dfc4677637de52ad694303203c0d7e9d098516` exited0, preserving the unpublished local commit.
+- The first tree upload was rejected before execution because the tool catalog changed; reloading the tool definition and retrying the same content-addressed tree succeeded. This was not a force update or a provider operation.
+
+This publication note is the only added content beyond that exact documentation
+tree. Its API audit commit will parent9882d6c and be checked against the local
+staged tree. Final github.update_ref targets only the existing PR branch with
+expected_sha fe59aaf84d31c68dddcba6cfda4cfc4299bfc322 and force=false; a changed
+remote head must be inspected rather than overwritten. The final SHA and actual
+CI are checked/read back and recorded in PR metadata/final response.
+
+Local synchronization preserves archive58dfc46, verifies the complete index/tree
+against the published API commit, and uses expected-old-SHA local update-ref only
+for this PR branch and its verified origin tracking ref. No user changes are
+discarded, no merge/remote force-push occurs, and main is never moved. Final
+whitespace/status/tree checks are required before reporting completion.
+
+No runtime/model/test/package/dependency/schema change accompanies publication.
+Prior exact-source checks remain155Python/422Node/43new mock tests with4/4CI on
+fe59aaf. Final-head CI runs separately. Actual live authority, atomic remote
+targeting, provider no-rescheduling/death evidence and no-overage gates remain
+BLOCKED; no exactly-once, staging, deployment, GPU or paid-operation claim follows.
