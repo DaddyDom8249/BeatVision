@@ -2614,3 +2614,43 @@ phase inventory and frozen bae2a0c evidence remain above. No history was rewritt
 or earlier42/154 results relabeled. Latest model totals are43/155. Publication SHA
 and exact CI follow below. No production/runtime/schema/provider/dependency or live
 permission change. No deployment, real remote stop, GPU, paid provider or merge.
+
+
+### Observation-only refinement publication — 2026-11-02
+
+Repair/model capability commit: **`fe59aaf84d31c68dddcba6cfda4cfc4299bfc322`**,
+`Allow observation-only model recovery after restart`,4files/68insertions/2deletions.
+Exact commands, each exit0: `git add PROJECT_LOG.md docs/audits/pr164-remote-control-authority-design-20261102.md providers/modal_motion/tests/staging_control_model.py providers/modal_motion/tests/test_staging_control_model.py`; `git diff --cached --check`; `git commit -m 'Allow observation-only model recovery after restart'`; `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028` (normal push, network permission, no force).
+
+All four actual workflows completed/success on exactfe59aaf84d31c68dddcba6cfda4cfc4299bfc322:
+
+- Production/model/SDK: https://github.com/DaddyDom8249/BeatVision/actions/runs/41489094061
+- Generation/security/isolated PostgreSQL: https://github.com/DaddyDom8249/BeatVision/actions/runs/41489093929
+- Full migration replay: https://github.com/DaddyDom8249/BeatVision/actions/runs/41489094126
+- Legacy storage ownership: https://github.com/DaddyDom8249/BeatVision/actions/runs/41489094041
+
+Decoded Production job125427057314 logs were independently read:17:14:02.1660228Z,
+155Python tests in26.846s;17:15:08.2449706Z,422Node/422pass/0skipped;
+17:15:21.8887996Z, package SDK0sockets/0cloud;17:15:22.0370104Z, control inspection
+PASS with live_remote_fault_control BLOCKED, incomplete task identity, empty ACK,
+SIGINT/possible Function input rescheduling, same pinned CLI source hash and
+0sockets/0cloud. Final totals are **155Python,422Node,43new model tests**. Audit,
+build, SDK/compilation/whitespace, actual isolated PG/security and migration checks
+passed. Frozen bae2 evidence/older totals remain historical, not relabeled.
+
+The final documentation-only record adds this SHA and actual CI results; no source
+change follows the155-test verification. Exact follow-up commands: `git diff --check`;
+`git add PROJECT_LOG.md docs/audits/pr164-remote-control-authority-design-20261102.md`;
+`git diff --cached --check`; `git commit -m 'Record observation-only recovery verification'`;
+normal `git push origin HEAD:refs/heads/fix/preserve-uncertain-dispatch-20261028`.
+Results and final head/CI are checked before final reporting; final SHA is externally
+recorded in PR metadata/final response to avoid a self-referential commit.
+
+Full phase inventory remains8paths; observation refinement4paths are a subset.
+Full PR inventory remains63paths as recorded above. Main remains
+3e26d8556e62b40e9f20823cb253854ae5efcec6, PR open/draft/unmerged. No force-push,
+production/runtime/schema/provider change, deployment, live trust/stop adapter,
+GPU or paid operation. The unsafe check-then-stop counterexample and actual SDK
+limits remain BLOCKED live requirements. Trusted identity/IAM/no-overage/private
+checkpoint/conditional target/termination evidence is still missing. No exactly-once
+or staging claim is made; no live authorization follows from these checks.

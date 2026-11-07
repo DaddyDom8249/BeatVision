@@ -183,3 +183,17 @@ SDK inspections and the existing13-case/58-request isolated PostgreSQL campaign.
 Exact commands/exits, regression failures/repairs, evidence hashes and63-file
 inventory are in PROJECT_LOG.md. These results do not establish real authority,
 conditional control, provider atomicity, account eligibility or staging readiness.
+
+
+Observation-only restart refinement: **fe59aaf84d31c68dddcba6cfda4cfc4299bfc322**.
+The new regression reopens a retained manifest after control expiry, permits only
+observation until its original read deadline, and refuses all request/control/
+deploy/teardown actions without another fake stop. Local and CI totals now
+**43new model tests /155Python /422Node**, all passing. All four workflows passed:
+[Production](https://github.com/DaddyDom8249/BeatVision/actions/runs/41489094061),
+[Generation/PostgreSQL](https://github.com/DaddyDom8249/BeatVision/actions/runs/41489093929),
+[Migration replay](https://github.com/DaddyDom8249/BeatVision/actions/runs/41489094126),
+[Storage](https://github.com/DaddyDom8249/BeatVision/actions/runs/41489094041).
+This changes only the offline model/design; no live issuer/control mechanism or
+production runtime is connected. The unresolved targeting/provider/cost gates
+and negative oracle above remain unchanged.
